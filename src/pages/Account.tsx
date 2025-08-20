@@ -2,6 +2,7 @@ import { User, Settings, CreditCard, BookOpen, Bell } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 export default function Account() {
   return (
@@ -78,6 +79,14 @@ export default function Account() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-medium">Theme</div>
+                <div className="text-sm text-muted-foreground">Light / Dark mode</div>
+              </div>
+              <ThemeToggle />
+            </div>
+            
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-medium">Language</div>

@@ -6,104 +6,117 @@
 
 @layer base {
   :root {
-    /* Afro-modern color palette - vibrant accents on neutral backgrounds */
-    --background: 15 10% 8%;
-    --foreground: 48 100% 95%;
-
-    --card: 20 14% 12%;
-    --card-foreground: 48 100% 95%;
-
-    --popover: 20 14% 12%;
-    --popover-foreground: 48 100% 95%;
-
+    /* Light mode - Modern and clean */
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    
     /* Kenyan-inspired primary colors - vibrant green from flag */
-    --primary: 142 76% 45%;
-    --primary-foreground: 15 10% 8%;
-
+    --primary: 142 76% 36%;
+    --primary-foreground: 0 0% 98%;
+    
     /* Warm earth tones for secondary */
-    --secondary: 25 45% 25%;
-    --secondary-foreground: 48 90% 90%;
-
-    --muted: 20 14% 18%;
-    --muted-foreground: 48 30% 65%;
-
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    
     /* Vibrant orange accent inspired by sunrise */
-    --accent: 25 95% 55%;
-    --accent-foreground: 15 10% 8%;
-
-    /* Market colors */
-    --bull: 142 76% 45%;
-    --bear: 0 85% 60%;
-    --neutral: 48 30% 65%;
-
-    --destructive: 0 85% 60%;
-    --destructive-foreground: 48 100% 95%;
-
-    --border: 20 14% 22%;
-    --input: 20 14% 18%;
-    --ring: 142 76% 45%;
-
+    --accent: 25 95% 53%;
+    --accent-foreground: 0 0% 98%;
+    
+    /* Market colors - consistent across themes */
+    --bull: 142 76% 36%;
+    --bear: 0 72% 51%;
+    --neutral: 240 3.8% 46.1%;
+    
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 142 76% 36%;
+    
     --radius: 0.75rem;
-
-    /* Gradients for visual impact */
-    --gradient-primary: linear-gradient(135deg, hsl(142 76% 45%), hsl(142 76% 35%));
-    --gradient-accent: linear-gradient(135deg, hsl(25 95% 55%), hsl(25 95% 45%));
-    --gradient-card: linear-gradient(135deg, hsl(20 14% 12%), hsl(20 14% 15%));
-    --gradient-hero: linear-gradient(135deg, hsl(15 10% 8%), hsl(20 14% 12%));
-
-    /* Shadows with color tints */
-    --shadow-primary: 0 10px 30px -10px hsl(142 76% 45% / 0.3);
-    --shadow-accent: 0 10px 30px -10px hsl(25 95% 55% / 0.3);
-    --shadow-card: 0 4px 16px -4px hsl(15 10% 5% / 0.4);
-
+    
+    /* Light mode gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(142 76% 36%), hsl(142 76% 30%));
+    --gradient-accent: linear-gradient(135deg, hsl(25 95% 53%), hsl(25 95% 47%));
+    --gradient-card: linear-gradient(135deg, hsl(0 0% 100%), hsl(240 4.8% 95.9%));
+    --gradient-hero: linear-gradient(135deg, hsl(240 4.8% 95.9%), hsl(0 0% 100%));
+    
+    /* Light mode shadows */
+    --shadow-primary: 0 10px 30px -10px hsl(142 76% 36% / 0.2);
+    --shadow-accent: 0 10px 30px -10px hsl(25 95% 53% / 0.2);
+    --shadow-card: 0 1px 3px 0 hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
+    
     /* Animation timing */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
+    
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
+    /* Dark mode - Afro-modern with vibrant accents */
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    
+    /* Brighter primary in dark mode for better contrast */
+    --primary: 142 76% 45%;
+    --primary-foreground: 240 5.9% 10%;
+    
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    
+    /* Brighter accent in dark mode */
+    --accent: 25 95% 60%;
+    --accent-foreground: 240 5.9% 10%;
+    
+    /* Market colors - slightly brighter in dark mode */
+    --bull: 142 76% 45%;
+    --bear: 0 85% 60%;
+    --neutral: 240 5% 64.9%;
+    
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --destructive-foreground: 0 0% 98%;
+    
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 142 76% 45%;
+    
+    /* Dark mode gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(142 76% 45%), hsl(142 76% 35%));
+    --gradient-accent: linear-gradient(135deg, hsl(25 95% 60%), hsl(25 95% 50%));
+    --gradient-card: linear-gradient(135deg, hsl(240 10% 3.9%), hsl(240 3.7% 15.9%));
+    --gradient-hero: linear-gradient(135deg, hsl(240 3.7% 15.9%), hsl(240 10% 3.9%));
+    
+    /* Dark mode shadows */
+    --shadow-primary: 0 10px 30px -10px hsl(142 76% 45% / 0.3);
+    --shadow-accent: 0 10px 30px -10px hsl(25 95% 60% / 0.3);
+    --shadow-card: 0 4px 16px -4px hsl(0 0% 0% / 0.4);
+    
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
