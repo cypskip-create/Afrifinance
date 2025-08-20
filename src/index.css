@@ -2,41 +2,62 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Kenyan Stocks Hub - Afro-Modern Design System */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Afro-modern color palette - vibrant accents on neutral backgrounds */
+    --background: 15 10% 8%;
+    --foreground: 48 100% 95%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 20 14% 12%;
+    --card-foreground: 48 100% 95%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 20 14% 12%;
+    --popover-foreground: 48 100% 95%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Kenyan-inspired primary colors - vibrant green from flag */
+    --primary: 142 76% 45%;
+    --primary-foreground: 15 10% 8%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Warm earth tones for secondary */
+    --secondary: 25 45% 25%;
+    --secondary-foreground: 48 90% 90%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 20 14% 18%;
+    --muted-foreground: 48 30% 65%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Vibrant orange accent inspired by sunrise */
+    --accent: 25 95% 55%;
+    --accent-foreground: 15 10% 8%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* Market colors */
+    --bull: 142 76% 45%;
+    --bear: 0 85% 60%;
+    --neutral: 48 30% 65%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --destructive: 0 85% 60%;
+    --destructive-foreground: 48 100% 95%;
 
-    --radius: 0.5rem;
+    --border: 20 14% 22%;
+    --input: 20 14% 18%;
+    --ring: 142 76% 45%;
+
+    --radius: 0.75rem;
+
+    /* Gradients for visual impact */
+    --gradient-primary: linear-gradient(135deg, hsl(142 76% 45%), hsl(142 76% 35%));
+    --gradient-accent: linear-gradient(135deg, hsl(25 95% 55%), hsl(25 95% 45%));
+    --gradient-card: linear-gradient(135deg, hsl(20 14% 12%), hsl(20 14% 15%));
+    --gradient-hero: linear-gradient(135deg, hsl(15 10% 8%), hsl(20 14% 12%));
+
+    /* Shadows with color tints */
+    --shadow-primary: 0 10px 30px -10px hsl(142 76% 45% / 0.3);
+    --shadow-accent: 0 10px 30px -10px hsl(25 95% 55% / 0.3);
+    --shadow-card: 0 4px 16px -4px hsl(15 10% 5% / 0.4);
+
+    /* Animation timing */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
     --sidebar-background: 0 0% 98%;
 
@@ -92,6 +113,7 @@ All colors MUST be HSL.
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
+  }
 }
 
 @layer base {
@@ -100,6 +122,88 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground overflow-x-hidden;
+  }
+}
+
+@layer components {
+  /* Market indicators */
+  .bull-indicator {
+    @apply text-green-400;
+  }
+  
+  .bear-indicator {
+    @apply text-red-400;
+  }
+
+  /* Card variants */
+  .card-gradient {
+    background: var(--gradient-card);
+    box-shadow: var(--shadow-card);
+  }
+
+  .card-hero {
+    background: var(--gradient-hero);
+    box-shadow: var(--shadow-primary);
+  }
+
+  /* Button hover effects */
+  .btn-primary {
+    background: var(--gradient-primary);
+    box-shadow: var(--shadow-primary);
+    transition: var(--transition-smooth);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-primary), 0 15px 35px -10px hsl(142 76% 45% / 0.4);
+  }
+
+  .btn-accent {
+    background: var(--gradient-accent);
+    box-shadow: var(--shadow-accent);
+    transition: var(--transition-smooth);
+  }
+
+  .btn-accent:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-accent), 0 15px 35px -10px hsl(25 95% 55% / 0.4);
+  }
+
+  /* Tab navigation */
+  .bottom-nav {
+    @apply fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border backdrop-blur-sm;
+  }
+
+  .tab-item {
+    @apply flex flex-col items-center justify-center py-2 px-3 min-h-[60px] transition-all duration-200;
+  }
+
+  .tab-item.active {
+    @apply text-primary;
+  }
+
+  .tab-item.inactive {
+    @apply text-muted-foreground hover:text-foreground;
+  }
+
+  /* Market data animations */
+  .price-up {
+    @apply text-green-400 animate-pulse;
+  }
+
+  .price-down {
+    @apply text-red-400 animate-pulse;
+  }
+
+  /* Kenyan pattern accent */
+  .kenyan-pattern {
+    background-image: repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 8px,
+      hsl(var(--primary) / 0.05) 8px,
+      hsl(var(--primary) / 0.05) 12px
+    );
   }
 }
