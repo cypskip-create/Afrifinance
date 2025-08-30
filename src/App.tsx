@@ -8,6 +8,7 @@ import { MainLayout } from "./components/layout/MainLayout";
 import Home from "./pages/Home";
 import Markets from "./pages/Markets";
 import Discover from "./pages/Discover";
+import News from "./pages/News";
 import Portfolio from "./pages/Portfolio";
 import Account from "./pages/Account";
 import NotFound from "./pages/NotFound";
@@ -26,6 +27,7 @@ const App = () => (
               <Route index element={<Home />} />
               <Route path="markets" element={<Markets />} />
               <Route path="discover" element={<Discover />} />
+              <Route path="news" element={<News />} />
               <Route path="portfolio" element={<Portfolio />} />
               <Route path="account" element={<Account />} />
             </Route>
