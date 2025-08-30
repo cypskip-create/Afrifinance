@@ -2,23 +2,29 @@ import { MorningBrief } from "@/components/home/MorningBrief";
 import { TopMovers } from "@/components/home/TopMovers";
 import { WatchlistSummary } from "@/components/home/WatchlistSummary";
 import { CurrencyConverter } from "@/components/home/CurrencyConverter";
-import { TopBar } from "@/components/shared/TopBar";
+import { Bell, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart, Bot, Search, TrendingUp } from "lucide-react";
-import { NavLink } from "react-router-dom";
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-hero">
-      {/* Enhanced Header */}
-      <TopBar 
-        title="AfriFinance" 
-        subtitle="Good morning, Investor"
-        showSearch={true}
-        showAI={true}
-        showNotifications={true}
-      />
+      {/* Header */}
+      <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-sm border-b border-border">
+        <div className="flex items-center justify-between p-4">
+          <div>
+            <h1 className="text-xl font-bold text-primary">StockHub Kenya</h1>
+            <p className="text-sm text-muted-foreground">Good morning, Investor</p>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
+              <Search className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
+              <Bell className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </header>
 
       {/* Main content */}
       <div className="p-4 space-y-6">
@@ -56,24 +62,14 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Quick shortcuts */}
-          <div className="grid grid-cols-3 gap-4">
-            <NavLink to="/portfolio">
-              <Button className="btn-primary h-12 w-full text-sm font-medium flex items-center space-x-2">
-                <PieChart className="h-4 w-4" />
-                <span>Portfolio</span>
-              </Button>
-            </NavLink>
-            <Button className="btn-accent h-12 text-sm font-medium flex items-center space-x-2">
-              <Bot className="h-4 w-4" />
-              <span>AI Assistant</span>
+          {/* Quick actions */}
+          <div className="grid grid-cols-2 gap-4">
+            <Button className="btn-primary h-12 text-sm font-medium">
+              + Add to Watchlist
             </Button>
-            <NavLink to="/discover">
-              <Button variant="outline" className="h-12 w-full text-sm font-medium flex items-center space-x-2">
-                <Search className="h-4 w-4" />
-                <span>Discover</span>
-              </Button>
-            </NavLink>
+            <Button className="btn-accent h-12 text-sm font-medium">
+              📊 Screen Stocks
+            </Button>
           </div>
         </div>
 

@@ -1,4 +1,4 @@
-import { Home, TrendingUp, Search, Newspaper, User } from "lucide-react";
+import { Home, TrendingUp, Search, PieChart, User } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
@@ -6,7 +6,7 @@ const navItems = [
   { id: "home", label: "Home", icon: Home, path: "/" },
   { id: "markets", label: "Markets", icon: TrendingUp, path: "/markets" },
   { id: "discover", label: "Discover", icon: Search, path: "/discover" },
-  { id: "news", label: "News", icon: Newspaper, path: "/news" },
+  { id: "portfolio", label: "Portfolio", icon: PieChart, path: "/portfolio" },
   { id: "account", label: "Account", icon: User, path: "/account" },
 ];
 
