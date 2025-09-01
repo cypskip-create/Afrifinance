@@ -135,7 +135,20 @@
 
   body {
     @apply bg-background text-foreground overflow-x-hidden;
+    /* 20% smaller base font size for Moomoo-style density */
+    font-size: 14px;
   }
+
+  /* Smaller typography scale for Moomoo-style information density */
+  h1 { font-size: 1.6rem; }
+  h2 { font-size: 1.4rem; }
+  h3 { font-size: 1.2rem; }
+  h4 { font-size: 1.1rem; }
+  .text-xl { font-size: 1rem; }
+  .text-lg { font-size: 0.9rem; }
+  .text-base { font-size: 0.8rem; }
+  .text-sm { font-size: 0.7rem; }
+  .text-xs { font-size: 0.6rem; }
 }
 
 @layer components {

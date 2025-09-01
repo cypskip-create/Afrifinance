@@ -1,8 +1,11 @@
 import { PieChart, Plus, TrendingUp, Calculator } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 export default function Portfolio() {
+  const navigate = useNavigate();
+  
   const holdings = [
     { symbol: "SAFCOM", name: "Safaricom", shares: 1000, value: 12850, cost: 11500, change: 11.7 },
     { symbol: "EQTY", name: "Equity Group", shares: 500, value: 31250, cost: 28000, change: 11.6 },
@@ -65,7 +68,8 @@ export default function Portfolio() {
             {holdings.map((holding) => (
               <div
                 key={holding.symbol}
-                className="p-4 rounded-lg bg-muted/20 hover:bg-muted/30 transition-colors"
+                className="p-4 rounded-lg bg-muted/20 hover:bg-muted/30 transition-colors cursor-pointer"
+                onClick={() => navigate(`/stock/${holding.symbol}`)}
               >
                 <div className="flex items-center justify-between mb-2">
                   <div>

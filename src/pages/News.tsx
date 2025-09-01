@@ -72,7 +72,7 @@ export default function News() {
       <div className="p-4">
         {/* News Categories */}
         <Tabs defaultValue="latest" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-6">
+          <TabsList className="grid w-full grid-cols-4 mb-4">
             {newsCategories.map((category) => (
               <TabsTrigger 
                 key={category.id} 
@@ -86,17 +86,17 @@ export default function News() {
           </TabsList>
 
           {newsCategories.map((category) => (
-            <TabsContent key={category.id} value={category.id} className="space-y-4">
+            <TabsContent key={category.id} value={category.id} className="space-y-3">
               {filteredNews(category.id).map((article, index) => (
                 <Card key={index} className="card-gradient hover:shadow-lg transition-all duration-300">
-                  <CardContent className="p-4">
-                    <div className="flex space-x-4">
-                      <div className="text-2xl">{article.image}</div>
+                  <CardContent className="p-3">
+                    <div className="flex space-x-3">
+                      <div className="text-lg">{article.image}</div>
                       <div className="flex-1">
-                        <h3 className="font-semibold text-foreground mb-2 line-clamp-2">
+                        <h3 className="font-semibold text-foreground mb-1 line-clamp-2 text-xs">
                           {article.title}
                         </h3>
-                        <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                        <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
                           {article.summary}
                         </p>
                         <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -113,15 +113,15 @@ export default function News() {
         </Tabs>
 
         {/* Breaking News Alert */}
-        <Card className="bg-gradient-accent mt-6 border-accent/20">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-white text-sm flex items-center space-x-2">
+        <Card className="bg-gradient-accent mt-4 border-accent/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-white text-xs flex items-center space-x-2">
               <div className="animate-pulse w-2 h-2 bg-white rounded-full"></div>
               <span>Breaking News</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
-            <p className="text-white/90 text-sm">
+            <p className="text-white/90 text-xs">
               KCB Group announces strategic partnership with fintech startup to enhance digital banking services
             </p>
           </CardContent>

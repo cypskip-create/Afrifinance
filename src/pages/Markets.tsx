@@ -8,7 +8,9 @@ export default function Markets() {
     { id: "stocks", label: "Stocks", icon: TrendingUp },
     { id: "crypto", label: "Crypto", icon: Bitcoin },
     { id: "etfs", label: "ETFs", icon: Coins },
+    { id: "options", label: "Options", icon: BarChart3 },
     { id: "commodities", label: "Commodities", icon: Globe },
+    { id: "bonds", label: "Bonds", icon: Coins },
   ];
 
   const indices = [
@@ -46,7 +48,7 @@ export default function Markets() {
       <div className="p-4">
         {/* Market Categories */}
         <Tabs defaultValue="stocks" className="w-full mb-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-6 overflow-x-auto">
             {marketCategories.map((category) => (
               <TabsTrigger 
                 key={category.id} 
@@ -179,6 +181,21 @@ export default function Markets() {
             </Card>
           </TabsContent>
 
+          {/* Options Tab */}
+          <TabsContent value="options" className="space-y-6">
+            <Card className="card-gradient">
+              <CardHeader>
+                <CardTitle className="text-lg">Options Trading</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8 text-muted-foreground">
+                  <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Options data coming soon</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* Commodities Tab */}
           <TabsContent value="commodities" className="space-y-6">
             <Card className="card-gradient">
@@ -189,6 +206,21 @@ export default function Markets() {
                 <div className="text-center py-8 text-muted-foreground">
                   <Globe className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>Commodities data coming soon</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Bonds Tab */}
+          <TabsContent value="bonds" className="space-y-6">
+            <Card className="card-gradient">
+              <CardHeader>
+                <CardTitle className="text-lg">Bonds & Fixed Income</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8 text-muted-foreground">
+                  <Coins className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Bonds data coming soon</p>
                 </div>
               </CardContent>
             </Card>
