@@ -12,6 +12,7 @@ import News from "./pages/News";
 import Portfolio from "./pages/Portfolio";
 import Account from "./pages/Account";
 import StockDetail from "./pages/StockDetail";
+import Watchlist from "./pages/Watchlist";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();

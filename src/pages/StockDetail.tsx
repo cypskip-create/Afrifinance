@@ -1,13 +1,20 @@
-import { ArrowLeft, Star, Bell, TrendingUp, TrendingDown, BarChart3, DollarSign, Calendar, Users, Plus } from "lucide-react";
+import { ArrowLeft, Heart, Bell, TrendingUp, TrendingDown, BarChart3, DollarSign, Calendar, Users, Plus, Building, Globe, MessageCircle, Brain } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate, useParams } from "react-router-dom";
+import { useState } from "react";
 
 export default function StockDetail() {
   const navigate = useNavigate();
   const { symbol } = useParams();
+  const [isWatchlisted, setIsWatchlisted] = useState(false);
+
+  const handleWatchlistToggle = () => {
+    setIsWatchlisted(!isWatchlisted);
+    // Add to toast notification later
+  };
 
   const stockData = {
     SAFCOM: {
@@ -41,6 +48,27 @@ export default function StockDetail() {
   const stock = stockData[symbol as keyof typeof stockData] || stockData.SAFCOM;
 
   const timeframes = ["1D", "1W", "1M", "6M", "1Y", "5Y", "Max"];
+
+  const companyInfo = {
+    SAFCOM: {
+      description: "Safaricom PLC is a leading mobile network operator in Kenya providing mobile telephony, mobile money transfer and wireless data services.",
+      sector: "Telecommunications",
+      headquarters: "Nairobi, Kenya",
+      ceo: "Peter Ndegwa",
+      employees: "6,500+",
+      founded: "1997"
+    },
+    EQTY: {
+      description: "Equity Group Holdings PLC is a financial services group headquartered in Nairobi, Kenya.",
+      sector: "Banking & Financial Services",
+      headquarters: "Nairobi, Kenya", 
+      ceo: "James Mwangi",
+      employees: "15,000+",
+      founded: "1984"
+    }
+  };
+
+  const company = companyInfo[symbol as keyof typeof companyInfo] || companyInfo.SAFCOM;
   
   const newsItems = [
     {
@@ -90,8 +118,13 @@ export default function StockDetail() {
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-              <Star className="h-4 w-4" />
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 w-8 p-0"
+              onClick={handleWatchlistToggle}
+            >
+              <Heart className={`h-4 w-4 ${isWatchlisted ? 'fill-red-500 text-red-500' : ''}`} />
             </Button>
             <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
               <Bell className="h-4 w-4" />
@@ -202,13 +235,90 @@ export default function StockDetail() {
         </Card>
 
         {/* Detailed Tabs */}
-        <Tabs defaultValue="news" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+        <Tabs defaultValue="overview" className="w-full">
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
+            <TabsTrigger value="chart" className="text-xs">Chart</TabsTrigger>
             <TabsTrigger value="news" className="text-xs">News</TabsTrigger>
-            <TabsTrigger value="financials" className="text-xs">Financials</TabsTrigger>
-            <TabsTrigger value="community" className="text-xs">Community</TabsTrigger>
-            <TabsTrigger value="events" className="text-xs">Events</TabsTrigger>
+            <TabsTrigger value="comments" className="text-xs">Comments</TabsTrigger>
+            <TabsTrigger value="options" className="text-xs">Options</TabsTrigger>
+            <TabsTrigger value="company" className="text-xs">Company</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="overview" className="space-y-3 mt-4">
+            <Card className="card-gradient">
+              <CardHeader>
+                <CardTitle className="text-sm flex items-center space-x-2">
+                  <Brain className="h-4 w-4 text-accent" />
+                  <span>AI Insights</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-3">
+                <p className="text-xs text-muted-foreground mb-2">
+                  Based on recent performance and market conditions, {stock.name} shows {stock.isUp ? 'positive momentum' : 'consolidation patterns'}. 
+                  The stock has strong fundamentals with a P/E ratio of {stock.pe} and consistent dividend payments.
+                </p>
+                <div className="text-xs">
+                  <span className="font-medium text-primary">Key Takeaway:</span> {stock.isUp ? 'Consider for growth portfolio' : 'Monitor for entry opportunities'}
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="card-gradient">
+              <CardHeader>
+                <CardTitle className="text-sm">Related Stocks</CardTitle>
+              </CardHeader>
+              <CardContent className="p-3">
+                <div className="space-y-2">
+                  {symbol === 'SAFCOM' ? 
+                    ['EQTY - Equity Group', 'KCB - KCB Group', 'COOP - Co-operative Bank'].map((stock, index) => (
+                      <div key={index} className="flex justify-between items-center p-2 rounded bg-muted/20">
+                        <span className="text-xs font-medium">{stock}</span>
+                        <span className="text-xs text-bull">+1.2%</span>
+                      </div>
+                    )) :
+                    ['SAFCOM - Safaricom', 'SCBK - Standard Chartered', 'DTB - Diamond Trust Bank'].map((stock, index) => (
+                      <div key={index} className="flex justify-between items-center p-2 rounded bg-muted/20">
+                        <span className="text-xs font-medium">{stock}</span>
+                        <span className="text-xs text-bull">+0.8%</span>
+                      </div>
+                    ))
+                  }
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="chart" className="mt-4">
+            <Card className="card-gradient">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm">Interactive Chart</CardTitle>
+                  <div className="flex space-x-1">
+                    {timeframes.map((tf) => (
+                      <Button
+                        key={tf}
+                        variant={tf === "1D" ? "default" : "ghost"}
+                        size="sm"
+                        className="h-6 px-2 text-xs"
+                      >
+                        {tf}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64 bg-muted/20 rounded-lg flex items-center justify-center">
+                  <div className="text-center text-muted-foreground">
+                    <BarChart3 className="h-12 w-12 mx-auto mb-2" />
+                    <div className="text-xs">Candlestick chart with technical indicators</div>
+                    <div className="text-xs opacity-70">Pinch to zoom, drag to pan</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="news" className="space-y-3 mt-4">
             {newsItems.map((news, index) => (
@@ -224,18 +334,7 @@ export default function StockDetail() {
             ))}
           </TabsContent>
 
-          <TabsContent value="financials" className="mt-4">
-            <Card className="card-gradient">
-              <CardContent className="p-4">
-                <div className="text-center py-8 text-muted-foreground">
-                  <DollarSign className="h-8 w-8 mx-auto mb-2" />
-                  <div className="text-xs">Financial statements coming soon</div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="community" className="space-y-3 mt-4">
+          <TabsContent value="comments" className="space-y-3 mt-4">
             {communityPosts.map((post, index) => (
               <Card key={index} className="card-gradient">
                 <CardContent className="p-3">
@@ -257,12 +356,56 @@ export default function StockDetail() {
             ))}
           </TabsContent>
 
-          <TabsContent value="events" className="mt-4">
+          <TabsContent value="options" className="mt-4">
             <Card className="card-gradient">
               <CardContent className="p-4">
                 <div className="text-center py-8 text-muted-foreground">
-                  <Calendar className="h-8 w-8 mx-auto mb-2" />
-                  <div className="text-xs">Corporate events coming soon</div>
+                  <BarChart3 className="h-8 w-8 mx-auto mb-2" />
+                  <div className="text-xs">Options chains coming soon</div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="company" className="mt-4">
+            <Card className="card-gradient">
+              <CardHeader>
+                <CardTitle className="text-sm flex items-center space-x-2">
+                  <Building className="h-4 w-4 text-accent" />
+                  <span>Company Profile</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <h4 className="text-xs font-medium mb-1">About</h4>
+                  <p className="text-xs text-muted-foreground">{company.description}</p>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <div className="text-xs text-muted-foreground">Sector</div>
+                    <div className="text-xs font-medium">{company.sector}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Founded</div>
+                    <div className="text-xs font-medium">{company.founded}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">CEO</div>
+                    <div className="text-xs font-medium">{company.ceo}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Employees</div>
+                    <div className="text-xs font-medium">{company.employees}</div>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1">Headquarters</div>
+                  <div className="flex items-center space-x-1">
+                    <Globe className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-xs font-medium">{company.headquarters}</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
