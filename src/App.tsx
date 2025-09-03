@@ -13,6 +13,7 @@ import Portfolio from "./pages/Portfolio";
 import Account from "./pages/Account";
 import StockDetail from "./pages/StockDetail";
 import Watchlist from "./pages/Watchlist";
+import SectorDetail from "./pages/SectorDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +34,8 @@ const App = () => (
               <Route path="portfolio" element={<Portfolio />} />
               <Route path="account" element={<Account />} />
               <Route path="stock/:symbol" element={<StockDetail />} />
+              <Route path="watchlist" element={<Watchlist />} />
+              <Route path="sector/:sector" element={<SectorDetail />} />
             </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

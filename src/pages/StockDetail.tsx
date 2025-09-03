@@ -239,15 +239,10 @@ export default function StockDetail() {
 
         {/* Detailed Tabs */}
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 sm:grid-cols-8 gap-1">
+          <TabsList className="grid w-full grid-cols-3 gap-1">
             <TabsTrigger value="overview" className="text-xs px-2">Overview</TabsTrigger>
             <TabsTrigger value="financials" className="text-xs px-2">Financials</TabsTrigger>
-            <TabsTrigger value="shareholders" className="text-xs px-2">Shareholders</TabsTrigger>
-            <TabsTrigger value="dividends" className="text-xs px-2">Dividends</TabsTrigger>
             <TabsTrigger value="profile" className="text-xs px-2">Profile</TabsTrigger>
-            <TabsTrigger value="news" className="text-xs px-2">News</TabsTrigger>
-            <TabsTrigger value="comments" className="text-xs px-2">Comments</TabsTrigger>
-            <TabsTrigger value="options" className="text-xs px-2">Options</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-3 mt-4">
@@ -331,10 +326,12 @@ export default function StockDetail() {
 
           <TabsContent value="financials" className="space-y-3 mt-4">
             <Tabs defaultValue="analytics" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="analytics" className="text-xs">Analytics</TabsTrigger>
                 <TabsTrigger value="estimates" className="text-xs">Estimates</TabsTrigger>
                 <TabsTrigger value="statements" className="text-xs">Statements</TabsTrigger>
+                <TabsTrigger value="shareholders" className="text-xs">Shareholders</TabsTrigger>
+                <TabsTrigger value="dividends" className="text-xs">Dividends</TabsTrigger>
               </TabsList>
 
               <TabsContent value="analytics" className="space-y-3 mt-4">
@@ -468,103 +465,103 @@ export default function StockDetail() {
                   </CardContent>
                 </Card>
               </TabsContent>
-            </Tabs>
-          </TabsContent>
 
-          <TabsContent value="shareholders" className="space-y-3 mt-4">
-            {/* Institutional Holdings */}
-            <Card className="card-gradient">
-              <CardHeader>
-                <CardTitle className="text-sm flex items-center space-x-2">
-                  <Briefcase className="h-4 w-4 text-accent" />
-                  <span>Institutional Holdings</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-3">
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center p-2 bg-muted/20 rounded">
-                    <span className="text-xs font-medium">Government of Kenya</span>
-                    <span className="text-xs">35.0%</span>
-                  </div>
-                  <div className="flex justify-between items-center p-2 bg-muted/20 rounded">
-                    <span className="text-xs font-medium">Vodacom Group</span>
-                    <span className="text-xs">35.0%</span>
-                  </div>
-                  <div className="flex justify-between items-center p-2 bg-muted/20 rounded">
-                    <span className="text-xs font-medium">Public Shareholders</span>
-                    <span className="text-xs">30.0%</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Earnings Performance */}
-            <Card className="card-gradient">
-              <CardHeader>
-                <CardTitle className="text-sm">Earnings Performance</CardTitle>
-              </CardHeader>
-              <CardContent className="p-3">
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-muted-foreground">Q3 2024</span>
-                    <div className="text-right">
-                      <div className="text-xs font-medium">Revenue: KES 78.2B</div>
-                      <div className="text-xs text-bull">+15.3% YoY</div>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-muted-foreground">EPS</span>
-                    <div className="text-right">
-                      <div className="text-xs font-medium">KES 0.28 (vs 0.25 est.)</div>
-                      <div className="text-xs text-bull">Beat by 12%</div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="dividends" className="space-y-3 mt-4">
-            <Card className="card-gradient">
-              <CardHeader>
-                <CardTitle className="text-sm flex items-center space-x-2">
-                  <Banknote className="h-4 w-4 text-accent" />
-                  <span>Dividend Information</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-3">
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="text-center p-3 bg-muted/20 rounded">
-                      <div className="text-xs text-muted-foreground">Dividend Per Share</div>
-                      <div className="text-sm font-medium">KES {stock.dividend}</div>
-                    </div>
-                    <div className="text-center p-3 bg-muted/20 rounded">
-                      <div className="text-xs text-muted-foreground">Yield</div>
-                      <div className="text-sm font-medium">4.8%</div>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h4 className="text-xs font-medium mb-2">Dividend History</h4>
+              <TabsContent value="shareholders" className="space-y-3 mt-4">
+                {/* Institutional Holdings */}
+                <Card className="card-gradient">
+                  <CardHeader>
+                    <CardTitle className="text-sm flex items-center space-x-2">
+                      <Briefcase className="h-4 w-4 text-accent" />
+                      <span>Institutional Holdings</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-3">
                     <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-muted-foreground">2024</span>
-                        <span className="text-xs font-medium">KES 0.62</span>
+                      <div className="flex justify-between items-center p-2 bg-muted/20 rounded">
+                        <span className="text-xs font-medium">Government of Kenya</span>
+                        <span className="text-xs">35.0%</span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-muted-foreground">2023</span>
-                        <span className="text-xs font-medium">KES 0.58</span>
+                      <div className="flex justify-between items-center p-2 bg-muted/20 rounded">
+                        <span className="text-xs font-medium">Vodacom Group</span>
+                        <span className="text-xs">35.0%</span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-muted-foreground">2022</span>
-                        <span className="text-xs font-medium">KES 0.55</span>
+                      <div className="flex justify-between items-center p-2 bg-muted/20 rounded">
+                        <span className="text-xs font-medium">Public Shareholders</span>
+                        <span className="text-xs">30.0%</span>
                       </div>
                     </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
+
+                {/* Earnings Performance */}
+                <Card className="card-gradient">
+                  <CardHeader>
+                    <CardTitle className="text-sm">Earnings Performance</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-3">
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-muted-foreground">Q3 2024</span>
+                        <div className="text-right">
+                          <div className="text-xs font-medium">Revenue: KES 78.2B</div>
+                          <div className="text-xs text-bull">+15.3% YoY</div>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-muted-foreground">EPS</span>
+                        <div className="text-right">
+                          <div className="text-xs font-medium">KES 0.28 (vs 0.25 est.)</div>
+                          <div className="text-xs text-bull">Beat by 12%</div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="dividends" className="space-y-3 mt-4">
+                <Card className="card-gradient">
+                  <CardHeader>
+                    <CardTitle className="text-sm flex items-center space-x-2">
+                      <Banknote className="h-4 w-4 text-accent" />
+                      <span>Dividend Information</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-3">
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="text-center p-3 bg-muted/20 rounded">
+                          <div className="text-xs text-muted-foreground">Dividend Per Share</div>
+                          <div className="text-sm font-medium">KES {stock.dividend}</div>
+                        </div>
+                        <div className="text-center p-3 bg-muted/20 rounded">
+                          <div className="text-xs text-muted-foreground">Yield</div>
+                          <div className="text-sm font-medium">4.8%</div>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h4 className="text-xs font-medium mb-2">Dividend History</h4>
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-muted-foreground">2024</span>
+                            <span className="text-xs font-medium">KES 0.62</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-muted-foreground">2023</span>
+                            <span className="text-xs font-medium">KES 0.58</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-muted-foreground">2022</span>
+                            <span className="text-xs font-medium">KES 0.55</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </TabsContent>
 
           <TabsContent value="profile" className="space-y-3 mt-4">
@@ -623,84 +620,62 @@ export default function StockDetail() {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
 
-          <TabsContent value="chart" className="mt-4">
-            <Card className="card-gradient">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm">Interactive Chart</CardTitle>
-                  <div className="flex space-x-1">
-                    {timeframes.map((tf) => (
-                      <Button
-                        key={tf}
-                        variant={tf === "1D" ? "default" : "ghost"}
-                        size="sm"
-                        className="h-6 px-2 text-xs"
-                      >
-                        {tf}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64 bg-muted/20 rounded-lg flex items-center justify-center">
-                  <div className="text-center text-muted-foreground">
-                    <BarChart3 className="h-12 w-12 mx-auto mb-2" />
-                    <div className="text-xs">Candlestick chart with technical indicators</div>
-                    <div className="text-xs opacity-70">Pinch to zoom, drag to pan</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+            {/* News Section */}
+            <Tabs defaultValue="news" className="w-full mt-4">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="news" className="text-xs">News</TabsTrigger>
+                <TabsTrigger value="comments" className="text-xs">Comments</TabsTrigger>
+                <TabsTrigger value="options" className="text-xs">Options</TabsTrigger>
+              </TabsList>
 
-          <TabsContent value="news" className="space-y-3 mt-4">
-            {newsItems.map((news, index) => (
-              <Card key={index} className="card-gradient">
-                <CardContent className="p-3">
-                  <h4 className="text-xs font-medium mb-1">{news.title}</h4>
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>{news.source}</span>
-                    <span>{news.time}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </TabsContent>
+              <TabsContent value="news" className="space-y-3 mt-4">
+                {newsItems.map((news, index) => (
+                  <Card key={index} className="card-gradient">
+                    <CardContent className="p-3">
+                      <h4 className="text-xs font-medium mb-1">{news.title}</h4>
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>{news.source}</span>
+                        <span>{news.time}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </TabsContent>
 
-          <TabsContent value="comments" className="space-y-3 mt-4">
-            {communityPosts.map((post, index) => (
-              <Card key={index} className="card-gradient">
-                <CardContent className="p-3">
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="text-xs font-medium">{post.user}</span>
-                    <span className="text-xs text-muted-foreground">{post.time}</span>
-                  </div>
-                  <p className="text-xs mb-2">{post.content}</p>
-                  <div className="flex items-center space-x-2">
-                    <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
-                      👍 {post.likes}
-                    </Button>
-                    <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
-                      Reply
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </TabsContent>
+              <TabsContent value="comments" className="space-y-3 mt-4">
+                {communityPosts.map((post, index) => (
+                  <Card key={index} className="card-gradient">
+                    <CardContent className="p-3">
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-xs font-medium">{post.user}</span>
+                        <span className="text-xs text-muted-foreground">{post.time}</span>
+                      </div>
+                      <p className="text-xs mb-2">{post.content}</p>
+                      <div className="flex items-center space-x-2">
+                        <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
+                          👍 {post.likes}
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
+                          Reply
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </TabsContent>
 
-          <TabsContent value="options" className="mt-4">
-            <Card className="card-gradient">
-              <CardContent className="p-4">
-                <div className="text-center py-8 text-muted-foreground">
-                  <BarChart3 className="h-8 w-8 mx-auto mb-2" />
-                  <div className="text-xs">Options chains coming soon</div>
-                </div>
-              </CardContent>
-            </Card>
+              <TabsContent value="options" className="mt-4">
+                <Card className="card-gradient">
+                  <CardContent className="p-4">
+                    <div className="text-center py-8 text-muted-foreground">
+                      <BarChart3 className="h-8 w-8 mx-auto mb-2" />
+                      <div className="text-xs">Options chains coming soon</div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </TabsContent>
 
         </Tabs>

@@ -198,7 +198,8 @@ export default function Markets() {
                   {sectors.map((sector) => (
                     <div
                       key={sector.name}
-                      className="flex items-center justify-between p-3 rounded-lg bg-muted/20"
+                      onClick={() => navigate(`/sector/${sector.name.toLowerCase()}`)}
+                      className="flex items-center justify-between p-3 rounded-lg bg-muted/20 cursor-pointer hover:bg-muted/30 transition-colors"
                     >
                       <span className="font-medium">{sector.name}</span>
                       <div className={`flex items-center space-x-1 ${sector.isUp ? 'text-bull' : 'text-bear'}`}>

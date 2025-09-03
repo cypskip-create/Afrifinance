@@ -44,6 +44,24 @@ export default function Portfolio() {
           </CardContent>
         </Card>
 
+        {/* Performance Chart */}
+        <Card className="card-gradient">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center space-x-2">
+              <TrendingUp className="h-5 w-5 text-primary" />
+              <span>Performance</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-32 bg-muted/20 rounded-lg flex items-center justify-center">
+              <div className="text-center text-muted-foreground">
+                <TrendingUp className="h-8 w-8 mx-auto mb-2" />
+                <div className="text-sm">Portfolio performance chart</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Quick Actions */}
         <div className="grid grid-cols-2 gap-4">
           <Button className="btn-primary h-12">
@@ -114,23 +132,6 @@ export default function Portfolio() {
           </CardContent>
         </Card>
 
-        {/* Performance Chart Placeholder */}
-        <Card className="card-gradient">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center space-x-2">
-              <TrendingUp className="h-5 w-5 text-primary" />
-              <span>Performance</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-32 bg-muted/20 rounded-lg flex items-center justify-center">
-              <div className="text-center text-muted-foreground">
-                <TrendingUp className="h-8 w-8 mx-auto mb-2" />
-                <div className="text-sm">Portfolio performance chart</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
