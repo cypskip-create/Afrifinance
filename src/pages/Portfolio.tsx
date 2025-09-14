@@ -1,4 +1,4 @@
-import { PieChart, Plus, TrendingUp, Calculator, Bot } from "lucide-react";
+import { PieChart, Plus, TrendingUp, Calculator, Bot, Coins, DollarSign } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -7,12 +7,35 @@ export default function Portfolio() {
   const navigate = useNavigate();
   
   const holdings = [
-    { symbol: "SAFCOM", name: "Safaricom", shares: 1000, value: 12850, cost: 11500, change: 11.7 },
-    { symbol: "EQTY", name: "Equity Group", shares: 500, value: 31250, cost: 28000, change: 11.6 },
-    { symbol: "SCBK", name: "Standard Chartered", shares: 100, value: 18500, cost: 17500, change: 5.7 },
+    { symbol: "SAFCOM", name: "Safaricom", shares: 1000, value: 12850, cost: 11500, change: 11.7, sector: "Telecommunications", dividend: 1.20 },
+    { symbol: "EQTY", name: "Equity Group", shares: 500, value: 31250, cost: 28000, change: 11.6, sector: "Banking", dividend: 2.50 },
+    { symbol: "SCBK", name: "Standard Chartered", shares: 100, value: 18500, cost: 17500, change: 5.7, sector: "Banking", dividend: 10.00 },
   ];
 
   const totalValue = holdings.reduce((sum, holding) => sum + holding.value, 0);
+
+  // Sector breakdown calculation
+  const sectorBreakdown = holdings.reduce((acc, holding) => {
+    if (!acc[holding.sector]) {
+      acc[holding.sector] = { value: 0, percentage: 0 };
+    }
+    acc[holding.sector].value += holding.value;
+    return acc;
+  }, {} as Record<string, { value: number; percentage: number }>);
+
+  Object.keys(sectorBreakdown).forEach(sector => {
+    sectorBreakdown[sector].percentage = (sectorBreakdown[sector].value / totalValue) * 100;
+  });
+
+  // Dividend tracking
+  const annualDividend = holdings.reduce((sum, holding) => sum + (holding.dividend * holding.shares), 0);
+  const dividendYield = (annualDividend / totalValue) * 100;
+  
+  const recentDividends = [
+    { company: "Safaricom", amount: 1200, date: "2024-03-15", type: "Interim" },
+    { company: "Equity Group", amount: 1250, date: "2024-02-28", type: "Final" },
+    { company: "Standard Chartered", amount: 1000, date: "2024-01-30", type: "Interim" },
+  ];
   const totalCost = holdings.reduce((sum, holding) => sum + holding.cost, 0);
   const totalGain = totalValue - totalCost;
   const totalGainPercent = ((totalGain / totalCost) * 100);
@@ -112,6 +135,75 @@ export default function Portfolio() {
                 </div>
               </div>
             ))}
+          </CardContent>
+        </Card>
+
+        {/* Sector Breakdown */}
+        <Card className="card-gradient">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center space-x-2">
+              <PieChart className="h-5 w-5 text-primary" />
+              <span>Sector Breakdown</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {Object.entries(sectorBreakdown).map(([sector, data]) => (
+              <div key={sector} className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="font-medium">{sector}</span>
+                  <span className="text-muted-foreground">
+                    {data.percentage.toFixed(1)}% • KES {data.value.toLocaleString()}
+                  </span>
+                </div>
+                <div className="w-full bg-muted/20 rounded-full h-2">
+                  <div 
+                    className="bg-primary h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${data.percentage}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* Dividend Tracking */}
+        <Card className="card-gradient">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center space-x-2">
+              <Coins className="h-5 w-5 text-accent" />
+              <span>Dividend Tracking</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="text-center p-4 bg-muted/20 rounded-lg">
+                <div className="text-2xl font-bold text-accent mb-1">
+                  KES {annualDividend.toLocaleString()}
+                </div>
+                <div className="text-sm text-muted-foreground">Annual Dividends</div>
+              </div>
+              <div className="text-center p-4 bg-muted/20 rounded-lg">
+                <div className="text-2xl font-bold text-accent mb-1">
+                  {dividendYield.toFixed(2)}%
+                </div>
+                <div className="text-sm text-muted-foreground">Dividend Yield</div>
+              </div>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="text-sm font-medium text-muted-foreground mb-3">Recent Dividends</div>
+              {recentDividends.map((dividend, index) => (
+                <div key={index} className="flex items-center justify-between p-3 bg-muted/20 rounded-lg">
+                  <div>
+                    <div className="font-medium">{dividend.company}</div>
+                    <div className="text-sm text-muted-foreground">{dividend.type} • {dividend.date}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-medium text-accent">KES {dividend.amount.toLocaleString()}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
 
