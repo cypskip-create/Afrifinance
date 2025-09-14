@@ -36,6 +36,32 @@ export default function Home() {
           {/* Currency converter */}
           <CurrencyConverter />
           
+          {/* NSE Fund Tracking */}
+          <div className="card-gradient rounded-xl p-6 border border-primary/20">
+            <h3 className="text-lg font-semibold mb-4 text-primary">NSE Fund Tracking</h3>
+            <div className="flex space-x-4 overflow-x-auto pb-2">
+              {[
+                { name: "NSE 20 Index", value: "1,847.23", change: 1.2, isUp: true },
+                { name: "NSE 25 Index", value: "3,542.87", change: 0.8, isUp: true },
+                { name: "All Share Index", value: "112.45", change: -0.3, isUp: false },
+                { name: "FTSE NSE Kenya 15", value: "1,234.56", change: 2.1, isUp: true },
+                { name: "NSE Growth Index", value: "987.32", change: -1.5, isUp: false },
+              ].map((fund, index) => (
+                <div
+                  key={fund.name}
+                  className="flex-shrink-0 p-4 rounded-lg bg-muted/20 border border-primary/10 hover:bg-muted/30 transition-all duration-200 min-w-[160px]"
+                >
+                  <div className="text-xs font-medium text-primary mb-1">{fund.name}</div>
+                  <div className="text-lg font-bold mb-1">{fund.value}</div>
+                  <div className={`text-xs flex items-center space-x-1 ${fund.isUp ? 'text-bull' : 'text-bear'}`}>
+                    <span>{fund.isUp ? '↗' : '↘'}</span>
+                    <span>{fund.isUp ? '+' : ''}{fund.change}%</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          
           {/* Market Heat Index placeholder */}
           <div className="card-gradient rounded-xl p-6 border border-primary/20">
             <h3 className="text-lg font-semibold mb-4 text-primary">Market Heat Index</h3>
@@ -66,7 +92,6 @@ export default function Home() {
             </NavLink>
             <Button className="btn-accent h-12 text-sm font-medium flex items-center space-x-2">
               <Bot className="h-4 w-4" />
-              <span>AI Assistant</span>
             </Button>
             <NavLink to="/discover">
               <Button variant="outline" className="h-12 w-full text-sm font-medium flex items-center space-x-2">

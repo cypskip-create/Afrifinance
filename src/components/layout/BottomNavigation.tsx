@@ -5,9 +5,9 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { id: "home", label: "Home", icon: Home, path: "/" },
   { id: "markets", label: "Markets", icon: TrendingUp, path: "/markets" },
-  { id: "portfolio", label: "Portfolio", icon: PieChart, path: "/portfolio" },
-  { id: "discover", label: "Discover", icon: Compass, path: "/discover" },
   { id: "news", label: "News", icon: Newspaper, path: "/news" },
+  { id: "discover", label: "Discover", icon: Compass, path: "/discover" },
+  { id: "portfolio", label: "Portfolio", icon: PieChart, path: "/portfolio" },
   { id: "account", label: "Account", icon: User, path: "/account" },
 ];
 

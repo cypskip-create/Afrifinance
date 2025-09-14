@@ -1,4 +1,4 @@
-import { PieChart, Plus, TrendingUp, Calculator } from "lucide-react";
+import { PieChart, Plus, TrendingUp, Calculator, Bot } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -20,9 +20,14 @@ export default function Portfolio() {
   return (
     <div className="min-h-screen bg-gradient-hero">
       <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-sm border-b border-border">
-        <div className="p-4">
-          <h1 className="text-xl font-bold text-primary">Portfolio</h1>
-          <p className="text-sm text-muted-foreground">Track your investments</p>
+        <div className="flex items-center justify-between p-4">
+          <div>
+            <h1 className="text-xl font-bold text-primary">Portfolio</h1>
+            <p className="text-sm text-muted-foreground">Track your investments</p>
+          </div>
+          <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
+            <Bot className="h-4 w-4" />
+          </Button>
         </div>
       </header>
 
