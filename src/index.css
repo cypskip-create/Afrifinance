@@ -130,13 +130,11 @@
 
 @layer base {
   * {
-    border-color: hsl(var(--border));
+    @apply border-border;
   }
 
   body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
-    overflow-x: hidden;
+    @apply bg-background text-foreground overflow-x-hidden;
     /* 20% smaller base font size for Moomoo-style density */
     font-size: 14px;
   }
@@ -156,11 +154,11 @@
 @layer components {
   /* Market indicators */
   .bull-indicator {
-    color: rgb(74 222 128);
+    @apply text-green-400;
   }
   
   .bear-indicator {
-    color: rgb(248 113 113);
+    @apply text-red-400;
   }
 
   /* Card variants */
@@ -199,47 +197,28 @@
 
   /* Tab navigation */
   .bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 50;
-    background-color: hsl(var(--card));
-    border-top: 1px solid hsl(var(--border));
-    backdrop-filter: blur(4px);
+    @apply fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border backdrop-blur-sm;
   }
 
   .tab-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 0.5rem 0.75rem;
-    min-height: 60px;
-    transition: all 0.2s;
+    @apply flex flex-col items-center justify-center py-2 px-3 min-h-[60px] transition-all duration-200;
   }
 
   .tab-item.active {
-    color: hsl(var(--primary));
+    @apply text-primary;
   }
 
   .tab-item.inactive {
-    color: hsl(var(--muted-foreground));
-  }
-
-  .tab-item.inactive:hover {
-    color: hsl(var(--foreground));
+    @apply text-muted-foreground hover:text-foreground;
   }
 
   /* Market data animations */
   .price-up {
-    color: rgb(74 222 128);
-    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    @apply text-green-400 animate-pulse;
   }
 
   .price-down {
-    color: rgb(248 113 113);
-    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    @apply text-red-400 animate-pulse;
   }
 
   /* Kenyan pattern accent */
