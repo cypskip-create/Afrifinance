@@ -122,7 +122,7 @@ export default function Discover() {
         title="Discover" 
         subtitle="Social investing & learning hub"
         showSearch={true}
-        showAI={true}
+        showAI={false}
         showNotifications={true}
       />
 

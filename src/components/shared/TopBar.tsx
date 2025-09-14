@@ -71,11 +71,10 @@ export function TopBar({
             <Button 
               variant="ghost" 
               size="sm" 
-              className="h-9 px-3 relative"
+              className="h-9 w-9 p-0 relative"
               title={`AI Assistant (${aiUsage.used}/${aiUsage.limit} used)`}
             >
-              <Bot className="h-4 w-4 mr-1" />
-              <span className="text-xs">AI</span>
+              <Bot className="h-4 w-4" />
               <Badge 
                 variant="secondary" 
                 className="absolute -top-1 -right-1 h-4 w-4 p-0 text-xs"
