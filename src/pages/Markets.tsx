@@ -7,6 +7,8 @@ import { useNavigate } from "react-router-dom";
 
 export default function Markets() {
   const navigate = useNavigate();
+  const { addToWatchlist, removeFromWatchlist, isInWatchlist } = useWatchlist();
+  const { toast } = useToast();
   const marketCategories = [
     { id: "stocks", label: "Stocks", icon: TrendingUp },
     { id: "crypto", label: "Crypto", icon: Bitcoin },

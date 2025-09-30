@@ -3,53 +3,70 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { TopBar } from "@/components/shared/TopBar";
 import { useNavigate } from "react-router-dom";
+import { useWatchlist } from "@/hooks/useWatchlist";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Watchlist() {
   const navigate = useNavigate();
+  const { watchlist, loading, removeFromWatchlist } = useWatchlist();
+  const { toast } = useToast();
 
-  const watchlistStocks = [
-    {
-      symbol: "SAFCOM",
-      name: "Safaricom PLC",
-      price: "12.85",
-      change: "0.15",
-      changePercent: "1.18",
+  // Mock current prices for demonstration
+  const currentPrices = {
+    "SAFCOM": { price: 12.85, change: 0.15, changePercent: 1.18, isUp: true },
+    "EQTY": { price: 62.50, change: 7.25, changePercent: 13.12, isUp: true },
+    "KCB": { price: 45.20, change: -1.30, changePercent: -2.79, isUp: false },
+    "COOP": { price: 13.40, change: 0.20, changePercent: 1.52, isUp: true },
+  };
+
+  const watchlistStocks = watchlist.map(item => {
+    const priceData = currentPrices[item.symbol as keyof typeof currentPrices] || {
+      price: 10.00,
+      change: 0,
+      changePercent: 0,
       isUp: true
-    },
-    {
-      symbol: "EQTY", 
-      name: "Equity Group Holdings",
-      price: "62.50",
-      change: "7.25",
-      changePercent: "13.12",
-      isUp: true
-    },
-    {
-      symbol: "KCB",
-      name: "KCB Group PLC",
-      price: "45.20",
-      change: "-1.30",
-      changePercent: "-2.79",
-      isUp: false
-    },
-    {
-      symbol: "COOP",
-      name: "Co-operative Bank",
-      price: "13.40",
-      change: "0.20",
-      changePercent: "1.52",
-      isUp: true
-    }
-  ];
+    };
+    
+    return {
+      symbol: item.symbol,
+      name: item.name,
+      price: priceData.price.toString(),
+      change: priceData.change.toString(),
+      changePercent: priceData.changePercent.toString(),
+      isUp: priceData.isUp
+    };
+  });
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-hero flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading watchlist...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleStockClick = (symbol: string) => {
     navigate(`/stock/${symbol}`);
   };
 
-  const handleRemoveFromWatchlist = (symbol: string, e: React.MouseEvent) => {
+  const handleRemoveFromWatchlist = async (symbol: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    // Add remove logic here
-    console.log(`Removing ${symbol} from watchlist`);
+    const result = await removeFromWatchlist(symbol);
+    if (result?.error) {
+      toast({
+        title: "Error",
+        description: "Failed to remove from watchlist",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Removed from watchlist",
+      });
+    }
   };
 
   return (

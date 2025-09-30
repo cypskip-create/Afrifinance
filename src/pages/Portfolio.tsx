@@ -2,15 +2,53 @@ import { PieChart, Plus, TrendingUp, Calculator, Bot, Coins, DollarSign } from "
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { usePortfolio } from "@/hooks/usePortfolio";
+import { useAuth } from "@/hooks/useAuth";
+import { AddTradeDialog } from "@/components/portfolio/AddTradeDialog";
 
 export default function Portfolio() {
   const navigate = useNavigate();
+  const { holdings: dbHoldings, loading } = usePortfolio();
+  const { user } = useAuth();
   
-  const holdings = [
-    { symbol: "SAFCOM", name: "Safaricom", shares: 1000, value: 12850, cost: 11500, change: 11.7, sector: "Telecommunications", dividend: 1.20 },
-    { symbol: "EQTY", name: "Equity Group", shares: 500, value: 31250, cost: 28000, change: 11.6, sector: "Banking", dividend: 2.50 },
-    { symbol: "SCBK", name: "Standard Chartered", shares: 100, value: 18500, cost: 17500, change: 5.7, sector: "Banking", dividend: 10.00 },
-  ];
+  // Mock current prices for demonstration
+  const currentPrices = {
+    "SAFCOM": 12.85,
+    "EQTY": 62.50,
+    "SCBK": 185.00,
+    "KCB": 45.20,
+    "COOP": 13.40,
+  };
+
+  // Transform database holdings to include current values and calculated fields
+  const holdings = dbHoldings.map(holding => {
+    const currentPrice = currentPrices[holding.symbol as keyof typeof currentPrices] || holding.avg_cost;
+    const currentValue = holding.shares * currentPrice;
+    const totalCost = holding.shares * holding.avg_cost;
+    const change = ((currentPrice - holding.avg_cost) / holding.avg_cost) * 100;
+    
+    return {
+      symbol: holding.symbol,
+      name: holding.name,
+      shares: holding.shares,
+      value: currentValue,
+      cost: totalCost,
+      change: change,
+      sector: holding.sector || "Unknown",
+      dividend: 1.20, // Mock dividend data
+    };
+  });
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-hero flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading portfolio...</p>
+        </div>
+      </div>
+    );
+  }
 
   const totalValue = holdings.reduce((sum, holding) => sum + holding.value, 0);
 
@@ -92,10 +130,12 @@ export default function Portfolio() {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-2 gap-4">
-          <Button className="btn-primary h-12">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Trade
-          </Button>
+          <AddTradeDialog>
+            <Button className="btn-primary h-12 w-full">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Trade
+            </Button>
+          </AddTradeDialog>
           <Button className="btn-accent h-12">
             <Calculator className="h-4 w-4 mr-2" />
             SIP Calculator

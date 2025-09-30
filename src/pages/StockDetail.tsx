@@ -5,15 +5,50 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate, useParams } from "react-router-dom";
 import { useState } from "react";
+import { useWatchlist } from "@/hooks/useWatchlist";
+import { useToast } from "@/hooks/use-toast";
 
 export default function StockDetail() {
   const navigate = useNavigate();
   const { symbol } = useParams();
-  const [isWatchlisted, setIsWatchlisted] = useState(false);
+  const { addToWatchlist, removeFromWatchlist, isInWatchlist } = useWatchlist();
+  const { toast } = useToast();
 
-  const handleWatchlistToggle = () => {
-    setIsWatchlisted(!isWatchlisted);
-    // Add to toast notification later
+  const handleWatchlistToggle = async () => {
+    if (!symbol) return;
+    
+    const isCurrentlyWatchlisted = isInWatchlist(symbol);
+    const stockName = stockData[symbol as keyof typeof stockData]?.name || symbol;
+    
+    if (isCurrentlyWatchlisted) {
+      const result = await removeFromWatchlist(symbol);
+      if (result?.error) {
+        toast({
+          title: "Error",
+          description: "Failed to remove from watchlist",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Removed from watchlist",
+        });
+      }
+    } else {
+      const result = await addToWatchlist(symbol, stockName);
+      if (result?.error) {
+        toast({
+          title: "Error",
+          description: result.error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Added to watchlist",
+        });
+      }
+    }
   };
 
   const stockData = {
@@ -124,7 +159,7 @@ export default function StockDetail() {
               className="h-8 w-8 p-0"
               onClick={handleWatchlistToggle}
             >
-              <Heart className={`h-4 w-4 ${isWatchlisted ? 'fill-red-500 text-red-500' : ''}`} />
+              <Heart className={`h-4 w-4 ${isInWatchlist(symbol || '') ? 'fill-red-500 text-red-500' : ''}`} />
             </Button>
             <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
               <Bot className="h-4 w-4" />

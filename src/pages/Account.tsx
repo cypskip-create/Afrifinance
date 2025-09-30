@@ -1,12 +1,24 @@
-import { User, Settings, CreditCard, Users, Bell, Shield, Crown, Zap } from "lucide-react";
+import { User, Settings, CreditCard, Users, Bell, Shield, Crown, Zap, LogOut } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { TopBar } from "@/components/shared/TopBar";
+import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
+import { useNavigate } from "react-router-dom";
 
 export default function Account() {
+  const { user, signOut } = useAuth();
+  const { profile, loading } = useProfile();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
+  };
+
   const subscriptionPlans = [
     {
       name: "Free",
@@ -54,14 +66,16 @@ export default function Account() {
               </div>
               <div>
                 <h3 className="font-semibold text-lg flex items-center space-x-2">
-                  <span>John Kamau</span>
+                  <span>{profile?.full_name || user?.email?.split('@')[0] || 'User'}</span>
                   <Badge variant="secondary" className="text-xs">
                     <Crown className="h-3 w-3 mr-1" />
-                    Free
+                    {profile?.subscription_plan?.charAt(0).toUpperCase() + profile?.subscription_plan?.slice(1) || 'Free'}
                   </Badge>
                 </h3>
-                <p className="text-sm text-muted-foreground">Beginner Investor</p>
-                <p className="text-xs text-muted-foreground">Member since Dec 2024</p>
+                <p className="text-sm text-muted-foreground">{user?.email}</p>
+                <p className="text-xs text-muted-foreground">
+                  Member since {profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : 'Recently'}
+                </p>
               </div>
             </div>
             <Button variant="outline" className="w-full mt-4">
@@ -185,6 +199,14 @@ export default function Account() {
             <Button variant="outline" className="w-full justify-start">
               <Shield className="h-4 w-4 mr-2" />
               Privacy & Security
+            </Button>
+            <Button 
+              variant="outline" 
+              className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50" 
+              onClick={handleSignOut}
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign Out
             </Button>
           </CardContent>
         </Card>

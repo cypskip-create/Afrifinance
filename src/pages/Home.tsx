@@ -5,20 +5,44 @@ import { CurrencyConverter } from "@/components/home/CurrencyConverter";
 import { TopBar } from "@/components/shared/TopBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart, Bot, Search, TrendingUp } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { PieChart, Bot, Search, TrendingUp, LogIn } from "lucide-react";
+import { NavLink, useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Home() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen bg-gradient-hero">
       {/* Enhanced Header */}
       <TopBar 
-        title="AfriFinance" 
-        subtitle="Good morning, Investor"
+        title={user ? "AfriFinance" : "Welcome to AfriFinance"} 
+        subtitle={user ? "Good morning, Investor" : "Your smart investment companion"}
         showSearch={true}
         showAI={true}
         showNotifications={true}
       />
+      
+      {!user && (
+        <div className="p-4">
+          <Card className="card-gradient border-primary/20">
+            <CardContent className="p-6 text-center">
+              <LogIn className="h-12 w-12 text-primary mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Get Started Today</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Sign up to track your portfolio, create watchlists, and access powerful investment tools.
+              </p>
+              <Button 
+                className="btn-primary w-full" 
+                onClick={() => navigate('/auth')}
+              >
+                Sign Up / Login
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Main content */}
       <div className="p-4 space-y-6">
