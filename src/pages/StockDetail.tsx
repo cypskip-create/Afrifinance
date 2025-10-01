@@ -12,9 +12,9 @@ import { useToast } from "@/hooks/use-toast";
 export default function StockDetail() {
   const navigate = useNavigate();
   const { symbol } = useParams();
+  const [selectedTimeframe, setSelectedTimeframe] = useState("1D");
   const { addToWatchlist, removeFromWatchlist, isInWatchlist } = useWatchlist();
   const { toast } = useToast();
-  const [selectedTimeframe, setSelectedTimeframe] = useState("1D");
 
   const handleWatchlistToggle = async () => {
     if (!symbol) return;
