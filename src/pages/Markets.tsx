@@ -4,6 +4,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { TopBar } from "@/components/shared/TopBar";
 import { useNavigate } from "react-router-dom";
+import { useWatchlist } from "@/hooks/useWatchlist";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Markets() {
   const navigate = useNavigate();
