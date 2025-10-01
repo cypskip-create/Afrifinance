@@ -4,12 +4,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { TopBar } from "@/components/shared/TopBar";
 import { useNavigate } from "react-router-dom";
-import { useWatchlist } from "@/hooks/useWatchlist";
+import * as WatchlistHook from "@/hooks/useWatchlist";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Markets() {
   const navigate = useNavigate();
-  const { addToWatchlist, removeFromWatchlist, isInWatchlist } = useWatchlist();
+  const { addToWatchlist, removeFromWatchlist, isInWatchlist } = WatchlistHook.useWatchlist();
   const { toast } = useToast();
   const marketCategories = [
     { id: "stocks", label: "Stocks", icon: TrendingUp },
