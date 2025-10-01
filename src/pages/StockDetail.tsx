@@ -1,5 +1,6 @@
 import { ArrowLeft, Heart, Bell, TrendingUp, TrendingDown, BarChart3, DollarSign, Calendar, Users, Plus, Building, Globe, MessageCircle, Brain, Bot, Activity, Target, TrendingUp as TrendingUpIcon, Award, PieChart, FileText, Banknote, UserCheck, Briefcase } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StockPriceChart } from "@/components/stock/StockPriceChart";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +14,7 @@ export default function StockDetail() {
   const { symbol } = useParams();
   const { addToWatchlist, removeFromWatchlist, isInWatchlist } = useWatchlist();
   const { toast } = useToast();
+  const [selectedTimeframe, setSelectedTimeframe] = useState("1D");
 
   const handleWatchlistToggle = async () => {
     if (!symbol) return;
@@ -213,9 +215,10 @@ export default function StockDetail() {
                 {timeframes.map((tf) => (
                   <Button
                     key={tf}
-                    variant={tf === "1D" ? "default" : "ghost"}
+                    variant={tf === selectedTimeframe ? "default" : "ghost"}
                     size="sm"
                     className="h-6 px-2 text-xs"
+                    onClick={() => setSelectedTimeframe(tf)}
                   >
                     {tf}
                   </Button>
@@ -224,11 +227,8 @@ export default function StockDetail() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="h-48 bg-muted/20 rounded-lg flex items-center justify-center">
-              <div className="text-center text-muted-foreground">
-                <BarChart3 className="h-8 w-8 mx-auto mb-2" />
-                <div className="text-xs">Interactive chart coming soon</div>
-              </div>
+            <div className="h-64">
+              <StockPriceChart symbol={symbol} timeframe={selectedTimeframe} />
             </div>
           </CardContent>
         </Card>

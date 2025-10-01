@@ -45,6 +45,13 @@
     
     --radius: 0.75rem;
     
+    /* Chart colors */
+    --chart-1: 0 72% 51%;
+    --chart-2: 142 76% 36%;
+    --chart-3: 25 95% 53%;
+    --chart-4: 217 91% 60%;
+    --chart-5: 280 76% 48%;
+    
     /* Light mode gradients */
     --gradient-primary: linear-gradient(135deg, hsl(142 76% 36%), hsl(142 76% 30%));
     --gradient-accent: linear-gradient(135deg, hsl(25 95% 53%), hsl(25 95% 47%));
@@ -105,6 +112,13 @@
     --border: 240 3.7% 15.9%;
     --input: 240 3.7% 15.9%;
     --ring: 142 76% 45%;
+    
+    /* Chart colors */
+    --chart-1: 0 85% 60%;
+    --chart-2: 142 76% 45%;
+    --chart-3: 25 95% 60%;
+    --chart-4: 217 91% 60%;
+    --chart-5: 280 76% 55%;
     
     /* Dark mode gradients */
     --gradient-primary: linear-gradient(135deg, hsl(142 76% 45%), hsl(142 76% 35%));
