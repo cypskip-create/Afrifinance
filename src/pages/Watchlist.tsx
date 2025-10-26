@@ -1,4 +1,4 @@
-import { Heart, TrendingUp, TrendingDown, Plus, Search } from "lucide-react";
+import { Heart, TrendingUp, TrendingDown, Plus, ArrowLeft } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { TopBar } from "@/components/shared/TopBar";
@@ -71,13 +71,22 @@ export default function Watchlist() {
 
   return (
     <div className="min-h-screen bg-gradient-hero">
-      <TopBar 
-        title="My Watchlist" 
-        subtitle="Track your favorite stocks"
-        showSearch={true}
-        showAI={true}
-        showNotifications={true}
-      />
+      <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-sm border-b border-border">
+        <div className="flex items-center justify-between p-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate(-1)}
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="text-center">
+            <h1 className="text-xl font-bold">My Watchlist</h1>
+            <p className="text-sm text-muted-foreground">Track your favorite stocks</p>
+          </div>
+          <div className="w-9"></div>
+        </div>
+      </header>
 
       <div className="p-4 space-y-4">
         {/* Summary Stats */}

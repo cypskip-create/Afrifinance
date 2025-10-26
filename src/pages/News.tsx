@@ -11,6 +11,16 @@ export default function News() {
     { id: "companies", label: "Companies", icon: Building2 },
   ];
 
+  const breakingNews = {
+    title: "KCB Group announces strategic partnership with fintech startup to enhance digital banking services",
+    summary: "Major banking group partners with leading fintech to revolutionize digital banking",
+    source: "Capital Markets",
+    time: "Just now",
+    category: "latest",
+    image: "🔴",
+    isBreaking: true
+  };
+
   const newsItems = [
     {
       title: "Safaricom Reports Strong Q3 Results",
@@ -47,8 +57,8 @@ export default function News() {
   ];
 
   const filteredNews = (category: string) => {
-    if (category === "latest") return newsItems;
-    return newsItems.filter(item => item.category === category);
+    const filtered = category === "latest" ? newsItems : newsItems.filter(item => item.category === category);
+    return [breakingNews, ...filtered];
   };
 
   return (
@@ -93,18 +103,26 @@ export default function News() {
           {newsCategories.map((category) => (
             <TabsContent key={category.id} value={category.id} className="space-y-3">
               {filteredNews(category.id).map((article, index) => (
-                <Card key={index} className="card-gradient hover:shadow-lg transition-all duration-300">
+                <Card key={index} className={`hover:shadow-lg transition-all duration-300 ${'isBreaking' in article && article.isBreaking ? 'bg-gradient-accent border-accent/20' : 'card-gradient'}`}>
                   <CardContent className="p-3">
+                    {'isBreaking' in article && article.isBreaking && (
+                      <div className="flex items-center space-x-2 mb-2">
+                        <div className="animate-pulse w-2 h-2 bg-white rounded-full"></div>
+                        <span className="text-xs font-bold text-white">BREAKING NEWS</span>
+                      </div>
+                    )}
                     <div className="flex space-x-3">
                       <div className="text-lg">{article.image}</div>
                       <div className="flex-1">
-                        <h3 className="font-semibold text-foreground mb-1 line-clamp-2 text-xs">
+                        <h3 className={`font-semibold mb-1 line-clamp-2 text-xs ${'isBreaking' in article && article.isBreaking ? 'text-white' : 'text-foreground'}`}>
                           {article.title}
                         </h3>
-                        <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
-                          {article.summary}
-                        </p>
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        {'summary' in article && (
+                          <p className={`text-xs mb-2 line-clamp-2 ${'isBreaking' in article && article.isBreaking ? 'text-white/90' : 'text-muted-foreground'}`}>
+                            {article.summary}
+                          </p>
+                        )}
+                        <div className={`flex items-center justify-between text-xs ${'isBreaking' in article && article.isBreaking ? 'text-white/80' : 'text-muted-foreground'}`}>
                           <span className="font-medium">{article.source}</span>
                           <span>{article.time}</span>
                         </div>
@@ -117,20 +135,6 @@ export default function News() {
           ))}
         </Tabs>
 
-        {/* Breaking News Alert */}
-        <Card className="bg-gradient-accent mt-4 border-accent/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-white text-xs flex items-center space-x-2">
-              <div className="animate-pulse w-2 h-2 bg-white rounded-full"></div>
-              <span>Breaking News</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <p className="text-white/90 text-xs">
-              KCB Group announces strategic partnership with fintech startup to enhance digital banking services
-            </p>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

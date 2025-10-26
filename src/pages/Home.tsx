@@ -8,17 +8,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Bot, Search, TrendingUp, LogIn } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { getTimeBasedGreeting } from "@/utils/timeGreeting";
 
 export default function Home() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { greeting } = getTimeBasedGreeting();
 
   return (
     <div className="min-h-screen bg-gradient-hero">
       {/* Enhanced Header */}
       <TopBar 
         title={user ? "AfriFinance" : "Welcome to AfriFinance"} 
-        subtitle={user ? "Good morning, Investor" : "Your smart investment companion"}
+        subtitle={user ? `${greeting}, Investor` : "Your smart investment companion"}
         showSearch={true}
         showAI={true}
         showNotifications={true}
