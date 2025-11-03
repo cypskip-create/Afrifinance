@@ -328,19 +328,51 @@ export default function Markets() {
             <CardTitle className="text-lg">Market Heatmap</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-4 gap-2 h-40">
-              {Array.from({ length: 16 }, (_, i) => (
-                <div
-                  key={i}
-                  className={`rounded-lg flex items-center justify-center text-xs font-medium ${
-                    Math.random() > 0.5
-                      ? 'bg-bull/30 text-bull border border-bull/40'
-                      : 'bg-bear/30 text-bear border border-bear/40'
-                  }`}
-                >
-                  {['SAFCOM', 'EQTY', 'SCBK', 'BAMB', 'EABL', 'KCB', 'COOP', 'DTB'][i % 8]}
-                </div>
-              ))}
+            <div className="grid grid-cols-4 gap-3">
+              {[
+                { symbol: 'SAFCOM', change: 2.4 },
+                { symbol: 'EQTY', change: 5.2 },
+                { symbol: 'SCBK', change: -1.8 },
+                { symbol: 'BAMB', change: -3.5 },
+                { symbol: 'EABL', change: 1.1 },
+                { symbol: 'KCB', change: 3.7 },
+                { symbol: 'COOP', change: -0.9 },
+                { symbol: 'DTB', change: 2.1 },
+                { symbol: 'ABSA', change: -2.3 },
+                { symbol: 'NCBA', change: 4.2 },
+                { symbol: 'BRIT', change: 1.5 },
+                { symbol: 'CARBACID', change: -1.2 },
+                { symbol: 'BAT', change: 0.8 },
+                { symbol: 'TOTL', change: -4.1 },
+                { symbol: 'ARM', change: 3.3 },
+                { symbol: 'SCOM', change: 1.9 }
+              ].map((stock, i) => {
+                const intensity = Math.abs(stock.change);
+                const isPositive = stock.change >= 0;
+                return (
+                  <div
+                    key={i}
+                    onClick={() => navigate(`/stock/${stock.symbol}`)}
+                    className={`rounded-xl p-3 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg aspect-square ${
+                      isPositive 
+                        ? intensity > 3 ? 'bg-gradient-to-br from-bull to-bull/60 text-white' :
+                          intensity > 1.5 ? 'bg-bull/50 text-white border border-bull' :
+                          'bg-bull/25 text-bull border border-bull/50'
+                        : intensity > 3 ? 'bg-gradient-to-br from-bear to-bear/60 text-white' :
+                          intensity > 1.5 ? 'bg-bear/50 text-white border border-bear' :
+                          'bg-bear/25 text-bear border border-bear/50'
+                    }`}
+                    style={{
+                      opacity: Math.max(0.7, Math.min(1, 0.5 + intensity / 10))
+                    }}
+                  >
+                    <div className="text-xs font-bold mb-1">{stock.symbol}</div>
+                    <div className="text-xs font-semibold">
+                      {stock.change >= 0 ? '+' : ''}{stock.change}%
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>

@@ -225,12 +225,12 @@ export default function Discover() {
             </CardContent>
           </Card>
 
-          {/* Chats Card */}
-          <Card className="card-gradient cursor-pointer" onClick={() => navigate('/chats')}>
+          {/* Rooms Card */}
+          <Card className="card-gradient cursor-pointer" onClick={() => navigate('/rooms')}>
             <CardContent className="p-4">
               <div className="flex items-center space-x-2 mb-2">
                 <Hash className="h-4 w-4 text-primary" />
-                <h4 className="font-semibold text-sm">Chats</h4>
+                <h4 className="font-semibold text-sm">Rooms</h4>
               </div>
               <p className="text-xs text-muted-foreground mb-3">
                 Real-time trading rooms
@@ -247,11 +247,10 @@ export default function Discover() {
 
         {/* Expanded Sections */}
         <Tabs defaultValue="hub" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="hub" className="text-xs">Feed</TabsTrigger>
-            <TabsTrigger value="learn" className="text-xs">Courses</TabsTrigger>
+            <TabsTrigger value="learn" className="text-xs">Learn</TabsTrigger>
             <TabsTrigger value="insights" className="text-xs">Top Traders</TabsTrigger>
-            <TabsTrigger value="chats" className="text-xs">Rooms</TabsTrigger>
           </TabsList>
 
           {/* TradersHub Feed */}
@@ -262,7 +261,7 @@ export default function Discover() {
                 <Button variant="ghost" size="sm" className="text-xs">Top</Button>
                 <Button variant="ghost" size="sm" className="text-xs">Following</Button>
               </div>
-              <Button size="sm" className="text-xs">
+              <Button size="sm" className="text-xs" onClick={() => navigate('/tradershub')}>
                 <MessageCircle className="h-3 w-3 mr-1" />
                 Post
               </Button>
@@ -309,14 +308,19 @@ export default function Discover() {
 
           {/* Learn Courses */}
           <TabsContent value="learn" className="space-y-3 mt-4">
-            <div className="flex space-x-2 mb-4">
-              <Button variant="outline" size="sm" className="text-xs">Beginner</Button>
-              <Button variant="ghost" size="sm" className="text-xs">Intermediate</Button>
-              <Button variant="ghost" size="sm" className="text-xs">Advanced</Button>
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex space-x-2">
+                <Button variant="outline" size="sm" className="text-xs">Beginner</Button>
+                <Button variant="ghost" size="sm" className="text-xs">Intermediate</Button>
+                <Button variant="ghost" size="sm" className="text-xs">Advanced</Button>
+              </div>
+              <Button size="sm" className="text-xs" onClick={() => navigate('/learn')}>
+                View All
+              </Button>
             </div>
 
-            {courses.map((course, index) => (
-              <Card key={index} className="card-gradient">
+            {courses.slice(0, 3).map((course, index) => (
+              <Card key={index} className="card-gradient cursor-pointer" onClick={() => navigate('/learn')}>
                 <CardContent className="p-3">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center space-x-2">
@@ -377,43 +381,6 @@ export default function Discover() {
             ))}
           </TabsContent>
 
-          {/* Chat Rooms */}
-          <TabsContent value="chats" className="space-y-3 mt-4">
-            <div className="flex justify-between items-center">
-              <div className="flex space-x-2">
-                <Button variant="outline" size="sm" className="text-xs">Public</Button>
-                <Button variant="ghost" size="sm" className="text-xs">Private</Button>
-              </div>
-              <Button size="sm" className="text-xs">
-                <Hash className="h-3 w-3 mr-1" />
-                Create Room
-              </Button>
-            </div>
-
-            {chatRooms.map((room, index) => (
-              <Card key={index} className="card-gradient">
-                <CardContent className="p-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium flex items-center space-x-2">
-                        <span className="text-xs">{room.name}</span>
-                        {room.active && (
-                          <div className="w-2 h-2 bg-bull rounded-full animate-pulse"></div>
-                        )}
-                        <Badge variant="outline" className="text-xs px-1">
-                          {room.type}
-                        </Badge>
-                      </div>
-                      <div className="text-xs text-muted-foreground">{room.members} members</div>
-                    </div>
-                    <Button variant="outline" size="sm" className="text-xs h-6">
-                      Join
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </TabsContent>
         </Tabs>
       </div>
     </div>

@@ -17,6 +17,10 @@ import Watchlist from "./pages/Watchlist";
 import SectorDetail from "./pages/SectorDetail";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import TradersHub from "./pages/TradersHub";
+import Learn from "./pages/Learn";
+import PaperTrade from "./pages/PaperTrade";
+import Rooms from "./pages/Rooms";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +44,10 @@ const App = () => (
                 <Route path="stock/:symbol" element={<StockDetail />} />
                 <Route path="watchlist" element={<Watchlist />} />
                 <Route path="sector/:sector" element={<SectorDetail />} />
+                <Route path="tradershub" element={<TradersHub />} />
+                <Route path="learn" element={<Learn />} />
+                <Route path="papertrade" element={<PaperTrade />} />
+                <Route path="rooms" element={<Rooms />} />
               </Route>
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

@@ -35,10 +35,16 @@ export function MorningBrief() {
           </div>
         </div>
         
-        <div className="bg-primary/10 rounded-lg p-3 border border-primary/20">
+        <div className="bg-primary/10 rounded-lg p-3 border border-primary/20 cursor-pointer hover:bg-primary/20 transition-colors">
           <p className="text-sm">
-            <span className="font-medium text-primary">Key Focus:</span> EABL earnings call at 2:00 PM EAT, 
-            inflation data due Thursday
+            <span className="font-medium text-primary">Key Focus:</span>{" "}
+            <span 
+              className="underline hover:text-primary cursor-pointer"
+              onClick={() => window.location.href = '/news'}
+            >
+              EABL earnings call at 2:00 PM EAT
+            </span>
+            , inflation data due Thursday
           </p>
         </div>
       </CardContent>

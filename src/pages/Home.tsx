@@ -88,25 +88,61 @@ export default function Home() {
           {/* Currency converter */}
           <CurrencyConverter />
           
-          {/* Market Heat Index placeholder */}
-          <div className="card-gradient rounded-xl p-6 border border-primary/20">
-            <h3 className="text-lg font-semibold mb-4 text-primary">Market Heat Index</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {['SAFCOM', 'EQTY', 'SCBK', 'BAMB'].map((stock, index) => (
-                <div
-                  key={stock}
-                  className={`p-3 rounded-lg text-center transition-all duration-200 hover:scale-105 ${
-                    index % 2 === 0 ? 'bg-bull/20 border border-bull/30' : 'bg-bear/20 border border-bear/30'
-                  }`}
-                >
-                  <div className="font-medium text-sm">{stock}</div>
-                  <div className={`text-xs ${index % 2 === 0 ? 'text-bull' : 'text-bear'}`}>
-                    {index % 2 === 0 ? '🔥 Hot' : '❄️ Cool'}
+          {/* Market Heat Index */}
+          <Card className="card-gradient border-primary/20">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold text-primary flex items-center space-x-2">
+                <TrendingUp className="h-5 w-5" />
+                <span>Market Heat Index</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {[
+                  { symbol: 'SAFCOM', change: 2.4, temp: 'Hot' },
+                  { symbol: 'EQTY', change: -1.2, temp: 'Cool' },
+                  { symbol: 'SCBK', change: 3.1, temp: 'Hot' },
+                  { symbol: 'BAMB', change: -2.8, temp: 'Cold' },
+                  { symbol: 'KCB', change: 1.8, temp: 'Warm' },
+                  { symbol: 'COOP', change: -0.5, temp: 'Cool' },
+                  { symbol: 'EABL', change: 2.9, temp: 'Hot' },
+                  { symbol: 'DTB', change: 0.3, temp: 'Neutral' }
+                ].map((stock) => (
+                  <div
+                    key={stock.symbol}
+                    onClick={() => navigate(`/stock/${stock.symbol}`)}
+                    className={`p-4 rounded-xl text-center cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg ${
+                      stock.change > 2 ? 'bg-gradient-to-br from-bull/30 to-bull/10 border-2 border-bull/40' :
+                      stock.change > 0 ? 'bg-gradient-to-br from-bull/20 to-bull/5 border border-bull/30' :
+                      stock.change > -2 ? 'bg-gradient-to-br from-bear/20 to-bear/5 border border-bear/30' :
+                      'bg-gradient-to-br from-bear/30 to-bear/10 border-2 border-bear/40'
+                    }`}
+                  >
+                    <div className="font-bold text-base mb-1">{stock.symbol}</div>
+                    <div className={`text-sm font-medium mb-1 ${stock.change >= 0 ? 'text-bull' : 'text-bear'}`}>
+                      {stock.change >= 0 ? '+' : ''}{stock.change}%
+                    </div>
+                    <div className={`text-xs flex items-center justify-center space-x-1 ${
+                      stock.temp === 'Hot' ? 'text-bull' :
+                      stock.temp === 'Warm' ? 'text-accent' :
+                      stock.temp === 'Cool' ? 'text-bear' :
+                      stock.temp === 'Cold' ? 'text-bear' :
+                      'text-muted-foreground'
+                    }`}>
+                      <span>
+                        {stock.temp === 'Hot' ? '🔥' :
+                         stock.temp === 'Warm' ? '☀️' :
+                         stock.temp === 'Cool' ? '❄️' :
+                         stock.temp === 'Cold' ? '🧊' :
+                         '➡️'}
+                      </span>
+                      <span>{stock.temp}</span>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Quick shortcuts */}
           <div className="grid grid-cols-3 gap-4">
