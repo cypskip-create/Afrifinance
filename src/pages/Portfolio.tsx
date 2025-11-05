@@ -5,6 +5,8 @@ import { useNavigate } from "react-router-dom";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { useAuth } from "@/hooks/useAuth";
 import { AddTradeDialog } from "@/components/portfolio/AddTradeDialog";
+import { PortfolioAnalytics } from "@/components/portfolio/PortfolioAnalytics";
+import { PriceAlertsManager } from "@/components/alerts/PriceAlertsManager";
 
 export default function Portfolio() {
   const navigate = useNavigate();
@@ -93,6 +95,15 @@ export default function Portfolio() {
       </header>
 
       <div className="p-4 space-y-6">
+        {/* Price Alerts Section */}
+        <PriceAlertsManager />
+        
+        {/* Portfolio Analytics */}
+        <PortfolioAnalytics 
+          holdings={holdings}
+          totalValue={totalValue}
+          totalCost={totalCost}
+        />
         {/* Portfolio Summary */}
         <Card className="card-hero">
           <CardContent className="p-6">

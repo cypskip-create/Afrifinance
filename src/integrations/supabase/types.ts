@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_recommendations: {
+        Row: {
+          confidence_score: number
+          created_at: string
+          expires_at: string
+          id: string
+          reasoning: string
+          recommendation_type: string
+          symbol: string
+          user_id: string
+        }
+        Insert: {
+          confidence_score: number
+          created_at?: string
+          expires_at?: string
+          id?: string
+          reasoning: string
+          recommendation_type: string
+          symbol: string
+          user_id: string
+        }
+        Update: {
+          confidence_score?: number
+          created_at?: string
+          expires_at?: string
+          id?: string
+          reasoning?: string
+          recommendation_type?: string
+          symbol?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       dividends: {
         Row: {
           amount: number
@@ -43,6 +76,39 @@ export type Database = {
           id?: string
           payment_date?: string
           symbol?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      portfolio_snapshots: {
+        Row: {
+          created_at: string
+          gain_percentage: number
+          id: string
+          snapshot_date: string
+          total_cost: number
+          total_gain: number
+          total_value: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          gain_percentage: number
+          id?: string
+          snapshot_date?: string
+          total_cost: number
+          total_gain: number
+          total_value: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          gain_percentage?: number
+          id?: string
+          snapshot_date?: string
+          total_cost?: number
+          total_gain?: number
+          total_value?: number
           user_id?: string
         }
         Relationships: []
@@ -78,6 +144,42 @@ export type Database = {
           sector?: string | null
           shares?: number
           symbol?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      price_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string
+          id: string
+          is_active: boolean
+          symbol: string
+          target_value: number | null
+          triggered_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          alert_type: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          symbol: string
+          target_value?: number | null
+          triggered_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          symbol?: string
+          target_value?: number | null
+          triggered_at?: string | null
           updated_at?: string
           user_id?: string
         }

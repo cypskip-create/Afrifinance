@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AIAssistant } from "@/components/ai/AIAssistant";
 
 export default function StockDetail() {
   const navigate = useNavigate();
@@ -200,6 +201,9 @@ export default function StockDetail() {
           </div>
         </div>
         
+        {/* AI Assistant Section */}
+        <AIAssistant symbol={symbol} />
+
         {/* Market Data Collapsible */}
         <Collapsible defaultOpen>
           <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/20 rounded-lg">
