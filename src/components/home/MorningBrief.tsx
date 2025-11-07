@@ -2,7 +2,11 @@ import { Calendar, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getTimeBasedGreeting } from "@/utils/timeGreeting";
 
-export function MorningBrief() {
+interface MorningBriefProps {
+  userName?: string | null;
+}
+
+export function MorningBrief({ userName }: MorningBriefProps) {
   const { period } = getTimeBasedGreeting();
   const today = new Date().toLocaleDateString('en-KE', { 
     weekday: 'long', 
@@ -10,13 +14,15 @@ export function MorningBrief() {
     month: 'long', 
     day: 'numeric' 
   });
+  
+  const firstName = userName ? userName.split(' ')[0] : 'Investor';
 
   return (
     <Card className="card-gradient border-primary/20">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-semibold text-primary">
-            {period.charAt(0).toUpperCase() + period.slice(1)} Brief
+            Good {period} {firstName}
           </CardTitle>
           <div className="flex items-center text-sm text-muted-foreground">
             <Calendar className="h-4 w-4 mr-1" />

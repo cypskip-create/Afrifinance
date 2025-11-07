@@ -1,4 +1,4 @@
-import { Newspaper, Filter, Clock, TrendingUp, Building2, Bot, ArrowLeft, Play } from "lucide-react";
+import { Newspaper, Filter, Clock, TrendingUp, Building2, Bot, ArrowLeft } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,50 +13,6 @@ export default function News() {
     { id: "companies", label: "Companies", icon: Building2 },
   ];
 
-  const featuredVideo = {
-    title: "Safaricom CEO discusses M-Pesa expansion strategy and digital transformation in East Africa",
-    thumbnail: "📱",
-    duration: "12:45",
-    source: "CNBC Africa",
-    time: "1 hour ago",
-    views: "45K views",
-    description: "Exclusive interview with Safaricom's CEO on the future of mobile money and fintech innovation"
-  };
-
-  const videoNews = [
-    {
-      title: "NSE Market Analysis: Banking Sector Outlook",
-      thumbnail: "📊",
-      duration: "5:20",
-      source: "Capital FM",
-      time: "3 hours ago",
-      views: "12K views"
-    },
-    {
-      title: "Expert Interview: Kenya's Economic Growth",
-      thumbnail: "🎙️",
-      duration: "8:15",
-      source: "Business Daily",
-      time: "5 hours ago",
-      views: "15K views"
-    },
-    {
-      title: "KCB Group Q3 Earnings Call Highlights",
-      thumbnail: "🏦",
-      duration: "6:30",
-      source: "Capital Markets",
-      time: "7 hours ago",
-      views: "9K views"
-    },
-    {
-      title: "Tech Stocks Rally: What's Driving Growth?",
-      thumbnail: "💻",
-      duration: "4:55",
-      source: "Business Daily",
-      time: "9 hours ago",
-      views: "11K views"
-    }
-  ];
 
   const breakingNews = {
     title: "KCB Group announces strategic partnership with fintech startup to enhance digital banking services",
@@ -142,82 +98,6 @@ export default function News() {
           Back
         </Button>
 
-        {/* Video News Section - Yahoo Finance Style */}
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <Play className="h-5 w-5 text-primary" />
-            Latest Videos
-          </h2>
-          
-          {/* Featured Video */}
-          <Card className="card-gradient hover:shadow-lg transition-all duration-300 cursor-pointer mb-4">
-            <CardContent className="p-0">
-              <div className="relative w-full aspect-video bg-gradient-to-br from-muted/50 to-muted/30 rounded-t-lg flex items-center justify-center">
-                <div className="text-6xl">{featuredVideo.thumbnail}</div>
-                <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-t-lg hover:bg-black/40 transition-all">
-                  <div className="bg-primary rounded-full p-4 shadow-lg hover:scale-110 transition-transform">
-                    <Play className="h-8 w-8 text-primary-foreground fill-current" />
-                  </div>
-                </div>
-                <div className="absolute bottom-2 right-2 bg-black/90 text-white text-sm font-medium px-2 py-1 rounded">
-                  {featuredVideo.duration}
-                </div>
-              </div>
-              <div className="p-4">
-                <h3 className="font-bold text-base mb-2 line-clamp-2">
-                  {featuredVideo.title}
-                </h3>
-                <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                  {featuredVideo.description}
-                </p>
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span className="font-medium">{featuredVideo.source}</span>
-                  <div className="flex items-center gap-2">
-                    <span>{featuredVideo.views}</span>
-                    <span>•</span>
-                    <span>{featuredVideo.time}</span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Video Grid */}
-          <div className="grid grid-cols-1 gap-3">
-            {videoNews.map((video, index) => (
-              <Card key={index} className="card-gradient hover:shadow-lg transition-all duration-300 cursor-pointer">
-                <CardContent className="p-3">
-                  <div className="flex gap-3">
-                    <div className="relative flex-shrink-0 w-40 aspect-video bg-muted/30 rounded-md flex items-center justify-center">
-                      <div className="text-3xl">{video.thumbnail}</div>
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-md hover:bg-black/30 transition-all">
-                        <div className="bg-primary/90 rounded-full p-2.5 hover:scale-110 transition-transform">
-                          <Play className="h-4 w-4 text-primary-foreground fill-current" />
-                        </div>
-                      </div>
-                      <div className="absolute bottom-1 right-1 bg-black/90 text-white text-xs font-medium px-1.5 py-0.5 rounded">
-                        {video.duration}
-                      </div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-sm line-clamp-2 mb-2">
-                        {video.title}
-                      </h3>
-                      <div className="text-xs text-muted-foreground">
-                        <div className="font-medium mb-1">{video.source}</div>
-                        <div className="flex items-center gap-2">
-                          <span>{video.views}</span>
-                          <span>•</span>
-                          <span>{video.time}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
 
         {/* News Categories */}
         <Tabs defaultValue="latest" className="w-full">

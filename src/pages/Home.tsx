@@ -8,10 +8,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Bot, Search, TrendingUp, LogIn } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
 import { getTimeBasedGreeting } from "@/utils/timeGreeting";
 
 export default function Home() {
   const { user } = useAuth();
+  const { profile } = useProfile();
   const navigate = useNavigate();
   const { greeting } = getTimeBasedGreeting();
 
@@ -49,7 +51,7 @@ export default function Home() {
       {/* Main content */}
       <div className="p-4 space-y-6">
         {/* Morning Brief */}
-        <MorningBrief />
+        <MorningBrief userName={profile?.full_name} />
         
         {/* NSE Fund Tracking */}
         <div className="card-gradient rounded-xl p-6 border border-primary/20">
