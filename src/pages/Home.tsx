@@ -16,13 +16,15 @@ export default function Home() {
   const { profile } = useProfile();
   const navigate = useNavigate();
   const { greeting } = getTimeBasedGreeting();
+  
+  const firstName = profile?.full_name ? profile.full_name.split(' ')[0] : 'Investor';
 
   return (
     <div className="min-h-screen bg-gradient-hero">
       {/* Enhanced Header */}
       <TopBar 
         title={user ? "AfriFinance" : "Welcome to AfriFinance"} 
-        subtitle={user ? `${greeting}, Investor` : "Your smart investment companion"}
+        subtitle={user ? `${greeting}, ${firstName}` : "Your smart investment companion"}
         showSearch={true}
         showAI={true}
         showNotifications={true}
@@ -51,7 +53,7 @@ export default function Home() {
       {/* Main content */}
       <div className="p-4 space-y-6">
         {/* Morning Brief */}
-        <MorningBrief userName={profile?.full_name} />
+        <MorningBrief />
         
         {/* NSE Fund Tracking */}
         <div className="card-gradient rounded-xl p-6 border border-primary/20">
