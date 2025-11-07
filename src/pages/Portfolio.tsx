@@ -95,15 +95,6 @@ export default function Portfolio() {
       </header>
 
       <div className="p-4 space-y-6">
-        {/* Price Alerts Section */}
-        <PriceAlertsManager />
-        
-        {/* Portfolio Analytics */}
-        <PortfolioAnalytics 
-          holdings={holdings}
-          totalValue={totalValue}
-          totalCost={totalCost}
-        />
         {/* Portfolio Summary */}
         <Card className="card-hero">
           <CardContent className="p-6">
@@ -257,6 +248,16 @@ export default function Portfolio() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Price Alerts Section */}
+        <PriceAlertsManager />
+        
+        {/* Portfolio Analytics */}
+        <PortfolioAnalytics 
+          holdings={holdings}
+          totalValue={totalValue}
+          totalCost={totalCost}
+        />
 
         {/* SIP Growth Simulator */}
         <Card className="card-gradient">

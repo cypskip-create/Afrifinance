@@ -1,4 +1,4 @@
-import { Newspaper, Filter, Clock, TrendingUp, Building2, Bot, ArrowLeft } from "lucide-react";
+import { Newspaper, Filter, Clock, TrendingUp, Building2, Bot, ArrowLeft, Play } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,6 +11,33 @@ export default function News() {
     { id: "earnings", label: "Earnings", icon: TrendingUp },
     { id: "economy", label: "Economy", icon: Building2 },
     { id: "companies", label: "Companies", icon: Building2 },
+  ];
+
+  const videoNews = [
+    {
+      title: "Safaricom CEO discusses M-Pesa expansion strategy",
+      thumbnail: "📱",
+      duration: "3:45",
+      source: "CNBC Africa",
+      time: "1 hour ago",
+      views: "12K views"
+    },
+    {
+      title: "NSE Market Analysis: Banking Sector Outlook",
+      thumbnail: "📊",
+      duration: "5:20",
+      source: "Capital FM",
+      time: "3 hours ago",
+      views: "8.5K views"
+    },
+    {
+      title: "Expert Interview: Kenya's Economic Growth Prospects",
+      thumbnail: "🎙️",
+      duration: "8:15",
+      source: "Business Daily",
+      time: "5 hours ago",
+      views: "15K views"
+    }
   ];
 
   const breakingNews = {
@@ -96,6 +123,48 @@ export default function News() {
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back
         </Button>
+
+        {/* Video News Section */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+            <Play className="h-5 w-5 text-primary" />
+            Video News
+          </h2>
+          <div className="grid grid-cols-1 gap-3">
+            {videoNews.map((video, index) => (
+              <Card key={index} className="card-gradient hover:shadow-lg transition-all duration-300 cursor-pointer">
+                <CardContent className="p-3">
+                  <div className="flex gap-3">
+                    <div className="relative flex-shrink-0 w-32 h-20 bg-muted/30 rounded-lg flex items-center justify-center">
+                      <div className="text-3xl">{video.thumbnail}</div>
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-lg">
+                        <div className="bg-primary/90 rounded-full p-2">
+                          <Play className="h-4 w-4 text-primary-foreground fill-current" />
+                        </div>
+                      </div>
+                      <div className="absolute bottom-1 right-1 bg-black/80 text-white text-xs px-1.5 py-0.5 rounded">
+                        {video.duration}
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-sm line-clamp-2 mb-1">
+                        {video.title}
+                      </h3>
+                      <div className="text-xs text-muted-foreground space-y-0.5">
+                        <div className="font-medium">{video.source}</div>
+                        <div className="flex items-center gap-2">
+                          <span>{video.views}</span>
+                          <span>•</span>
+                          <span>{video.time}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
 
         {/* News Categories */}
         <Tabs defaultValue="latest" className="w-full">
