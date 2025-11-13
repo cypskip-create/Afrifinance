@@ -87,7 +87,7 @@ export default function Markets() {
           <h2 className="text-2xl font-bold text-primary mb-4">
             {marketCategories.find(c => c.id === selectedCategory)?.label || "Stocks"}
           </h2>
-          <div className="flex items-center space-x-2 overflow-x-auto pb-2">
+          <div className="grid grid-cols-6 gap-2 px-1">
             {marketCategories.map((category) => {
               const Icon = category.icon;
               return (
@@ -95,7 +95,7 @@ export default function Markets() {
                   key={category.id}
                   variant={category.id === selectedCategory ? "default" : "outline"}
                   size="icon"
-                  className={`h-12 w-12 flex-shrink-0 ${
+                  className={`w-full aspect-square ${
                     category.id === selectedCategory ? 'bg-primary hover:bg-primary/90' : ''
                   }`}
                   onClick={() => setSelectedCategory(category.id)}
