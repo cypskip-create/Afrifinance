@@ -21,6 +21,7 @@ import TradersHub from "./pages/TradersHub";
 import Learn from "./pages/Learn";
 import PaperTrade from "./pages/PaperTrade";
 import Rooms from "./pages/Rooms";
+import Notifications from "./pages/Notifications";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +49,7 @@ const App = () => (
                 <Route path="learn" element={<Learn />} />
                 <Route path="papertrade" element={<PaperTrade />} />
                 <Route path="rooms" element={<Rooms />} />
+                <Route path="notifications" element={<Notifications />} />
               </Route>
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

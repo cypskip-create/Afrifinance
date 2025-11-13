@@ -10,11 +10,15 @@ import { Bell, Plus, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 
-export function PriceAlertsManager() {
+interface PriceAlertsManagerProps {
+  initialSymbol?: string;
+}
+
+export function PriceAlertsManager({ initialSymbol }: PriceAlertsManagerProps = {}) {
   const { alerts, loading, createAlert, deleteAlert, toggleAlert } = usePriceAlerts();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
-  const [symbol, setSymbol] = useState('');
+  const [symbol, setSymbol] = useState(initialSymbol || '');
   const [alertType, setAlertType] = useState<'price_above' | 'price_below'>('price_above');
   const [targetValue, setTargetValue] = useState('');
 

@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Heart, TrendingUp, TrendingDown, Bell, Newspaper, Activity, Target, Award, PieChart, FileText, Banknote, UserCheck, Briefcase, Building, Globe, Users, Calendar } from "lucide-react";
+import { ArrowLeft, Heart, TrendingUp, TrendingDown, Bell, Activity, Target, Award, PieChart, FileText, Banknote, UserCheck, Briefcase, Building, Globe, Users, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { StockPriceChart } from "@/components/stock/StockPriceChart";
 import { BuySharesDialog } from "@/components/stock/BuySharesDialog";
@@ -10,12 +10,13 @@ import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AIAssistant } from "@/components/ai/AIAssistant";
+import { PriceAlertsManager } from "@/components/alerts/PriceAlertsManager";
 
 export default function StockDetail() {
   const navigate = useNavigate();
   const { symbol } = useParams();
   const [selectedTimeframe, setSelectedTimeframe] = useState("1D");
+  const [showAlertsDialog, setShowAlertsDialog] = useState(false);
   const { addToWatchlist, removeFromWatchlist, isInWatchlist } = useWatchlist();
   const { toast } = useToast();
 
@@ -149,12 +150,14 @@ export default function StockDetail() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           
-          <div className="text-center flex items-center space-x-2">
-            <span className="font-bold">{symbol}</span>
-            <span className="text-muted-foreground">KES {stock.price.toFixed(2)}</span>
-            <span className={stock.isUp ? 'text-bull' : 'text-bear'}>
-              {stock.isUp ? '+' : ''}{stock.changePercent}%
-            </span>
+          <div className="text-center">
+            <div className="flex items-center justify-center space-x-2 mb-1">
+              <span className="font-bold">{symbol}</span>
+              <span className={stock.isUp ? 'text-bull' : 'text-bear'}>
+                {stock.isUp ? '+' : ''}{stock.changePercent}%
+              </span>
+            </div>
+            <div className="text-muted-foreground text-sm">KES {stock.price.toFixed(2)}</div>
           </div>
 
           <div className="flex items-center space-x-2">
@@ -166,10 +169,12 @@ export default function StockDetail() {
             >
               <Heart className={`h-5 w-5 ${isInWatchlist(symbol || '') ? 'fill-primary text-primary' : 'text-primary'}`} />
             </Button>
-            <Button variant="ghost" size="icon" className="bg-blue-500/10 rounded-full">
-              <Newspaper className="h-5 w-5 text-blue-500" />
-            </Button>
-            <Button variant="ghost" size="icon" className="bg-orange-500/10 rounded-full">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="bg-orange-500/10 rounded-full"
+              onClick={() => setShowAlertsDialog(true)}
+            >
               <Bell className="h-5 w-5 text-orange-500" />
             </Button>
           </div>
@@ -200,9 +205,6 @@ export default function StockDetail() {
             <span>{stock.isUp ? '+' : ''}KES {stock.change.toFixed(2)} ({stock.changePercent}%)</span>
           </div>
         </div>
-        
-        {/* AI Assistant Section */}
-        <AIAssistant symbol={symbol} />
 
         {/* Market Data Collapsible */}
         <Collapsible defaultOpen>
@@ -237,22 +239,43 @@ export default function StockDetail() {
         </Collapsible>
 
         {/* Action Buttons */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <BuySharesDialog symbol={symbol || ''} name={stock.name} price={stock.price}>
             <Button className="h-14 flex-col py-2 bg-primary hover:bg-primary/90 w-full">
               <TrendingUp className="h-5 w-5 mb-1" />
               <span className="text-sm font-medium">Buy</span>
             </Button>
           </BuySharesDialog>
-          <Button variant="outline" className="h-14 flex-col py-2">
+          <Button 
+            variant="outline" 
+            className="h-14 flex-col py-2"
+            onClick={() => setShowAlertsDialog(true)}
+          >
             <Bell className="h-5 w-5 mb-1" />
-            <span className="text-sm">Alerts</span>
-          </Button>
-          <Button variant="outline" className="h-14 flex-col py-2">
-            <Newspaper className="h-5 w-5 mb-1" />
-            <span className="text-sm">News</span>
+            <span className="text-sm">Set Alert</span>
           </Button>
         </div>
+
+        {/* Price Alerts Dialog */}
+        {showAlertsDialog && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-background rounded-lg w-full max-w-md max-h-[80vh] overflow-auto">
+              <div className="sticky top-0 bg-background border-b p-4 flex items-center justify-between">
+                <h2 className="text-lg font-semibold">Price Alerts</h2>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => setShowAlertsDialog(false)}
+                >
+                  ✕
+                </Button>
+              </div>
+              <div className="p-4">
+                <PriceAlertsManager initialSymbol={symbol} />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Timeframe Buttons */}
         <div className="flex space-x-1">

@@ -1,4 +1,4 @@
-import { TrendingUp, TrendingDown, BarChart3, Bitcoin, Coins, Globe, Brain, Filter } from "lucide-react";
+import { TrendingUp, TrendingDown, BarChart3, Bitcoin, Coins, Globe, Brain, Filter, Building2, Layers, Box } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -6,17 +6,20 @@ import { TopBar } from "@/components/shared/TopBar";
 import { useNavigate } from "react-router-dom";
 import * as WatchlistHook from "@/hooks/useWatchlist";
 import { useToast } from "@/hooks/use-toast";
+import * as React from "react";
 
 export default function Markets() {
   const navigate = useNavigate();
   const { addToWatchlist, removeFromWatchlist, isInWatchlist } = WatchlistHook.useWatchlist();
   const { toast } = useToast();
+  const [selectedCategory, setSelectedCategory] = React.useState("stocks");
+  
   const marketCategories = [
-    { id: "stocks", label: "Stocks", icon: TrendingUp },
+    { id: "stocks", label: "Stocks", icon: Building2 },
     { id: "crypto", label: "Crypto", icon: Bitcoin },
-    { id: "etfs", label: "ETFs", icon: Coins },
+    { id: "etfs", label: "ETFs", icon: Layers },
     { id: "options", label: "Options", icon: BarChart3 },
-    { id: "commodities", label: "Commodities", icon: Globe },
+    { id: "commodities", label: "Commodities", icon: Box },
     { id: "bonds", label: "Bonds", icon: Coins },
   ];
 
@@ -80,20 +83,31 @@ export default function Markets() {
         </Card>
 
         {/* Market Categories */}
-        <Tabs defaultValue="stocks" className="w-full mb-6">
-          <TabsList className="grid w-full grid-cols-6 overflow-x-auto">
-            {marketCategories.map((category) => (
-              <TabsTrigger 
-                key={category.id} 
-                value={category.id}
-                className="flex items-center space-x-1 text-xs"
-              >
-                <category.icon className="h-3 w-3" />
-                <span>{category.label}</span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
+        <div className="mb-4">
+          <h2 className="text-2xl font-bold text-primary mb-4">
+            {marketCategories.find(c => c.id === selectedCategory)?.label || "Stocks"}
+          </h2>
+          <div className="flex items-center space-x-2 overflow-x-auto pb-2">
+            {marketCategories.map((category) => {
+              const Icon = category.icon;
+              return (
+                <Button
+                  key={category.id}
+                  variant={category.id === selectedCategory ? "default" : "outline"}
+                  size="icon"
+                  className={`h-12 w-12 flex-shrink-0 ${
+                    category.id === selectedCategory ? 'bg-primary hover:bg-primary/90' : ''
+                  }`}
+                  onClick={() => setSelectedCategory(category.id)}
+                >
+                  <Icon className="h-5 w-5" />
+                </Button>
+              );
+            })}
+          </div>
+        </div>
 
+        <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="w-full mb-6">
           {/* Stocks Tab */}
           <TabsContent value="stocks" className="space-y-6">
             {/* Top Gainers & Losers */}

@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface TopBarProps {
   title: string;
@@ -19,6 +20,7 @@ export function TopBar({
   showAI = true, 
   showNotifications = true 
 }: TopBarProps) {
+  const navigate = useNavigate();
   const [searchOpen, setSearchOpen] = useState(false);
   const [aiUsage] = useState({ used: 1, limit: 3, tier: "Free" }); // Mock data
 
@@ -86,7 +88,12 @@ export function TopBar({
 
           {/* Notifications */}
           {showNotifications && (
-            <Button variant="ghost" size="sm" className="h-9 w-9 p-0 relative">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-9 w-9 p-0 relative"
+              onClick={() => navigate('/notifications')}
+            >
               <Bell className="h-4 w-4" />
               <div className="absolute -top-1 -right-1 w-2 h-2 bg-accent rounded-full"></div>
             </Button>
