@@ -1,4 +1,4 @@
-import { Newspaper, Filter, Clock, TrendingUp, Building2, Bot, ArrowLeft } from "lucide-react";
+import { Newspaper, Filter, Clock, TrendingUp, Building2, Bot } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -88,17 +88,6 @@ export default function News() {
       </header>
 
       <div className="p-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate(-1)}
-          className="mb-4"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
-
-
         {/* News Categories */}
         <Tabs defaultValue="latest" className="w-full">
           <TabsList className="grid w-full grid-cols-4 mb-4">
