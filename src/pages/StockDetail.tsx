@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Heart, TrendingUp, TrendingDown, Bell, Activity, Target, Award, PieChart, FileText, Banknote, UserCheck, Briefcase, Building, Globe, Users, Calendar } from "lucide-react";
+import { ArrowLeft, Heart, TrendingUp, TrendingDown, Newspaper, Activity, Target, Award, PieChart, FileText, Banknote, UserCheck, Briefcase, Building, Globe, Users, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { StockPriceChart } from "@/components/stock/StockPriceChart";
 import { BuySharesDialog } from "@/components/stock/BuySharesDialog";
@@ -142,22 +142,24 @@ export default function StockDetail() {
       {/* Top Navigation */}
       <header className="sticky top-0 z-40 bg-background border-b border-border">
         <div className="flex items-center justify-between p-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate(-1)}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          
-          <div className="text-center">
-            <div className="flex items-center justify-center space-x-2 mb-1">
-              <span className="font-bold">{symbol}</span>
-              <span className={stock.isUp ? 'text-bull' : 'text-bear'}>
-                {stock.isUp ? '+' : ''}{stock.changePercent}%
-              </span>
+          <div className="flex items-start gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(-1)}
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            
+            <div className="flex flex-col">
+              <div className="flex items-center gap-3">
+                <span className="font-bold text-lg">{symbol}</span>
+                <span className={stock.isUp ? 'text-bull' : 'text-bear'}>
+                  {stock.isUp ? '+' : ''}{stock.changePercent}%
+                </span>
+              </div>
+              <div className="text-foreground text-base">KES {stock.price.toFixed(2)}</div>
             </div>
-            <div className="text-muted-foreground text-sm">KES {stock.price.toFixed(2)}</div>
           </div>
 
           <div className="flex items-center space-x-2">
@@ -173,9 +175,9 @@ export default function StockDetail() {
               variant="ghost" 
               size="icon" 
               className="bg-orange-500/10 rounded-full"
-              onClick={() => setShowAlertsDialog(true)}
+              onClick={() => navigate(`/news?stock=${symbol}`)}
             >
-              <Bell className="h-5 w-5 text-orange-500" />
+              <Newspaper className="h-5 w-5 text-orange-500" />
             </Button>
           </div>
         </div>
@@ -249,10 +251,10 @@ export default function StockDetail() {
           <Button 
             variant="outline" 
             className="h-14 flex-col py-2"
-            onClick={() => setShowAlertsDialog(true)}
+            onClick={() => navigate(`/news?stock=${symbol}`)}
           >
-            <Bell className="h-5 w-5 mb-1" />
-            <span className="text-sm">Set Alert</span>
+            <Newspaper className="h-5 w-5 mb-1" />
+            <span className="text-sm">News</span>
           </Button>
         </div>
 
