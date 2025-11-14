@@ -22,6 +22,7 @@ import Learn from "./pages/Learn";
 import PaperTrade from "./pages/PaperTrade";
 import Rooms from "./pages/Rooms";
 import Notifications from "./pages/Notifications";
+import Landing from "./pages/Landing";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,7 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
+              <Route path="/landing" element={<Landing />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/" element={<MainLayout />}>
                 <Route index element={<Home />} />
