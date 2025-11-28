@@ -10,19 +10,16 @@ import Home from "./pages/Home";
 import Markets from "./pages/Markets";
 import Discover from "./pages/Discover";
 import News from "./pages/News";
-import Portfolio from "./pages/Portfolio";
 import Account from "./pages/Account";
 import StockDetail from "./pages/StockDetail";
 import Watchlist from "./pages/Watchlist";
 import SectorDetail from "./pages/SectorDetail";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
-import TradersHub from "./pages/TradersHub";
 import Learn from "./pages/Learn";
-import PaperTrade from "./pages/PaperTrade";
-import Rooms from "./pages/Rooms";
 import Notifications from "./pages/Notifications";
 import Landing from "./pages/Landing";
+import MarketBrief from "./pages/MarketBrief";
 
 const queryClient = new QueryClient();
 
@@ -42,16 +39,13 @@ const App = () => (
                 <Route path="markets" element={<Markets />} />
                 <Route path="discover" element={<Discover />} />
                 <Route path="news" element={<News />} />
-                <Route path="portfolio" element={<Portfolio />} />
                 <Route path="account" element={<Account />} />
                 <Route path="stock/:symbol" element={<StockDetail />} />
                 <Route path="watchlist" element={<Watchlist />} />
                 <Route path="sector/:sector" element={<SectorDetail />} />
-                <Route path="tradershub" element={<TradersHub />} />
                 <Route path="learn" element={<Learn />} />
-                <Route path="papertrade" element={<PaperTrade />} />
-                <Route path="rooms" element={<Rooms />} />
                 <Route path="notifications" element={<Notifications />} />
+                <Route path="market-brief" element={<MarketBrief />} />
               </Route>
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

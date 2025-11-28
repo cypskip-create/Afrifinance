@@ -1,7 +1,9 @@
 import { Calendar, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useNavigate } from "react-router-dom";
 
 export function MorningBrief() {
+  const navigate = useNavigate();
   const today = new Date().toLocaleDateString('en-KE', { 
     weekday: 'long', 
     year: 'numeric', 
@@ -10,7 +12,10 @@ export function MorningBrief() {
   });
 
   return (
-    <Card className="card-gradient border-primary/20">
+    <Card 
+      className="card-gradient border-primary/20 cursor-pointer hover:shadow-lg transition-all duration-300"
+      onClick={() => navigate('/market-brief')}
+    >
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-semibold text-primary">
@@ -33,16 +38,10 @@ export function MorningBrief() {
           </div>
         </div>
         
-        <div className="bg-primary/10 rounded-lg p-3 border border-primary/20 cursor-pointer hover:bg-primary/20 transition-colors">
+        <div className="bg-primary/10 rounded-lg p-3 border border-primary/20">
           <p className="text-sm">
             <span className="font-medium text-primary">Key Focus:</span>{" "}
-            <span 
-              className="underline hover:text-primary cursor-pointer"
-              onClick={() => window.location.href = '/news'}
-            >
-              EABL earnings call at 2:00 PM EAT
-            </span>
-            , inflation data due Thursday
+            EABL earnings call at 2:00 PM EAT, inflation data due Thursday
           </p>
         </div>
       </CardContent>
