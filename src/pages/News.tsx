@@ -20,7 +20,7 @@ export default function News() {
     source: "Capital Markets",
     time: "Just now",
     category: "latest",
-    image: "🔴",
+    imageUrl: "https://images.unsplash.com/photo-1541354329998-f4d9a9f9297f?w=400&h=250&fit=crop",
     isBreaking: true
   };
 
@@ -31,7 +31,7 @@ export default function News() {
       source: "Business Daily",
       time: "2 hours ago",
       category: "earnings",
-      image: "📱"
+      imageUrl: "https://images.unsplash.com/photo-1556155092-490a1ba16284?w=400&h=250&fit=crop"
     },
     {
       title: "NSE 20 Index Hits New Monthly High",
@@ -39,7 +39,7 @@ export default function News() {
       source: "Capital FM",
       time: "4 hours ago",
       category: "latest",
-      image: "📈"
+      imageUrl: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400&h=250&fit=crop"
     },
     {
       title: "Central Bank Maintains Rates at 12.5%",
@@ -47,7 +47,7 @@ export default function News() {
       source: "The Star",
       time: "6 hours ago",
       category: "economy",
-      image: "🏛️"
+      imageUrl: "https://images.unsplash.com/photo-1541354329998-f4d9a9f9297f?w=400&h=250&fit=crop"
     },
     {
       title: "Equity Bank Expands to South Sudan",
@@ -55,7 +55,7 @@ export default function News() {
       source: "Standard",
       time: "8 hours ago",
       category: "companies",
-      image: "🏦"
+      imageUrl: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400&h=250&fit=crop"
     },
   ];
 
@@ -106,18 +106,26 @@ export default function News() {
           {newsCategories.map((category) => (
             <TabsContent key={category.id} value={category.id} className="space-y-3">
               {filteredNews(category.id).map((article, index) => (
-                <Card key={index} className={`hover:shadow-lg transition-all duration-300 ${'isBreaking' in article && article.isBreaking ? 'bg-gradient-accent border-accent/20' : 'card-gradient'}`}>
-                  <CardContent className="p-3">
+                <Card key={index} className={`hover:shadow-lg transition-all duration-300 overflow-hidden ${'isBreaking' in article && article.isBreaking ? 'bg-gradient-accent border-accent/20' : 'card-gradient'}`}>
+                  <CardContent className="p-0">
                     {'isBreaking' in article && article.isBreaking && (
-                      <div className="flex items-center space-x-2 mb-2">
+                      <div className="flex items-center space-x-2 px-3 pt-3 pb-2">
                         <div className="animate-pulse w-2 h-2 bg-white rounded-full"></div>
                         <span className="text-xs font-bold text-white">BREAKING NEWS</span>
                       </div>
                     )}
-                    <div className="flex space-x-3">
-                      <div className="text-lg">{article.image}</div>
-                      <div className="flex-1">
-                        <h3 className={`font-semibold mb-1 line-clamp-2 text-xs ${'isBreaking' in article && article.isBreaking ? 'text-white' : 'text-foreground'}`}>
+                    <div className="flex">
+                      {'imageUrl' in article && (
+                        <div className="w-24 h-24 flex-shrink-0">
+                          <img 
+                            src={article.imageUrl} 
+                            alt={article.title}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      <div className="flex-1 p-3">
+                        <h3 className={`font-semibold mb-1 line-clamp-2 text-sm ${'isBreaking' in article && article.isBreaking ? 'text-white' : 'text-foreground'}`}>
                           {article.title}
                         </h3>
                         {'summary' in article && (

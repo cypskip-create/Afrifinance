@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Heart, TrendingUp, TrendingDown, Newspaper, Activity, Target, Award, PieChart, FileText, Banknote, UserCheck, Briefcase, Building, Globe, Users, Calendar, Bell, GitCompare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { StockPriceChart } from "@/components/stock/StockPriceChart";
-import { BuySharesDialog } from "@/components/stock/BuySharesDialog";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
@@ -241,14 +240,7 @@ export default function StockDetail() {
         </Collapsible>
 
         {/* Action Buttons */}
-        <div className="grid grid-cols-3 gap-3">
-          <BuySharesDialog symbol={symbol || ''} name={stock.name} price={stock.price}>
-            <Button className="h-14 flex-col py-2 bg-primary hover:bg-primary/90 w-full">
-              <TrendingUp className="h-5 w-5 mb-1" />
-              <span className="text-sm font-medium">Buy</span>
-            </Button>
-          </BuySharesDialog>
-          
+        <div className="grid grid-cols-2 gap-3">
           <Button 
             variant="outline" 
             className="h-14 flex-col py-2"
