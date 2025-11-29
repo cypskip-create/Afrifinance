@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 
 export default function TrackInvestments() {
-  const { portfolio, loading, removeFromPortfolio, refetch } = usePortfolio();
+  const { portfolio, loading, removeFromPortfolio, addToPortfolio, refetch } = usePortfolio();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -78,7 +78,7 @@ export default function TrackInvestments() {
       <div className="p-4 space-y-6">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-bold">Your Investments</h2>
-          <AddTradeDialog onTradeAdded={refetch} />
+          <AddTradeDialog onTradeAdded={addToPortfolio} />
         </div>
 
         <PortfolioAnalytics {...stats} />

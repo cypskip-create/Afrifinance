@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus } from "lucide-react";
 
 interface AddTradeDialogProps {
-  onTradeAdded: () => void;
+  onTradeAdded: (symbol: string, name: string, shares: number, avgCost: number, sector?: string) => Promise<any>;
 }
 
 export function AddTradeDialog({ onTradeAdded }: AddTradeDialogProps) {
@@ -32,7 +32,23 @@ export function AddTradeDialog({ onTradeAdded }: AddTradeDialogProps) {
       return;
     }
 
-    // Here you would typically save to your backend
+    const result = await onTradeAdded(
+      symbol,
+      name,
+      parseFloat(shares),
+      parseFloat(avgCost),
+      sector || undefined
+    );
+
+    if (result.error) {
+      toast({
+        title: "Error",
+        description: "Failed to add investment",
+        variant: "destructive",
+      });
+      return;
+    }
+
     toast({
       title: "Investment Added",
       description: `Added ${shares} shares of ${symbol} to your portfolio`,
@@ -44,7 +60,6 @@ export function AddTradeDialog({ onTradeAdded }: AddTradeDialogProps) {
     setShares("");
     setAvgCost("");
     setSector("");
-    onTradeAdded();
   };
 
   return (
