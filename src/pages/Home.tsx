@@ -1,11 +1,11 @@
 import { MorningBrief } from "@/components/home/MorningBrief";
-import { TopMovers } from "@/components/home/TopMovers";
+import { TopMoversLosers } from "@/components/home/TopMoversLosers";
 import { WatchlistSummary } from "@/components/home/WatchlistSummary";
 import { CurrencyConverter } from "@/components/home/CurrencyConverter";
 import { TopBar } from "@/components/shared/TopBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart, Bot, Search, TrendingUp, LogIn } from "lucide-react";
+import { PieChart, Search, TrendingUp, LogIn } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
@@ -26,7 +26,6 @@ export default function Home() {
         title={user ? "AfriFinance" : "Welcome to AfriFinance"} 
         subtitle={user ? `${greeting}, ${firstName}` : "Your smart investment companion"}
         showSearch={true}
-        showAI={true}
         showNotifications={true}
       />
       
@@ -83,9 +82,9 @@ export default function Home() {
         
         {/* Grid of widgets */}
         <div className="grid gap-6">
-          {/* Top movers and watchlist row */}
+          {/* Top movers/losers and watchlist row */}
           <div className="grid lg:grid-cols-2 gap-6">
-            <TopMovers />
+            <TopMoversLosers />
             <WatchlistSummary />
           </div>
           
@@ -149,16 +148,13 @@ export default function Home() {
           </Card>
 
           {/* Quick shortcuts */}
-          <div className="grid grid-cols-3 gap-4">
-            <NavLink to="/portfolio">
+          <div className="grid grid-cols-2 gap-4">
+            <NavLink to="/track-investments">
               <Button className="btn-primary h-12 w-full text-sm font-medium flex items-center space-x-2">
                 <PieChart className="h-4 w-4" />
-                <span>Portfolio</span>
+                <span>Investments</span>
               </Button>
             </NavLink>
-            <Button className="btn-accent h-12 text-sm font-medium flex items-center space-x-2">
-              <Bot className="h-4 w-4" />
-            </Button>
             <NavLink to="/discover">
               <Button variant="outline" className="h-12 w-full text-sm font-medium flex items-center space-x-2">
                 <Search className="h-4 w-4" />
