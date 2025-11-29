@@ -20,6 +20,9 @@ import Learn from "./pages/Learn";
 import Notifications from "./pages/Notifications";
 import Landing from "./pages/Landing";
 import MarketBrief from "./pages/MarketBrief";
+import TrackInvestments from "./pages/TrackInvestments";
+import TradersHub from "./pages/TradersHub";
+import Rooms from "./pages/Rooms";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +49,9 @@ const App = () => (
                 <Route path="learn" element={<Learn />} />
                 <Route path="notifications" element={<Notifications />} />
                 <Route path="market-brief" element={<MarketBrief />} />
+                <Route path="track-investments" element={<TrackInvestments />} />
+                <Route path="traders-hub" element={<TradersHub />} />
+                <Route path="rooms" element={<Rooms />} />
               </Route>
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
