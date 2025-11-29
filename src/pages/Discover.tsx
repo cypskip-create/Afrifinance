@@ -206,20 +206,20 @@ export default function Discover() {
             </CardContent>
           </Card>
 
-          {/* Papertrade Card */}
-          <Card className="card-gradient cursor-pointer" onClick={() => navigate('/papertrade')}>
+          {/* Track Investments Card */}
+          <Card className="card-gradient cursor-pointer" onClick={() => navigate('/track-investments')}>
             <CardContent className="p-4">
               <div className="flex items-center space-x-2 mb-2">
                 <TrendingUp className="h-4 w-4 text-primary" />
-                <h4 className="font-semibold text-sm">Papertrade</h4>
+                <h4 className="font-semibold text-sm">My Investments</h4>
               </div>
               <p className="text-xs text-muted-foreground mb-3">
-                Practice trading risk-free
+                Track your portfolio
               </p>
               <div className="text-xs">
                 <div className="flex items-center space-x-1 text-accent">
-                  <Users className="h-3 w-3" />
-                  <span>{papertradeStats.activeTraders} active</span>
+                  <PieChart className="h-3 w-3" />
+                  <span>View holdings</span>
                 </div>
               </div>
             </CardContent>
