@@ -128,7 +128,7 @@ export default function Discover() {
 
       <div className="p-4 space-y-4">
         {/* Large Insights Card */}
-        <Card className="card-hero cursor-pointer" onClick={() => navigate('/insights')}>
+        <Card className="card-hero cursor-pointer" onClick={() => navigate('/track-investments')}>
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center space-x-2">
@@ -169,7 +169,7 @@ export default function Discover() {
         {/* 2-Column Grid of Main Cards */}
         <div className="grid grid-cols-2 gap-4">
           {/* TradersHub Card */}
-          <Card className="card-gradient cursor-pointer" onClick={() => navigate('/tradershub')}>
+          <Card className="card-gradient cursor-pointer" onClick={() => navigate('/traders-hub')}>
             <CardContent className="p-4">
               <div className="flex items-center space-x-2 mb-2">
                 <Users className="h-4 w-4 text-primary" />
@@ -261,7 +261,7 @@ export default function Discover() {
                 <Button variant="ghost" size="sm" className="text-xs">Top</Button>
                 <Button variant="ghost" size="sm" className="text-xs">Following</Button>
               </div>
-              <Button size="sm" className="text-xs" onClick={() => navigate('/tradershub')}>
+              <Button size="sm" className="text-xs" onClick={() => navigate('/traders-hub')}>
                 <MessageCircle className="h-3 w-3 mr-1" />
                 Post
               </Button>
