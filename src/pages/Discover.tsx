@@ -176,12 +176,12 @@ export default function Discover() {
                 <h4 className="font-semibold text-sm">TradersHub</h4>
               </div>
               <p className="text-xs text-muted-foreground mb-3">
-                Social trading community
+                Connect & interact with traders
               </p>
               <div className="text-xs">
                 <div className="flex items-center space-x-1 text-accent">
-                  <MessageCircle className="h-3 w-3" />
-                  <span>24 new posts</span>
+                  <Users className="h-3 w-3" />
+                  <span>1.2K active traders</span>
                 </div>
               </div>
             </CardContent>

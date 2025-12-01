@@ -1,12 +1,14 @@
 import { TopBar } from "@/components/shared/TopBar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { AddTradeDialog } from "@/components/portfolio/AddTradeDialog";
 import { PortfolioAnalytics } from "@/components/portfolio/PortfolioAnalytics";
-import { Trash2, TrendingUp, TrendingDown } from "lucide-react";
+import { Trash2, TrendingUp, TrendingDown, PieChart as PieChartIcon, BarChart3, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { LineChart, Line, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from "recharts";
 
 export default function TrackInvestments() {
   const { portfolio, loading, removeFromPortfolio, addToPortfolio, refetch } = usePortfolio();
@@ -41,6 +43,37 @@ export default function TrackInvestments() {
 
     return { totalValue, totalCost, totalGain, gainPercentage };
   };
+
+  // Calculate sector allocation
+  const getSectorAllocation = () => {
+    const sectorMap: { [key: string]: number } = {};
+    
+    portfolio.forEach((item) => {
+      const currentPrice = getCurrentPrice(item.symbol);
+      const value = currentPrice * item.shares;
+      const sector = item.sector || 'Other';
+      sectorMap[sector] = (sectorMap[sector] || 0) + value;
+    });
+
+    return Object.entries(sectorMap).map(([name, value]) => ({
+      name,
+      value: Math.round(value)
+    }));
+  };
+
+  // Mock historical data for performance chart
+  const getPerformanceData = () => {
+    return [
+      { date: 'Jan', value: 45000 },
+      { date: 'Feb', value: 48000 },
+      { date: 'Mar', value: 46500 },
+      { date: 'Apr', value: 52000 },
+      { date: 'May', value: 55000 },
+      { date: 'Jun', value: stats.totalValue }
+    ];
+  };
+
+  const COLORS = ['hsl(var(--primary))', 'hsl(var(--accent))', 'hsl(var(--bull))', 'hsl(var(--bear))', 'hsl(var(--muted))'];
 
   const handleDelete = async (id: string) => {
     const result = await removeFromPortfolio(id);
@@ -83,7 +116,16 @@ export default function TrackInvestments() {
 
         <PortfolioAnalytics {...stats} />
 
-        {portfolio.length === 0 ? (
+        {/* Advanced Analytics Tabs */}
+        <Tabs defaultValue="holdings" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="holdings">Holdings</TabsTrigger>
+            <TabsTrigger value="performance">Performance</TabsTrigger>
+            <TabsTrigger value="allocation">Allocation</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="holdings" className="space-y-4 mt-4">
+            {portfolio.length === 0 ? (
           <Card className="card-gradient">
             <CardContent className="p-8 text-center">
               <p className="text-muted-foreground mb-4">
@@ -94,9 +136,9 @@ export default function TrackInvestments() {
               </p>
             </CardContent>
           </Card>
-        ) : (
-          <div className="space-y-4">
-            {portfolio.map((item) => {
+            ) : (
+              <div className="space-y-4">
+                {portfolio.map((item) => {
               const currentPrice = getCurrentPrice(item.symbol);
               const totalValue = currentPrice * item.shares;
               const totalCost = item.avg_cost * item.shares;
@@ -164,10 +206,156 @@ export default function TrackInvestments() {
                     </div>
                   </CardContent>
                 </Card>
-              );
-            })}
-          </div>
-        )}
+                  );
+                })}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Performance Chart Tab */}
+          <TabsContent value="performance" className="mt-4">
+            <Card className="card-gradient">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <BarChart3 className="h-5 w-5" />
+                  <span>Portfolio Performance</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {portfolio.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Add investments to see performance data
+                  </div>
+                ) : (
+                  <>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <LineChart data={getPerformanceData()}>
+                        <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" />
+                        <YAxis stroke="hsl(var(--muted-foreground))" />
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: 'hsl(var(--card))', 
+                            border: '1px solid hsl(var(--border))' 
+                          }} 
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="value" 
+                          stroke="hsl(var(--primary))" 
+                          strokeWidth={2}
+                          dot={{ fill: 'hsl(var(--primary))' }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                    <div className="mt-4 grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-muted-foreground">6M Return</p>
+                        <p className={`text-lg font-bold ${stats.gainPercentage >= 0 ? 'text-bull' : 'text-bear'}`}>
+                          {stats.gainPercentage >= 0 ? '+' : ''}{stats.gainPercentage.toFixed(2)}%
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Total Gain/Loss</p>
+                        <p className={`text-lg font-bold ${stats.totalGain >= 0 ? 'text-bull' : 'text-bear'}`}>
+                          {stats.totalGain >= 0 ? '+' : ''}KES {stats.totalGain.toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Sector Allocation Tab */}
+          <TabsContent value="allocation" className="mt-4">
+            <Card className="card-gradient">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <PieChartIcon className="h-5 w-5" />
+                  <span>Sector Allocation</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {portfolio.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Add investments to see sector allocation
+                  </div>
+                ) : (
+                  <>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <PieChart>
+                        <Pie
+                          data={getSectorAllocation()}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {getSectorAllocation().map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: 'hsl(var(--card))', 
+                            border: '1px solid hsl(var(--border))' 
+                          }} 
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="mt-4 space-y-2">
+                      {getSectorAllocation().map((sector, index) => (
+                        <div key={sector.name} className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <div 
+                              className="w-3 h-3 rounded-full" 
+                              style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                            />
+                            <span className="text-sm">{sector.name}</span>
+                          </div>
+                          <span className="text-sm font-medium">KES {sector.value.toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Investment Tips Card */}
+            <Card className="card-gradient mt-4">
+              <CardHeader>
+                <CardTitle className="text-base">Investment Insights</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-start space-x-2">
+                  <Calendar className="h-4 w-4 mt-0.5 text-primary" />
+                  <div>
+                    <p className="text-sm font-medium">Diversification</p>
+                    <p className="text-xs text-muted-foreground">
+                      {getSectorAllocation().length < 3 
+                        ? "Consider diversifying across more sectors to reduce risk" 
+                        : "Good sector diversification in your portfolio"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <TrendingUp className="h-4 w-4 mt-0.5 text-bull" />
+                  <div>
+                    <p className="text-sm font-medium">Performance</p>
+                    <p className="text-xs text-muted-foreground">
+                      Your portfolio is {stats.gainPercentage >= 0 ? 'up' : 'down'} {Math.abs(stats.gainPercentage).toFixed(2)}% overall
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
