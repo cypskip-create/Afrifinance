@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Heart, TrendingUp, TrendingDown, Newspaper, Activity, Target, Award, PieChart, FileText, Banknote, UserCheck, Briefcase, Building, Globe, Users, Calendar, Bell, GitCompare } from "lucide-react";
+import { ArrowLeft, Heart, TrendingUp, TrendingDown, Newspaper, Activity, Target, Award, PieChart, FileText, Banknote, UserCheck, Briefcase, Building, Globe, Users, Calendar, Bell, GitCompare, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { StockPriceChart } from "@/components/stock/StockPriceChart";
 import { useWatchlist } from "@/hooks/useWatchlist";
@@ -10,13 +10,17 @@ import { useState } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PriceAlertsManager } from "@/components/alerts/PriceAlertsManager";
+import { AddTradeDialog } from "@/components/portfolio/AddTradeDialog";
+import { usePortfolio } from "@/hooks/usePortfolio";
 
 export default function StockDetail() {
   const navigate = useNavigate();
   const { symbol } = useParams();
   const [selectedTimeframe, setSelectedTimeframe] = useState("1D");
   const [showAlertsDialog, setShowAlertsDialog] = useState(false);
+  const [showAddTradeDialog, setShowAddTradeDialog] = useState(false);
   const { addToWatchlist, removeFromWatchlist, isInWatchlist } = useWatchlist();
+  const { addToPortfolio } = usePortfolio();
   const { toast } = useToast();
 
   const stockData = {
@@ -240,7 +244,7 @@ export default function StockDetail() {
         </Collapsible>
 
         {/* Action Buttons */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <Button 
             variant="outline" 
             className="h-14 flex-col py-2"
@@ -248,6 +252,15 @@ export default function StockDetail() {
           >
             <Bell className="h-5 w-5 mb-1" />
             <span className="text-sm">Create Alert</span>
+          </Button>
+
+          <Button 
+            variant="outline" 
+            className="h-14 flex-col py-2"
+            onClick={() => setShowAddTradeDialog(true)}
+          >
+            <Plus className="h-5 w-5 mb-1" />
+            <span className="text-sm">Add Trade</span>
           </Button>
 
           <Button 
@@ -279,6 +292,35 @@ export default function StockDetail() {
               </div>
               <div className="p-4">
                 <PriceAlertsManager initialSymbol={symbol} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add Trade Dialog */}
+        {showAddTradeDialog && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-background rounded-lg w-full max-w-md max-h-[80vh] overflow-auto">
+              <div className="sticky top-0 bg-background border-b p-4 flex items-center justify-between">
+                <h2 className="text-lg font-semibold">Add Trade</h2>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => setShowAddTradeDialog(false)}
+                >
+                  ✕
+                </Button>
+              </div>
+              <div className="p-4">
+                <AddTradeDialog 
+                  onTradeAdded={async (sym, name, shares, avgCost, sector) => {
+                    const result = await addToPortfolio(sym, name, shares, avgCost, sector);
+                    if (!result.error) {
+                      setShowAddTradeDialog(false);
+                    }
+                    return result;
+                  }}
+                />
               </div>
             </div>
           </div>
