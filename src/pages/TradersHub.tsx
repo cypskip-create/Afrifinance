@@ -1,9 +1,8 @@
-import { TopBar } from "@/components/shared/TopBar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, TrendingUp, MessageSquare, Award } from "lucide-react";
+import { Users, TrendingUp, MessageSquare, Award, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const traders = [
@@ -18,10 +17,24 @@ export default function TradersHub() {
 
   return (
     <div className="min-h-screen bg-gradient-hero">
-      <TopBar 
-        title="Traders Hub" 
-        subtitle="Connect with top traders and investors"
-      />
+      {/* Header with back button */}
+      <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-sm border-b border-border">
+        <div className="flex items-center justify-between p-4">
+          <div className="flex items-center space-x-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(-1)}
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-xl font-bold text-primary">Traders Hub</h1>
+              <p className="text-sm text-muted-foreground">Connect with top traders and investors</p>
+            </div>
+          </div>
+        </div>
+      </header>
       
       <div className="p-4 space-y-6">
         {/* Stats Overview */}

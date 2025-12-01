@@ -1,11 +1,10 @@
-import { TopBar } from "@/components/shared/TopBar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { AddTradeDialog } from "@/components/portfolio/AddTradeDialog";
 import { PortfolioAnalytics } from "@/components/portfolio/PortfolioAnalytics";
-import { Trash2, TrendingUp, TrendingDown, PieChart as PieChartIcon, BarChart3, Calendar } from "lucide-react";
+import { Trash2, TrendingUp, TrendingDown, PieChart as PieChartIcon, BarChart3, Calendar, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { LineChart, Line, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from "recharts";
@@ -96,7 +95,23 @@ export default function TrackInvestments() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-hero">
-        <TopBar title="Track Your Investments" />
+        <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-sm border-b border-border">
+          <div className="flex items-center justify-between p-4">
+            <div className="flex items-center space-x-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate(-1)}
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div>
+                <h1 className="text-xl font-bold text-primary">Track Your Investments</h1>
+                <p className="text-sm text-muted-foreground">Monitor your investment performance</p>
+              </div>
+            </div>
+          </div>
+        </header>
         <div className="p-4">
           <div className="text-center py-8">Loading...</div>
         </div>
@@ -106,7 +121,24 @@ export default function TrackInvestments() {
 
   return (
     <div className="min-h-screen bg-gradient-hero">
-      <TopBar title="Track Your Investments" subtitle="Monitor your investment performance" />
+      {/* Header with back button */}
+      <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-sm border-b border-border">
+        <div className="flex items-center justify-between p-4">
+          <div className="flex items-center space-x-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(-1)}
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-xl font-bold text-primary">Track Your Investments</h1>
+              <p className="text-sm text-muted-foreground">Monitor your investment performance</p>
+            </div>
+          </div>
+        </div>
+      </header>
       
       <div className="p-4 space-y-6">
         <div className="flex justify-between items-center">
