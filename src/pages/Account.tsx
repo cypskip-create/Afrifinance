@@ -23,19 +23,19 @@ export default function Account() {
     {
       name: "Free",
       price: "KES 0",
-      features: ["Basic features", "Limited AI (3/day)", "Ads included"],
+      features: ["Basic features", "Standard tools", "Ads included"],
       current: true
     },
     {
       name: "Premium",
       price: "KES 999/month",
-      features: ["Ad-free experience", "Enhanced tools", "AI Assistant (30/day)"],
+      features: ["Ad-free experience", "Enhanced tools", "Advanced analytics"],
       current: false
     },
     {
       name: "Premium+",
       price: "KES 1,999/month", 
-      features: ["Everything included", "Unlimited AI", "Priority support"],
+      features: ["Everything included", "Real-time data", "Priority support"],
       current: false
     }
   ];

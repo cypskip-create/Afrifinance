@@ -1,4 +1,4 @@
-import { Newspaper, Filter, Clock, TrendingUp, Building2, Bot } from "lucide-react";
+import { Newspaper, Filter, Clock, TrendingUp, Building2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -77,9 +77,6 @@ export default function News() {
             <p className="text-sm text-muted-foreground">Stay updated with latest market developments</p>
           </div>
           <div className="flex space-x-2">
-            <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
-              <Bot className="h-4 w-4" />
-            </Button>
             <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
               <Filter className="h-4 w-4" />
             </Button>
