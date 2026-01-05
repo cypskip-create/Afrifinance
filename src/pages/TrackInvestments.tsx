@@ -94,59 +94,56 @@ export default function TrackInvestments() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-hero">
-        <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-sm border-b border-border">
+      <div className="min-h-screen bg-background">
+        <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border">
           <div className="flex items-center justify-between p-4">
             <div className="flex items-center space-x-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate(-1)}
-              >
+              <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <div>
-                <h1 className="text-xl font-bold text-primary">Track Your Investments</h1>
-                <p className="text-sm text-muted-foreground">Monitor your investment performance</p>
+                <h1 className="text-lg font-bold">Track Your Investments</h1>
+                <p className="text-xs text-muted-foreground">Monitor your portfolio</p>
               </div>
             </div>
           </div>
         </header>
-        <div className="p-4">
-          <div className="text-center py-8">Loading...</div>
+        <div className="flex items-center justify-center py-20">
+          <div className="flex flex-col items-center">
+            <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary/30 border-t-primary mb-4" />
+            <p className="text-sm text-muted-foreground">Loading portfolio...</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-hero">
-      {/* Header with back button */}
-      <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-sm border-b border-border">
+    <div className="min-h-screen bg-background pb-20">
+      {/* Header */}
+      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border">
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center space-x-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate(-1)}
-            >
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="tap-scale">
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-xl font-bold text-primary">Track Your Investments</h1>
-              <p className="text-sm text-muted-foreground">Monitor your investment performance</p>
+              <h1 className="text-lg font-bold">Track Your Investments</h1>
+              <p className="text-xs text-muted-foreground">Monitor your portfolio</p>
             </div>
           </div>
         </div>
       </header>
       
-      <div className="p-4 space-y-6">
-        <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold">Your Investments</h2>
+      <div className="p-4 space-y-5">
+        <div className="flex justify-between items-center animate-fade-in">
+          <h2 className="text-xl font-bold">Your Portfolio</h2>
           <AddTradeDialog onTradeAdded={addToPortfolio} />
         </div>
 
-        <PortfolioAnalytics {...stats} />
+        <div className="animate-fade-in">
+          <PortfolioAnalytics {...stats} />
+        </div>
 
         {/* Advanced Analytics Tabs */}
         <Tabs defaultValue="holdings" className="w-full">

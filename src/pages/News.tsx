@@ -65,29 +65,27 @@ export default function News() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-hero">
+    <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-sm border-b border-border">
+      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border">
         <div className="flex items-center justify-between p-4">
           <div>
-            <h1 className="text-xl font-bold text-primary flex items-center space-x-2">
-              <Newspaper className="h-5 w-5" />
+            <h1 className="text-lg font-bold flex items-center space-x-2">
+              <Newspaper className="h-5 w-5 text-primary" />
               <span>Market News</span>
             </h1>
-            <p className="text-sm text-muted-foreground">Stay updated with latest market developments</p>
+            <p className="text-xs text-muted-foreground">Latest market developments</p>
           </div>
-          <div className="flex space-x-2">
-            <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
-              <Filter className="h-4 w-4" />
-            </Button>
-          </div>
+          <Button variant="ghost" size="icon" className="tap-scale">
+            <Filter className="h-4 w-4" />
+          </Button>
         </div>
       </header>
 
       <div className="p-4">
         {/* News Categories */}
         <Tabs defaultValue="latest" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-4">
+          <TabsList className="grid w-full grid-cols-4 mb-4 h-9">
             {newsCategories.map((category) => (
               <TabsTrigger 
                 key={category.id} 
@@ -101,19 +99,26 @@ export default function News() {
           </TabsList>
 
           {newsCategories.map((category) => (
-            <TabsContent key={category.id} value={category.id} className="space-y-3">
+            <TabsContent key={category.id} value={category.id} className="space-y-3 stagger-children">
               {filteredNews(category.id).map((article, index) => (
-                <Card key={index} className={`hover:shadow-lg transition-all duration-300 overflow-hidden ${'isBreaking' in article && article.isBreaking ? 'bg-gradient-accent border-accent/20' : 'card-gradient'}`}>
+                <Card 
+                  key={index} 
+                  className={`overflow-hidden tap-scale cursor-pointer transition-all duration-200 hover:shadow-lg ${
+                    'isBreaking' in article && article.isBreaking 
+                      ? 'bg-gradient-accent border-accent/20' 
+                      : 'card-gradient'
+                  }`}
+                >
                   <CardContent className="p-0">
                     {'isBreaking' in article && article.isBreaking && (
-                      <div className="flex items-center space-x-2 px-3 pt-3 pb-2">
-                        <div className="animate-pulse w-2 h-2 bg-white rounded-full"></div>
-                        <span className="text-xs font-bold text-white">BREAKING NEWS</span>
+                      <div className="flex items-center space-x-2 px-3 pt-3 pb-1">
+                        <div className="animate-pulse w-2 h-2 bg-white rounded-full" />
+                        <span className="text-xs font-bold text-white tracking-wide">BREAKING</span>
                       </div>
                     )}
                     <div className="flex">
                       {'imageUrl' in article && (
-                        <div className="w-24 h-24 flex-shrink-0">
+                        <div className="w-20 h-20 flex-shrink-0 m-3 rounded-lg overflow-hidden">
                           <img 
                             src={article.imageUrl} 
                             alt={article.title}
@@ -121,16 +126,22 @@ export default function News() {
                           />
                         </div>
                       )}
-                      <div className="flex-1 p-3">
-                        <h3 className={`font-semibold mb-1 line-clamp-2 text-sm ${'isBreaking' in article && article.isBreaking ? 'text-white' : 'text-foreground'}`}>
+                      <div className="flex-1 py-3 pr-3">
+                        <h3 className={`font-semibold mb-1 line-clamp-2 text-sm leading-tight ${
+                          'isBreaking' in article && article.isBreaking ? 'text-white' : ''
+                        }`}>
                           {article.title}
                         </h3>
                         {'summary' in article && (
-                          <p className={`text-xs mb-2 line-clamp-2 ${'isBreaking' in article && article.isBreaking ? 'text-white/90' : 'text-muted-foreground'}`}>
+                          <p className={`text-xs mb-2 line-clamp-2 leading-relaxed ${
+                            'isBreaking' in article && article.isBreaking ? 'text-white/90' : 'text-muted-foreground'
+                          }`}>
                             {article.summary}
                           </p>
                         )}
-                        <div className={`flex items-center justify-between text-xs ${'isBreaking' in article && article.isBreaking ? 'text-white/80' : 'text-muted-foreground'}`}>
+                        <div className={`flex items-center justify-between text-xs ${
+                          'isBreaking' in article && article.isBreaking ? 'text-white/80' : 'text-muted-foreground'
+                        }`}>
                           <span className="font-medium">{article.source}</span>
                           <span>{article.time}</span>
                         </div>
@@ -142,7 +153,6 @@ export default function News() {
             </TabsContent>
           ))}
         </Tabs>
-
       </div>
     </div>
   );

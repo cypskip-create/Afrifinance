@@ -117,16 +117,16 @@ export default function Discover() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-hero">
+    <div className="min-h-screen bg-background pb-20">
       <TopBar 
         title="Discover" 
-        subtitle="Social investing & learning hub"
+        subtitle="Social investing & learning"
         showSearch={true}
         showAI={false}
         showNotifications={true}
       />
 
-      <div className="p-4 space-y-4">
+      <div className="p-4 space-y-4 stagger-children">
         {/* Large Insights Card */}
         <Card className="card-hero cursor-pointer" onClick={() => navigate('/track-investments')}>
           <CardContent className="p-4">

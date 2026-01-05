@@ -16,27 +16,23 @@ export default function TradersHub() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-hero">
-      {/* Header with back button */}
-      <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-sm border-b border-border">
+    <div className="min-h-screen bg-background pb-20">
+      {/* Header */}
+      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border">
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center space-x-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate(-1)}
-            >
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="tap-scale">
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-xl font-bold text-primary">Traders Hub</h1>
-              <p className="text-sm text-muted-foreground">Connect with top traders and investors</p>
+              <h1 className="text-lg font-bold">Traders Hub</h1>
+              <p className="text-xs text-muted-foreground">Connect with investors</p>
             </div>
           </div>
         </div>
       </header>
       
-      <div className="p-4 space-y-6">
+      <div className="p-4 space-y-5 stagger-children">
         {/* Stats Overview */}
         <div className="grid grid-cols-3 gap-4">
           <Card className="card-gradient">

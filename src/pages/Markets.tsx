@@ -57,8 +57,8 @@ export default function Markets() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-hero">
-      {/* Enhanced Header */}
+    <div className="min-h-screen bg-background pb-20">
+      {/* Header */}
       <TopBar 
         title="Markets" 
         subtitle="Global market overview"
@@ -67,27 +67,27 @@ export default function Markets() {
         showNotifications={true}
       />
 
-      <div className="p-4">
-        {/* AI Quick Take */}
-        <Card className="card-gradient mb-4">
+      <div className="p-4 space-y-5">
+        {/* Market Summary Card */}
+        <Card className="card-gradient animate-fade-in">
           <CardContent className="p-4">
             <div className="flex items-center space-x-2 mb-2">
               <Brain className="h-4 w-4 text-accent" />
-              <span className="text-sm font-medium">AI Quick Take</span>
+              <span className="text-sm font-medium">Market Summary</span>
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-sm text-muted-foreground leading-relaxed">
               Markets showing positive momentum today with banking sector leading gains. 
-              NSE 20 up 1.2% driven by strong earnings reports from major institutions.
+              NSE 20 up 1.2% driven by strong earnings reports.
             </p>
           </CardContent>
         </Card>
 
-        {/* Market Categories */}
-        <div className="mb-4">
-          <h2 className="text-2xl font-bold text-primary mb-4">
+        {/* Category Icons */}
+        <div className="animate-fade-in">
+          <h2 className="text-lg font-bold mb-3">
             {marketCategories.find(c => c.id === selectedCategory)?.label || "Stocks"}
           </h2>
-          <div className="grid grid-cols-6 gap-2 px-1">
+          <div className="grid grid-cols-6 gap-2">
             {marketCategories.map((category) => {
               const Icon = category.icon;
               return (
@@ -95,7 +95,7 @@ export default function Markets() {
                   key={category.id}
                   variant={category.id === selectedCategory ? "default" : "outline"}
                   size="icon"
-                  className={`w-full aspect-square ${
+                  className={`w-full aspect-square tap-scale ${
                     category.id === selectedCategory ? 'bg-primary hover:bg-primary/90' : ''
                   }`}
                   onClick={() => setSelectedCategory(category.id)}

@@ -143,25 +143,26 @@ export default function StockDetail() {
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Top Navigation */}
-      <header className="sticky top-0 z-40 bg-background border-b border-border">
+      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border">
         <div className="flex items-center justify-between p-4">
           <div className="flex items-start gap-3">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => navigate(-1)}
+              className="tap-scale"
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
             
             <div className="flex flex-col">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <span className="font-bold text-lg">{symbol}</span>
-                <span className={stock.isUp ? 'text-bull' : 'text-bear'}>
+                <span className={`text-sm font-medium ${stock.isUp ? 'text-bull' : 'text-bear'}`}>
                   {stock.isUp ? '+' : ''}{stock.changePercent}%
                 </span>
               </div>
-              <div className="text-foreground text-base">KES {stock.price.toFixed(2)}</div>
+              <div className="text-sm text-muted-foreground">KES {stock.price.toFixed(2)}</div>
             </div>
           </div>
 
@@ -170,17 +171,17 @@ export default function StockDetail() {
               variant="ghost"
               size="icon"
               onClick={handleWatchlistToggle}
-              className="bg-primary/10 rounded-full"
+              className="bg-primary/10 rounded-full tap-scale"
             >
-              <Heart className={`h-5 w-5 ${isInWatchlist(symbol || '') ? 'fill-primary text-primary' : 'text-primary'}`} />
+              <Heart className={`h-5 w-5 transition-all ${isInWatchlist(symbol || '') ? 'fill-primary text-primary scale-110' : 'text-primary'}`} />
             </Button>
             <Button 
               variant="ghost" 
               size="icon" 
-              className="bg-orange-500/10 rounded-full"
+              className="bg-accent/10 rounded-full tap-scale"
               onClick={() => navigate(`/news?stock=${symbol}`)}
             >
-              <Newspaper className="h-5 w-5 text-orange-500" />
+              <Newspaper className="h-5 w-5 text-accent" />
             </Button>
           </div>
         </div>
@@ -188,25 +189,25 @@ export default function StockDetail() {
 
       <div className="p-4 space-y-4">
         {/* Stock Header */}
-        <div className="space-y-3">
+        <div className="space-y-2 animate-fade-in">
           <div>
-            <h1 className="text-2xl font-bold">{symbol}</h1>
-            <p className="text-muted-foreground">{stock.name}</p>
+            <h1 className="text-xl font-bold">{symbol}</h1>
+            <p className="text-sm text-muted-foreground">{stock.name}</p>
           </div>
           
           <div className="flex items-center space-x-2">
-            <Badge variant="outline" className="text-xs">{stock.exchange}</Badge>
+            <Badge variant="secondary" className="text-xs">{stock.exchange}</Badge>
             <Badge variant="outline" className="text-xs">{stock.sector}</Badge>
           </div>
           
-          <div className="text-sm text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             Market Open • Updated just now
           </div>
           
-          <div className="text-4xl font-bold">
+          <div className="text-3xl font-bold">
             KES {stock.price.toFixed(2)}
           </div>
-          <div className={`text-lg font-medium flex items-center space-x-1 ${stock.isUp ? 'text-bull' : 'text-bear'}`}>
+          <div className={`text-base font-medium flex items-center space-x-1 ${stock.isUp ? 'text-bull' : 'text-bear'}`}>
             <span>{stock.isUp ? '+' : ''}KES {stock.change.toFixed(2)} ({stock.changePercent}%)</span>
           </div>
         </div>
@@ -244,35 +245,35 @@ export default function StockDetail() {
         </Collapsible>
 
         {/* Action Buttons */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2 animate-fade-in">
           <Button 
             variant="outline" 
-            className="h-14 flex-col py-2"
+            className="h-12 flex-col py-2 tap-scale"
             onClick={() => setShowAlertsDialog(true)}
           >
-            <Bell className="h-5 w-5 mb-1" />
-            <span className="text-sm">Create Alert</span>
+            <Bell className="h-4 w-4 mb-0.5" />
+            <span className="text-xs">Alert</span>
           </Button>
 
           <Button 
             variant="outline" 
-            className="h-14 flex-col py-2"
+            className="h-12 flex-col py-2 tap-scale"
             onClick={() => setShowAddTradeDialog(true)}
           >
-            <Plus className="h-5 w-5 mb-1" />
-            <span className="text-sm">Add Trade</span>
+            <Plus className="h-4 w-4 mb-0.5" />
+            <span className="text-xs">Add Trade</span>
           </Button>
 
           <Button 
             variant="outline" 
-            className="h-14 flex-col py-2"
+            className="h-12 flex-col py-2 tap-scale"
             onClick={() => toast({
               title: "Compare Stocks",
               description: "Stock comparison feature coming soon!",
             })}
           >
-            <GitCompare className="h-5 w-5 mb-1" />
-            <span className="text-sm">Compare</span>
+            <GitCompare className="h-4 w-4 mb-0.5" />
+            <span className="text-xs">Compare</span>
           </Button>
         </div>
 
