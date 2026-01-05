@@ -70,65 +70,71 @@ export function AddTradeDialog({ onTradeAdded }: AddTradeDialogProps) {
           Add Investment
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Add New Investment</DialogTitle>
+      <DialogContent className="sm:max-w-[400px] p-0 gap-0">
+        <DialogHeader className="p-5 pb-4 border-b">
+          <DialogTitle className="text-lg">Add New Investment</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="symbol">Stock Symbol *</Label>
+            <Label htmlFor="symbol" className="text-sm font-medium">Stock Symbol *</Label>
             <Input
               id="symbol"
               placeholder="e.g., SAFCOM"
               value={symbol}
               onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+              className="h-10"
               required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="name">Company Name *</Label>
+            <Label htmlFor="name" className="text-sm font-medium">Company Name *</Label>
             <Input
               id="name"
               placeholder="e.g., Safaricom"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              className="h-10"
               required
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="shares">Number of Shares *</Label>
-            <Input
-              id="shares"
-              type="number"
-              placeholder="e.g., 100"
-              value={shares}
-              onChange={(e) => setShares(e.target.value)}
-              required
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="shares" className="text-sm font-medium">Shares *</Label>
+              <Input
+                id="shares"
+                type="number"
+                placeholder="100"
+                value={shares}
+                onChange={(e) => setShares(e.target.value)}
+                className="h-10"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="avgCost" className="text-sm font-medium">Avg Cost (KES) *</Label>
+              <Input
+                id="avgCost"
+                type="number"
+                step="0.01"
+                placeholder="12.50"
+                value={avgCost}
+                onChange={(e) => setAvgCost(e.target.value)}
+                className="h-10"
+                required
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="avgCost">Average Cost (KES) *</Label>
-            <Input
-              id="avgCost"
-              type="number"
-              step="0.01"
-              placeholder="e.g., 12.50"
-              value={avgCost}
-              onChange={(e) => setAvgCost(e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="sector">Sector</Label>
+            <Label htmlFor="sector" className="text-sm font-medium">Sector</Label>
             <Select value={sector} onValueChange={setSector}>
-              <SelectTrigger>
+              <SelectTrigger className="h-10">
                 <SelectValue placeholder="Select sector" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-popover">
                 <SelectItem value="Banking">Banking</SelectItem>
                 <SelectItem value="Telecommunications">Telecommunications</SelectItem>
                 <SelectItem value="Manufacturing">Manufacturing</SelectItem>
@@ -139,11 +145,11 @@ export function AddTradeDialog({ onTradeAdded }: AddTradeDialogProps) {
             </Select>
           </div>
 
-          <div className="flex justify-end space-x-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+          <div className="flex gap-3 pt-2">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} className="flex-1 h-10">
               Cancel
             </Button>
-            <Button type="submit" className="btn-primary">
+            <Button type="submit" className="flex-1 h-10 btn-primary">
               Add Investment
             </Button>
           </div>

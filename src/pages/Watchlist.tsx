@@ -39,10 +39,10 @@ export default function Watchlist() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-hero flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading watchlist...</p>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary/30 border-t-primary mb-4" />
+          <p className="text-sm text-muted-foreground">Loading watchlist...</p>
         </div>
       </div>
     );
@@ -70,25 +70,21 @@ export default function Watchlist() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-hero">
-      <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-sm border-b border-border">
+    <div className="min-h-screen bg-background pb-20">
+      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border">
         <div className="flex items-center justify-between p-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate(-1)}
-          >
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="tap-scale">
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="text-center">
-            <h1 className="text-xl font-bold">My Watchlist</h1>
-            <p className="text-sm text-muted-foreground">Track your favorite stocks</p>
+            <h1 className="text-lg font-bold">My Watchlist</h1>
+            <p className="text-xs text-muted-foreground">Track your favorites</p>
           </div>
           <div className="w-9"></div>
         </div>
       </header>
 
-      <div className="p-4 space-y-4">
+      <div className="p-4 space-y-4 stagger-children">
         {/* Summary Stats */}
         <Card className="card-gradient">
           <CardContent className="p-4">

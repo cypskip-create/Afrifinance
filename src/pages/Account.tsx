@@ -41,7 +41,7 @@ export default function Account() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-hero">
+    <div className="min-h-screen bg-background pb-20">
       <TopBar 
         title="Account" 
         subtitle="Profile & settings"
@@ -50,7 +50,7 @@ export default function Account() {
         showNotifications={true}
       />
 
-      <div className="p-4 space-y-6">
+      <div className="p-4 space-y-5 stagger-children">
         {/* Profile Section */}
         <Card className="card-gradient">
           <CardHeader>
