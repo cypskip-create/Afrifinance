@@ -1,5 +1,5 @@
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
+import { useMemo } from "react";
 
 interface StockPriceChartProps {
   symbol: string;
@@ -8,113 +8,151 @@ interface StockPriceChartProps {
 
 // Mock data generator based on timeframe
 const generateMockData = (timeframe: string) => {
-  const dataPoints: { date: string; price: number }[] = [];
+  const dataPoints: { date: string; price: number; timestamp: number }[] = [];
   const basePrice = 150;
   let points = 30;
-  let dateFormat = "MMM DD";
 
   switch (timeframe) {
     case "1D":
-      points = 24;
-      dateFormat = "HH:mm";
+      points = 78; // 5-min intervals for trading hours
       break;
     case "1W":
-      points = 7;
+      points = 35; // Hourly data
       break;
     case "1M":
-      points = 30;
+      points = 22; // Trading days
       break;
     case "3M":
-      points = 90;
+      points = 65;
       break;
     case "1Y":
-      points = 365;
-      dateFormat = "MMM";
+      points = 252; // Trading days
       break;
     case "5Y":
-      points = 1825;
-      dateFormat = "YYYY";
+      points = 1260;
       break;
   }
 
+  let currentPrice = basePrice;
+  
   for (let i = 0; i < points; i++) {
     const date = new Date();
-    date.setDate(date.getDate() - (points - i));
     
-    const randomChange = (Math.random() - 0.5) * 10;
-    const trend = i * 0.05; // Slight upward trend
-    const price = basePrice + randomChange + trend;
+    if (timeframe === "1D") {
+      date.setMinutes(date.getMinutes() - (points - i) * 5);
+    } else {
+      date.setDate(date.getDate() - (points - i));
+    }
+    
+    // More realistic price movement with momentum
+    const momentum = Math.random() > 0.48 ? 1 : -1;
+    const volatility = timeframe === "1D" ? 0.3 : 0.8;
+    const change = momentum * Math.random() * volatility;
+    currentPrice = Math.max(basePrice * 0.7, Math.min(basePrice * 1.5, currentPrice + change));
 
     let formattedDate = "";
     if (timeframe === "1D") {
-      formattedDate = `${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
-    } else if (timeframe === "5Y") {
-      formattedDate = date.getFullYear().toString();
-    } else {
+      formattedDate = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    } else if (timeframe === "1W") {
+      formattedDate = date.toLocaleDateString('en-US', { weekday: 'short' });
+    } else if (timeframe === "1M" || timeframe === "3M") {
       formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    } else if (timeframe === "1Y") {
+      formattedDate = date.toLocaleDateString('en-US', { month: 'short' });
+    } else {
+      formattedDate = date.toLocaleDateString('en-US', { year: 'numeric' });
     }
 
     dataPoints.push({
       date: formattedDate,
-      price: parseFloat(price.toFixed(2))
+      price: parseFloat(currentPrice.toFixed(2)),
+      timestamp: date.getTime()
     });
   }
 
   return dataPoints;
 };
 
+const CustomTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-popover/95 backdrop-blur-sm border border-border rounded-lg px-3 py-2 shadow-lg">
+        <p className="text-foreground font-semibold text-lg">
+          KES {payload[0].value.toFixed(2)}
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
 export const StockPriceChart = ({ symbol, timeframe }: StockPriceChartProps) => {
-  const data = generateMockData(timeframe);
+  const data = useMemo(() => generateMockData(timeframe), [timeframe]);
+  
   const firstPrice = data[0]?.price || 0;
   const lastPrice = data[data.length - 1]?.price || 0;
   const isPositive = lastPrice >= firstPrice;
+  
+  const strokeColor = isPositive ? "hsl(var(--bull))" : "hsl(var(--bear))";
+  const gradientId = `colorPrice-${symbol}-${timeframe}`;
 
-  const chartConfig = {
-    price: {
-      label: "Price",
-      color: isPositive ? "hsl(var(--chart-2))" : "hsl(var(--chart-1))",
-    },
-  };
+  const minPrice = Math.min(...data.map(d => d.price));
+  const maxPrice = Math.max(...data.map(d => d.price));
+  const padding = (maxPrice - minPrice) * 0.1;
 
   return (
-    <ChartContainer config={chartConfig} className="h-full w-full">
+    <div className="h-full w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+        <AreaChart 
+          data={data} 
+          margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
+        >
+          <defs>
+            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+              <stop 
+                offset="0%" 
+                stopColor={strokeColor} 
+                stopOpacity={0.3}
+              />
+              <stop 
+                offset="100%" 
+                stopColor={strokeColor} 
+                stopOpacity={0}
+              />
+            </linearGradient>
+          </defs>
           <XAxis 
             dataKey="date" 
-            stroke="hsl(var(--muted-foreground))"
-            fontSize={12}
-            tickLine={false}
-            axisLine={false}
-            tickFormatter={(value) => {
-              // Show fewer labels for better readability
-              return value;
-            }}
+            hide={true}
           />
           <YAxis 
-            stroke="hsl(var(--muted-foreground))"
-            fontSize={12}
-            tickLine={false}
-            axisLine={false}
-            tickFormatter={(value) => `$${value.toFixed(0)}`}
-            domain={['dataMin - 5', 'dataMax + 5']}
+            hide={true}
+            domain={[minPrice - padding, maxPrice + padding]}
           />
-          <ChartTooltip 
-            content={<ChartTooltipContent 
-              formatter={(value) => [`$${Number(value).toFixed(2)}`, "Price"]}
-            />} 
+          <Tooltip 
+            content={<CustomTooltip />}
+            cursor={{
+              stroke: 'hsl(var(--muted-foreground))',
+              strokeWidth: 1,
+              strokeDasharray: '4 4'
+            }}
           />
-          <Line 
+          <Area 
             type="monotone" 
             dataKey="price" 
-            stroke={chartConfig.price.color}
+            stroke={strokeColor}
             strokeWidth={2}
+            fill={`url(#${gradientId})`}
             dot={false}
-            activeDot={{ r: 4, fill: chartConfig.price.color }}
+            activeDot={{ 
+              r: 4, 
+              fill: strokeColor,
+              stroke: 'hsl(var(--background))',
+              strokeWidth: 2
+            }}
           />
-        </LineChart>
+        </AreaChart>
       </ResponsiveContainer>
-    </ChartContainer>
+    </div>
   );
 };
