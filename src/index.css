@@ -348,6 +348,29 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+  
+  /* Marquee Animation */
+  .marquee-container {
+    @apply flex overflow-hidden;
+  }
+  
+  .marquee-content {
+    @apply flex;
+    animation: marquee 25s linear infinite;
+  }
+  
+  .marquee-container:hover .marquee-content {
+    animation-play-state: paused;
+  }
+
+  @keyframes marquee {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
+  }
 }
 
 /* Custom scrollbar for webkit browsers */
