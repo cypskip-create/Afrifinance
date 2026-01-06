@@ -1,4 +1,4 @@
-import { TrendingUp, TrendingDown, BarChart3, Bitcoin, Coins, Globe, Brain, Filter, Building2, Layers, Box } from "lucide-react";
+import { TrendingUp, TrendingDown, BarChart3, Bitcoin, Coins, Globe, Brain, Building2, Layers, Box } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -7,12 +7,24 @@ import { useNavigate } from "react-router-dom";
 import * as WatchlistHook from "@/hooks/useWatchlist";
 import { useToast } from "@/hooks/use-toast";
 import * as React from "react";
+import { CryptoChartDialog } from "@/components/markets/CryptoChartDialog";
 
 export default function Markets() {
   const navigate = useNavigate();
   const { addToWatchlist, removeFromWatchlist, isInWatchlist } = WatchlistHook.useWatchlist();
   const { toast } = useToast();
   const [selectedCategory, setSelectedCategory] = React.useState("stocks");
+  const [selectedCrypto, setSelectedCrypto] = React.useState<typeof cryptoData[0] | null>(null);
+  const [cryptoDialogOpen, setCryptoDialogOpen] = React.useState(false);
+
+  const cryptoData = [
+    { name: "Bitcoin", symbol: "BTC", price: "$43,250", change: 2.4, isUp: true },
+    { name: "Ethereum", symbol: "ETH", price: "$2,580", change: 1.8, isUp: true },
+    { name: "Cardano", symbol: "ADA", price: "$0.52", change: -3.2, isUp: false },
+    { name: "Solana", symbol: "SOL", price: "$98.45", change: 5.1, isUp: true },
+    { name: "Ripple", symbol: "XRP", price: "$0.62", change: -1.2, isUp: false },
+    { name: "Polkadot", symbol: "DOT", price: "$7.23", change: 0.8, isUp: true },
+  ];
   
   const marketCategories = [
     { id: "stocks", label: "Stocks", icon: Building2 },
@@ -50,11 +62,10 @@ export default function Markets() {
     { name: "Manufacturing", change: 0.7, isUp: true },
   ];
 
-  const cryptoData = [
-    { name: "Bitcoin", symbol: "BTC", price: "$43,250", change: 2.4, isUp: true },
-    { name: "Ethereum", symbol: "ETH", price: "$2,580", change: 1.8, isUp: true },
-    { name: "Cardano", symbol: "ADA", price: "$0.52", change: -3.2, isUp: false },
-  ];
+  const handleCryptoClick = (crypto: typeof cryptoData[0]) => {
+    setSelectedCrypto(crypto);
+    setCryptoDialogOpen(true);
+  };
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -251,15 +262,21 @@ export default function Markets() {
                   {cryptoData.map((crypto) => (
                     <div
                       key={crypto.name}
-                      className="flex items-center justify-between p-3 rounded-lg bg-muted/20"
+                      onClick={() => handleCryptoClick(crypto)}
+                      className="flex items-center justify-between p-3 rounded-lg bg-muted/20 cursor-pointer hover:bg-muted/30 transition-colors tap-scale"
                     >
-                      <div>
-                        <div className="font-medium">{crypto.name}</div>
-                        <div className="text-sm text-muted-foreground">{crypto.symbol}</div>
+                      <div className="flex items-center space-x-3">
+                        <div className="h-10 w-10 rounded-full bg-gradient-primary flex items-center justify-center text-primary-foreground font-bold text-xs">
+                          {crypto.symbol.slice(0, 2)}
+                        </div>
+                        <div>
+                          <div className="font-medium">{crypto.name}</div>
+                          <div className="text-sm text-muted-foreground">{crypto.symbol}</div>
+                        </div>
                       </div>
                       <div className="text-right">
                         <div className="font-medium">{crypto.price}</div>
-                        <div className={`text-sm flex items-center space-x-1 ${crypto.isUp ? 'text-bull' : 'text-bear'}`}>
+                        <div className={`text-sm flex items-center justify-end space-x-1 ${crypto.isUp ? 'text-bull' : 'text-bear'}`}>
                           {crypto.isUp ? (
                             <TrendingUp className="h-3 w-3" />
                           ) : (
@@ -391,6 +408,13 @@ export default function Markets() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Crypto Chart Dialog */}
+      <CryptoChartDialog
+        open={cryptoDialogOpen}
+        onOpenChange={setCryptoDialogOpen}
+        crypto={selectedCrypto}
+      />
     </div>
   );
 }

@@ -74,26 +74,30 @@ export default function Home() {
           <MorningBrief />
         </div>
         
-        {/* NSE Indices Horizontal Scroll */}
+        {/* NSE Indices Marquee */}
         <div className="animate-fade-in">
           <h3 className="text-base font-semibold mb-3 flex items-center space-x-2">
             <TrendingUp className="h-4 w-4 text-primary" />
             <span>NSE Indices</span>
           </h3>
-          <div className="flex space-x-3 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4">
-            {nseIndices.map((fund) => (
-              <div
-                key={fund.name}
-                className="flex-shrink-0 p-3 rounded-xl bg-card border border-border hover:border-primary/30 transition-all duration-200 min-w-[130px] tap-scale"
-              >
-                <div className="text-xs font-medium text-muted-foreground mb-1">{fund.name}</div>
-                <div className="text-base font-bold mb-0.5">{fund.value}</div>
-                <div className={`text-xs flex items-center space-x-1 ${fund.isUp ? 'text-bull' : 'text-bear'}`}>
-                  <span>{fund.isUp ? '↑' : '↓'}</span>
-                  <span>{fund.isUp ? '+' : ''}{fund.change}%</span>
-                </div>
+          <div className="overflow-hidden -mx-4">
+            <div className="marquee-container group">
+              <div className="marquee-content">
+                {[...nseIndices, ...nseIndices].map((fund, idx) => (
+                  <div
+                    key={`${fund.name}-${idx}`}
+                    className="flex-shrink-0 p-3 rounded-xl bg-card border border-border hover:border-primary/30 transition-all duration-200 min-w-[130px] tap-scale mx-1.5"
+                  >
+                    <div className="text-xs font-medium text-muted-foreground mb-1">{fund.name}</div>
+                    <div className="text-base font-bold mb-0.5">{fund.value}</div>
+                    <div className={`text-xs flex items-center space-x-1 ${fund.isUp ? 'text-bull' : 'text-bear'}`}>
+                      <span>{fund.isUp ? '↑' : '↓'}</span>
+                      <span>{fund.isUp ? '+' : ''}{fund.change}%</span>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
         </div>
         

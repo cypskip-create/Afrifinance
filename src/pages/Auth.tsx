@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, TrendingUp, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Logo } from '@/components/shared/Logo';
 
 export default function Auth() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -68,14 +69,8 @@ export default function Auth() {
   return (
     <div className="min-h-screen bg-gradient-hero flex flex-col items-center justify-center p-6">
       {/* Logo Section */}
-      <div className="flex items-center space-x-3 mb-8 animate-fade-in">
-        <div className="h-12 w-12 rounded-xl bg-gradient-primary flex items-center justify-center shadow-primary">
-          <TrendingUp className="h-7 w-7 text-primary-foreground" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">AfriFinance</h1>
-          <p className="text-xs text-muted-foreground">Smart Investment Companion</p>
-        </div>
+      <div className="mb-8 animate-fade-in">
+        <Logo size="lg" />
       </div>
 
       <Card className="w-full max-w-sm card-gradient border-0 shadow-lg animate-fade-in">

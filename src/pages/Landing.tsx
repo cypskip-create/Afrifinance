@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { TrendingUp, Newspaper, Bell, BarChart3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { Logo } from "@/components/shared/Logo";
 
 export default function Landing() {
   const navigate = useNavigate();
@@ -11,10 +12,7 @@ export default function Landing() {
       {/* Hero Section */}
       <header className="container mx-auto px-4 py-6">
         <nav className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <TrendingUp className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold text-primary">StockTracker</span>
-          </div>
+          <Logo size="md" />
           <div className="flex items-center space-x-4">
             <Button variant="ghost" onClick={() => navigate("/auth")}>
               Sign In
@@ -197,12 +195,9 @@ export default function Landing() {
       <footer className="border-t border-border mt-20">
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col md:flex-row items-center justify-between">
-            <div className="flex items-center space-x-2 mb-4 md:mb-0">
-              <TrendingUp className="h-6 w-6 text-primary" />
-              <span className="text-lg font-bold">StockTracker</span>
-            </div>
-            <div className="text-sm text-muted-foreground">
-              © 2025 StockTracker. All rights reserved.
+            <Logo size="sm" />
+            <div className="text-sm text-muted-foreground mt-4 md:mt-0">
+              © 2025 AfriFinance. All rights reserved.
             </div>
           </div>
         </div>
