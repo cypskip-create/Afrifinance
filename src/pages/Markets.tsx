@@ -1,4 +1,4 @@
-import { TrendingUp, TrendingDown, BarChart3, Bitcoin, Coins, Globe, Brain, Building2, Layers, Box } from "lucide-react";
+import { TrendingUp, TrendingDown, BarChart3, Bitcoin, Coins, Globe, Brain, Building2, Layers, Box, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,8 @@ import * as WatchlistHook from "@/hooks/useWatchlist";
 import { useToast } from "@/hooks/use-toast";
 import * as React from "react";
 import { CryptoChartDialog } from "@/components/markets/CryptoChartDialog";
+import { MarketStatusIndicator } from "@/components/shared/MarketStatusIndicator";
+import { SparklineChart } from "@/components/shared/SparklineChart";
 
 export default function Markets() {
   const navigate = useNavigate();
@@ -18,12 +20,16 @@ export default function Markets() {
   const [cryptoDialogOpen, setCryptoDialogOpen] = React.useState(false);
 
   const cryptoData = [
-    { name: "Bitcoin", symbol: "BTC", price: "$43,250", change: 2.4, isUp: true },
-    { name: "Ethereum", symbol: "ETH", price: "$2,580", change: 1.8, isUp: true },
-    { name: "Cardano", symbol: "ADA", price: "$0.52", change: -3.2, isUp: false },
-    { name: "Solana", symbol: "SOL", price: "$98.45", change: 5.1, isUp: true },
-    { name: "Ripple", symbol: "XRP", price: "$0.62", change: -1.2, isUp: false },
-    { name: "Polkadot", symbol: "DOT", price: "$7.23", change: 0.8, isUp: true },
+    { name: "Bitcoin", symbol: "BTC", price: "$43,250", change: 2.4, isUp: true, marketCap: "$847.2B", volume24h: "$28.5B", high24h: "$44,120", low24h: "$42,580", supply: "19.6M BTC", rank: 1 },
+    { name: "Ethereum", symbol: "ETH", price: "$2,580", change: 1.8, isUp: true, marketCap: "$310.5B", volume24h: "$15.2B", high24h: "$2,650", low24h: "$2,520", supply: "120.2M ETH", rank: 2 },
+    { name: "BNB", symbol: "BNB", price: "$312.45", change: 3.2, isUp: true, marketCap: "$48.1B", volume24h: "$1.2B", high24h: "$318.00", low24h: "$302.10", supply: "153.8M BNB", rank: 3 },
+    { name: "Solana", symbol: "SOL", price: "$98.45", change: 5.1, isUp: true, marketCap: "$42.8B", volume24h: "$2.8B", high24h: "$102.30", low24h: "$93.20", supply: "435.2M SOL", rank: 4 },
+    { name: "XRP", symbol: "XRP", price: "$0.62", change: -1.2, isUp: false, marketCap: "$33.9B", volume24h: "$1.5B", high24h: "$0.65", low24h: "$0.60", supply: "54.7B XRP", rank: 5 },
+    { name: "Cardano", symbol: "ADA", price: "$0.52", change: -3.2, isUp: false, marketCap: "$18.4B", volume24h: "$520M", high24h: "$0.56", low24h: "$0.50", supply: "35.4B ADA", rank: 6 },
+    { name: "Avalanche", symbol: "AVAX", price: "$35.80", change: 4.5, isUp: true, marketCap: "$13.7B", volume24h: "$580M", high24h: "$37.20", low24h: "$34.10", supply: "382M AVAX", rank: 7 },
+    { name: "Polkadot", symbol: "DOT", price: "$7.23", change: 0.8, isUp: true, marketCap: "$10.1B", volume24h: "$320M", high24h: "$7.45", low24h: "$7.05", supply: "1.4B DOT", rank: 8 },
+    { name: "Chainlink", symbol: "LINK", price: "$14.85", change: 2.1, isUp: true, marketCap: "$8.7B", volume24h: "$450M", high24h: "$15.20", low24h: "$14.30", supply: "587M LINK", rank: 9 },
+    { name: "Polygon", symbol: "MATIC", price: "$0.89", change: -0.5, isUp: false, marketCap: "$8.3B", volume24h: "$380M", high24h: "$0.92", low24h: "$0.87", supply: "9.3B MATIC", rank: 10 },
   ];
   
   const marketCategories = [
@@ -79,6 +85,15 @@ export default function Markets() {
       />
 
       <div className="p-4 space-y-5">
+        {/* Market Status */}
+        <div className="flex items-center justify-between animate-fade-in">
+          <MarketStatusIndicator />
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            <span>Updated just now</span>
+          </div>
+        </div>
+
         {/* Market Summary Card */}
         <Card className="card-gradient animate-fade-in">
           <CardContent className="p-4">
@@ -88,7 +103,7 @@ export default function Markets() {
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Markets showing positive momentum today with banking sector leading gains. 
-              NSE 20 up 1.2% driven by strong earnings reports.
+              NSE 20 up 1.2% driven by strong earnings reports. Crypto markets rallying with Bitcoin testing $44K resistance.
             </p>
           </CardContent>
         </Card>
@@ -136,15 +151,20 @@ export default function Markets() {
                       <div
                         key={stock.symbol}
                         onClick={() => navigate(`/stock/${stock.symbol}`)}
-                        className="flex items-center justify-between p-2 rounded-lg bg-muted/20 cursor-pointer hover:bg-muted/30 transition-colors"
+                        className="flex items-center justify-between p-2 rounded-lg bg-muted/20 cursor-pointer hover:bg-muted/30 transition-colors tap-scale"
                       >
-                        <div>
-                          <div className="text-xs font-medium">{stock.symbol}</div>
-                          <div className="text-xs text-muted-foreground">{stock.name}</div>
+                        <div className="flex items-center gap-3">
+                          <div>
+                            <div className="text-xs font-medium">{stock.symbol}</div>
+                            <div className="text-xs text-muted-foreground">{stock.name}</div>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <div className="text-xs font-medium">KES {stock.price}</div>
-                          <div className="text-xs text-bull">+{stock.change}%</div>
+                        <div className="flex items-center gap-3">
+                          <SparklineChart isPositive={stock.isUp} width={50} height={20} />
+                          <div className="text-right">
+                            <div className="text-xs font-medium">KES {stock.price}</div>
+                            <div className="text-xs text-bull">+{stock.change}%</div>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -165,15 +185,20 @@ export default function Markets() {
                       <div
                         key={stock.symbol}
                         onClick={() => navigate(`/stock/${stock.symbol}`)}
-                        className="flex items-center justify-between p-2 rounded-lg bg-muted/20 cursor-pointer hover:bg-muted/30 transition-colors"
+                        className="flex items-center justify-between p-2 rounded-lg bg-muted/20 cursor-pointer hover:bg-muted/30 transition-colors tap-scale"
                       >
-                        <div>
-                          <div className="text-xs font-medium">{stock.symbol}</div>
-                          <div className="text-xs text-muted-foreground">{stock.name}</div>
+                        <div className="flex items-center gap-3">
+                          <div>
+                            <div className="text-xs font-medium">{stock.symbol}</div>
+                            <div className="text-xs text-muted-foreground">{stock.name}</div>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <div className="text-xs font-medium">KES {stock.price}</div>
-                          <div className="text-xs text-bear">{stock.change}%</div>
+                        <div className="flex items-center gap-3">
+                          <SparklineChart isPositive={stock.isUp} width={50} height={20} />
+                          <div className="text-right">
+                            <div className="text-xs font-medium">KES {stock.price}</div>
+                            <div className="text-xs text-bear">{stock.change}%</div>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -250,15 +275,36 @@ export default function Markets() {
 
           {/* Crypto Tab */}
           <TabsContent value="crypto" className="space-y-6">
+            {/* Crypto Market Stats */}
+            <div className="grid grid-cols-2 gap-3">
+              <Card className="card-gradient">
+                <CardContent className="p-3">
+                  <div className="text-xs text-muted-foreground">Total Market Cap</div>
+                  <div className="text-lg font-bold">$1.72T</div>
+                  <div className="text-xs text-bull">+2.3% 24h</div>
+                </CardContent>
+              </Card>
+              <Card className="card-gradient">
+                <CardContent className="p-3">
+                  <div className="text-xs text-muted-foreground">24h Volume</div>
+                  <div className="text-lg font-bold">$89.5B</div>
+                  <div className="text-xs text-bull">+5.1% 24h</div>
+                </CardContent>
+              </Card>
+            </div>
+
             <Card className="card-gradient">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center space-x-2">
-                  <Bitcoin className="h-5 w-5 text-accent" />
-                  <span>Top Cryptocurrencies</span>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Bitcoin className="h-5 w-5 text-accent" />
+                    <span>Top Cryptocurrencies</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground font-normal">Tap for details</span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {cryptoData.map((crypto) => (
                     <div
                       key={crypto.name}
@@ -270,23 +316,47 @@ export default function Markets() {
                           {crypto.symbol.slice(0, 2)}
                         </div>
                         <div>
-                          <div className="font-medium">{crypto.name}</div>
-                          <div className="text-sm text-muted-foreground">{crypto.symbol}</div>
+                          <div className="font-medium flex items-center gap-2">
+                            {crypto.name}
+                            <span className="text-xs bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
+                              #{crypto.rank}
+                            </span>
+                          </div>
+                          <div className="text-xs text-muted-foreground">{crypto.symbol}</div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-medium">{crypto.price}</div>
-                        <div className={`text-sm flex items-center justify-end space-x-1 ${crypto.isUp ? 'text-bull' : 'text-bear'}`}>
-                          {crypto.isUp ? (
-                            <TrendingUp className="h-3 w-3" />
-                          ) : (
-                            <TrendingDown className="h-3 w-3" />
-                          )}
-                          <span>{crypto.isUp ? '+' : ''}{crypto.change}%</span>
+                      <div className="flex items-center gap-3">
+                        <SparklineChart isPositive={crypto.isUp} width={50} height={24} />
+                        <div className="text-right min-w-[70px]">
+                          <div className="font-medium">{crypto.price}</div>
+                          <div className={`text-xs flex items-center justify-end space-x-1 ${crypto.isUp ? 'text-bull' : 'text-bear'}`}>
+                            {crypto.isUp ? (
+                              <TrendingUp className="h-3 w-3" />
+                            ) : (
+                              <TrendingDown className="h-3 w-3" />
+                            )}
+                            <span>{crypto.isUp ? '+' : ''}{crypto.change}%</span>
+                          </div>
                         </div>
                       </div>
                     </div>
                   ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Bitcoin Dominance */}
+            <Card className="card-gradient">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Bitcoin Dominance</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-2xl font-bold">49.2%</span>
+                  <span className="text-xs text-muted-foreground">of total market cap</span>
+                </div>
+                <div className="w-full bg-muted/30 rounded-full h-3">
+                  <div className="bg-gradient-primary h-3 rounded-full" style={{ width: '49.2%' }} />
                 </div>
               </CardContent>
             </Card>

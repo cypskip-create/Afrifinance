@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Heart, TrendingUp, TrendingDown, Newspaper, Activity, Target, Award, PieChart, FileText, Banknote, UserCheck, Briefcase, Building, Globe, Users, Calendar, Bell, GitCompare, Plus } from "lucide-react";
+import { ArrowLeft, Heart, TrendingUp, TrendingDown, Newspaper, Activity, Target, Award, PieChart, FileText, Banknote, UserCheck, Briefcase, Building, Globe, Users, Calendar, Bell, GitCompare, Plus, Share2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { StockPriceChart } from "@/components/stock/StockPriceChart";
 import { useWatchlist } from "@/hooks/useWatchlist";
@@ -12,6 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PriceAlertsManager } from "@/components/alerts/PriceAlertsManager";
 import { AddTradeDialog } from "@/components/portfolio/AddTradeDialog";
 import { usePortfolio } from "@/hooks/usePortfolio";
+import { AnalystRatings } from "@/components/stock/AnalystRatings";
+import { MarketStatusIndicator } from "@/components/shared/MarketStatusIndicator";
 
 export default function StockDetail() {
   const navigate = useNavigate();
@@ -200,9 +202,7 @@ export default function StockDetail() {
             <Badge variant="outline" className="text-xs">{stock.sector}</Badge>
           </div>
           
-          <div className="text-xs text-muted-foreground">
-            Market Open • Updated just now
-          </div>
+          <MarketStatusIndicator />
           
           <div className="text-3xl font-bold">
             KES {stock.price.toFixed(2)}
@@ -393,7 +393,19 @@ export default function StockDetail() {
           </CardContent>
         </Card>
 
-        {/* Detailed Tabs */}
+        {/* Analyst Ratings */}
+        <Card className="card-gradient">
+          <CardHeader>
+            <CardTitle className="text-sm flex items-center space-x-2">
+              <Award className="h-4 w-4 text-accent" />
+              <span>Analyst Ratings</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <AnalystRatings currentPrice={stock.price} />
+          </CardContent>
+        </Card>
+
         <Tabs defaultValue="overview" className="w-full">
           <TabsList className="grid w-full grid-cols-3 gap-1">
             <TabsTrigger value="overview" className="text-xs px-2">Overview</TabsTrigger>
