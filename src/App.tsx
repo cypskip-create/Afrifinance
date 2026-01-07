@@ -23,6 +23,8 @@ import MarketBrief from "./pages/MarketBrief";
 import TrackInvestments from "./pages/TrackInvestments";
 import TradersHub from "./pages/TradersHub";
 import Rooms from "./pages/Rooms";
+import StockScreener from "./pages/StockScreener";
+import StockCompare from "./pages/StockCompare";
 
 const queryClient = new QueryClient();
 
@@ -52,6 +54,8 @@ const App = () => (
                 <Route path="track-investments" element={<TrackInvestments />} />
                 <Route path="traders-hub" element={<TradersHub />} />
                 <Route path="rooms" element={<Rooms />} />
+                <Route path="screener" element={<StockScreener />} />
+                <Route path="compare" element={<StockCompare />} />
               </Route>
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
