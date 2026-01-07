@@ -3,11 +3,11 @@ import { TopMoversLosers } from "@/components/home/TopMoversLosers";
 import { WatchlistSummary } from "@/components/home/WatchlistSummary";
 import { CurrencyConverter } from "@/components/home/CurrencyConverter";
 import { StockHeatmap } from "@/components/home/StockHeatmap";
-import { StockScreener } from "@/components/markets/StockScreener";
+import { RealtimeWatchlistWidget } from "@/components/home/RealtimeWatchlistWidget";
 import { TopBar } from "@/components/shared/TopBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart, Search, TrendingUp, LogIn, Zap } from "lucide-react";
+import { PieChart, Search, TrendingUp, LogIn, Zap, Sparkles, ChevronRight } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
@@ -95,6 +95,14 @@ export default function Home() {
         {/* Top Movers & Watchlist */}
         <div className="space-y-5 stagger-children">
           <TopMoversLosers />
+          
+          {/* Real-time Watchlist Widget */}
+          {user && (
+            <div className="animate-fade-in">
+              <RealtimeWatchlistWidget />
+            </div>
+          )}
+          
           <WatchlistSummary />
         </div>
         
@@ -118,9 +126,27 @@ export default function Home() {
           </Card>
         </div>
         
-        {/* Stock Screener */}
+        {/* Stock Screener Quick Link */}
         <div className="animate-fade-in">
-          <StockScreener />
+          <Card 
+            className="card-gradient cursor-pointer hover:scale-[1.01] transition-all tap-scale"
+            onClick={() => navigate('/screener')}
+          >
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent/20 to-accent/5 flex items-center justify-center">
+                    <Sparkles className="h-5 w-5 text-accent" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-sm">Stock Screener</h3>
+                    <p className="text-xs text-muted-foreground">Find your next investment</p>
+                  </div>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Quick Actions */}

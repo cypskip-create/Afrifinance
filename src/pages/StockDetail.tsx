@@ -267,10 +267,7 @@ export default function StockDetail() {
           <Button 
             variant="outline" 
             className="h-12 flex-col py-2 tap-scale"
-            onClick={() => toast({
-              title: "Compare Stocks",
-              description: "Stock comparison feature coming soon!",
-            })}
+            onClick={() => navigate(`/compare?stock=${symbol}`)}
           >
             <GitCompare className="h-4 w-4 mb-0.5" />
             <span className="text-xs">Compare</span>
@@ -494,12 +491,27 @@ export default function StockDetail() {
 
           <TabsContent value="financials" className="space-y-3 mt-4">
             <Tabs defaultValue="analytics" className="w-full">
-              <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="analytics" className="text-xs">Analytics</TabsTrigger>
-                <TabsTrigger value="estimates" className="text-xs">Estimates</TabsTrigger>
-                <TabsTrigger value="statements" className="text-xs">Statements</TabsTrigger>
-                <TabsTrigger value="shareholders" className="text-xs">Shareholders</TabsTrigger>
-                <TabsTrigger value="dividends" className="text-xs">Dividends</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-5 h-12">
+                <TabsTrigger value="analytics" className="flex flex-col items-center gap-0.5 py-2">
+                  <Award className="h-4 w-4" />
+                  <span className="text-[9px]">Analytics</span>
+                </TabsTrigger>
+                <TabsTrigger value="estimates" className="flex flex-col items-center gap-0.5 py-2">
+                  <Target className="h-4 w-4" />
+                  <span className="text-[9px]">Estimates</span>
+                </TabsTrigger>
+                <TabsTrigger value="statements" className="flex flex-col items-center gap-0.5 py-2">
+                  <FileText className="h-4 w-4" />
+                  <span className="text-[9px]">Statements</span>
+                </TabsTrigger>
+                <TabsTrigger value="shareholders" className="flex flex-col items-center gap-0.5 py-2">
+                  <Users className="h-4 w-4" />
+                  <span className="text-[9px]">Holders</span>
+                </TabsTrigger>
+                <TabsTrigger value="dividends" className="flex flex-col items-center gap-0.5 py-2">
+                  <Banknote className="h-4 w-4" />
+                  <span className="text-[9px]">Dividends</span>
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="analytics" className="space-y-3 mt-4">
