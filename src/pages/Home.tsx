@@ -2,10 +2,12 @@ import { MorningBrief } from "@/components/home/MorningBrief";
 import { TopMoversLosers } from "@/components/home/TopMoversLosers";
 import { WatchlistSummary } from "@/components/home/WatchlistSummary";
 import { CurrencyConverter } from "@/components/home/CurrencyConverter";
+import { StockHeatmap } from "@/components/home/StockHeatmap";
+import { StockScreener } from "@/components/markets/StockScreener";
 import { TopBar } from "@/components/shared/TopBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart, Search, TrendingUp, LogIn } from "lucide-react";
+import { PieChart, Search, TrendingUp, LogIn, Zap } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
@@ -25,17 +27,6 @@ export default function Home() {
     { name: "All Share", value: "112.45", change: -0.3, isUp: false },
     { name: "FTSE Kenya", value: "1,234.56", change: 2.1, isUp: true },
     { name: "Growth", value: "987.32", change: -1.5, isUp: false },
-  ];
-
-  const heatMapStocks = [
-    { symbol: 'SAFCOM', change: 2.4, temp: 'Hot' },
-    { symbol: 'EQTY', change: -1.2, temp: 'Cool' },
-    { symbol: 'SCBK', change: 3.1, temp: 'Hot' },
-    { symbol: 'BAMB', change: -2.8, temp: 'Cold' },
-    { symbol: 'KCB', change: 1.8, temp: 'Warm' },
-    { symbol: 'COOP', change: -0.5, temp: 'Cool' },
-    { symbol: 'EABL', change: 2.9, temp: 'Hot' },
-    { symbol: 'DTB', change: 0.3, temp: 'Neutral' }
   ];
 
   return (
@@ -112,36 +103,25 @@ export default function Home() {
           <CurrencyConverter />
         </div>
         
-        {/* Market Heat Index */}
-        <Card className="card-gradient animate-fade-in">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold flex items-center space-x-2">
-              <span className="text-lg">🔥</span>
-              <span>Market Heat Index</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-4 gap-2">
-              {heatMapStocks.map((stock) => (
-                <div
-                  key={stock.symbol}
-                  onClick={() => navigate(`/stock/${stock.symbol}`)}
-                  className={`p-3 rounded-lg text-center cursor-pointer transition-all duration-200 tap-scale ${
-                    stock.change > 2 ? 'bg-bull/20 border border-bull/30' :
-                    stock.change > 0 ? 'bg-bull/10 border border-bull/20' :
-                    stock.change > -2 ? 'bg-bear/10 border border-bear/20' :
-                    'bg-bear/20 border border-bear/30'
-                  }`}
-                >
-                  <div className="font-bold text-xs mb-0.5">{stock.symbol}</div>
-                  <div className={`text-xs font-medium ${stock.change >= 0 ? 'text-bull' : 'text-bear'}`}>
-                    {stock.change >= 0 ? '+' : ''}{stock.change}%
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        {/* Market Heat Index - Modern Treemap */}
+        <div className="animate-fade-in">
+          <Card className="card-gradient">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-semibold flex items-center space-x-2">
+                <Zap className="h-4 w-4 text-accent" />
+                <span>Market Pulse</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <StockHeatmap />
+            </CardContent>
+          </Card>
+        </div>
+        
+        {/* Stock Screener */}
+        <div className="animate-fade-in">
+          <StockScreener />
+        </div>
 
         {/* Quick Actions */}
         <div className="grid grid-cols-2 gap-3 animate-fade-in">
