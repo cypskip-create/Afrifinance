@@ -4,10 +4,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { AddTradeDialog } from "@/components/portfolio/AddTradeDialog";
 import { PortfolioAnalytics } from "@/components/portfolio/PortfolioAnalytics";
-import { Trash2, TrendingUp, TrendingDown, PieChart as PieChartIcon, BarChart3, Calendar, ArrowLeft } from "lucide-react";
+import { RobinhoodPerformanceChart } from "@/components/portfolio/RobinhoodPerformanceChart";
+import { RealtimePriceTicker } from "@/components/shared/RealtimePriceTicker";
+import { Trash2, TrendingUp, TrendingDown, PieChart as PieChartIcon, BarChart3, Calendar, ArrowLeft, Briefcase } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { LineChart, Line, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
 export default function TrackInvestments() {
   const { portfolio, loading, removeFromPortfolio, addToPortfolio, refetch } = usePortfolio();
@@ -241,57 +243,54 @@ export default function TrackInvestments() {
             )}
           </TabsContent>
 
-          {/* Performance Chart Tab */}
-          <TabsContent value="performance" className="mt-4">
-            <Card className="card-gradient">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <BarChart3 className="h-5 w-5" />
-                  <span>Portfolio Performance</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {portfolio.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    Add investments to see performance data
-                  </div>
-                ) : (
-                  <>
-                    <ResponsiveContainer width="100%" height={250}>
-                      <LineChart data={getPerformanceData()}>
-                        <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" />
-                        <YAxis stroke="hsl(var(--muted-foreground))" />
-                        <Tooltip 
-                          contentStyle={{ 
-                            backgroundColor: 'hsl(var(--card))', 
-                            border: '1px solid hsl(var(--border))' 
-                          }} 
-                        />
-                        <Line 
-                          type="monotone" 
-                          dataKey="value" 
-                          stroke="hsl(var(--primary))" 
-                          strokeWidth={2}
-                          dot={{ fill: 'hsl(var(--primary))' }}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                    <div className="mt-4 grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-xs text-muted-foreground">6M Return</p>
-                        <p className={`text-lg font-bold ${stats.gainPercentage >= 0 ? 'text-bull' : 'text-bear'}`}>
-                          {stats.gainPercentage >= 0 ? '+' : ''}{stats.gainPercentage.toFixed(2)}%
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Total Gain/Loss</p>
-                        <p className={`text-lg font-bold ${stats.totalGain >= 0 ? 'text-bull' : 'text-bear'}`}>
-                          {stats.totalGain >= 0 ? '+' : ''}KES {stats.totalGain.toFixed(2)}
-                        </p>
-                      </div>
+          {/* Performance Chart Tab - Robinhood Style */}
+          <TabsContent value="performance" className="mt-4 space-y-4">
+            <RobinhoodPerformanceChart 
+              currentValue={stats.totalValue}
+              initialValue={stats.totalCost}
+            />
+            
+            {/* Stats Cards */}
+            <div className="grid grid-cols-2 gap-3">
+              <Card className="card-gradient">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className={`p-2 rounded-full ${stats.gainPercentage >= 0 ? 'bg-bull/20' : 'bg-bear/20'}`}>
+                      {stats.gainPercentage >= 0 ? (
+                        <TrendingUp className="h-4 w-4 text-bull" />
+                      ) : (
+                        <TrendingDown className="h-4 w-4 text-bear" />
+                      )}
                     </div>
-                  </>
-                )}
+                    <span className="text-xs text-muted-foreground">Total Return</span>
+                  </div>
+                  <div className={`text-xl font-bold ${stats.gainPercentage >= 0 ? 'text-bull' : 'text-bear'}`}>
+                    {stats.gainPercentage >= 0 ? '+' : ''}{stats.gainPercentage.toFixed(2)}%
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="card-gradient">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="p-2 rounded-full bg-primary/20">
+                      <Briefcase className="h-4 w-4 text-primary" />
+                    </div>
+                    <span className="text-xs text-muted-foreground">Net Gain</span>
+                  </div>
+                  <div className={`text-xl font-bold ${stats.totalGain >= 0 ? 'text-bull' : 'text-bear'}`}>
+                    {stats.totalGain >= 0 ? '+' : ''}KES {Math.abs(stats.totalGain).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Performance Tips */}
+            <Card className="card-gradient">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Calendar className="h-3.5 w-3.5" />
+                  <span>Your portfolio has been active for 6 months</span>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
