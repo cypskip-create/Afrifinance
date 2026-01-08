@@ -1,13 +1,16 @@
 import { MorningBrief } from "@/components/home/MorningBrief";
 import { TopMoversLosers } from "@/components/home/TopMoversLosers";
-import { WatchlistSummary } from "@/components/home/WatchlistSummary";
 import { CurrencyConverter } from "@/components/home/CurrencyConverter";
 import { StockHeatmap } from "@/components/home/StockHeatmap";
 import { RealtimeWatchlistWidget } from "@/components/home/RealtimeWatchlistWidget";
+import { EconomicCalendar } from "@/components/home/EconomicCalendar";
+import { FearGreedIndex } from "@/components/home/FearGreedIndex";
+import { TrendingStocks } from "@/components/home/TrendingStocks";
+import { QuickTradeWidget } from "@/components/home/QuickTradeWidget";
 import { TopBar } from "@/components/shared/TopBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart, Search, TrendingUp, LogIn, Zap, Sparkles, ChevronRight } from "lucide-react";
+import { PieChart, Search, TrendingUp, LogIn, Zap, Sparkles, ChevronRight, BarChart3, Scale } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
@@ -91,19 +94,34 @@ export default function Home() {
             </div>
           </div>
         </div>
+
+        {/* Fear & Greed Index - Professional Sentiment Indicator */}
+        <div className="animate-fade-in">
+          <FearGreedIndex />
+        </div>
         
-        {/* Top Movers & Watchlist */}
-        <div className="space-y-5 stagger-children">
+        {/* Quick Trade Widget - For logged in users */}
+        {user && (
+          <div className="animate-fade-in">
+            <QuickTradeWidget />
+          </div>
+        )}
+        
+        {/* Real-time Watchlist Widget - Only for logged in users */}
+        {user && (
+          <div className="animate-fade-in">
+            <RealtimeWatchlistWidget />
+          </div>
+        )}
+
+        {/* Trending Stocks */}
+        <div className="animate-fade-in">
+          <TrendingStocks />
+        </div>
+        
+        {/* Top Movers & Losers */}
+        <div className="animate-fade-in">
           <TopMoversLosers />
-          
-          {/* Real-time Watchlist Widget */}
-          {user && (
-            <div className="animate-fade-in">
-              <RealtimeWatchlistWidget />
-            </div>
-          )}
-          
-          <WatchlistSummary />
         </div>
         
         {/* Currency Converter */}
@@ -125,25 +143,44 @@ export default function Home() {
             </CardContent>
           </Card>
         </div>
-        
-        {/* Stock Screener Quick Link */}
+
+        {/* Economic Calendar */}
         <div className="animate-fade-in">
+          <EconomicCalendar />
+        </div>
+        
+        {/* Quick Action Cards */}
+        <div className="grid grid-cols-2 gap-3 animate-fade-in">
           <Card 
-            className="card-gradient cursor-pointer hover:scale-[1.01] transition-all tap-scale"
+            className="card-gradient cursor-pointer hover:scale-[1.02] transition-all tap-scale"
             onClick={() => navigate('/screener')}
           >
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent/20 to-accent/5 flex items-center justify-center">
-                    <Sparkles className="h-5 w-5 text-accent" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm">Stock Screener</h3>
-                    <p className="text-xs text-muted-foreground">Find your next investment</p>
-                  </div>
+              <div className="flex flex-col items-center text-center gap-2">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent/20 to-accent/5 flex items-center justify-center">
+                  <Sparkles className="h-5 w-5 text-accent" />
                 </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <h3 className="font-semibold text-sm">Screener</h3>
+                  <p className="text-xs text-muted-foreground">Find stocks</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className="card-gradient cursor-pointer hover:scale-[1.02] transition-all tap-scale"
+            onClick={() => navigate('/compare')}
+          >
+            <CardContent className="p-4">
+              <div className="flex flex-col items-center text-center gap-2">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                  <Scale className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm">Compare</h3>
+                  <p className="text-xs text-muted-foreground">Side by side</p>
+                </div>
               </div>
             </CardContent>
           </Card>
