@@ -5,11 +5,12 @@ import { usePortfolio } from "@/hooks/usePortfolio";
 import { AddTradeDialog } from "@/components/portfolio/AddTradeDialog";
 import { PortfolioAnalytics } from "@/components/portfolio/PortfolioAnalytics";
 import { RobinhoodPerformanceChart } from "@/components/portfolio/RobinhoodPerformanceChart";
-import { RealtimePriceTicker } from "@/components/shared/RealtimePriceTicker";
-import { Trash2, TrendingUp, TrendingDown, PieChart as PieChartIcon, BarChart3, Calendar, ArrowLeft, Briefcase } from "lucide-react";
+import { SectorAllocationChart } from "@/components/portfolio/SectorAllocationChart";
+import { DividendTracker } from "@/components/portfolio/DividendTracker";
+import { MarketOverviewWidget } from "@/components/portfolio/MarketOverviewWidget";
+import { Trash2, TrendingUp, TrendingDown, Calendar, ArrowLeft, Briefcase, Banknote, Activity } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
 export default function TrackInvestments() {
   const { portfolio, loading, removeFromPortfolio, addToPortfolio, refetch } = usePortfolio();
@@ -74,7 +75,7 @@ export default function TrackInvestments() {
     ];
   };
 
-  const COLORS = ['hsl(var(--primary))', 'hsl(var(--accent))', 'hsl(var(--bull))', 'hsl(var(--bear))', 'hsl(var(--muted))'];
+  // Colors moved to SectorAllocationChart component
 
   const handleDelete = async (id: string) => {
     const result = await removeFromPortfolio(id);
@@ -149,10 +150,18 @@ export default function TrackInvestments() {
 
         {/* Advanced Analytics Tabs */}
         <Tabs defaultValue="holdings" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="holdings">Holdings</TabsTrigger>
-            <TabsTrigger value="performance">Performance</TabsTrigger>
-            <TabsTrigger value="allocation">Allocation</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-5 h-auto p-1">
+            <TabsTrigger value="holdings" className="text-xs py-2">Holdings</TabsTrigger>
+            <TabsTrigger value="performance" className="text-xs py-2">Performance</TabsTrigger>
+            <TabsTrigger value="allocation" className="text-xs py-2">Allocation</TabsTrigger>
+            <TabsTrigger value="dividends" className="text-xs py-2 flex items-center gap-1">
+              <Banknote className="h-3 w-3" />
+              <span className="hidden sm:inline">Dividends</span>
+            </TabsTrigger>
+            <TabsTrigger value="market" className="text-xs py-2 flex items-center gap-1">
+              <Activity className="h-3 w-3" />
+              <span className="hidden sm:inline">Market</span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="holdings" className="space-y-4 mt-4">
@@ -295,93 +304,23 @@ export default function TrackInvestments() {
             </Card>
           </TabsContent>
 
-          {/* Sector Allocation Tab */}
+          {/* Sector Allocation Tab - New Professional Design */}
           <TabsContent value="allocation" className="mt-4">
-            <Card className="card-gradient">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <PieChartIcon className="h-5 w-5" />
-                  <span>Sector Allocation</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {portfolio.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    Add investments to see sector allocation
-                  </div>
-                ) : (
-                  <>
-                    <ResponsiveContainer width="100%" height={250}>
-                      <PieChart>
-                        <Pie
-                          data={getSectorAllocation()}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                          outerRadius={80}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {getSectorAllocation().map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip 
-                          contentStyle={{ 
-                            backgroundColor: 'hsl(var(--card))', 
-                            border: '1px solid hsl(var(--border))' 
-                          }} 
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div className="mt-4 space-y-2">
-                      {getSectorAllocation().map((sector, index) => (
-                        <div key={sector.name} className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2">
-                            <div 
-                              className="w-3 h-3 rounded-full" 
-                              style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                            />
-                            <span className="text-sm">{sector.name}</span>
-                          </div>
-                          <span className="text-sm font-medium">KES {sector.value.toLocaleString()}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+            <SectorAllocationChart 
+              data={getSectorAllocation()}
+              totalValue={stats.totalValue}
+              gainPercentage={stats.gainPercentage}
+            />
+          </TabsContent>
 
-            {/* Investment Tips Card */}
-            <Card className="card-gradient mt-4">
-              <CardHeader>
-                <CardTitle className="text-base">Investment Insights</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-start space-x-2">
-                  <Calendar className="h-4 w-4 mt-0.5 text-primary" />
-                  <div>
-                    <p className="text-sm font-medium">Diversification</p>
-                    <p className="text-xs text-muted-foreground">
-                      {getSectorAllocation().length < 3 
-                        ? "Consider diversifying across more sectors to reduce risk" 
-                        : "Good sector diversification in your portfolio"}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <TrendingUp className="h-4 w-4 mt-0.5 text-bull" />
-                  <div>
-                    <p className="text-sm font-medium">Performance</p>
-                    <p className="text-xs text-muted-foreground">
-                      Your portfolio is {stats.gainPercentage >= 0 ? 'up' : 'down'} {Math.abs(stats.gainPercentage).toFixed(2)}% overall
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          {/* Dividends Tab */}
+          <TabsContent value="dividends" className="mt-4">
+            <DividendTracker portfolio={portfolio} />
+          </TabsContent>
+
+          {/* Market Overview Tab */}
+          <TabsContent value="market" className="mt-4">
+            <MarketOverviewWidget />
           </TabsContent>
         </Tabs>
       </div>
