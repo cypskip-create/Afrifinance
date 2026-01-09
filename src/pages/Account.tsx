@@ -1,4 +1,5 @@
-import { User, Settings, CreditCard, Users, Bell, Shield, Crown, Zap, LogOut } from "lucide-react";
+import { useState } from "react";
+import { User, Settings, CreditCard, Users, Bell, Shield, Crown, Zap, LogOut, Pencil } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,8 +9,10 @@ import { TopBar } from "@/components/shared/TopBar";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useNavigate } from "react-router-dom";
+import { EditProfileDialog } from "@/components/profile/EditProfileDialog";
 
 export default function Account() {
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
   const { user, signOut } = useAuth();
   const { profile, loading } = useProfile();
   const navigate = useNavigate();
