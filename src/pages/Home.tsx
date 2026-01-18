@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { MorningBrief } from "@/components/home/MorningBrief";
 import { TopMoversLosers } from "@/components/home/TopMoversLosers";
 import { CurrencyConverter } from "@/components/home/CurrencyConverter";
@@ -7,10 +8,11 @@ import { EconomicCalendar } from "@/components/home/EconomicCalendar";
 import { FearGreedIndex } from "@/components/home/FearGreedIndex";
 import { TrendingStocks } from "@/components/home/TrendingStocks";
 import { QuickTradeWidget } from "@/components/home/QuickTradeWidget";
+import { WidgetManager, WidgetConfig, defaultWidgets } from "@/components/home/WidgetManager";
 import { TopBar } from "@/components/shared/TopBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart, Search, TrendingUp, LogIn, Zap, Sparkles, ChevronRight, BarChart3, Scale } from "lucide-react";
+import { PieChart, Search, TrendingUp, LogIn, Zap, Sparkles, ChevronRight, BarChart3, Scale, Settings2 } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
@@ -21,8 +23,20 @@ export default function Home() {
   const { profile } = useProfile();
   const navigate = useNavigate();
   const { greeting } = getTimeBasedGreeting();
+  const [widgetManagerOpen, setWidgetManagerOpen] = useState(false);
+  const [widgets, setWidgets] = useState<WidgetConfig[]>(() => {
+    const saved = localStorage.getItem('home-widgets');
+    return saved ? JSON.parse(saved) : defaultWidgets;
+  });
   
   const firstName = profile?.full_name ? profile.full_name.split(' ')[0] : 'Investor';
+
+  const handleSaveWidgets = (newWidgets: WidgetConfig[]) => {
+    setWidgets(newWidgets);
+    localStorage.setItem('home-widgets', JSON.stringify(newWidgets));
+  };
+
+  const isWidgetEnabled = (id: string) => widgets.find(w => w.id === id)?.enabled ?? true;
 
   const nseIndices = [
     { name: "NSE 20", value: "1,847.23", change: 1.2, isUp: true },
@@ -40,6 +54,23 @@ export default function Home() {
         showSearch={true}
         showNotifications={true}
       />
+      
+      {/* Widget Manager Button & Dialog */}
+      {user && (
+        <>
+          <div className="absolute top-4 right-16 z-50">
+            <Button variant="ghost" size="icon" onClick={() => setWidgetManagerOpen(true)}>
+              <Settings2 className="h-4 w-4" />
+            </Button>
+          </div>
+          <WidgetManager 
+            open={widgetManagerOpen} 
+            onOpenChange={setWidgetManagerOpen}
+            widgets={widgets}
+            onSave={handleSaveWidgets}
+          />
+        </>
+      )}
       
       {!user && (
         <div className="p-4 animate-fade-in">
