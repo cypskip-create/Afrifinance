@@ -81,9 +81,10 @@ export default function Account() {
                 </p>
               </div>
             </div>
-            <Button variant="outline" className="w-full mt-4">
+            <Button variant="outline" className="w-full mt-4" onClick={() => setEditProfileOpen(true)}>
               Edit Profile
             </Button>
+            <EditProfileDialog open={editProfileOpen} onOpenChange={setEditProfileOpen} />
           </CardContent>
         </Card>
 

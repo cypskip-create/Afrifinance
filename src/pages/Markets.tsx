@@ -10,6 +10,7 @@ import * as React from "react";
 import { CryptoChartDialog } from "@/components/markets/CryptoChartDialog";
 import { MarketStatusIndicator } from "@/components/shared/MarketStatusIndicator";
 import { SparklineChart } from "@/components/shared/SparklineChart";
+import { AllStocksList } from "@/components/markets/AllStocksList";
 
 export default function Markets() {
   const navigate = useNavigate();
@@ -136,6 +137,8 @@ export default function Markets() {
         <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="w-full mb-6">
           {/* Stocks Tab */}
           <TabsContent value="stocks" className="space-y-6">
+            {/* All Stocks List */}
+            <AllStocksList />
             {/* Top Gainers & Losers */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Card className="card-gradient">
