@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, User, Loader2 } from "lucide-react";
+import { Camera, User, Loader2, Upload, X } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
+import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface EditProfileDialogProps {
   open: boolean;
@@ -15,11 +16,90 @@ interface EditProfileDialogProps {
 }
 
 export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps) {
-  const { profile, updateProfile } = useProfile();
+  const { profile, updateProfile, refetch } = useProfile();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [fullName, setFullName] = useState(profile?.full_name || "");
-  const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || "");
+  const [uploading, setUploading] = useState(false);
+  const [fullName, setFullName] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [previewUrl, setPreviewUrl] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (open && profile) {
+      setFullName(profile.full_name || "");
+      setAvatarUrl(profile.avatar_url || "");
+      setPreviewUrl(profile.avatar_url || "");
+    }
+  }, [open, profile]);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload an image file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please upload an image smaller than 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      // Create a unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/avatar-${Date.now()}.${fileExt}`;
+
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+
+      setAvatarUrl(publicUrl);
+      setPreviewUrl(publicUrl);
+
+      toast({
+        title: "Photo uploaded",
+        description: "Your profile photo has been uploaded",
+      });
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({
+        title: "Upload failed",
+        description: "Failed to upload image. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemovePhoto = () => {
+    setAvatarUrl("");
+    setPreviewUrl("");
+  };
 
   const handleSave = async () => {
     setLoading(true);
@@ -40,6 +120,7 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
           title: "Success",
           description: "Profile updated successfully",
         });
+        await refetch();
         onOpenChange(false);
       }
     } catch (error) {
@@ -66,69 +147,137 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Edit Profile</DialogTitle>
+          <DialogTitle className="text-center text-xl">Edit Profile</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-6 py-4">
           {/* Avatar Section */}
           <div className="flex flex-col items-center gap-4">
-            <div className="relative">
-              <Avatar className="h-24 w-24">
-                <AvatarImage src={avatarUrl} />
-                <AvatarFallback className="bg-primary/20 text-primary text-2xl">
-                  {fullName ? getInitials(fullName) : <User className="h-10 w-10" />}
+            <div className="relative group">
+              <Avatar className="h-28 w-28 ring-4 ring-primary/20">
+                <AvatarImage src={previewUrl} className="object-cover" />
+                <AvatarFallback className="bg-gradient-primary text-primary-foreground text-3xl font-bold">
+                  {fullName ? getInitials(fullName) : <User className="h-12 w-12" />}
                 </AvatarFallback>
               </Avatar>
-              <Button 
-                size="icon" 
-                variant="secondary"
-                className="absolute bottom-0 right-0 h-8 w-8 rounded-full"
+              
+              {/* Upload overlay */}
+              <div 
+                className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                onClick={() => fileInputRef.current?.click()}
               >
-                <Camera className="h-4 w-4" />
-              </Button>
+                {uploading ? (
+                  <Loader2 className="h-8 w-8 text-white animate-spin" />
+                ) : (
+                  <Camera className="h-8 w-8 text-white" />
+                )}
+              </div>
+              
+              {/* Remove button */}
+              {previewUrl && (
+                <Button
+                  size="icon"
+                  variant="destructive"
+                  className="absolute -top-1 -right-1 h-7 w-7 rounded-full"
+                  onClick={handleRemovePhoto}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
             </div>
-            <p className="text-xs text-muted-foreground">Tap to change photo</p>
+            
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="image/*"
+              onChange={handleFileUpload}
+            />
+            
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="gap-2"
+            >
+              {uploading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4" />
+                  Upload Photo
+                </>
+              )}
+            </Button>
           </div>
 
           {/* Form Fields */}
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="fullName">Full Name</Label>
+              <Label htmlFor="fullName" className="text-sm font-medium">
+                Full Name
+              </Label>
               <Input
                 id="fullName"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="Enter your full name"
+                className="h-11"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="avatarUrl">Avatar URL (optional)</Label>
+              <Label htmlFor="email" className="text-sm font-medium">
+                Email Address
+              </Label>
+              <Input
+                id="email"
+                value={user?.email || ""}
+                disabled
+                className="h-11 bg-muted/50"
+              />
+              <p className="text-xs text-muted-foreground">
+                Email cannot be changed
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="avatarUrl" className="text-sm font-medium">
+                Avatar URL (optional)
+              </Label>
               <Input
                 id="avatarUrl"
                 value={avatarUrl}
-                onChange={(e) => setAvatarUrl(e.target.value)}
+                onChange={(e) => {
+                  setAvatarUrl(e.target.value);
+                  setPreviewUrl(e.target.value);
+                }}
                 placeholder="https://example.com/avatar.jpg"
+                className="h-11"
               />
               <p className="text-xs text-muted-foreground">
-                Enter a URL to your profile picture
+                Or paste a direct link to your profile picture
               </p>
             </div>
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3">
+          <div className="flex gap-3 pt-2">
             <Button 
               variant="outline" 
-              className="flex-1"
+              className="flex-1 h-11"
               onClick={() => onOpenChange(false)}
             >
               Cancel
             </Button>
             <Button 
-              className="flex-1 btn-primary"
+              className="flex-1 h-11 btn-primary"
               onClick={handleSave}
-              disabled={loading}
+              disabled={loading || uploading}
             >
               {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Save Changes
