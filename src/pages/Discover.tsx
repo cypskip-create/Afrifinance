@@ -122,7 +122,6 @@ export default function Discover() {
         title="Discover" 
         subtitle="Social investing & learning"
         showSearch={true}
-        showAI={false}
         showNotifications={true}
       />
 

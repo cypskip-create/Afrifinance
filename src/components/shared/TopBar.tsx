@@ -1,7 +1,6 @@
-import { Search, Bot, Bell } from "lucide-react";
+import { Search, Settings2, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -9,20 +8,21 @@ interface TopBarProps {
   title: string;
   subtitle?: string;
   showSearch?: boolean;
-  showAI?: boolean;
+  showWidgetSettings?: boolean;
   showNotifications?: boolean;
+  onWidgetSettingsClick?: () => void;
 }
 
 export function TopBar({ 
   title, 
   subtitle, 
   showSearch = true, 
-  showAI = true, 
-  showNotifications = true 
+  showWidgetSettings = false, 
+  showNotifications = true,
+  onWidgetSettingsClick
 }: TopBarProps) {
   const navigate = useNavigate();
   const [searchOpen, setSearchOpen] = useState(false);
-  const [aiUsage] = useState({ used: 1, limit: 3, tier: "Free" }); // Mock data
 
   return (
     <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-sm border-b border-border">
@@ -68,21 +68,16 @@ export function TopBar({
             </div>
           )}
 
-          {/* AI Assistant */}
-          {showAI && (
+          {/* Widget Settings */}
+          {showWidgetSettings && onWidgetSettingsClick && (
             <Button 
               variant="ghost" 
               size="sm" 
-              className="h-9 w-9 p-0 relative"
-              title={`AI Assistant (${aiUsage.used}/${aiUsage.limit} used)`}
+              className="h-9 w-9 p-0"
+              onClick={onWidgetSettingsClick}
+              title="Customize Widgets"
             >
-              <Bot className="h-4 w-4" />
-              <Badge 
-                variant="secondary" 
-                className="absolute -top-1 -right-1 h-4 w-4 p-0 text-xs"
-              >
-                {aiUsage.limit - aiUsage.used}
-              </Badge>
+              <Settings2 className="h-4 w-4" />
             </Button>
           )}
 

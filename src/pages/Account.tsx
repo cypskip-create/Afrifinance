@@ -49,7 +49,6 @@ export default function Account() {
         title="Account" 
         subtitle="Profile & settings"
         showSearch={false}
-        showAI={false}
         showNotifications={true}
       />
 
