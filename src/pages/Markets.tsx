@@ -81,7 +81,6 @@ export default function Markets() {
         title="Markets" 
         subtitle="Global market overview"
         showSearch={true}
-        showAI={false}
         showNotifications={true}
       />
 

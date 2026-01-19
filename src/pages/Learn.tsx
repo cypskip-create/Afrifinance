@@ -198,7 +198,6 @@ export default function Learn() {
         title="Learning Center" 
         subtitle="Master investing skills"
         showSearch={true}
-        showAI={false}
         showNotifications={true}
       />
 

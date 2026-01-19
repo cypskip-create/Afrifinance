@@ -12,7 +12,7 @@ import { WidgetManager, WidgetConfig, defaultWidgets } from "@/components/home/W
 import { TopBar } from "@/components/shared/TopBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart, Search, TrendingUp, LogIn, Zap, Sparkles, ChevronRight, BarChart3, Scale, Settings2 } from "lucide-react";
+import { PieChart, Search, TrendingUp, LogIn, Zap, Sparkles, ChevronRight, BarChart3, Scale } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
@@ -52,24 +52,19 @@ export default function Home() {
         title={user ? "AfriFinance" : "Welcome to AfriFinance"} 
         subtitle={user ? `${greeting}, ${firstName}` : "Your smart investment companion"}
         showSearch={true}
+        showWidgetSettings={!!user}
         showNotifications={true}
+        onWidgetSettingsClick={() => setWidgetManagerOpen(true)}
       />
       
-      {/* Widget Manager Button & Dialog */}
+      {/* Widget Manager Dialog */}
       {user && (
-        <>
-          <div className="absolute top-4 right-16 z-50">
-            <Button variant="ghost" size="icon" onClick={() => setWidgetManagerOpen(true)}>
-              <Settings2 className="h-4 w-4" />
-            </Button>
-          </div>
-          <WidgetManager 
-            open={widgetManagerOpen} 
-            onOpenChange={setWidgetManagerOpen}
-            widgets={widgets}
-            onSave={handleSaveWidgets}
-          />
-        </>
+        <WidgetManager 
+          open={widgetManagerOpen} 
+          onOpenChange={setWidgetManagerOpen}
+          widgets={widgets}
+          onSave={handleSaveWidgets}
+        />
       )}
       
       {!user && (
