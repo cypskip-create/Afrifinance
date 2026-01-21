@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -10,11 +10,13 @@ import {
   Users, TrendingUp, MessageSquare, Award, ArrowLeft, Heart, 
   Repeat2, Share, MoreHorizontal, ImagePlus, BarChart3, Send,
   Flame, Hash, Search, Verified, ChartLine, Bell, UserPlus,
-  Bookmark, Globe, Lock, MessageCircle
+  Bookmark, Globe, Lock, MessageCircle, X, Image as ImageIcon,
+  Smile, MapPin, Calendar
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { TopBar } from "@/components/shared/TopBar";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 interface Post {
   id: number;
@@ -41,8 +43,13 @@ interface Post {
 export default function TradersHub() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [newPost, setNewPost] = useState("");
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isPosting, setIsPosting] = useState(false);
   const [activeTab, setActiveTab] = useState("for-you");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [posts, setPosts] = useState<Post[]>([
     {
@@ -117,6 +124,12 @@ export default function TradersHub() {
     { name: "Michael Otieno", username: "motieno", avatar: "MO", followers: 28500, accuracy: 75, verified: false }
   ];
 
+  const suggestedUsers = [
+    { name: "James Mwangi", username: "jmwangi_invest", avatar: "JM", bio: "Equity Bank CEO | 20+ years investing", followers: 125000, verified: true },
+    { name: "Carole Karuga", username: "carole_stocks", avatar: "CK", bio: "NSE analyst | Daily market insights", followers: 45000, verified: true },
+    { name: "Brian Odhiambo", username: "brian_trades", avatar: "BO", bio: "Full-time trader | Options specialist", followers: 18500, verified: false },
+  ];
+
   const handleLike = (postId: number) => {
     setPosts(prev => prev.map(p => 
       p.id === postId ? { ...p, liked: !p.liked, likes: p.liked ? p.likes - 1 : p.likes + 1 } : p
@@ -127,12 +140,80 @@ export default function TradersHub() {
     setPosts(prev => prev.map(p => 
       p.id === postId ? { ...p, reposted: !p.reposted, reposts: p.reposted ? p.reposts - 1 : p.reposts + 1 } : p
     ));
+    toast({ title: "Reposted successfully" });
   };
 
   const handleBookmark = (postId: number) => {
     setPosts(prev => prev.map(p => 
       p.id === postId ? { ...p, bookmarked: !p.bookmarked } : p
     ));
+    const post = posts.find(p => p.id === postId);
+    toast({ title: post?.bookmarked ? "Removed from bookmarks" : "Added to bookmarks" });
+  };
+
+  const handleShare = async (post: Post) => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Post by ${post.user.name}`,
+          text: post.content.slice(0, 100) + "...",
+          url: window.location.href
+        });
+      } catch (err) {
+        console.log("Error sharing:", err);
+      }
+    } else {
+      await navigator.clipboard.writeText(window.location.href);
+      toast({ title: "Link copied to clipboard" });
+    }
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSelectedImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handlePost = () => {
+    if (!newPost.trim() && !selectedImage) return;
+    
+    setIsPosting(true);
+    
+    // Simulate posting
+    setTimeout(() => {
+      const newPostData: Post = {
+        id: Date.now(),
+        user: {
+          name: user?.email?.split('@')[0] || "You",
+          username: user?.email?.split('@')[0] || "you",
+          avatar: user?.email?.[0].toUpperCase() || "U",
+          verified: false,
+          followers: 0
+        },
+        content: newPost,
+        image: selectedImage || undefined,
+        stockMentions: newPost.match(/\$[A-Z]+/g)?.map(s => s.slice(1)) || [],
+        likes: 0,
+        reposts: 0,
+        replies: 0,
+        views: 0,
+        time: "now",
+        liked: false,
+        reposted: false,
+        bookmarked: false
+      };
+      
+      setPosts(prev => [newPostData, ...prev]);
+      setNewPost("");
+      setSelectedImage(null);
+      setIsPosting(false);
+      toast({ title: "Post published successfully!" });
+    }, 1000);
   };
 
   const formatNumber = (num: number) => {
@@ -152,43 +233,95 @@ export default function TradersHub() {
 
       <div className="flex flex-col lg:flex-row">
         {/* Main Feed */}
-        <div className="flex-1 border-r border-border">
+        <div className="flex-1 lg:border-r lg:border-border">
           {/* Compose Post */}
-          {user && (
+          {user ? (
             <Card className="mx-4 mt-4 card-gradient">
               <CardContent className="p-4">
                 <div className="flex gap-3">
-                  <Avatar className="h-10 w-10">
+                  <Avatar className="h-10 w-10 flex-shrink-0">
                     <AvatarFallback className="bg-primary text-primary-foreground">
                       {user.email?.[0].toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
                     <Textarea 
-                      placeholder="Share your market insights..."
+                      placeholder="Share your market insights... Use $SYMBOL for stocks"
                       value={newPost}
                       onChange={(e) => setNewPost(e.target.value)}
-                      className="min-h-[80px] resize-none border-0 bg-transparent p-0 focus-visible:ring-0"
+                      className="min-h-[80px] resize-none border-0 bg-transparent p-0 focus-visible:ring-0 text-sm"
                     />
-                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
-                      <div className="flex gap-2">
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <ImagePlus className="h-4 w-4 text-primary" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <BarChart3 className="h-4 w-4 text-primary" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <Hash className="h-4 w-4 text-primary" />
+                    
+                    {selectedImage && (
+                      <div className="relative mt-3 rounded-xl overflow-hidden">
+                        <img src={selectedImage} alt="Selected" className="w-full max-h-60 object-cover rounded-xl" />
+                        <Button 
+                          variant="secondary" 
+                          size="icon" 
+                          className="absolute top-2 right-2 h-8 w-8 rounded-full"
+                          onClick={() => setSelectedImage(null)}
+                        >
+                          <X className="h-4 w-4" />
                         </Button>
                       </div>
-                      <Button size="sm" className="btn-primary" disabled={!newPost.trim()}>
-                        <Send className="h-4 w-4 mr-1" />
-                        Post
+                    )}
+                    
+                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
+                      <div className="flex gap-1">
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          onChange={handleImageSelect}
+                          accept="image/*"
+                          className="hidden"
+                        />
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-9 w-9"
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          <ImageIcon className="h-5 w-5 text-primary" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-9 w-9">
+                          <BarChart3 className="h-5 w-5 text-primary" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-9 w-9">
+                          <Hash className="h-5 w-5 text-primary" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-9 w-9">
+                          <Smile className="h-5 w-5 text-primary" />
+                        </Button>
+                      </div>
+                      <Button 
+                        size="sm" 
+                        className="btn-primary h-9 px-4" 
+                        disabled={(!newPost.trim() && !selectedImage) || isPosting}
+                        onClick={handlePost}
+                      >
+                        {isPosting ? (
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        ) : (
+                          <>
+                            <Send className="h-4 w-4 mr-1" />
+                            Post
+                          </>
+                        )}
                       </Button>
                     </div>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="mx-4 mt-4 card-gradient">
+              <CardContent className="p-6 text-center">
+                <Users className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
+                <h3 className="font-semibold mb-2">Join the Community</h3>
+                <p className="text-sm text-muted-foreground mb-4">Sign in to share your insights and connect with traders</p>
+                <Button className="btn-primary" onClick={() => navigate('/auth')}>
+                  Sign In
+                </Button>
               </CardContent>
             </Card>
           )}
@@ -209,7 +342,7 @@ export default function TradersHub() {
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex gap-3">
                         <Avatar className="h-10 w-10">
-                          <AvatarFallback className="bg-primary text-primary-foreground">
+                          <AvatarFallback className="bg-primary text-primary-foreground text-sm">
                             {post.user.avatar}
                           </AvatarFallback>
                         </Avatar>
@@ -232,7 +365,7 @@ export default function TradersHub() {
 
                     {/* Post Content */}
                     <div className="mb-3">
-                      <p className="text-sm whitespace-pre-wrap">
+                      <p className="text-sm whitespace-pre-wrap leading-relaxed">
                         {post.content.split(/(\$[A-Z]+)/g).map((part, i) => 
                           part.startsWith('$') ? (
                             <span 
@@ -255,12 +388,12 @@ export default function TradersHub() {
 
                     {/* Stock Mentions */}
                     {post.stockMentions && post.stockMentions.length > 0 && (
-                      <div className="flex gap-2 mb-3">
+                      <div className="flex flex-wrap gap-2 mb-3">
                         {post.stockMentions.map(stock => (
                           <Badge 
                             key={stock} 
                             variant="secondary" 
-                            className="text-xs cursor-pointer"
+                            className="text-xs cursor-pointer hover:bg-primary/20 transition-colors"
                             onClick={() => navigate(`/stock/${stock}`)}
                           >
                             <ChartLine className="h-3 w-3 mr-1" />
@@ -277,12 +410,17 @@ export default function TradersHub() {
                       </div>
                     )}
 
+                    {/* Views */}
+                    <div className="text-xs text-muted-foreground mb-3">
+                      {formatNumber(post.views)} views
+                    </div>
+
                     {/* Post Actions */}
                     <div className="flex items-center justify-between pt-3 border-t border-border">
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        className={`h-8 px-2 gap-1 ${post.liked ? 'text-red-500' : 'text-muted-foreground'}`}
+                        className={`h-9 px-3 gap-1.5 ${post.liked ? 'text-red-500' : 'text-muted-foreground'} hover:text-red-500 hover:bg-red-500/10`}
                         onClick={() => handleLike(post.id)}
                       >
                         <Heart className={`h-4 w-4 ${post.liked ? 'fill-current' : ''}`} />
@@ -291,7 +429,7 @@ export default function TradersHub() {
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        className="h-8 px-2 gap-1 text-muted-foreground"
+                        className="h-9 px-3 gap-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10"
                       >
                         <MessageCircle className="h-4 w-4" />
                         <span className="text-xs">{formatNumber(post.replies)}</span>
@@ -299,7 +437,7 @@ export default function TradersHub() {
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        className={`h-8 px-2 gap-1 ${post.reposted ? 'text-bull' : 'text-muted-foreground'}`}
+                        className={`h-9 px-3 gap-1.5 ${post.reposted ? 'text-bull' : 'text-muted-foreground'} hover:text-bull hover:bg-bull/10`}
                         onClick={() => handleRepost(post.id)}
                       >
                         <Repeat2 className="h-4 w-4" />
@@ -308,12 +446,17 @@ export default function TradersHub() {
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        className={`h-8 px-2 gap-1 ${post.bookmarked ? 'text-primary' : 'text-muted-foreground'}`}
+                        className={`h-9 px-3 gap-1.5 ${post.bookmarked ? 'text-primary' : 'text-muted-foreground'} hover:text-primary hover:bg-primary/10`}
                         onClick={() => handleBookmark(post.id)}
                       >
                         <Bookmark className={`h-4 w-4 ${post.bookmarked ? 'fill-current' : ''}`} />
                       </Button>
-                      <Button variant="ghost" size="sm" className="h-8 px-2 gap-1 text-muted-foreground">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-9 px-3 gap-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                        onClick={() => handleShare(post)}
+                      >
                         <Share className="h-4 w-4" />
                       </Button>
                     </div>
@@ -330,7 +473,7 @@ export default function TradersHub() {
                   <p className="text-sm text-muted-foreground mb-4">
                     When you follow traders, their posts will appear here
                   </p>
-                  <Button onClick={() => setActiveTab("for-you")}>
+                  <Button onClick={() => setActiveTab("trending")} className="btn-primary">
                     Discover Traders
                   </Button>
                 </CardContent>
@@ -348,9 +491,12 @@ export default function TradersHub() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {trendingTopics.map((topic, idx) => (
-                    <div key={topic.tag} className="flex items-center justify-between">
+                    <div 
+                      key={topic.tag} 
+                      className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/30 cursor-pointer transition-colors"
+                    >
                       <div className="flex items-center gap-3">
-                        <span className="text-xs text-muted-foreground">{idx + 1}</span>
+                        <span className="text-xs text-muted-foreground font-medium w-4">{idx + 1}</span>
                         <div>
                           <div className="flex items-center gap-1">
                             <span className="font-medium text-sm">#{topic.tag}</span>
@@ -374,7 +520,7 @@ export default function TradersHub() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {topTraders.map((trader) => (
-                    <div key={trader.username} className="flex items-center justify-between">
+                    <div key={trader.username} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/30 transition-colors">
                       <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10">
                           <AvatarFallback className="bg-primary text-primary-foreground text-xs">
@@ -400,6 +546,38 @@ export default function TradersHub() {
                   ))}
                 </CardContent>
               </Card>
+
+              {/* Who to Follow */}
+              <Card className="card-gradient">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Users className="h-4 w-4 text-primary" />
+                    Who to Follow
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {suggestedUsers.map((user) => (
+                    <div key={user.username} className="flex items-start gap-3">
+                      <Avatar className="h-12 w-12">
+                        <AvatarFallback className="bg-accent text-accent-foreground">
+                          {user.avatar}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1">
+                          <span className="font-semibold text-sm truncate">{user.name}</span>
+                          {user.verified && <Verified className="h-3 w-3 text-primary fill-primary flex-shrink-0" />}
+                        </div>
+                        <p className="text-xs text-muted-foreground">@{user.username}</p>
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{user.bio}</p>
+                      </div>
+                      <Button size="sm" className="btn-primary h-8 flex-shrink-0">
+                        Follow
+                      </Button>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
         </div>
@@ -409,44 +587,23 @@ export default function TradersHub() {
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search TradersHub" className="pl-9" />
+            <Input 
+              placeholder="Search TradersHub"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
           </div>
 
-          {/* Trending */}
+          {/* Trending on Desktop */}
           <Card className="card-gradient">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Trending</CardTitle>
+              <CardTitle className="text-sm">Trending Topics</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {trendingTopics.slice(0, 3).map((topic) => (
-                <div key={topic.tag} className="cursor-pointer hover:bg-muted/20 p-2 rounded">
-                  <span className="font-medium text-sm">#{topic.tag}</span>
-                  <p className="text-xs text-muted-foreground">{formatNumber(topic.posts)} posts</p>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          {/* Who to Follow */}
-          <Card className="card-gradient">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Who to follow</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {topTraders.slice(0, 2).map((trader) => (
-                <div key={trader.username} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="text-xs">{trader.avatar}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="text-xs font-medium">{trader.name}</p>
-                      <p className="text-[10px] text-muted-foreground">@{trader.username}</p>
-                    </div>
-                  </div>
-                  <Button size="sm" variant="outline" className="h-7 text-xs">
-                    Follow
-                  </Button>
+                <div key={topic.tag} className="text-sm cursor-pointer hover:text-primary transition-colors">
+                  #{topic.tag}
                 </div>
               ))}
             </CardContent>
