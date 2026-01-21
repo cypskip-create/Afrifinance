@@ -148,17 +148,21 @@
 @layer base {
   * {
     @apply border-border;
+    -webkit-tap-highlight-color: transparent;
   }
 
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
   }
 
   body {
     @apply bg-background text-foreground;
     font-size: 14px;
     line-height: 1.5;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
   }
 
   /* Responsive typography scale */
@@ -166,6 +170,18 @@
   h2 { @apply text-xl font-semibold tracking-tight; }
   h3 { @apply text-lg font-semibold; }
   h4 { @apply text-base font-medium; }
+
+  /* Touch-friendly minimum hit targets */
+  button, a, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Exception for inline elements and small icons */
+  button.inline-btn, a.inline-link, [data-small-target] {
+    min-height: auto;
+    min-width: auto;
+  }
 }
 
 @layer components {
@@ -224,15 +240,18 @@
     box-shadow: 0 8px 25px -5px hsl(25 95% 55% / 0.4);
   }
 
-  /* Bottom navigation */
+  /* Bottom navigation - optimized for mobile */
   .bottom-nav {
     @apply fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-lg border-t border-border;
     padding-bottom: env(safe-area-inset-bottom);
+    padding-bottom: max(env(safe-area-inset-bottom), 8px);
   }
 
   .tab-item {
-    @apply flex flex-col items-center justify-center py-2 px-1 min-h-[56px];
+    @apply flex flex-col items-center justify-center py-2 px-1;
+    min-height: 56px;
     transition: var(--transition-smooth);
+    -webkit-tap-highlight-color: transparent;
   }
 
   .tab-item.active {
@@ -249,6 +268,13 @@
 
   .tab-item.inactive:hover {
     @apply text-foreground;
+  }
+
+  /* Mobile-optimized touch targets */
+  @media (max-width: 640px) {
+    .tab-item {
+      min-height: 60px;
+    }
   }
 
   /* Price animations */
