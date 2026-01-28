@@ -11,13 +11,33 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { NewsDetailDialog } from "@/components/news/NewsDetailDialog";
+
+interface NewsArticle {
+  id: number;
+  title: string;
+  summary: string;
+  source: string;
+  time: string;
+  category: string;
+  imageUrl: string;
+  readTime?: string;
+  views?: number;
+  likes?: number;
+  comments?: number;
+  hasVideo?: boolean;
+  stockMentions?: string[];
+  isPremium?: boolean;
+  isBreaking?: boolean;
+}
 
 export default function News() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [savedArticles, setSavedArticles] = useState<number[]>([]);
   const [followedTopics, setFollowedTopics] = useState<string[]>(["earnings", "stocks"]);
-
+  const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const newsCategories = [
     { id: "for-you", label: "For You", icon: Zap },
     { id: "latest", label: "Latest", icon: Clock },
@@ -217,7 +237,13 @@ export default function News() {
         )}
 
         {/* Breaking News - Large Feature Card */}
-        <Card className="bg-gradient-accent border-0 overflow-hidden tap-scale cursor-pointer">
+        <Card 
+          className="bg-gradient-accent border-0 overflow-hidden tap-scale cursor-pointer"
+          onClick={() => {
+            setSelectedArticle(breakingNews as NewsArticle);
+            setDetailDialogOpen(true);
+          }}
+        >
           <CardContent className="p-0">
             <div className="relative">
               <img 
@@ -329,6 +355,10 @@ export default function News() {
                   <Card 
                     key={article.id} 
                     className="card-gradient overflow-hidden tap-scale cursor-pointer transition-all duration-200 hover:shadow-lg"
+                    onClick={() => {
+                      setSelectedArticle(article);
+                      setDetailDialogOpen(true);
+                    }}
                   >
                     <CardContent className="p-0">
                       <div className="flex">
@@ -439,6 +469,15 @@ export default function News() {
           </CardContent>
         </Card>
       </div>
+
+      {/* News Detail Dialog */}
+      <NewsDetailDialog 
+        article={selectedArticle}
+        open={detailDialogOpen}
+        onOpenChange={setDetailDialogOpen}
+        savedArticles={savedArticles}
+        onToggleSave={toggleSave}
+      />
     </div>
   );
 }
