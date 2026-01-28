@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { User, Settings, CreditCard, Users, Bell, Shield, Crown, Zap, LogOut, ChevronRight, Smartphone, Globe, HelpCircle, FileText, Star } from "lucide-react";
+import { User, Settings, CreditCard, Users, Bell, Shield, Crown, Zap, LogOut, ChevronRight, Smartphone, Globe, HelpCircle, FileText, Star, Eye, EyeOff, Lock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,12 +12,15 @@ import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useNavigate } from "react-router-dom";
 import { EditProfileDialog } from "@/components/profile/EditProfileDialog";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Account() {
   const [editProfileOpen, setEditProfileOpen] = useState(false);
+  const [portfolioPublic, setPortfolioPublic] = useState(true);
   const { user, signOut } = useAuth();
-  const { profile, loading } = useProfile();
+  const { profile, loading, updateProfile } = useProfile();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleSignOut = async () => {
     await signOut();
@@ -179,6 +182,33 @@ export default function Account() {
                 </div>
               </div>
               <ThemeToggle />
+            </div>
+            
+            <Separator />
+
+            <div className="flex items-center justify-between py-2">
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-lg bg-muted/50 flex items-center justify-center">
+                  {portfolioPublic ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                </div>
+                <div>
+                  <div className="font-medium text-sm">Portfolio Visibility</div>
+                  <div className="text-xs text-muted-foreground">
+                    {portfolioPublic ? "Public - Others can see your investments" : "Private - Only you can see"}
+                  </div>
+                </div>
+              </div>
+              <Switch 
+                checked={portfolioPublic} 
+                onCheckedChange={async (checked) => {
+                  setPortfolioPublic(checked);
+                  await updateProfile({ portfolio_public: checked } as any);
+                  toast({ 
+                    title: checked ? "Portfolio is now public" : "Portfolio is now private",
+                    description: checked ? "Other users can view your investments" : "Your investments are hidden from others"
+                  });
+                }} 
+              />
             </div>
             
             <Separator />

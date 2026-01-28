@@ -25,6 +25,7 @@ import TradersHub from "./pages/TradersHub";
 import Rooms from "./pages/Rooms";
 import StockScreener from "./pages/StockScreener";
 import StockCompare from "./pages/StockCompare";
+import UserProfile from "./pages/UserProfile";
 
 const queryClient = new QueryClient();
 
@@ -56,6 +57,7 @@ const App = () => (
                 <Route path="rooms" element={<Rooms />} />
                 <Route path="screener" element={<StockScreener />} />
                 <Route path="compare" element={<StockCompare />} />
+                <Route path="profile/:userId" element={<UserProfile />} />
               </Route>
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
