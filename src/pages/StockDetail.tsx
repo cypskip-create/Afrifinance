@@ -25,7 +25,23 @@ export default function StockDetail() {
   const { addToPortfolio } = usePortfolio();
   const { toast } = useToast();
 
-  const stockData = {
+  // Comprehensive NSE stock data with accurate tickers and sectors
+  const stockData: Record<string, {
+    name: string;
+    price: number;
+    change: number;
+    changePercent: string;
+    isUp: boolean;
+    marketCap: string;
+    pe: string;
+    eps: string;
+    dividend: string;
+    high52: string;
+    low52: string;
+    exchange: string;
+    sector: string;
+  }> = {
+    // Telecommunications
     SAFCOM: {
       name: "Safaricom PLC",
       price: 12.85,
@@ -41,8 +57,9 @@ export default function StockDetail() {
       exchange: "NSE",
       sector: "Telecommunications"
     },
+    // Banking
     EQTY: {
-      name: "Equity Group Holdings",
+      name: "Equity Group Holdings PLC",
       price: 62.50,
       change: 7.25,
       changePercent: "13.12",
@@ -56,11 +73,41 @@ export default function StockDetail() {
       exchange: "NSE",
       sector: "Banking"
     },
+    KCB: {
+      name: "KCB Group PLC",
+      price: 45.75,
+      change: 1.25,
+      changePercent: "2.81",
+      isUp: true,
+      marketCap: "147.2B",
+      pe: "6.5",
+      eps: "7.04",
+      dividend: "1.50",
+      high52: "52.00",
+      low52: "38.00",
+      exchange: "NSE",
+      sector: "Banking"
+    },
+    COOP: {
+      name: "Co-operative Bank of Kenya",
+      price: 17.25,
+      change: 0.45,
+      changePercent: "2.68",
+      isUp: true,
+      marketCap: "101.5B",
+      pe: "5.8",
+      eps: "2.97",
+      dividend: "1.00",
+      high52: "19.50",
+      low52: "14.00",
+      exchange: "NSE",
+      sector: "Banking"
+    },
     SCBK: {
-      name: "Standard Chartered",
+      name: "Standard Chartered Bank Kenya",
       price: 185.00,
       change: 5.70,
-      changePercent: "5.70",
+      changePercent: "3.18",
       isUp: true,
       marketCap: "145.8B",
       pe: "10.5",
@@ -70,14 +117,297 @@ export default function StockDetail() {
       low52: "165.25",
       exchange: "NSE",
       sector: "Banking"
-    }
+    },
+    ABSA: {
+      name: "ABSA Bank Kenya PLC",
+      price: 14.80,
+      change: 0.35,
+      changePercent: "2.42",
+      isUp: true,
+      marketCap: "80.5B",
+      pe: "5.2",
+      eps: "2.85",
+      dividend: "1.10",
+      high52: "16.00",
+      low52: "12.50",
+      exchange: "NSE",
+      sector: "Banking"
+    },
+    NCBA: {
+      name: "NCBA Group PLC",
+      price: 52.25,
+      change: -0.75,
+      changePercent: "-1.42",
+      isUp: false,
+      marketCap: "86.2B",
+      pe: "6.8",
+      eps: "7.68",
+      dividend: "3.00",
+      high52: "58.00",
+      low52: "45.00",
+      exchange: "NSE",
+      sector: "Banking"
+    },
+    DTB: {
+      name: "Diamond Trust Bank Kenya",
+      price: 68.50,
+      change: 1.00,
+      changePercent: "1.48",
+      isUp: true,
+      marketCap: "19.2B",
+      pe: "4.8",
+      eps: "14.27",
+      dividend: "4.00",
+      high52: "75.00",
+      low52: "58.00",
+      exchange: "NSE",
+      sector: "Banking"
+    },
+    STANBIC: {
+      name: "Stanbic Holdings PLC",
+      price: 125.00,
+      change: 2.50,
+      changePercent: "2.04",
+      isUp: true,
+      marketCap: "49.5B",
+      pe: "7.2",
+      eps: "17.36",
+      dividend: "8.00",
+      high52: "135.00",
+      low52: "105.00",
+      exchange: "NSE",
+      sector: "Banking"
+    },
+    // Insurance
+    BRIT: {
+      name: "Britam Holdings PLC",
+      price: 6.80,
+      change: 0.15,
+      changePercent: "2.26",
+      isUp: true,
+      marketCap: "17.2B",
+      pe: "8.5",
+      eps: "0.80",
+      dividend: "0.25",
+      high52: "8.00",
+      low52: "5.50",
+      exchange: "NSE",
+      sector: "Insurance"
+    },
+    JUB: {
+      name: "Jubilee Holdings Ltd",
+      price: 245.00,
+      change: -5.00,
+      changePercent: "-2.00",
+      isUp: false,
+      marketCap: "17.7B",
+      pe: "6.2",
+      eps: "39.52",
+      dividend: "9.00",
+      high52: "280.00",
+      low52: "220.00",
+      exchange: "NSE",
+      sector: "Insurance"
+    },
+    // Manufacturing & Allied
+    EABL: {
+      name: "East African Breweries Ltd",
+      price: 178.50,
+      change: 3.25,
+      changePercent: "1.85",
+      isUp: true,
+      marketCap: "141.3B",
+      pe: "18.5",
+      eps: "9.65",
+      dividend: "6.50",
+      high52: "195.00",
+      low52: "155.00",
+      exchange: "NSE",
+      sector: "Manufacturing & Allied"
+    },
+    BAT: {
+      name: "British American Tobacco Kenya",
+      price: 425.00,
+      change: 5.00,
+      changePercent: "1.19",
+      isUp: true,
+      marketCap: "42.5B",
+      pe: "9.8",
+      eps: "43.37",
+      dividend: "52.00",
+      high52: "480.00",
+      low52: "380.00",
+      exchange: "NSE",
+      sector: "Manufacturing & Allied"
+    },
+    // Energy & Petroleum
+    KPLC: {
+      name: "Kenya Power & Lighting Co.",
+      price: 2.85,
+      change: 0.05,
+      changePercent: "1.79",
+      isUp: true,
+      marketCap: "5.5B",
+      pe: "N/A",
+      eps: "-1.25",
+      dividend: "0.00",
+      high52: "3.50",
+      low52: "2.00",
+      exchange: "NSE",
+      sector: "Energy & Petroleum"
+    },
+    KEGN: {
+      name: "KenGen PLC",
+      price: 4.25,
+      change: 0.10,
+      changePercent: "2.41",
+      isUp: true,
+      marketCap: "28.0B",
+      pe: "5.2",
+      eps: "0.82",
+      dividend: "0.30",
+      high52: "5.00",
+      low52: "3.50",
+      exchange: "NSE",
+      sector: "Energy & Petroleum"
+    },
+    TOTL: {
+      name: "TotalEnergies Marketing Kenya",
+      price: 28.50,
+      change: 0.50,
+      changePercent: "1.79",
+      isUp: true,
+      marketCap: "5.1B",
+      pe: "12.5",
+      eps: "2.28",
+      dividend: "1.50",
+      high52: "32.00",
+      low52: "24.00",
+      exchange: "NSE",
+      sector: "Energy & Petroleum"
+    },
+    // Agricultural
+    SASN: {
+      name: "Sasini PLC",
+      price: 18.50,
+      change: -0.25,
+      changePercent: "-1.33",
+      isUp: false,
+      marketCap: "4.2B",
+      pe: "8.5",
+      eps: "2.18",
+      dividend: "0.50",
+      high52: "22.00",
+      low52: "16.00",
+      exchange: "NSE",
+      sector: "Agricultural"
+    },
+    KTBL: {
+      name: "Kenya Tea Development Agency",
+      price: 85.00,
+      change: 1.50,
+      changePercent: "1.80",
+      isUp: true,
+      marketCap: "16.8B",
+      pe: "7.2",
+      eps: "11.81",
+      dividend: "4.00",
+      high52: "95.00",
+      low52: "75.00",
+      exchange: "NSE",
+      sector: "Agricultural"
+    },
+    // Construction & Allied
+    BAMB: {
+      name: "Bamburi Cement PLC",
+      price: 32.75,
+      change: 0.75,
+      changePercent: "2.34",
+      isUp: true,
+      marketCap: "11.9B",
+      pe: "15.2",
+      eps: "2.15",
+      dividend: "0.00",
+      high52: "38.00",
+      low52: "28.00",
+      exchange: "NSE",
+      sector: "Construction & Allied"
+    },
+    // Investment
+    CTUM: {
+      name: "Centum Investment Company",
+      price: 12.50,
+      change: 0.20,
+      changePercent: "1.63",
+      isUp: true,
+      marketCap: "8.3B",
+      pe: "4.5",
+      eps: "2.78",
+      dividend: "0.55",
+      high52: "15.00",
+      low52: "10.00",
+      exchange: "NSE",
+      sector: "Investment"
+    },
+    // Commercial & Services
+    NMG: {
+      name: "Nation Media Group PLC",
+      price: 16.80,
+      change: 0.30,
+      changePercent: "1.82",
+      isUp: true,
+      marketCap: "3.1B",
+      pe: "8.2",
+      eps: "2.05",
+      dividend: "1.00",
+      high52: "20.00",
+      low52: "14.00",
+      exchange: "NSE",
+      sector: "Commercial & Services"
+    },
+    TPS: {
+      name: "TPS Eastern Africa (Serena)",
+      price: 22.50,
+      change: 0.50,
+      changePercent: "2.27",
+      isUp: true,
+      marketCap: "4.1B",
+      pe: "12.5",
+      eps: "1.80",
+      dividend: "0.75",
+      high52: "26.00",
+      low52: "18.00",
+      exchange: "NSE",
+      sector: "Commercial & Services"
+    },
   };
 
-  const stock = stockData[symbol as keyof typeof stockData] || stockData.SAFCOM;
+  const stock = stockData[symbol as keyof typeof stockData] || {
+    name: symbol || "Unknown Stock",
+    price: 0,
+    change: 0,
+    changePercent: "0.00",
+    isUp: true,
+    marketCap: "N/A",
+    pe: "N/A",
+    eps: "N/A",
+    dividend: "N/A",
+    high52: "N/A",
+    low52: "N/A",
+    exchange: "NSE",
+    sector: "Unknown"
+  };
 
-  const companyInfo = {
+  const companyInfo: Record<string, {
+    description: string;
+    sector: string;
+    headquarters: string;
+    ceo: string;
+    employees: string;
+    founded: string;
+  }> = {
     SAFCOM: {
-      description: "Safaricom PLC is a leading mobile network operator in Kenya providing mobile telephony, mobile money transfer and wireless data services.",
+      description: "Safaricom PLC is a leading mobile network operator in Kenya providing mobile telephony, mobile money transfer (M-Pesa), and wireless data services. It is the largest telecommunications provider in Kenya.",
       sector: "Telecommunications",
       headquarters: "Nairobi, Kenya",
       ceo: "Peter Ndegwa",
@@ -85,24 +415,113 @@ export default function StockDetail() {
       founded: "1997"
     },
     EQTY: {
-      description: "Equity Group Holdings PLC is a financial services group headquartered in Nairobi, Kenya.",
+      description: "Equity Group Holdings PLC is a leading financial services group in East and Central Africa, providing banking, insurance, and investment services through its subsidiaries.",
       sector: "Banking & Financial Services",
       headquarters: "Nairobi, Kenya", 
       ceo: "James Mwangi",
       employees: "15,000+",
       founded: "1984"
     },
+    KCB: {
+      description: "KCB Group PLC is the largest commercial bank in Kenya and East Africa by assets, offering a wide range of banking and financial services.",
+      sector: "Banking & Financial Services",
+      headquarters: "Nairobi, Kenya",
+      ceo: "Paul Russo",
+      employees: "10,000+",
+      founded: "1896"
+    },
+    COOP: {
+      description: "Co-operative Bank of Kenya is a major commercial bank serving retail and corporate customers, with a strong focus on the cooperative movement.",
+      sector: "Banking & Financial Services",
+      headquarters: "Nairobi, Kenya",
+      ceo: "Gideon Muriuki",
+      employees: "4,500+",
+      founded: "1965"
+    },
     SCBK: {
-      description: "Standard Chartered Bank Kenya Limited is a leading financial services provider in Kenya, offering a wide range of banking products and services.",
+      description: "Standard Chartered Bank Kenya Limited is a leading financial services provider in Kenya, offering a wide range of banking products and services to personal, corporate, and institutional clients.",
       sector: "Banking & Financial Services",
       headquarters: "Nairobi, Kenya",
       ceo: "Kariuki Ngari",
       employees: "1,200+",
       founded: "1911"
-    }
+    },
+    ABSA: {
+      description: "ABSA Bank Kenya PLC (formerly Barclays Bank Kenya) is a leading financial services provider offering personal and business banking solutions.",
+      sector: "Banking & Financial Services",
+      headquarters: "Nairobi, Kenya",
+      ceo: "Abdi Mohamed",
+      employees: "2,500+",
+      founded: "1916"
+    },
+    NCBA: {
+      description: "NCBA Group PLC was formed from the merger of NIC Bank and CBA Group, creating one of Kenya's largest banks by customer deposits.",
+      sector: "Banking & Financial Services",
+      headquarters: "Nairobi, Kenya",
+      ceo: "John Gachora",
+      employees: "3,000+",
+      founded: "2019"
+    },
+    EABL: {
+      description: "East African Breweries Limited is the largest brewer in East Africa, producing and distributing a wide range of alcoholic and non-alcoholic beverages including Tusker, Guinness, and Bell lager.",
+      sector: "Manufacturing & Allied",
+      headquarters: "Nairobi, Kenya",
+      ceo: "Jane Karuku",
+      employees: "4,000+",
+      founded: "1922"
+    },
+    BAT: {
+      description: "British American Tobacco Kenya PLC is a leading tobacco company manufacturing and distributing cigarettes and tobacco products in Kenya and the East African region.",
+      sector: "Manufacturing & Allied",
+      headquarters: "Nairobi, Kenya",
+      ceo: "Crispin Achola",
+      employees: "800+",
+      founded: "1907"
+    },
+    KPLC: {
+      description: "Kenya Power and Lighting Company is the sole electricity distribution company in Kenya, responsible for transmission, distribution, and retail of electricity.",
+      sector: "Energy & Petroleum",
+      headquarters: "Nairobi, Kenya",
+      ceo: "Joseph Siror",
+      employees: "12,000+",
+      founded: "1922"
+    },
+    KEGN: {
+      description: "Kenya Electricity Generating Company (KenGen) is the largest electricity generator in Kenya, producing about 70% of the electricity consumed in the country.",
+      sector: "Energy & Petroleum",
+      headquarters: "Nairobi, Kenya",
+      ceo: "Rebecca Miano",
+      employees: "2,500+",
+      founded: "1954"
+    },
+    BAMB: {
+      description: "Bamburi Cement PLC is Kenya's leading cement manufacturer, producing and distributing cement and other construction materials across East Africa.",
+      sector: "Construction & Allied",
+      headquarters: "Nairobi, Kenya",
+      ceo: "Karl-Jan Vissers",
+      employees: "1,500+",
+      founded: "1951"
+    },
+    NMG: {
+      description: "Nation Media Group is the largest private media house in East and Central Africa, operating newspapers, television, radio, and digital platforms.",
+      sector: "Commercial & Services",
+      headquarters: "Nairobi, Kenya",
+      ceo: "Stephen Gitagama",
+      employees: "2,000+",
+      founded: "1959"
+    },
   };
 
-  const company = companyInfo[symbol as keyof typeof companyInfo] || companyInfo.SAFCOM;
+  const company = companyInfo[symbol as keyof typeof companyInfo] || {
+    description: `${stock.name} is a company listed on the Nairobi Securities Exchange in the ${stock.sector} sector.`,
+    sector: stock.sector,
+    headquarters: "Nairobi, Kenya",
+    ceo: "N/A",
+    employees: "N/A",
+    founded: "N/A"
+  };
+
+  
 
   const handleWatchlistToggle = async () => {
     if (!symbol) return;
