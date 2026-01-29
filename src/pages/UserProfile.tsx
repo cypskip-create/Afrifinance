@@ -1,14 +1,15 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Calendar, MapPin, Link as LinkIcon, Settings, UserPlus, UserMinus, MessageCircle, MoreHorizontal, Lock, Verified } from "lucide-react";
+import { ArrowLeft, Calendar, Settings, UserPlus, UserMinus, MessageCircle, MoreHorizontal, Lock, Verified, Heart, Repeat2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useFollows } from "@/hooks/useFollows";
 import { useToast } from "@/hooks/use-toast";
+import { FollowersDialog } from "@/components/social/FollowersDialog";
 
 interface UserProfileData {
   id: string;
@@ -30,6 +31,7 @@ interface UserPost {
   created_at: string;
   likes_count: number;
   comments_count: number;
+  reposts_count: number;
 }
 
 export default function UserProfile() {
@@ -37,18 +39,25 @@ export default function UserProfile() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { isFollowing, toggleFollow, fetchFollowers, fetchFollowing } = useFollows();
   const [profile, setProfile] = useState<UserProfileData | null>(null);
   const [posts, setPosts] = useState<UserPost[]>([]);
-  const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
+  
+  // Followers dialog state
+  const [followersDialogOpen, setFollowersDialogOpen] = useState(false);
+  const [dialogTab, setDialogTab] = useState<"followers" | "following">("followers");
 
   const isOwnProfile = user?.id === userId;
+  const userIsFollowing = userId ? isFollowing(userId) : false;
 
   useEffect(() => {
     if (userId) {
       fetchProfile();
       fetchUserPosts();
-      if (user) checkFollowStatus();
+      loadFollowCounts();
     }
   }, [userId, user]);
 
@@ -65,6 +74,18 @@ export default function UserProfile() {
     setLoading(false);
   };
 
+  const loadFollowCounts = async () => {
+    if (!userId) return;
+    
+    const [followers, following] = await Promise.all([
+      fetchFollowers(userId),
+      fetchFollowing(userId)
+    ]);
+    
+    setFollowersCount(followers.length);
+    setFollowingCount(following.length);
+  };
+
   const fetchUserPosts = async () => {
     const { data: postsData } = await supabase
       .from('posts')
@@ -75,31 +96,21 @@ export default function UserProfile() {
     if (postsData) {
       const postsWithCounts = await Promise.all(
         postsData.map(async (post) => {
-          const [likesRes, commentsRes] = await Promise.all([
+          const [likesRes, commentsRes, repostsRes] = await Promise.all([
             supabase.from('post_likes').select('id', { count: 'exact', head: true }).eq('post_id', post.id),
             supabase.from('post_comments').select('id', { count: 'exact', head: true }).eq('post_id', post.id),
+            supabase.from('post_reposts').select('id', { count: 'exact', head: true }).eq('post_id', post.id),
           ]);
           return {
             ...post,
             likes_count: likesRes.count || 0,
             comments_count: commentsRes.count || 0,
+            reposts_count: repostsRes.count || 0,
           };
         })
       );
       setPosts(postsWithCounts);
     }
-  };
-
-  const checkFollowStatus = async () => {
-    if (!user || !userId) return;
-    const { data } = await supabase
-      .from('user_follows')
-      .select('id')
-      .eq('follower_id', user.id)
-      .eq('following_id', userId)
-      .maybeSingle();
-    
-    setIsFollowing(!!data);
   };
 
   const handleFollow = async () => {
@@ -108,27 +119,19 @@ export default function UserProfile() {
       return;
     }
 
-    if (isFollowing) {
-      const { error } = await supabase
-        .from('user_follows')
-        .delete()
-        .eq('follower_id', user.id)
-        .eq('following_id', userId);
+    if (!userId) return;
 
-      if (!error) {
-        setIsFollowing(false);
-        toast({ title: "Unfollowed successfully" });
-      }
-    } else {
-      const { error } = await supabase
-        .from('user_follows')
-        .insert({ follower_id: user.id, following_id: userId });
-
-      if (!error) {
-        setIsFollowing(true);
-        toast({ title: "Following!" });
-      }
+    const { error } = await toggleFollow(userId);
+    
+    if (!error) {
+      toast({ title: userIsFollowing ? "Unfollowed" : "Following!" });
+      loadFollowCounts();
     }
+  };
+
+  const openFollowersDialog = (tab: "followers" | "following") => {
+    setDialogTab(tab);
+    setFollowersDialogOpen(true);
   };
 
   const getInitials = (name: string | null) => {
@@ -232,10 +235,10 @@ export default function UserProfile() {
                     <MessageCircle className="h-4 w-4" />
                   </Button>
                   <Button 
-                    variant={isFollowing ? "outline" : "default"}
+                    variant={userIsFollowing ? "outline" : "default"}
                     onClick={handleFollow}
                   >
-                    {isFollowing ? (
+                    {userIsFollowing ? (
                       <>
                         <UserMinus className="h-4 w-4 mr-1" />
                         Following
@@ -271,12 +274,18 @@ export default function UserProfile() {
             </div>
 
             <div className="flex gap-4 mt-3">
-              <button className="hover:underline">
-                <span className="font-bold">{profile.following_count || 0}</span>
+              <button 
+                className="hover:underline"
+                onClick={() => openFollowersDialog("following")}
+              >
+                <span className="font-bold">{followingCount}</span>
                 <span className="text-muted-foreground ml-1">Following</span>
               </button>
-              <button className="hover:underline">
-                <span className="font-bold">{profile.followers_count || 0}</span>
+              <button 
+                className="hover:underline"
+                onClick={() => openFollowersDialog("followers")}
+              >
+                <span className="font-bold">{followersCount}</span>
                 <span className="text-muted-foreground ml-1">Followers</span>
               </button>
             </div>
@@ -329,6 +338,7 @@ export default function UserProfile() {
                     <div className="flex-1">
                       <div className="flex items-center gap-1">
                         <span className="font-semibold text-sm">{profile.full_name || 'User'}</span>
+                        <Verified className="h-3 w-3 text-primary fill-primary" />
                         <span className="text-sm text-muted-foreground">
                           @{profile.email?.split('@')[0]} · {formatTimeAgo(post.created_at)}
                         </span>
@@ -354,8 +364,18 @@ export default function UserProfile() {
                         />
                       )}
                       <div className="flex items-center gap-6 mt-3 text-sm text-muted-foreground">
-                        <span>{post.comments_count} comments</span>
-                        <span>{post.likes_count} likes</span>
+                        <span className="flex items-center gap-1">
+                          <Heart className="h-4 w-4" />
+                          {post.likes_count}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <MessageCircle className="h-4 w-4" />
+                          {post.comments_count}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Repeat2 className="h-4 w-4" />
+                          {post.reposts_count}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -373,6 +393,15 @@ export default function UserProfile() {
           <p className="text-muted-foreground">No liked posts</p>
         </TabsContent>
       </Tabs>
+
+      {/* Followers/Following Dialog */}
+      <FollowersDialog
+        open={followersDialogOpen}
+        onOpenChange={setFollowersDialogOpen}
+        userId={userId || ""}
+        initialTab={dialogTab}
+        userName={profile.full_name || "User"}
+      />
     </div>
   );
 }

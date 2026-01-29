@@ -5,12 +5,22 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import { 
-  Bookmark, BookmarkCheck, Share2, ThumbsUp, MessageCircle, 
-  Clock, Eye, ExternalLink, X 
+  Bookmark, BookmarkCheck, Share2, MessageCircle, 
+  Clock, Eye, X, Send, User
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+
+interface NewsComment {
+  id: string;
+  user: string;
+  avatar: string;
+  content: string;
+  time: string;
+}
 
 interface NewsArticle {
   id: number;
@@ -22,7 +32,6 @@ interface NewsArticle {
   imageUrl: string;
   readTime?: string;
   views?: number;
-  likes?: number;
   comments?: number;
   hasVideo?: boolean;
   stockMentions?: string[];
@@ -38,6 +47,22 @@ interface NewsDetailDialogProps {
   onToggleSave: (id: number) => void;
 }
 
+// Mock comments for demo - in production, these would come from database
+const mockComments: Record<number, NewsComment[]> = {
+  1: [
+    { id: "1", user: "TraderKE", avatar: "TK", content: "This is great news for the banking sector! EQTY is looking strong.", time: "2h ago" },
+    { id: "2", user: "MarketWatch", avatar: "MW", content: "The foreign investors seem bullish on Kenyan equities.", time: "3h ago" },
+    { id: "3", user: "FinanceGuru", avatar: "FG", content: "I've been holding SAFCOM for months. Finally seeing some movement!", time: "4h ago" },
+  ],
+  2: [
+    { id: "1", user: "CryptoKe", avatar: "CK", content: "Mobile banking disruption is real. $SAFCOM leading the way.", time: "1h ago" },
+  ],
+  3: [
+    { id: "1", user: "InvestorJane", avatar: "IJ", content: "Agricultural sector needs more attention from investors.", time: "5h ago" },
+    { id: "2", user: "NSEWatcher", avatar: "NW", content: "Tea exports are crucial for forex inflows.", time: "6h ago" },
+  ],
+};
+
 export function NewsDetailDialog({ 
   article, 
   open, 
@@ -47,8 +72,15 @@ export function NewsDetailDialog({
 }: NewsDetailDialogProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [newComment, setNewComment] = useState("");
+  const [comments, setComments] = useState<NewsComment[]>([]);
+  const [showComments, setShowComments] = useState(false);
 
   if (!article) return null;
+
+  const articleComments = mockComments[article.id] || [];
+  const allComments = [...articleComments, ...comments];
 
   const handleShare = async () => {
     if (navigator.share) {
@@ -65,6 +97,26 @@ export function NewsDetailDialog({
       await navigator.clipboard.writeText(window.location.href);
       toast({ title: "Link copied to clipboard" });
     }
+  };
+
+  const handleAddComment = () => {
+    if (!newComment.trim()) return;
+    if (!user) {
+      toast({ title: "Sign in to comment", variant: "destructive" });
+      return;
+    }
+
+    const comment: NewsComment = {
+      id: Date.now().toString(),
+      user: user.email?.split('@')[0] || "User",
+      avatar: (user.email?.slice(0, 2) || "U").toUpperCase(),
+      content: newComment.trim(),
+      time: "now"
+    };
+
+    setComments(prev => [comment, ...prev]);
+    setNewComment("");
+    toast({ title: "Comment added!" });
   };
 
   // Generate full article content based on summary
@@ -192,23 +244,18 @@ For investors, analysts recommend maintaining a diversified portfolio while keep
                     {(article.views / 1000).toFixed(1)}K views
                   </span>
                 )}
-                {article.likes && (
-                  <span className="flex items-center gap-1">
-                    <ThumbsUp className="h-4 w-4" />
-                    {article.likes}
-                  </span>
-                )}
-                {article.comments && (
-                  <span className="flex items-center gap-1">
-                    <MessageCircle className="h-4 w-4" />
-                    {article.comments}
-                  </span>
-                )}
+                <button 
+                  className="flex items-center gap-1 hover:text-primary transition-colors"
+                  onClick={() => setShowComments(!showComments)}
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  {allComments.length} comments
+                </button>
               </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 mb-4">
               <Button 
                 variant="outline" 
                 className="flex-1"
@@ -230,7 +277,77 @@ For investors, analysts recommend maintaining a diversified portfolio while keep
                 <Share2 className="h-4 w-4 mr-2" />
                 Share
               </Button>
+              <Button 
+                variant={showComments ? "default" : "outline"} 
+                className="flex-1" 
+                onClick={() => setShowComments(!showComments)}
+              >
+                <MessageCircle className="h-4 w-4 mr-2" />
+                {allComments.length}
+              </Button>
             </div>
+
+            {/* Comments Section */}
+            {showComments && (
+              <div className="border-t pt-4 space-y-4">
+                <h3 className="font-semibold text-sm flex items-center gap-2">
+                  <MessageCircle className="h-4 w-4" />
+                  Comments ({allComments.length})
+                </h3>
+
+                {/* Add Comment */}
+                <div className="flex gap-2">
+                  <Avatar className="h-8 w-8 flex-shrink-0">
+                    <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                      <User className="h-4 w-4" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 flex gap-2">
+                    <Textarea 
+                      placeholder={user ? "Add a comment..." : "Sign in to comment"}
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      className="min-h-[60px] resize-none text-sm"
+                      disabled={!user}
+                    />
+                    <Button 
+                      size="icon" 
+                      className="h-[60px]"
+                      onClick={handleAddComment}
+                      disabled={!newComment.trim() || !user}
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Comments List */}
+                <div className="space-y-3">
+                  {allComments.length === 0 ? (
+                    <p className="text-center text-muted-foreground text-sm py-4">
+                      No comments yet. Be the first to comment!
+                    </p>
+                  ) : (
+                    allComments.map((comment) => (
+                      <div key={comment.id} className="flex gap-2">
+                        <Avatar className="h-8 w-8 flex-shrink-0">
+                          <AvatarFallback className="bg-muted text-muted-foreground text-xs">
+                            {comment.avatar}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 bg-muted/30 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium text-sm">{comment.user}</span>
+                            <span className="text-xs text-muted-foreground">{comment.time}</span>
+                          </div>
+                          <p className="text-sm">{comment.content}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </ScrollArea>
       </DialogContent>
