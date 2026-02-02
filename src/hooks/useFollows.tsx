@@ -30,8 +30,9 @@ export function useFollows() {
 
     const followingIds = followsData.map(f => f.following_id);
     
+    // Use public view to exclude sensitive data like email
     const { data: profiles } = await supabase
-      .from('profiles')
+      .from('profiles_public')
       .select('id, user_id, full_name, avatar_url, bio')
       .in('user_id', followingIds);
 
@@ -51,8 +52,9 @@ export function useFollows() {
 
     const followerIds = followsData.map(f => f.follower_id);
     
+    // Use public view to exclude sensitive data like email
     const { data: profiles } = await supabase
-      .from('profiles')
+      .from('profiles_public')
       .select('id, user_id, full_name, avatar_url, bio')
       .in('user_id', followerIds);
 

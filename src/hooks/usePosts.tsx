@@ -56,10 +56,10 @@ export function usePosts() {
 
       if (postsError) throw postsError;
 
-      // Fetch profiles for each post
+      // Fetch profiles for each post using public view (excludes sensitive data like email)
       const userIds = [...new Set(postsData?.map(p => p.user_id) || [])];
       const { data: profiles } = await supabase
-        .from('profiles')
+        .from('profiles_public')
         .select('id, user_id, full_name, avatar_url, bio')
         .in('user_id', userIds);
 
@@ -267,8 +267,9 @@ export function usePosts() {
     if (!comments) return [];
 
     const userIds = [...new Set(comments.map(c => c.user_id))];
+    // Use public view to exclude sensitive data like email
     const { data: profiles } = await supabase
-      .from('profiles')
+      .from('profiles_public')
       .select('id, user_id, full_name, avatar_url, bio')
       .in('user_id', userIds);
 

@@ -69,8 +69,9 @@ export default function Discover() {
   }, []);
 
   const fetchTopTraders = async () => {
+    // Use public view to exclude sensitive data like email
     const { data: profiles } = await supabase
-      .from('profiles')
+      .from('profiles_public')
       .select('id, user_id, full_name, avatar_url')
       .limit(10);
 
