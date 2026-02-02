@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { 
   Newspaper, Filter, Clock, TrendingUp, Building2, Bookmark, BookmarkCheck,
-  Play, Share2, ThumbsUp, MessageCircle, Bell, BellOff, ChevronRight,
+  Play, Share2, MessageCircle, Bell, BellOff, ChevronRight,
   Flame, Globe, DollarSign, BarChart3, Zap, Eye, ExternalLink
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +23,6 @@ interface NewsArticle {
   imageUrl: string;
   readTime?: string;
   views?: number;
-  likes?: number;
   comments?: number;
   hasVideo?: boolean;
   stockMentions?: string[];
@@ -65,7 +64,6 @@ export default function News() {
     isBreaking: true,
     readTime: "3 min",
     views: 12450,
-    likes: 342,
     comments: 89,
   };
 
@@ -80,7 +78,6 @@ export default function News() {
       imageUrl: "https://images.unsplash.com/photo-1556155092-490a1ba16284?w=400&h=250&fit=crop",
       readTime: "5 min",
       views: 8920,
-      likes: 234,
       comments: 56,
       hasVideo: true,
       stockMentions: ["SAFCOM"],
@@ -95,7 +92,6 @@ export default function News() {
       imageUrl: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400&h=250&fit=crop",
       readTime: "4 min",
       views: 6540,
-      likes: 189,
       comments: 42,
       stockMentions: ["EQTY", "KCB", "COOP"],
     },
@@ -109,7 +105,6 @@ export default function News() {
       imageUrl: "https://images.unsplash.com/photo-1541354329998-f4d9a9f9297f?w=400&h=250&fit=crop",
       readTime: "6 min",
       views: 4320,
-      likes: 156,
       comments: 78,
     },
     {
@@ -122,7 +117,6 @@ export default function News() {
       imageUrl: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400&h=250&fit=crop",
       readTime: "4 min",
       views: 3890,
-      likes: 98,
       comments: 34,
       stockMentions: ["EQTY"],
     },
@@ -136,7 +130,6 @@ export default function News() {
       imageUrl: "https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?w=400&h=250&fit=crop",
       readTime: "8 min",
       views: 2450,
-      likes: 67,
       comments: 23,
       stockMentions: ["KPLC", "KEGN"],
       isPremium: true,
@@ -410,10 +403,6 @@ export default function News() {
                               <span className="flex items-center gap-1">
                                 <Eye className="h-3 w-3" />
                                 {(article.views / 1000).toFixed(1)}K
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <ThumbsUp className="h-3 w-3" />
-                                {article.likes}
                               </span>
                               <span className="flex items-center gap-1">
                                 <MessageCircle className="h-3 w-3" />
