@@ -9,9 +9,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
-  Heart, Repeat2, Share, MoreHorizontal, ImagePlus, BarChart3, Send,
+  Heart, Repeat2, Share, ImagePlus, BarChart3, Send,
   Hash, Verified, ChartLine, Bookmark, BookmarkCheck, MessageCircle, X, 
-  Image as ImageIcon, Trash2, TrendingUp
+  Image as ImageIcon, Trash2, TrendingUp, AlertCircle, ShieldCheck,
+  Lightbulb, Trophy, BarChart2, Users, Flame
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { TopBar } from "@/components/shared/TopBar";
@@ -23,6 +24,9 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { SuggestedUsers } from "@/components/social/SuggestedUsers";
 import { TrendingTopics } from "@/components/social/TrendingTopics";
+import { TraderLeaderboard } from "@/components/social/TraderLeaderboard";
+import { TradingIdeas } from "@/components/social/TradingIdeas";
+import { CommunityPolls } from "@/components/social/CommunityPolls";
 
 export default function TradersHub() {
   const navigate = useNavigate();
@@ -36,6 +40,7 @@ export default function TradersHub() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isPosting, setIsPosting] = useState(false);
   const [activeTab, setActiveTab] = useState("for-you");
+  const [activeSection, setActiveSection] = useState("feed");
   
   // Comments dialog
   const [commentsDialogOpen, setCommentsDialogOpen] = useState(false);
@@ -366,165 +371,233 @@ export default function TradersHub() {
     <div className="min-h-screen bg-background pb-20">
       <TopBar 
         title="TradersHub" 
-        subtitle="Social trading community"
+        subtitle="Professional trading community"
         showSearch={true}
         showNotifications={true}
       />
 
+      {/* Community Guidelines Banner */}
+      <div className="px-4 pt-4">
+        <Card className="bg-gradient-to-r from-primary/5 to-accent/5 border-primary/20">
+          <CardContent className="p-3 flex items-center gap-3">
+            <ShieldCheck className="h-5 w-5 text-primary shrink-0" />
+            <p className="text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">Community Guidelines:</span> Share insights responsibly. No financial advice. All trading carries risk.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section Tabs */}
+      <div className="px-4 mt-4">
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          {[
+            { id: "feed", label: "Feed", icon: MessageCircle },
+            { id: "ideas", label: "Trade Ideas", icon: Lightbulb },
+            { id: "leaderboard", label: "Leaderboard", icon: Trophy },
+            { id: "polls", label: "Polls", icon: BarChart2 },
+          ].map((section) => (
+            <Button
+              key={section.id}
+              variant={activeSection === section.id ? "default" : "outline"}
+              size="sm"
+              className="whitespace-nowrap"
+              onClick={() => setActiveSection(section.id)}
+            >
+              <section.icon className="h-4 w-4 mr-1.5" />
+              {section.label}
+            </Button>
+          ))}
+        </div>
+      </div>
+
       <div className="max-w-4xl mx-auto flex gap-4">
-        {/* Main Feed */}
+        {/* Main Content */}
         <div className="flex-1 max-w-2xl">
-          {/* Compose Post */}
-          {user ? (
-            <Card className="mx-4 mt-4 card-gradient">
-              <CardContent className="p-4">
-                <div className="flex gap-3">
-                  <Avatar className="h-10 w-10 flex-shrink-0 cursor-pointer" onClick={() => navigate(`/profile/${user.id}`)}>
-                    <AvatarImage src={profile?.avatar_url || ""} />
-                    <AvatarFallback className="bg-primary text-primary-foreground">
-                      {getInitials(profile?.full_name || user.email)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <Textarea 
-                      placeholder="Share your market insights... Use $SYMBOL for stocks"
-                      value={newPost}
-                      onChange={(e) => setNewPost(e.target.value)}
-                      className="min-h-[80px] resize-none border-0 bg-transparent p-0 focus-visible:ring-0 text-sm"
-                    />
-                    
-                    {selectedImage && (
-                      <div className="relative mt-3 rounded-xl overflow-hidden">
-                        <img src={selectedImage} alt="Selected" className="w-full max-h-60 object-cover rounded-xl" />
-                        <Button 
-                          variant="secondary" 
-                          size="icon" 
-                          className="absolute top-2 right-2 h-8 w-8 rounded-full"
-                          onClick={() => setSelectedImage(null)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )}
-                    
-                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
-                      <div className="flex gap-1">
-                        <input
-                          type="file"
-                          ref={fileInputRef}
-                          onChange={handleImageSelect}
-                          accept="image/*"
-                          className="hidden"
-                        />
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-9 w-9"
-                          onClick={() => fileInputRef.current?.click()}
-                        >
-                          <ImageIcon className="h-5 w-5 text-primary" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-9 w-9">
-                          <BarChart3 className="h-5 w-5 text-primary" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-9 w-9">
-                          <Hash className="h-5 w-5 text-primary" />
-                        </Button>
-                      </div>
-                      <Button 
-                        size="sm" 
-                        className="btn-primary h-9 px-4" 
-                        disabled={(!newPost.trim() && !selectedImage) || isPosting}
-                        onClick={handlePost}
-                      >
-                        {isPosting ? (
-                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        ) : (
-                          <>
-                            <Send className="h-4 w-4 mr-1" />
-                            Post
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className="mx-4 mt-4 card-gradient">
-              <CardContent className="p-6 text-center">
-                <h3 className="font-semibold mb-2">Join the Community</h3>
-                <p className="text-sm text-muted-foreground mb-4">Sign in to share your insights and connect with traders</p>
-                <Button className="btn-primary" onClick={() => navigate('/auth')}>
-                  Sign In
-                </Button>
-              </CardContent>
-            </Card>
+          {/* Trade Ideas Section */}
+          {activeSection === "ideas" && (
+            <div className="px-4 mt-4">
+              <TradingIdeas />
+            </div>
           )}
 
-          {/* Feed Tabs */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="px-4 mt-4">
-            <TabsList className="w-full grid grid-cols-3">
-              <TabsTrigger value="for-you" className="text-xs">For You</TabsTrigger>
-              <TabsTrigger value="following" className="text-xs">Following</TabsTrigger>
-              <TabsTrigger value="trending" className="text-xs">Trending</TabsTrigger>
-            </TabsList>
+          {/* Leaderboard Section */}
+          {activeSection === "leaderboard" && (
+            <div className="px-4 mt-4">
+              <TraderLeaderboard />
+            </div>
+          )}
 
-            <TabsContent value="for-you" className="mt-4 space-y-4">
-              {loading ? (
-                <div className="flex justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary/30 border-t-primary" />
-                </div>
-              ) : filteredPosts.length === 0 ? (
-                <Card className="card-gradient">
-                  <CardContent className="p-8 text-center">
-                    <p className="text-muted-foreground">No posts yet. Be the first to share!</p>
+          {/* Polls Section */}
+          {activeSection === "polls" && (
+            <div className="px-4 mt-4">
+              <CommunityPolls />
+            </div>
+          )}
+
+          {/* Feed Section */}
+          {activeSection === "feed" && (
+            <>
+              {/* Compose Post */}
+              {user ? (
+                <Card className="mx-4 mt-4 card-gradient">
+                  <CardContent className="p-4">
+                    <div className="flex gap-3">
+                      <Avatar className="h-10 w-10 flex-shrink-0 cursor-pointer" onClick={() => navigate(`/profile/${user.id}`)}>
+                        <AvatarImage src={profile?.avatar_url || ""} />
+                        <AvatarFallback className="bg-primary text-primary-foreground">
+                          {getInitials(profile?.full_name || user.email)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <Textarea 
+                          placeholder="Share your market insights... Use $SYMBOL for stocks, #hashtag for topics"
+                          value={newPost}
+                          onChange={(e) => setNewPost(e.target.value)}
+                          className="min-h-[80px] resize-none border-0 bg-transparent p-0 focus-visible:ring-0 text-sm"
+                        />
+                        
+                        {selectedImage && (
+                          <div className="relative mt-3 rounded-xl overflow-hidden">
+                            <img src={selectedImage} alt="Selected" className="w-full max-h-60 object-cover rounded-xl" />
+                            <Button 
+                              variant="secondary" 
+                              size="icon" 
+                              className="absolute top-2 right-2 h-8 w-8 rounded-full"
+                              onClick={() => setSelectedImage(null)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                        
+                        <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
+                          <div className="flex gap-1">
+                            <input
+                              type="file"
+                              ref={fileInputRef}
+                              onChange={handleImageSelect}
+                              accept="image/*"
+                              className="hidden"
+                            />
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-9 w-9"
+                              onClick={() => fileInputRef.current?.click()}
+                            >
+                              <ImageIcon className="h-5 w-5 text-primary" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-9 w-9">
+                              <BarChart3 className="h-5 w-5 text-primary" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-9 w-9">
+                              <Hash className="h-5 w-5 text-primary" />
+                            </Button>
+                          </div>
+                          <Button 
+                            size="sm" 
+                            className="btn-primary h-9 px-4" 
+                            disabled={(!newPost.trim() && !selectedImage) || isPosting}
+                            onClick={handlePost}
+                          >
+                            {isPosting ? (
+                              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            ) : (
+                              <>
+                                <Send className="h-4 w-4 mr-1" />
+                                Post
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               ) : (
-                filteredPosts.map((post) => renderPost(post))
-              )}
-            </TabsContent>
-
-            <TabsContent value="following" className="mt-4 space-y-4">
-              {loading ? (
-                <div className="flex justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary/30 border-t-primary" />
-                </div>
-              ) : filteredPosts.length === 0 ? (
-                <Card className="card-gradient">
-                  <CardContent className="p-8 text-center">
-                    <TrendingUp className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                    <p className="font-medium mb-1">No posts from people you follow</p>
-                    <p className="text-sm text-muted-foreground mb-4">Follow traders to see their posts here</p>
-                    <Button onClick={() => setActiveTab("for-you")}>
-                      Discover Traders
+                <Card className="mx-4 mt-4 card-gradient">
+                  <CardContent className="p-6 text-center">
+                    <Users className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
+                    <h3 className="font-semibold mb-2">Join the Community</h3>
+                    <p className="text-sm text-muted-foreground mb-4">Sign in to share your insights and connect with traders</p>
+                    <Button className="btn-primary" onClick={() => navigate('/auth')}>
+                      Sign In
                     </Button>
                   </CardContent>
                 </Card>
-              ) : (
-                filteredPosts.map((post) => renderPost(post))
               )}
-            </TabsContent>
 
-            <TabsContent value="trending" className="mt-4 space-y-4">
-              {loading ? (
-                <div className="flex justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary/30 border-t-primary" />
-                </div>
-              ) : filteredPosts.length === 0 ? (
-                <Card className="card-gradient">
-                  <CardContent className="p-8 text-center">
-                    <TrendingUp className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-muted-foreground">No trending posts yet. Keep engaging!</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                filteredPosts.map((post) => renderPost(post))
-              )}
-            </TabsContent>
-          </Tabs>
+              {/* Feed Tabs */}
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="px-4 mt-4">
+                <TabsList className="w-full grid grid-cols-3">
+                  <TabsTrigger value="for-you" className="text-xs">For You</TabsTrigger>
+                  <TabsTrigger value="following" className="text-xs">Following</TabsTrigger>
+                  <TabsTrigger value="trending" className="text-xs">
+                    <Flame className="h-3 w-3 mr-1" />
+                    Trending
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="for-you" className="mt-4 space-y-4">
+                  {loading ? (
+                    <div className="flex justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary/30 border-t-primary" />
+                    </div>
+                  ) : filteredPosts.length === 0 ? (
+                    <Card className="card-gradient">
+                      <CardContent className="p-8 text-center">
+                        <MessageCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                        <p className="font-medium mb-1">No posts yet</p>
+                        <p className="text-sm text-muted-foreground">Be the first to share your market insights!</p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    filteredPosts.map((post) => renderPost(post))
+                  )}
+                </TabsContent>
+
+                <TabsContent value="following" className="mt-4 space-y-4">
+                  {loading ? (
+                    <div className="flex justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary/30 border-t-primary" />
+                    </div>
+                  ) : filteredPosts.length === 0 ? (
+                    <Card className="card-gradient">
+                      <CardContent className="p-8 text-center">
+                        <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                        <p className="font-medium mb-1">No posts from people you follow</p>
+                        <p className="text-sm text-muted-foreground mb-4">Follow traders to see their posts here</p>
+                        <Button onClick={() => setActiveTab("for-you")}>
+                          Discover Traders
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    filteredPosts.map((post) => renderPost(post))
+                  )}
+                </TabsContent>
+
+                <TabsContent value="trending" className="mt-4 space-y-4">
+                  {loading ? (
+                    <div className="flex justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary/30 border-t-primary" />
+                    </div>
+                  ) : filteredPosts.length === 0 ? (
+                    <Card className="card-gradient">
+                      <CardContent className="p-8 text-center">
+                        <Flame className="h-12 w-12 mx-auto mb-4 text-orange-500" />
+                        <p className="font-medium mb-1">No trending posts yet</p>
+                        <p className="text-sm text-muted-foreground">Posts with high engagement appear here</p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    filteredPosts.map((post) => renderPost(post))
+                  )}
+                </TabsContent>
+              </Tabs>
+            </>
+          )}
         </div>
 
         {/* Sidebar - Hidden on mobile */}
@@ -546,7 +619,7 @@ export default function TradersHub() {
                 <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary/30 border-t-primary" />
               </div>
             ) : comments.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">No comments yet</p>
+              <p className="text-center text-muted-foreground py-8">No comments yet. Be the first to comment!</p>
             ) : (
               <div className="space-y-4">
                 {comments.map((comment) => (
