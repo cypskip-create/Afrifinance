@@ -30,9 +30,9 @@ export function SuggestedUsers() {
   }, [user]);
 
   const fetchSuggestions = async () => {
-    // Fetch users that the current user is not following
+    // Fetch users using public view (excludes sensitive data like email)
     const { data: profiles } = await supabase
-      .from('profiles')
+      .from('profiles_public')
       .select('id, user_id, full_name, avatar_url, bio')
       .limit(10);
 

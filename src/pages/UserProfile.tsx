@@ -62,14 +62,29 @@ export default function UserProfile() {
   }, [userId, user]);
 
   const fetchProfile = async () => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', userId)
-      .maybeSingle();
+    // Use base profiles table for own profile (includes email), 
+    // use profiles_public view for other users (excludes email for privacy)
+    if (isOwnProfile) {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
 
-    if (data) {
-      setProfile(data as UserProfileData);
+      if (data) {
+        setProfile(data as UserProfileData);
+      }
+    } else {
+      // For other users, query the public view which excludes email
+      const { data, error } = await supabase
+        .from('profiles_public')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (data) {
+        setProfile({ ...data, email: null } as UserProfileData);
+      }
     }
     setLoading(false);
   };
