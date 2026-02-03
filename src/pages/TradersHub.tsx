@@ -388,24 +388,24 @@ export default function TradersHub() {
         </Card>
       </div>
 
-      {/* Section Tabs */}
+      {/* Section Tabs - Icon only for mobile */}
       <div className="px-4 mt-4">
-        <div className="flex gap-2 overflow-x-auto pb-2">
+        <div className="grid grid-cols-4 gap-2">
           {[
             { id: "feed", label: "Feed", icon: MessageCircle },
-            { id: "ideas", label: "Trade Ideas", icon: Lightbulb },
-            { id: "leaderboard", label: "Leaderboard", icon: Trophy },
+            { id: "ideas", label: "Ideas", icon: Lightbulb },
+            { id: "leaderboard", label: "Top", icon: Trophy },
             { id: "polls", label: "Polls", icon: BarChart2 },
           ].map((section) => (
             <Button
               key={section.id}
               variant={activeSection === section.id ? "default" : "outline"}
               size="sm"
-              className="whitespace-nowrap"
+              className="flex flex-col items-center gap-1 h-auto py-2"
               onClick={() => setActiveSection(section.id)}
             >
-              <section.icon className="h-4 w-4 mr-1.5" />
-              {section.label}
+              <section.icon className="h-5 w-5" />
+              <span className="text-[10px]">{section.label}</span>
             </Button>
           ))}
         </div>

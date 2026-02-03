@@ -41,7 +41,7 @@ export function TopBar({
               {searchOpen ? (
                 <div className="flex items-center space-x-2">
                   <Input 
-                    placeholder="Search stocks, crypto, ETFs..." 
+                    placeholder="Search stocks, ETFs..." 
                     className="w-48 h-9 text-sm"
                     autoFocus
                     onBlur={() => setSearchOpen(false)}
