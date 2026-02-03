@@ -28,18 +28,6 @@ const liveRooms = [
     isLive: true,
     category: "Live",
   },
-  {
-    id: 2,
-    name: "Crypto Trading Strategies",
-    hosts: [
-      { name: "Alex Nyamweya", avatar: "AN", verified: false },
-    ],
-    listeners: 156,
-    speakers: 3,
-    topic: "Bitcoin halving impact on altcoins",
-    isLive: true,
-    category: "Crypto",
-  },
 ];
 
 const scheduledRooms = [
@@ -127,7 +115,7 @@ const textRooms = [
 const topTraders = [
   { name: "James M.", handle: "@jamesm_trades", followers: "12.5K", winRate: "78%", verified: true },
   { name: "Sarah K.", handle: "@sarah_invests", followers: "8.2K", winRate: "72%", verified: true },
-  { name: "Alex N.", handle: "@alex_crypto", followers: "6.8K", winRate: "69%", verified: false },
+  { name: "Alex N.", handle: "@alex_stocks", followers: "6.8K", winRate: "69%", verified: false },
 ];
 
 export default function Rooms() {
@@ -136,7 +124,7 @@ export default function Rooms() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [joinedRooms, setJoinedRooms] = useState<number[]>([5, 7]);
 
-  const categories = ["All", "General", "Banking", "Telecommunications", "Energy", "Crypto", "Premium"];
+  const categories = ["All", "General", "Banking", "Telecommunications", "Energy", "Premium"];
 
   const handleJoinRoom = (roomId: number, roomName: string, isPrivate: boolean) => {
     if (isPrivate) {

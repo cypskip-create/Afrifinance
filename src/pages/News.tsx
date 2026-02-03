@@ -141,7 +141,7 @@ export default function News() {
     { tag: "#Safaricom", count: "1.8K" },
     { tag: "#KenyaEconomy", count: "1.2K" },
     { tag: "#Earnings2024", count: "890" },
-    { tag: "#CryptoKenya", count: "756" },
+    { tag: "#NSEStocks", count: "756" },
   ];
 
   const toggleSave = (id: number) => {
