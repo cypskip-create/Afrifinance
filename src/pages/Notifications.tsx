@@ -1,10 +1,15 @@
 import { useState } from "react";
-import { Bell, TrendingUp, TrendingDown, AlertCircle, CheckCircle, Trash2, Settings, ChevronRight, ArrowLeft, Filter, MoreHorizontal, Newspaper, DollarSign, Users, Zap, Clock, Eye, EyeOff } from "lucide-react";
+import { 
+  Bell, TrendingUp, TrendingDown, AlertCircle, CheckCircle, Trash2, 
+  Settings, ChevronRight, ArrowLeft, Newspaper, DollarSign, Users, 
+  Zap, Eye, Target
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
@@ -20,6 +25,14 @@ interface Notification {
   actionUrl?: string;
   actionLabel?: string;
 }
+
+const notificationCategories = [
+  { id: "all", label: "All", icon: Bell },
+  { id: "price-alert", label: "Alerts", icon: Target },
+  { id: "news", label: "News", icon: Newspaper },
+  { id: "portfolio", label: "Portfolio", icon: DollarSign },
+  { id: "social", label: "Social", icon: Users },
+];
 
 export default function Notifications() {
   const navigate = useNavigate();
@@ -313,19 +326,31 @@ export default function Notifications() {
           </div>
         )}
 
-        {/* Tabbed Notifications */}
+        {/* Tabbed Notifications with Icons */}
         <Tabs defaultValue="all" className="w-full">
-          <TabsList className="w-full grid grid-cols-5 h-9">
-            <TabsTrigger value="all" className="text-[10px] px-1">All</TabsTrigger>
-            <TabsTrigger value="price-alert" className="text-[10px] px-1">Alerts</TabsTrigger>
-            <TabsTrigger value="news" className="text-[10px] px-1">News</TabsTrigger>
-            <TabsTrigger value="portfolio" className="text-[10px] px-1">Portfolio</TabsTrigger>
-            <TabsTrigger value="social" className="text-[10px] px-1">Social</TabsTrigger>
+          <TabsList className="w-full grid grid-cols-5 h-12">
+            {notificationCategories.map((cat) => (
+              <TabsTrigger 
+                key={cat.id} 
+                value={cat.id} 
+                className="flex flex-col items-center gap-0.5 py-1.5 px-1 data-[state=active]:bg-primary/10"
+              >
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <cat.icon className="h-4 w-4" />
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>{cat.label}</p>
+                  </TooltipContent>
+                </Tooltip>
+                <span className="text-[9px]">{cat.label}</span>
+              </TabsTrigger>
+            ))}
           </TabsList>
 
-          {["all", "price-alert", "news", "portfolio", "social"].map((type) => (
-            <TabsContent key={type} value={type} className="mt-4 space-y-3">
-              {getNotificationsByType(type).length === 0 ? (
+          {notificationCategories.map((cat) => (
+            <TabsContent key={cat.id} value={cat.id} className="mt-4 space-y-3">
+              {getNotificationsByType(cat.id).length === 0 ? (
                 <Card className="card-gradient">
                   <CardContent className="p-8 text-center">
                     <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
@@ -333,14 +358,14 @@ export default function Notifications() {
                     </div>
                     <h3 className="font-semibold mb-2">No notifications</h3>
                     <p className="text-sm text-muted-foreground">
-                      {type === "all" 
+                      {cat.id === "all" 
                         ? "You're all caught up!" 
-                        : `No ${type.replace("-", " ")} notifications yet`}
+                        : `No ${cat.label.toLowerCase()} notifications yet`}
                     </p>
                   </CardContent>
                 </Card>
               ) : (
-                getNotificationsByType(type).map((notification) => (
+                getNotificationsByType(cat.id).map((notification) => (
                   <NotificationCard key={notification.id} notification={notification} />
                 ))
               )}
