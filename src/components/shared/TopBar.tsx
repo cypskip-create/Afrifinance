@@ -2,7 +2,7 @@ import { Search, Settings2, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 interface TopBarProps {
   title: string;
@@ -11,6 +11,8 @@ interface TopBarProps {
   showWidgetSettings?: boolean;
   showNotifications?: boolean;
   onWidgetSettingsClick?: () => void;
+  onSearch?: (query: string) => void;
+  initialSearchQuery?: string;
 }
 
 export function TopBar({ 
@@ -19,10 +21,32 @@ export function TopBar({
   showSearch = true, 
   showWidgetSettings = false, 
   showNotifications = true,
-  onWidgetSettingsClick
+  onWidgetSettingsClick,
+  onSearch,
+  initialSearchQuery = ""
 }: TopBarProps) {
   const navigate = useNavigate();
-  const [searchOpen, setSearchOpen] = useState(false);
+  const location = useLocation();
+  const [searchOpen, setSearchOpen] = useState(!!initialSearchQuery);
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
+
+  const handleSearchSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (searchQuery.trim()) {
+      if (onSearch) {
+        onSearch(searchQuery.trim());
+      } else if (location.pathname !== '/traders-hub') {
+        // Navigate to TradersHub with search query
+        navigate(`/traders-hub?search=${encodeURIComponent(searchQuery.trim())}`);
+      }
+    }
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearchSubmit();
+    }
+  };
 
   return (
     <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-sm border-b border-border">
@@ -39,22 +63,31 @@ export function TopBar({
           {showSearch && (
             <div className="flex items-center">
               {searchOpen ? (
-                <div className="flex items-center space-x-2">
+                <form onSubmit={handleSearchSubmit} className="flex items-center space-x-2">
                   <Input 
-                    placeholder="Search stocks, ETFs..." 
+                    placeholder="Search stocks, topics..." 
                     className="w-48 h-9 text-sm"
                     autoFocus
-                    onBlur={() => setSearchOpen(false)}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={handleSearchKeyDown}
+                    onBlur={() => {
+                      if (!searchQuery) setSearchOpen(false);
+                    }}
                   />
                   <Button 
+                    type="button"
                     variant="ghost" 
                     size="sm" 
                     className="h-9 w-9 p-0"
-                    onClick={() => setSearchOpen(false)}
+                    onClick={() => {
+                      setSearchQuery("");
+                      setSearchOpen(false);
+                    }}
                   >
                     ✕
                   </Button>
-                </div>
+                </form>
               ) : (
                 <Button 
                   variant="ghost" 

@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { 
-  Newspaper, Filter, Clock, TrendingUp, Building2, Bookmark, BookmarkCheck,
-  Play, Share2, MessageCircle, Bell, BellOff, ChevronRight,
-  Flame, Globe, DollarSign, BarChart3, Zap, Eye, ExternalLink
+  Newspaper, Filter, Clock, TrendingUp, Bookmark, BookmarkCheck,
+  Play, Share2, MessageCircle, Bell, ChevronRight,
+  Flame, Globe, BarChart3, Zap, Eye
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -242,26 +242,27 @@ export default function News() {
               <img 
                 src={breakingNews.imageUrl} 
                 alt={breakingNews.title}
-                className="w-full h-48 object-cover"
+                className="w-full h-44 object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
               <div className="absolute top-3 left-3 flex items-center gap-2">
-                <Badge className="bg-red-500 text-white animate-pulse">BREAKING</Badge>
-                <Badge variant="secondary" className="bg-black/50 text-white">{breakingNews.readTime} read</Badge>
+                <Badge className="bg-red-500 text-white animate-pulse text-xs">{breakingNews.isBreaking ? "BREAKING" : "FEATURED"}</Badge>
+                <Badge variant="secondary" className="bg-black/50 text-white text-xs">{breakingNews.readTime} read</Badge>
               </div>
               <div className="absolute bottom-0 left-0 right-0 p-4">
-                <h3 className="text-white font-bold text-lg mb-2 line-clamp-2">{breakingNews.title}</h3>
-                <p className="text-white/80 text-sm mb-3 line-clamp-2">{breakingNews.summary}</p>
+                <h3 className="text-white font-bold text-base mb-2 line-clamp-2">{breakingNews.title}</h3>
+                <p className="text-white/80 text-sm mb-2 line-clamp-2">{breakingNews.summary}</p>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 text-white/70 text-xs">
+                  <div className="flex items-center gap-2 text-white/70 text-xs">
                     <span className="font-medium text-white">{breakingNews.source}</span>
+                    <span>•</span>
                     <span>{breakingNews.time}</span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     <Button 
                       variant="ghost" 
                       size="icon" 
-                      className="h-8 w-8 text-white hover:bg-white/20"
+                      className="h-7 w-7 text-white hover:bg-white/20"
                       onClick={(e) => { e.stopPropagation(); toggleSave(breakingNews.id); }}
                     >
                       {savedArticles.includes(breakingNews.id) ? (
@@ -270,7 +271,7 @@ export default function News() {
                         <Bookmark className="h-4 w-4" />
                       )}
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-white hover:bg-white/20">
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/20">
                       <Share2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -281,25 +282,30 @@ export default function News() {
         </Card>
 
         {/* Trending Topics */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
+        <div className="mt-5">
+          <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold flex items-center gap-2">
               <Flame className="h-4 w-4 text-orange-500" />
               Trending Topics
             </h3>
-            <Button variant="ghost" size="sm" className="text-xs h-7">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-xs h-7"
+              onClick={() => navigate('/traders-hub')}
+            >
               See all
               <ChevronRight className="h-3 w-3 ml-1" />
             </Button>
           </div>
           <ScrollArea className="w-full whitespace-nowrap">
-            <div className="flex gap-2">
+            <div className="flex gap-2 pb-1">
               {trendingTopics.map((topic, idx) => (
                 <Badge 
                   key={idx} 
                   variant="secondary" 
                   className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors py-1.5 px-3"
-                  onClick={() => toggleFollowTopic(topic.tag)}
+                  onClick={() => navigate(`/traders-hub?search=${encodeURIComponent(topic.tag)}`)}
                 >
                   {topic.tag}
                   <span className="ml-1.5 text-muted-foreground text-[10px]">{topic.count}</span>

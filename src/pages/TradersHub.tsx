@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -9,10 +10,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
-  Heart, Repeat2, Share, ImagePlus, BarChart3, Send,
-  Hash, Verified, ChartLine, Bookmark, BookmarkCheck, MessageCircle, X, 
-  Image as ImageIcon, Trash2, TrendingUp, AlertCircle, ShieldCheck,
-  Lightbulb, Trophy, BarChart2, Users, Flame
+  Heart, Repeat2, Share, ImagePlus, Send,
+  Verified, ChartLine, Bookmark, BookmarkCheck, MessageCircle, X, 
+  Trash2, ShieldCheck, Lightbulb, Trophy, BarChart2, Users, Flame, 
+  Search, Image, Hash, BarChart3
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { TopBar } from "@/components/shared/TopBar";
@@ -30,6 +31,7 @@ import { CommunityPolls } from "@/components/social/CommunityPolls";
 
 export default function TradersHub() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const { profile } = useProfile();
   const { posts, loading, createPost, likePost, repostPost, bookmarkPost, fetchComments, addComment, deletePost, fetchPosts } = usePosts();
@@ -41,6 +43,7 @@ export default function TradersHub() {
   const [isPosting, setIsPosting] = useState(false);
   const [activeTab, setActiveTab] = useState("for-you");
   const [activeSection, setActiveSection] = useState("feed");
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || "");
   
   // Comments dialog
   const [commentsDialogOpen, setCommentsDialogOpen] = useState(false);
@@ -49,8 +52,25 @@ export default function TradersHub() {
   const [newComment, setNewComment] = useState("");
   const [loadingComments, setLoadingComments] = useState(false);
 
-  // Filter posts based on active tab
+  // Update search query from URL params
+  useEffect(() => {
+    const urlSearch = searchParams.get('search');
+    if (urlSearch) {
+      setSearchQuery(urlSearch);
+    }
+  }, [searchParams]);
+
+  // Filter posts based on active tab and search query
   const filteredPosts = posts.filter(post => {
+    // First apply search filter if there's a query
+    if (searchQuery) {
+      const searchLower = searchQuery.toLowerCase().replace(/^#/, '');
+      const contentMatches = post.content.toLowerCase().includes(searchLower);
+      const stockMatches = post.stock_mentions?.some(s => s.toLowerCase().includes(searchLower));
+      if (!contentMatches && !stockMatches) return false;
+    }
+    
+    // Then apply tab filter
     if (activeTab === "following") {
       return isFollowing(post.user_id);
     }
@@ -59,6 +79,16 @@ export default function TradersHub() {
     }
     return true; // for-you shows all
   });
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    setSearchParams(query ? { search: query } : {});
+  };
+
+  const clearSearch = () => {
+    setSearchQuery("");
+    setSearchParams({});
+  };
 
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -374,7 +404,24 @@ export default function TradersHub() {
         subtitle="Professional trading community"
         showSearch={true}
         showNotifications={true}
+        onSearch={handleSearch}
+        initialSearchQuery={searchQuery}
       />
+
+      {/* Search Active Indicator */}
+      {searchQuery && (
+        <div className="px-4 pt-4">
+          <div className="flex items-center gap-2 p-3 bg-primary/5 rounded-lg border border-primary/20">
+            <Search className="h-4 w-4 text-primary" />
+            <span className="text-sm flex-1">
+              Showing results for: <span className="font-medium text-primary">{searchQuery}</span>
+            </span>
+            <Button variant="ghost" size="sm" className="h-7 px-2" onClick={clearSearch}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Community Guidelines Banner */}
       <div className="px-4 pt-4">
@@ -486,7 +533,7 @@ export default function TradersHub() {
                               className="h-9 w-9"
                               onClick={() => fileInputRef.current?.click()}
                             >
-                              <ImageIcon className="h-5 w-5 text-primary" />
+                              <Image className="h-5 w-5 text-primary" />
                             </Button>
                             <Button variant="ghost" size="icon" className="h-9 w-9">
                               <BarChart3 className="h-5 w-5 text-primary" />
