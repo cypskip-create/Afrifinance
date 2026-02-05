@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Calendar, Settings, UserPlus, UserMinus, MessageCircle, MoreHorizontal, Lock, Verified, Heart, Repeat2, FileText, Bookmark } from "lucide-react";
+import { ArrowLeft, Calendar, Settings, UserPlus, UserMinus, MessageCircle, MoreHorizontal, Lock, Verified, Heart, Repeat2, FileText, Bookmark, Camera, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,13 +11,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { useFollows } from "@/hooks/useFollows";
 import { useToast } from "@/hooks/use-toast";
 import { FollowersDialog } from "@/components/social/FollowersDialog";
+import { EditProfileDialog } from "@/components/profile/EditProfileDialog";
 
 interface UserProfileData {
   id: string;
   user_id: string;
   full_name: string | null;
-  email: string | null;
   avatar_url: string | null;
+  banner_url: string | null;
   bio: string | null;
   portfolio_public: boolean;
   followers_count: number;
@@ -55,18 +56,22 @@ export default function UserProfile() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { isFollowing, toggleFollow, fetchFollowers, fetchFollowing } = useFollows();
+  const bannerInputRef = useRef<HTMLInputElement>(null);
+  
   const [profile, setProfile] = useState<UserProfileData | null>(null);
   const [posts, setPosts] = useState<UserPost[]>([]);
   const [likedPosts, setLikedPosts] = useState<UserPost[]>([]);
   const [userComments, setUserComments] = useState<UserComment[]>([]);
   const [repostedPosts, setRepostedPosts] = useState<UserPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   
-  // Followers dialog state
+  // Dialog states
   const [followersDialogOpen, setFollowersDialogOpen] = useState(false);
   const [dialogTab, setDialogTab] = useState<"followers" | "following">("followers");
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
 
   const isOwnProfile = user?.id === userId;
   const userIsFollowing = userId ? isFollowing(userId) : false;
@@ -83,26 +88,34 @@ export default function UserProfile() {
   }, [userId, user]);
 
   const fetchProfile = async () => {
-    if (isOwnProfile) {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
+    if (!userId) return;
+    
+    try {
+      if (isOwnProfile && user) {
+        // Own profile - can access the full profiles table
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, user_id, full_name, avatar_url, banner_url, bio, portfolio_public, followers_count, following_count, created_at')
+          .eq('user_id', userId)
+          .maybeSingle();
 
-      if (data) {
-        setProfile(data as UserProfileData);
-      }
-    } else {
-      const { data, error } = await supabase
-        .from('profiles_public')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
+        if (data) {
+          setProfile(data as UserProfileData);
+        }
+      } else {
+        // Other user's profile - use the public view
+        const { data, error } = await supabase
+          .from('profiles_public')
+          .select('id, user_id, full_name, avatar_url, banner_url, bio, portfolio_public, followers_count, following_count, created_at')
+          .eq('user_id', userId)
+          .maybeSingle();
 
-      if (data) {
-        setProfile({ ...data, email: null } as UserProfileData);
+        if (data) {
+          setProfile(data as UserProfileData);
+        }
       }
+    } catch (err) {
+      console.error('Error fetching profile:', err);
     }
     setLoading(false);
   };
@@ -149,7 +162,6 @@ export default function UserProfile() {
   const fetchUserLikes = async () => {
     if (!userId) return;
     
-    // Get all posts that this user liked
     const { data: likesData } = await supabase
       .from('post_likes')
       .select('post_id')
@@ -164,7 +176,6 @@ export default function UserProfile() {
         .in('id', postIds);
 
       if (postsData) {
-        // Get authors for liked posts
         const userIds = [...new Set(postsData.map(p => p.user_id))];
         const { data: profiles } = await supabase
           .from('profiles_public')
@@ -205,7 +216,6 @@ export default function UserProfile() {
       .order('created_at', { ascending: false });
 
     if (commentsData && commentsData.length > 0) {
-      // Get the posts for these comments
       const postIds = [...new Set(commentsData.map(c => c.post_id))];
       const { data: postsData } = await supabase
         .from('posts')
@@ -299,6 +309,53 @@ export default function UserProfile() {
     }
   };
 
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({ title: "Invalid file type", description: "Please upload an image", variant: "destructive" });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Max 5MB allowed", variant: "destructive" });
+      return;
+    }
+
+    setUploadingBanner(true);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/banner-${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('banners')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('banners')
+        .getPublicUrl(fileName);
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ banner_url: publicUrl })
+        .eq('user_id', user.id);
+
+      if (updateError) throw updateError;
+
+      setProfile(prev => prev ? { ...prev, banner_url: publicUrl } : null);
+      toast({ title: "Banner updated!" });
+    } catch (error) {
+      console.error('Banner upload error:', error);
+      toast({ title: "Upload failed", variant: "destructive" });
+    } finally {
+      setUploadingBanner(false);
+    }
+  };
+
   const openFollowersDialog = (tab: "followers" | "following") => {
     setDialogTab(tab);
     setFollowersDialogOpen(true);
@@ -306,19 +363,11 @@ export default function UserProfile() {
 
   const getInitials = (name: string | null) => {
     if (!name) return "U";
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
+    return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
   };
 
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('en-US', { 
-      month: 'long', 
-      year: 'numeric' 
-    });
+    return new Date(date).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   };
 
   const formatTimeAgo = (date: string) => {
@@ -334,25 +383,29 @@ export default function UserProfile() {
   };
 
   const renderPost = (post: UserPost, showAuthor: boolean = false) => (
-    <div key={post.id} className="p-4">
+    <div key={post.id} className="p-4 border-b border-border">
       <div className="flex gap-3">
-        <Avatar className="h-10 w-10">
+        <Avatar 
+          className="h-10 w-10 cursor-pointer" 
+          onClick={() => navigate(`/profile/${showAuthor ? post.user_id : profile?.user_id}`)}
+        >
           <AvatarImage src={(showAuthor ? post.author?.avatar_url : profile?.avatar_url) || ""} />
           <AvatarFallback className="bg-primary text-primary-foreground">
             {getInitials(showAuthor ? post.author?.full_name || null : profile?.full_name)}
           </AvatarFallback>
         </Avatar>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1">
-            <span className="font-semibold text-sm">
+            <span 
+              className="font-semibold text-sm cursor-pointer hover:underline"
+              onClick={() => navigate(`/profile/${showAuthor ? post.user_id : profile?.user_id}`)}
+            >
               {showAuthor ? (post.author?.full_name || 'User') : (profile?.full_name || 'User')}
             </span>
             <Verified className="h-3 w-3 text-primary fill-primary" />
-            <span className="text-sm text-muted-foreground">
-              · {formatTimeAgo(post.created_at)}
-            </span>
+            <span className="text-sm text-muted-foreground">· {formatTimeAgo(post.created_at)}</span>
           </div>
-          <p className="text-sm mt-1 whitespace-pre-wrap">
+          <p className="text-sm mt-1 whitespace-pre-wrap break-words">
             {post.content.split(/(\$[A-Z]+)/g).map((part, i) => 
               part.startsWith('$') ? (
                 <span 
@@ -366,25 +419,12 @@ export default function UserProfile() {
             )}
           </p>
           {post.image_url && (
-            <img 
-              src={post.image_url} 
-              alt="Post" 
-              className="mt-3 rounded-xl max-h-60 object-cover w-full" 
-            />
+            <img src={post.image_url} alt="Post" className="mt-3 rounded-xl max-h-60 object-cover w-full" />
           )}
           <div className="flex items-center gap-6 mt-3 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <Heart className="h-4 w-4" />
-              {post.likes_count}
-            </span>
-            <span className="flex items-center gap-1">
-              <MessageCircle className="h-4 w-4" />
-              {post.comments_count}
-            </span>
-            <span className="flex items-center gap-1">
-              <Repeat2 className="h-4 w-4" />
-              {post.reposts_count}
-            </span>
+            <span className="flex items-center gap-1"><Heart className="h-4 w-4" />{post.likes_count}</span>
+            <span className="flex items-center gap-1"><MessageCircle className="h-4 w-4" />{post.comments_count}</span>
+            <span className="flex items-center gap-1"><Repeat2 className="h-4 w-4" />{post.reposts_count}</span>
           </div>
         </div>
       </div>
@@ -440,9 +480,40 @@ export default function UserProfile() {
         </div>
       </header>
 
-      {/* Profile Header */}
+      {/* Banner + Profile */}
       <div className="relative">
-        <div className="h-32 bg-gradient-primary" />
+        {/* Banner */}
+        <div className="relative h-32 bg-gradient-primary overflow-hidden">
+          {profile.banner_url && (
+            <img src={profile.banner_url} alt="Banner" className="w-full h-full object-cover" />
+          )}
+          {isOwnProfile && (
+            <>
+              <input
+                type="file"
+                ref={bannerInputRef}
+                className="hidden"
+                accept="image/*"
+                onChange={handleBannerUpload}
+              />
+              <Button
+                size="icon"
+                variant="secondary"
+                className="absolute bottom-2 right-2 h-8 w-8 rounded-full bg-black/50 hover:bg-black/70 border-0"
+                onClick={() => bannerInputRef.current?.click()}
+                disabled={uploadingBanner}
+              >
+                {uploadingBanner ? (
+                  <Loader2 className="h-4 w-4 text-white animate-spin" />
+                ) : (
+                  <Camera className="h-4 w-4 text-white" />
+                )}
+              </Button>
+            </>
+          )}
+        </div>
+
+        {/* Profile Section */}
         <div className="px-4 -mt-16">
           <div className="flex justify-between items-end">
             <Avatar className="h-28 w-28 ring-4 ring-background">
@@ -453,7 +524,7 @@ export default function UserProfile() {
             </Avatar>
             <div className="flex gap-2 mb-2">
               {isOwnProfile ? (
-                <Button variant="outline" onClick={() => navigate('/account')}>
+                <Button variant="outline" onClick={() => setEditProfileOpen(true)}>
                   <Settings className="h-4 w-4 mr-1" />
                   Edit Profile
                 </Button>
@@ -467,15 +538,9 @@ export default function UserProfile() {
                     onClick={handleFollow}
                   >
                     {userIsFollowing ? (
-                      <>
-                        <UserMinus className="h-4 w-4 mr-1" />
-                        Following
-                      </>
+                      <><UserMinus className="h-4 w-4 mr-1" />Following</>
                     ) : (
-                      <>
-                        <UserPlus className="h-4 w-4 mr-1" />
-                        Follow
-                      </>
+                      <><UserPlus className="h-4 w-4 mr-1" />Follow</>
                     )}
                   </Button>
                 </>
@@ -485,14 +550,10 @@ export default function UserProfile() {
 
           {/* Profile Info */}
           <div className="mt-4">
-            <h2 className="text-xl font-bold flex items-center gap-1">
-              {profile.full_name || 'User'}
-            </h2>
-            <p className="text-sm text-muted-foreground">@{profile.email?.split('@')[0] || 'user'}</p>
+            <h2 className="text-xl font-bold">{profile.full_name || 'User'}</h2>
+            <p className="text-sm text-muted-foreground">@{profile.full_name?.toLowerCase().replace(/\s+/g, '') || 'user'}</p>
             
-            {profile.bio && (
-              <p className="mt-3 text-sm">{profile.bio}</p>
-            )}
+            {profile.bio && <p className="mt-3 text-sm">{profile.bio}</p>}
 
             <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
               <div className="flex items-center gap-1">
@@ -502,17 +563,11 @@ export default function UserProfile() {
             </div>
 
             <div className="flex gap-4 mt-3">
-              <button 
-                className="hover:underline"
-                onClick={() => openFollowersDialog("following")}
-              >
+              <button className="hover:underline" onClick={() => openFollowersDialog("following")}>
                 <span className="font-bold">{followingCount}</span>
                 <span className="text-muted-foreground ml-1">Following</span>
               </button>
-              <button 
-                className="hover:underline"
-                onClick={() => openFollowersDialog("followers")}
-              >
+              <button className="hover:underline" onClick={() => openFollowersDialog("followers")}>
                 <span className="font-bold">{followersCount}</span>
                 <span className="text-muted-foreground ml-1">Followers</span>
               </button>
@@ -533,7 +588,7 @@ export default function UserProfile() {
         </div>
       )}
 
-      {/* Tabs - Icon only for mobile */}
+      {/* Tabs */}
       <Tabs defaultValue="posts" className="mt-4">
         <TabsList className="w-full grid grid-cols-4 bg-transparent border-b border-border rounded-none h-12">
           <Tooltip>
@@ -572,99 +627,87 @@ export default function UserProfile() {
 
         <TabsContent value="posts" className="mt-0">
           {posts.length === 0 ? (
-            <div className="p-8 text-center">
-              <FileText className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
-              <p className="text-muted-foreground">No posts yet</p>
+            <div className="p-8 text-center text-muted-foreground">
+              <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p>No posts yet</p>
             </div>
           ) : (
-            <div className="divide-y divide-border">
-              {posts.map((post) => renderPost(post, false))}
-            </div>
+            posts.map(post => renderPost(post))
           )}
         </TabsContent>
 
         <TabsContent value="replies" className="mt-0">
           {userComments.length === 0 ? (
-            <div className="p-8 text-center">
-              <MessageCircle className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
-              <p className="text-muted-foreground">No replies yet</p>
+            <div className="p-8 text-center text-muted-foreground">
+              <MessageCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p>No replies yet</p>
             </div>
           ) : (
-            <div className="divide-y divide-border">
-              {userComments.map((comment) => (
-                <div key={comment.id} className="p-4">
-                  <div className="flex gap-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={profile?.avatar_url || ""} />
-                      <AvatarFallback className="bg-primary text-primary-foreground">
-                        {getInitials(profile?.full_name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-1">
-                        <span className="font-semibold text-sm">{profile?.full_name || 'User'}</span>
-                        <Verified className="h-3 w-3 text-primary fill-primary" />
-                        <span className="text-sm text-muted-foreground">
-                          · {formatTimeAgo(comment.created_at)}
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground mb-1">
-                        Replying to @{comment.post_author_name}
-                      </p>
-                      <p className="text-sm whitespace-pre-wrap">{comment.content}</p>
-                      <div className="mt-2 p-2 rounded-lg bg-muted/30 text-xs text-muted-foreground">
-                        <p className="line-clamp-2">{comment.post_content}...</p>
-                      </div>
+            userComments.map(comment => (
+              <div key={comment.id} className="p-4 border-b border-border">
+                <p className="text-xs text-muted-foreground mb-2">
+                  Replying to <span className="text-primary">@{comment.post_author_name?.toLowerCase().replace(/\s+/g, '') || 'user'}</span>
+                </p>
+                <div className="flex gap-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={profile?.avatar_url || ""} />
+                    <AvatarFallback className="bg-primary text-primary-foreground">
+                      {getInitials(profile?.full_name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-1">
+                      <span className="font-semibold text-sm">{profile?.full_name || 'User'}</span>
+                      <Verified className="h-3 w-3 text-primary fill-primary" />
+                      <span className="text-sm text-muted-foreground">· {formatTimeAgo(comment.created_at)}</span>
                     </div>
+                    <p className="text-sm mt-1">{comment.content}</p>
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))
           )}
         </TabsContent>
 
         <TabsContent value="reposts" className="mt-0">
           {repostedPosts.length === 0 ? (
-            <div className="p-8 text-center">
-              <Repeat2 className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
-              <p className="text-muted-foreground">No reposts yet</p>
+            <div className="p-8 text-center text-muted-foreground">
+              <Repeat2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p>No reposts yet</p>
             </div>
           ) : (
-            <div className="divide-y divide-border">
-              {repostedPosts.map((post) => (
-                <div key={post.id}>
-                  <div className="px-4 pt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                    <Repeat2 className="h-3 w-3" />
-                    <span>{profile?.full_name} reposted</span>
-                  </div>
-                  {renderPost(post, true)}
-                </div>
-              ))}
-            </div>
+            repostedPosts.map(post => renderPost(post, true))
           )}
         </TabsContent>
 
         <TabsContent value="likes" className="mt-0">
           {likedPosts.length === 0 ? (
-            <div className="p-8 text-center">
-              <Heart className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
-              <p className="text-muted-foreground">No liked posts</p>
+            <div className="p-8 text-center text-muted-foreground">
+              <Heart className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p>No likes yet</p>
             </div>
           ) : (
-            <div className="divide-y divide-border">
-              {likedPosts.map((post) => renderPost(post, true))}
-            </div>
+            likedPosts.map(post => renderPost(post, true))
           )}
         </TabsContent>
       </Tabs>
 
-      {/* Followers/Following Dialog */}
-      <FollowersDialog
-        open={followersDialogOpen}
-        onOpenChange={setFollowersDialogOpen}
-        userId={userId || ""}
-        initialTab={dialogTab}
-        userName={profile.full_name || "User"}
+      {/* Dialogs */}
+      {userId && (
+        <FollowersDialog 
+          open={followersDialogOpen} 
+          onOpenChange={setFollowersDialogOpen}
+          userId={userId}
+          initialTab={dialogTab}
+        />
+      )}
+      
+      <EditProfileDialog 
+        open={editProfileOpen} 
+        onOpenChange={(open) => {
+          setEditProfileOpen(open);
+          if (!open) fetchProfile();
+        }} 
       />
     </div>
   );
