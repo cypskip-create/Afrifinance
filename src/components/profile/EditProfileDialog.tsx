@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Camera, User, Loader2, Upload, X } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
@@ -22,6 +23,7 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [fullName, setFullName] = useState("");
+  const [bio, setBio] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [previewUrl, setPreviewUrl] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -29,6 +31,7 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
   useEffect(() => {
     if (open && profile) {
       setFullName(profile.full_name || "");
+      setBio(profile.bio || "");
       setAvatarUrl(profile.avatar_url || "");
       setPreviewUrl(profile.avatar_url || "");
     }
@@ -106,6 +109,7 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
     try {
       const result = await updateProfile({
         full_name: fullName,
+        bio: bio,
         avatar_url: avatarUrl,
       });
       
@@ -219,7 +223,7 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="fullName" className="text-sm font-medium">
-                Full Name
+                Name
               </Label>
               <Input
                 id="fullName"
@@ -231,17 +235,19 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium">
-                Email Address
+              <Label htmlFor="bio" className="text-sm font-medium">
+                Bio
               </Label>
-              <Input
-                id="email"
-                value={user?.email || ""}
-                disabled
-                className="h-11 bg-muted/50"
+              <Textarea
+                id="bio"
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                placeholder="Tell us about yourself..."
+                className="min-h-[80px] resize-none"
+                maxLength={160}
               />
-              <p className="text-xs text-muted-foreground">
-                Email cannot be changed
+              <p className="text-xs text-muted-foreground text-right">
+                {bio.length}/160
               </p>
             </div>
 

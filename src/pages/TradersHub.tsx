@@ -402,26 +402,9 @@ export default function TradersHub() {
       <TopBar 
         title="TradersHub" 
         subtitle="Professional trading community"
-        showSearch={true}
+        showSearch={false}
         showNotifications={true}
-        onSearch={handleSearch}
-        initialSearchQuery={searchQuery}
       />
-
-      {/* Search Active Indicator */}
-      {searchQuery && (
-        <div className="px-4 pt-4">
-          <div className="flex items-center gap-2 p-3 bg-primary/5 rounded-lg border border-primary/20">
-            <Search className="h-4 w-4 text-primary" />
-            <span className="text-sm flex-1">
-              Showing results for: <span className="font-medium text-primary">{searchQuery}</span>
-            </span>
-            <Button variant="ghost" size="sm" className="h-7 px-2" onClick={clearSearch}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      )}
 
       {/* Community Guidelines Banner */}
       <div className="px-4 pt-4">
@@ -435,8 +418,30 @@ export default function TradersHub() {
         </Card>
       </div>
 
-      {/* Section Tabs - Icon only for mobile */}
-      <div className="px-4 mt-4">
+      {/* Search Bar + Section Tabs */}
+      <div className="px-4 mt-4 space-y-3">
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search posts, stocks, hashtags..."
+            value={searchQuery}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="pl-9 pr-9 h-10 bg-muted/50"
+          />
+          {searchQuery && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+              onClick={clearSearch}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+
+        {/* Section Tabs */}
         <div className="grid grid-cols-4 gap-2">
           {[
             { id: "feed", label: "Feed", icon: MessageCircle },

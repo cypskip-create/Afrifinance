@@ -37,6 +37,7 @@ export default function News() {
   const [followedTopics, setFollowedTopics] = useState<string[]>(["earnings", "stocks"]);
   const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+
   const newsCategories = [
     { id: "for-you", label: "For You", icon: Zap },
     { id: "latest", label: "Latest", icon: Clock },
@@ -55,7 +56,7 @@ export default function News() {
 
   const breakingNews = {
     id: 0,
-    title: "KCB Group announces strategic partnership with fintech startup to enhance digital banking services across East Africa",
+    title: "KCB Group announces strategic partnership with fintech startup",
     summary: "Major banking group partners with leading fintech to revolutionize digital banking, targeting 5 million new users by 2025",
     source: "Capital Markets",
     time: "Just now",
@@ -85,7 +86,7 @@ export default function News() {
     {
       id: 2,
       title: "NSE 20 Index Hits New Monthly High on Banking Rally",
-      summary: "Banking and telecom sectors lead market rally amid positive investor sentiment and foreign inflows",
+      summary: "Banking and telecom sectors lead market rally amid positive investor sentiment",
       source: "Capital FM",
       time: "4 hours ago",
       category: "trending",
@@ -110,7 +111,7 @@ export default function News() {
     {
       id: 4,
       title: "Equity Bank Expands to South Sudan in Regional Push",
-      summary: "Regional banking group opens new subsidiary as part of aggressive expansion strategy in East Africa",
+      summary: "Regional banking group opens new subsidiary as part of aggressive expansion strategy",
       source: "Standard",
       time: "8 hours ago",
       category: "stocks",
@@ -123,7 +124,7 @@ export default function News() {
     {
       id: 5,
       title: "Analysis: What Rising Global Oil Prices Mean for Kenya Power",
-      summary: "Expert analysis on impact of geopolitical tensions on energy costs and KPLC stock outlook",
+      summary: "Expert analysis on impact of geopolitical tensions on energy costs",
       source: "Reuters",
       time: "10 hours ago",
       category: "stocks",
@@ -154,12 +155,6 @@ export default function News() {
     });
   };
 
-  const toggleFollowTopic = (topic: string) => {
-    setFollowedTopics(prev => 
-      prev.includes(topic) ? prev.filter(t => t !== topic) : [...prev, topic]
-    );
-  };
-
   const filteredNews = (category: string) => {
     if (category === "for-you") {
       return newsItems.filter(item => 
@@ -172,56 +167,60 @@ export default function News() {
     return newsItems.filter(item => item.category === category);
   };
 
+  const handleTopicClick = (tag: string) => {
+    navigate(`/traders-hub?search=${encodeURIComponent(tag)}`);
+  };
+
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border">
-        <div className="flex items-center justify-between p-4">
+      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-lg border-b border-border">
+        <div className="flex items-center justify-between px-4 py-3">
           <div>
-            <h1 className="text-lg font-bold flex items-center space-x-2">
+            <h1 className="text-lg font-bold flex items-center gap-2">
               <Newspaper className="h-5 w-5 text-primary" />
               <span>News</span>
             </h1>
             <p className="text-xs text-muted-foreground">Market updates & insights</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="tap-scale relative">
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className="h-9 w-9 relative">
               <Bookmark className="h-4 w-4" />
               {savedArticles.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-[10px] flex items-center justify-center text-primary-foreground">
+                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-primary text-[10px] flex items-center justify-center text-primary-foreground font-medium">
                   {savedArticles.length}
                 </span>
               )}
             </Button>
-            <Button variant="ghost" size="icon" className="tap-scale">
+            <Button variant="ghost" size="icon" className="h-9 w-9">
               <Filter className="h-4 w-4" />
             </Button>
           </div>
         </div>
       </header>
 
-      <div className="p-4 space-y-4">
+      <div className="px-4 py-3 space-y-4">
         {/* Live News Banner */}
         {liveNews.isLive && (
-          <Card className="bg-gradient-to-r from-red-500/10 via-red-500/5 to-transparent border-red-500/20 overflow-hidden">
-            <CardContent className="p-3 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1.5 bg-red-500 text-white px-2 py-0.5 rounded-full text-xs font-bold animate-pulse">
-                  <span className="w-2 h-2 bg-white rounded-full" />
+          <Card className="bg-gradient-to-r from-red-500/10 via-red-500/5 to-transparent border-red-500/20">
+            <CardContent className="p-3 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 bg-red-500 text-white px-2 py-0.5 rounded-full text-xs font-bold shrink-0">
+                  <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
                   LIVE
                 </div>
-                <div>
-                  <p className="text-sm font-medium line-clamp-1">{liveNews.title}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium truncate">{liveNews.title}</p>
                   <p className="text-xs text-muted-foreground flex items-center gap-2">
                     <span>{liveNews.source}</span>
                     <span className="flex items-center gap-1">
                       <Eye className="h-3 w-3" />
-                      {liveNews.viewers.toLocaleString()} watching
+                      {liveNews.viewers.toLocaleString()}
                     </span>
                   </p>
                 </div>
               </div>
-              <Button size="sm" className="bg-red-500 hover:bg-red-600">
+              <Button size="sm" className="bg-red-500 hover:bg-red-600 shrink-0 h-8">
                 <Play className="h-3 w-3 mr-1" />
                 Watch
               </Button>
@@ -229,9 +228,9 @@ export default function News() {
           </Card>
         )}
 
-        {/* Breaking News - Large Feature Card */}
+        {/* Breaking News Card */}
         <Card 
-          className="bg-gradient-accent border-0 overflow-hidden tap-scale cursor-pointer"
+          className="bg-gradient-accent border-0 overflow-hidden cursor-pointer"
           onClick={() => {
             setSelectedArticle(breakingNews as NewsArticle);
             setDetailDialogOpen(true);
@@ -242,23 +241,27 @@ export default function News() {
               <img 
                 src={breakingNews.imageUrl} 
                 alt={breakingNews.title}
-                className="w-full h-44 object-cover"
+                className="w-full h-40 object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-              <div className="absolute top-3 left-3 flex items-center gap-2">
-                <Badge className="bg-red-500 text-white animate-pulse text-xs">{breakingNews.isBreaking ? "BREAKING" : "FEATURED"}</Badge>
-                <Badge variant="secondary" className="bg-black/50 text-white text-xs">{breakingNews.readTime} read</Badge>
+              <div className="absolute top-2.5 left-2.5 flex items-center gap-2">
+                <Badge className="bg-red-500 text-white text-[10px] px-2 py-0.5">BREAKING</Badge>
+                <Badge variant="secondary" className="bg-black/50 text-white text-[10px] px-2 py-0.5">
+                  {breakingNews.readTime}
+                </Badge>
               </div>
-              <div className="absolute bottom-0 left-0 right-0 p-4">
-                <h3 className="text-white font-bold text-base mb-2 line-clamp-2">{breakingNews.title}</h3>
-                <p className="text-white/80 text-sm mb-2 line-clamp-2">{breakingNews.summary}</p>
+              <div className="absolute bottom-0 left-0 right-0 p-3">
+                <h3 className="text-white font-semibold text-sm leading-snug mb-1.5 line-clamp-2">
+                  {breakingNews.title}
+                </h3>
+                <p className="text-white/70 text-xs line-clamp-1 mb-2">{breakingNews.summary}</p>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-white/70 text-xs">
+                  <div className="flex items-center gap-2 text-white/60 text-xs">
                     <span className="font-medium text-white">{breakingNews.source}</span>
-                    <span>•</span>
+                    <span>·</span>
                     <span>{breakingNews.time}</span>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-0.5">
                     <Button 
                       variant="ghost" 
                       size="icon" 
@@ -282,7 +285,7 @@ export default function News() {
         </Card>
 
         {/* Trending Topics */}
-        <div className="mt-5">
+        <div>
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold flex items-center gap-2">
               <Flame className="h-4 w-4 text-orange-500" />
@@ -291,24 +294,24 @@ export default function News() {
             <Button 
               variant="ghost" 
               size="sm" 
-              className="text-xs h-7"
+              className="text-xs h-7 px-2"
               onClick={() => navigate('/traders-hub')}
             >
               See all
-              <ChevronRight className="h-3 w-3 ml-1" />
+              <ChevronRight className="h-3 w-3 ml-0.5" />
             </Button>
           </div>
           <ScrollArea className="w-full whitespace-nowrap">
-            <div className="flex gap-2 pb-1">
+            <div className="flex gap-2">
               {trendingTopics.map((topic, idx) => (
                 <Badge 
                   key={idx} 
                   variant="secondary" 
-                  className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors py-1.5 px-3"
-                  onClick={() => navigate(`/traders-hub?search=${encodeURIComponent(topic.tag)}`)}
+                  className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors py-1 px-2.5 text-xs"
+                  onClick={() => handleTopicClick(topic.tag)}
                 >
                   {topic.tag}
-                  <span className="ml-1.5 text-muted-foreground text-[10px]">{topic.count}</span>
+                  <span className="ml-1 text-muted-foreground text-[10px]">{topic.count}</span>
                 </Badge>
               ))}
             </div>
@@ -319,18 +322,15 @@ export default function News() {
         {/* News Categories */}
         <Tabs defaultValue="for-you" className="w-full">
           <ScrollArea className="w-full whitespace-nowrap">
-            <TabsList className="inline-flex h-10 w-max bg-muted/30 p-1">
+            <TabsList className="inline-flex h-9 w-max bg-muted/40 p-1 gap-0.5">
               {newsCategories.map((category) => (
                 <TabsTrigger 
                   key={category.id} 
                   value={category.id}
-                  className="flex items-center gap-1.5 px-4 data-[state=active]:bg-background"
+                  className="flex items-center gap-1.5 px-3 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
                 >
                   <category.icon className="h-3.5 w-3.5" />
-                  <span className="text-xs">{category.label}</span>
-                  {followedTopics.includes(category.id) && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                  )}
+                  <span>{category.label}</span>
                 </TabsTrigger>
               ))}
             </TabsList>
@@ -338,13 +338,13 @@ export default function News() {
           </ScrollArea>
 
           {newsCategories.map((category) => (
-            <TabsContent key={category.id} value={category.id} className="space-y-3 mt-4">
+            <TabsContent key={category.id} value={category.id} className="space-y-3 mt-3">
               {filteredNews(category.id).length === 0 ? (
                 <Card className="card-gradient">
-                  <CardContent className="p-8 text-center">
-                    <Bell className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                    <h3 className="font-semibold mb-1">No articles yet</h3>
-                    <p className="text-sm text-muted-foreground">
+                  <CardContent className="p-6 text-center">
+                    <Bell className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                    <h3 className="font-semibold text-sm mb-1">No articles yet</h3>
+                    <p className="text-xs text-muted-foreground">
                       Follow topics to see personalized news here
                     </p>
                   </CardContent>
@@ -353,7 +353,7 @@ export default function News() {
                 filteredNews(category.id).map((article) => (
                   <Card 
                     key={article.id} 
-                    className="card-gradient overflow-hidden tap-scale cursor-pointer transition-all duration-200 hover:shadow-lg"
+                    className="card-gradient overflow-hidden cursor-pointer transition-all duration-200 hover:shadow-md"
                     onClick={() => {
                       setSelectedArticle(article);
                       setDetailDialogOpen(true);
@@ -361,41 +361,41 @@ export default function News() {
                   >
                     <CardContent className="p-0">
                       <div className="flex">
-                        <div className="relative w-28 flex-shrink-0">
+                        <div className="relative w-24 shrink-0">
                           <img 
                             src={article.imageUrl} 
                             alt={article.title}
-                            className="w-full h-full object-cover min-h-[110px]"
+                            className="w-full h-full object-cover min-h-[100px]"
                           />
                           {article.hasVideo && (
                             <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                              <div className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center">
-                                <Play className="h-4 w-4 text-foreground ml-0.5" />
+                              <div className="w-7 h-7 rounded-full bg-white/90 flex items-center justify-center">
+                                <Play className="h-3.5 w-3.5 text-foreground ml-0.5" />
                               </div>
                             </div>
                           )}
                           {article.isPremium && (
-                            <Badge className="absolute top-2 left-2 bg-accent text-accent-foreground text-[10px]">
+                            <Badge className="absolute top-1.5 left-1.5 bg-accent text-accent-foreground text-[9px] px-1.5 py-0">
                               PRO
                             </Badge>
                           )}
                         </div>
-                        <div className="flex-1 p-3 flex flex-col justify-between">
+                        <div className="flex-1 p-2.5 flex flex-col justify-between min-w-0">
                           <div>
-                            <div className="flex items-center gap-2 mb-1.5">
-                              <span className="text-xs font-medium text-primary">{article.source}</span>
-                              <span className="text-xs text-muted-foreground">{article.time}</span>
+                            <div className="flex items-center gap-1.5 mb-1">
+                              <span className="text-[11px] font-medium text-primary">{article.source}</span>
+                              <span className="text-[11px] text-muted-foreground">{article.time}</span>
                             </div>
-                            <h3 className="font-semibold text-sm line-clamp-2 leading-tight mb-1.5">
+                            <h3 className="font-semibold text-xs line-clamp-2 leading-snug mb-1.5">
                               {article.title}
                             </h3>
                             {article.stockMentions && article.stockMentions.length > 0 && (
-                              <div className="flex gap-1 mb-2">
-                                {article.stockMentions.map((stock) => (
+                              <div className="flex gap-1 flex-wrap">
+                                {article.stockMentions.slice(0, 2).map((stock) => (
                                   <Badge 
                                     key={stock} 
                                     variant="outline" 
-                                    className="text-[10px] px-1.5 py-0 cursor-pointer hover:bg-primary/10"
+                                    className="text-[9px] px-1.5 py-0 h-4 cursor-pointer hover:bg-primary/10"
                                     onClick={(e) => { e.stopPropagation(); navigate(`/stock/${stock}`); }}
                                   >
                                     ${stock}
@@ -404,22 +404,22 @@ export default function News() {
                               </div>
                             )}
                           </div>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                              <span className="flex items-center gap-1">
+                          <div className="flex items-center justify-between mt-1.5">
+                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                              <span className="flex items-center gap-0.5">
                                 <Eye className="h-3 w-3" />
                                 {(article.views / 1000).toFixed(1)}K
                               </span>
-                              <span className="flex items-center gap-1">
+                              <span className="flex items-center gap-0.5">
                                 <MessageCircle className="h-3 w-3" />
                                 {article.comments}
                               </span>
                             </div>
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center">
                               <Button 
                                 variant="ghost" 
                                 size="icon" 
-                                className="h-7 w-7"
+                                className="h-6 w-6"
                                 onClick={(e) => { e.stopPropagation(); toggleSave(article.id); }}
                               >
                                 {savedArticles.includes(article.id) ? (
@@ -428,7 +428,7 @@ export default function News() {
                                   <Bookmark className="h-3.5 w-3.5" />
                                 )}
                               </Button>
-                              <Button variant="ghost" size="icon" className="h-7 w-7">
+                              <Button variant="ghost" size="icon" className="h-6 w-6">
                                 <Share2 className="h-3.5 w-3.5" />
                               </Button>
                             </div>
@@ -443,22 +443,21 @@ export default function News() {
           ))}
         </Tabs>
 
-        {/* Topic Follow Suggestion */}
+        {/* Personalization CTA */}
         <Card className="card-gradient border-primary/20">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Bell className="h-5 w-5 text-primary" />
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <Bell className="h-4 w-4 text-primary" />
                 </div>
-                <div>
-                  <h4 className="font-semibold text-sm">Get Personalized News</h4>
-                  <p className="text-xs text-muted-foreground">Follow topics you care about</p>
+                <div className="min-w-0">
+                  <h4 className="font-semibold text-sm">Personalized News</h4>
+                  <p className="text-[11px] text-muted-foreground truncate">Follow topics you care about</p>
                 </div>
               </div>
-              <Button size="sm" variant="outline">
+              <Button size="sm" variant="outline" className="h-8 px-3 text-xs shrink-0">
                 Customize
-                <ChevronRight className="h-3 w-3 ml-1" />
               </Button>
             </div>
           </CardContent>
