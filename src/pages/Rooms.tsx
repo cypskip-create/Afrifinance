@@ -1,18 +1,19 @@
 import { useState } from "react";
 import { TopBar } from "@/components/shared/TopBar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
 import { 
-  Users, MessageCircle, TrendingUp, Lock, Globe, Search, Plus, 
-  Mic, MicOff, Volume2, Crown, Star, Verified, Radio, Calendar,
-  ChevronRight, Bell, MoreHorizontal, Play, Pause, Headphones,
-  MessageSquare, ThumbsUp, Share2, UserPlus, Settings
+  Search, Plus, Radio, Calendar, ChevronRight, 
+  Crown, MessageSquare, Mic, Headphones
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { LiveRoomCard } from "@/components/rooms/LiveRoomCard";
+import { TextRoomCard } from "@/components/rooms/TextRoomCard";
+import { ScheduledRoomCard } from "@/components/rooms/ScheduledRoomCard";
+import { TopTraderCard } from "@/components/rooms/TopTraderCard";
 
 const liveRooms = [
   {
@@ -24,9 +25,22 @@ const liveRooms = [
     ],
     listeners: 342,
     speakers: 5,
-    topic: "Today's market outlook and key stocks to watch",
+    topic: "Today's market outlook and key stocks to watch for the trading session",
     isLive: true,
-    category: "Live",
+    category: "Markets",
+  },
+  {
+    id: 2,
+    name: "Banking Sector Deep Dive",
+    hosts: [
+      { name: "Alex Njeru", avatar: "AN", verified: true },
+      { name: "Mary Wanjiku", avatar: "MW", verified: false },
+    ],
+    listeners: 187,
+    speakers: 3,
+    topic: "Analyzing Q3 earnings from major banks: EQTY, KCB, COOP",
+    isLive: true,
+    category: "Banking",
   },
 ];
 
@@ -47,11 +61,27 @@ const scheduledRooms = [
     attendees: 567,
     topic: "Technical Analysis Basics",
   },
+  {
+    id: 5,
+    title: "Dividend Investing Strategy",
+    host: "Income Investors",
+    time: "Saturday, 2:00 PM",
+    attendees: 189,
+    topic: "Building a dividend portfolio",
+  },
+  {
+    id: 6,
+    title: "Market Week Ahead",
+    host: "Trading Desk",
+    time: "Monday, 8:00 AM",
+    attendees: 412,
+    topic: "Key events and stocks to watch",
+  },
 ];
 
 const textRooms = [
   {
-    id: 5,
+    id: 7,
     name: "NSE Daily Discussions",
     description: "Daily market analysis and trading ideas for NSE stocks",
     members: 1240,
@@ -63,7 +93,7 @@ const textRooms = [
     lastMessageTime: "2m ago",
   },
   {
-    id: 6,
+    id: 8,
     name: "Banking Sector Focus",
     description: "Deep dive into banking stocks: EQTY, KCB, COOP, and more",
     members: 560,
@@ -75,19 +105,19 @@ const textRooms = [
     lastMessageTime: "5m ago",
   },
   {
-    id: 7,
+    id: 9,
     name: "Safaricom Bulls",
     description: "For SAFCOM investors and enthusiasts",
     members: 890,
     online: 123,
-    category: "Telecommunications",
+    category: "Telecom",
     isPrivate: false,
     messages: 1560,
     lastMessage: "M-Pesa numbers looking strong",
     lastMessageTime: "1m ago",
   },
   {
-    id: 8,
+    id: 10,
     name: "Premium Traders Circle",
     description: "Exclusive room for verified premium members",
     members: 120,
@@ -99,7 +129,7 @@ const textRooms = [
     lastMessageTime: "Premium",
   },
   {
-    id: 9,
+    id: 11,
     name: "Energy & Infrastructure",
     description: "KenGen, Kenya Power, and infrastructure investments",
     members: 340,
@@ -116,15 +146,16 @@ const topTraders = [
   { name: "James M.", handle: "@jamesm_trades", followers: "12.5K", winRate: "78%", verified: true },
   { name: "Sarah K.", handle: "@sarah_invests", followers: "8.2K", winRate: "72%", verified: true },
   { name: "Alex N.", handle: "@alex_stocks", followers: "6.8K", winRate: "69%", verified: false },
+  { name: "Mary W.", handle: "@mary_nse", followers: "5.4K", winRate: "74%", verified: true },
 ];
 
 export default function Rooms() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [joinedRooms, setJoinedRooms] = useState<number[]>([5, 7]);
+  const [joinedRooms, setJoinedRooms] = useState<number[]>([7, 9]);
 
-  const categories = ["All", "General", "Banking", "Telecommunications", "Energy", "Premium"];
+  const categories = ["All", "General", "Banking", "Telecom", "Energy", "Premium"];
 
   const handleJoinRoom = (roomId: number, roomName: string, isPrivate: boolean) => {
     if (isPrivate) {
@@ -145,7 +176,28 @@ export default function Rooms() {
 
   const handleLeaveRoom = (roomId: number) => {
     setJoinedRooms(prev => prev.filter(id => id !== roomId));
-    toast({ title: "Left room", description: "You have left the room" });
+    toast({ title: "Left room" });
+  };
+
+  const handleJoinLiveRoom = (roomName: string) => {
+    toast({
+      title: "Joining Live Room",
+      description: `Connecting to ${roomName}...`,
+    });
+  };
+
+  const handleRemindScheduled = (title: string) => {
+    toast({
+      title: "Reminder Set",
+      description: `We'll notify you before "${title}" starts`,
+    });
+  };
+
+  const handleFollowTrader = (name: string) => {
+    toast({
+      title: "Following",
+      description: `You're now following ${name}`,
+    });
   };
 
   const filteredRooms = textRooms.filter(room => {
@@ -179,7 +231,7 @@ export default function Rooms() {
           <div>
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-semibold flex items-center gap-2">
-                <Radio className="h-4 w-4 text-red-500 animate-pulse" />
+                <Radio className="h-4 w-4 text-destructive animate-pulse" />
                 Live Now
               </h3>
               <Button variant="ghost" size="sm" className="text-xs h-7">
@@ -187,62 +239,15 @@ export default function Rooms() {
                 <ChevronRight className="h-3 w-3 ml-1" />
               </Button>
             </div>
-            <ScrollArea className="w-full whitespace-nowrap">
-              <div className="flex gap-3">
-                {liveRooms.map((room) => (
-                  <Card key={room.id} className="w-[280px] flex-shrink-0 bg-gradient-to-br from-primary/10 via-background to-accent/5 border-primary/20">
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Badge className="bg-red-500 text-white text-[10px] animate-pulse">
-                          <span className="w-1.5 h-1.5 bg-white rounded-full mr-1" />
-                          LIVE
-                        </Badge>
-                        <Badge variant="secondary" className="text-[10px]">{room.category}</Badge>
-                      </div>
-                      <h4 className="font-semibold text-sm mb-1 line-clamp-1">{room.name}</h4>
-                      <p className="text-xs text-muted-foreground mb-3 line-clamp-1">{room.topic}</p>
-                      
-                      {/* Hosts */}
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="flex -space-x-2">
-                          {room.hosts.map((host, idx) => (
-                            <div 
-                              key={idx} 
-                              className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-medium border-2 border-background"
-                            >
-                              {host.avatar}
-                            </div>
-                          ))}
-                        </div>
-                        <div className="text-xs">
-                          <span className="font-medium">{room.hosts[0].name}</span>
-                          {room.hosts[0].verified && <Verified className="h-3 w-3 text-primary inline ml-1" />}
-                          {room.hosts.length > 1 && <span className="text-muted-foreground"> +{room.hosts.length - 1}</span>}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Headphones className="h-3 w-3" />
-                            {room.listeners}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Mic className="h-3 w-3" />
-                            {room.speakers}
-                          </span>
-                        </div>
-                        <Button size="sm" className="h-7 text-xs">
-                          <Headphones className="h-3 w-3 mr-1" />
-                          Join
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-              <ScrollBar orientation="horizontal" />
-            </ScrollArea>
+            <div className="space-y-3">
+              {liveRooms.map((room) => (
+                <LiveRoomCard 
+                  key={room.id} 
+                  room={room} 
+                  onJoin={() => handleJoinLiveRoom(room.name)}
+                />
+              ))}
+            </div>
           </div>
         )}
 
@@ -258,26 +263,19 @@ export default function Rooms() {
               <Plus className="h-3 w-3 ml-1" />
             </Button>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            {scheduledRooms.map((room) => (
-              <Card key={room.id} className="card-gradient">
-                <CardContent className="p-3">
-                  <h4 className="font-semibold text-xs mb-1 line-clamp-1">{room.title}</h4>
-                  <p className="text-[10px] text-muted-foreground mb-2">{room.time}</p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                      <Users className="h-3 w-3" />
-                      {room.attendees}
-                    </span>
-                    <Button size="sm" variant="outline" className="h-6 text-[10px] px-2">
-                      <Bell className="h-2.5 w-2.5 mr-1" />
-                      Remind
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <ScrollArea className="w-full whitespace-nowrap">
+            <div className="flex gap-3">
+              {scheduledRooms.map((room) => (
+                <div key={room.id} className="w-[200px] shrink-0">
+                  <ScheduledRoomCard 
+                    room={room}
+                    onRemind={() => handleRemindScheduled(room.title)}
+                  />
+                </div>
+              ))}
+            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
         </div>
 
         {/* Top Traders to Follow */}
@@ -291,26 +289,11 @@ export default function Rooms() {
           <ScrollArea className="w-full whitespace-nowrap">
             <div className="flex gap-3">
               {topTraders.map((trader, idx) => (
-                <Card key={idx} className="w-[160px] flex-shrink-0 card-gradient">
-                  <CardContent className="p-3 text-center">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-accent/10 flex items-center justify-center mx-auto mb-2 font-bold">
-                      {trader.name.split(' ').map(n => n[0]).join('')}
-                    </div>
-                    <h4 className="font-semibold text-sm flex items-center justify-center gap-1">
-                      {trader.name}
-                      {trader.verified && <Verified className="h-3 w-3 text-primary" />}
-                    </h4>
-                    <p className="text-xs text-muted-foreground mb-2">{trader.handle}</p>
-                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground mb-2">
-                      <span>{trader.followers}</span>
-                      <span className="text-bull">{trader.winRate} win</span>
-                    </div>
-                    <Button size="sm" variant="outline" className="w-full h-7 text-xs">
-                      <UserPlus className="h-3 w-3 mr-1" />
-                      Follow
-                    </Button>
-                  </CardContent>
-                </Card>
+                <TopTraderCard 
+                  key={idx} 
+                  trader={trader}
+                  onFollow={() => handleFollowTrader(trader.name)}
+                />
               ))}
             </div>
             <ScrollBar orientation="horizontal" />
@@ -318,7 +301,7 @@ export default function Rooms() {
         </div>
 
         {/* Text-Based Rooms */}
-        <Tabs defaultValue="all" className="w-full">
+        <div>
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold flex items-center gap-2">
               <MessageSquare className="h-4 w-4 text-primary" />
@@ -349,100 +332,24 @@ export default function Rooms() {
 
           {/* Rooms List */}
           <div className="space-y-3">
-            {filteredRooms.map((room) => {
-              const isJoined = joinedRooms.includes(room.id);
-              return (
-                <Card key={room.id} className="card-gradient overflow-hidden">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          {room.isPrivate ? (
-                            <Lock className="h-4 w-4 text-accent" />
-                          ) : (
-                            <Globe className="h-4 w-4 text-primary" />
-                          )}
-                          <h4 className="font-semibold text-sm">{room.name}</h4>
-                          {room.isPrivate && (
-                            <Badge variant="secondary" className="text-[10px]">
-                              <Crown className="h-2.5 w-2.5 mr-0.5" />
-                              Premium
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground mb-2 line-clamp-1">
-                          {room.description}
-                        </p>
-                        <Badge variant="outline" className="text-[10px]">
-                          {room.category}
-                        </Badge>
-                      </div>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </div>
-
-                    {/* Last Message Preview */}
-                    {!room.isPrivate && (
-                      <div className="bg-muted/30 rounded-lg p-2 mb-3">
-                        <p className="text-xs text-muted-foreground line-clamp-1">
-                          {room.lastMessage}
-                        </p>
-                        <span className="text-[10px] text-muted-foreground">{room.lastMessageTime}</span>
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Users className="h-3.5 w-3.5" />
-                          <span>{room.members.toLocaleString()}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="w-2 h-2 rounded-full bg-bull animate-pulse" />
-                          <span>{room.online} online</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <MessageCircle className="h-3.5 w-3.5" />
-                          <span>{room.messages.toLocaleString()}</span>
-                        </div>
-                      </div>
-                      {isJoined ? (
-                        <div className="flex gap-2">
-                          <Button size="sm" className="h-7 text-xs">
-                            Open
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            className="h-7 text-xs"
-                            onClick={() => handleLeaveRoom(room.id)}
-                          >
-                            Leave
-                          </Button>
-                        </div>
-                      ) : (
-                        <Button
-                          size="sm"
-                          className={`h-7 text-xs ${room.isPrivate ? 'bg-accent hover:bg-accent/90' : ''}`}
-                          onClick={() => handleJoinRoom(room.id, room.name, room.isPrivate)}
-                        >
-                          {room.isPrivate ? "Upgrade" : "Join"}
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+            {filteredRooms.map((room) => (
+              <TextRoomCard
+                key={room.id}
+                room={room}
+                isJoined={joinedRooms.includes(room.id)}
+                onJoin={() => handleJoinRoom(room.id, room.name, room.isPrivate)}
+                onLeave={() => handleLeaveRoom(room.id)}
+                onOpen={() => toast({ title: `Opening ${room.name}` })}
+              />
+            ))}
           </div>
-        </Tabs>
+        </div>
 
         {/* Create Room CTA */}
         <Card className="bg-gradient-to-br from-primary/10 via-background to-accent/5 border-primary/20">
           <CardContent className="p-6 text-center">
             <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-              <MessageCircle className="h-7 w-7 text-primary" />
+              <MessageSquare className="h-7 w-7 text-primary" />
             </div>
             <h3 className="text-lg font-semibold mb-2">Start Your Own Community</h3>
             <p className="text-sm text-muted-foreground mb-4">
