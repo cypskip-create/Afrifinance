@@ -12,6 +12,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { NewsDetailDialog } from "@/components/news/NewsDetailDialog";
+import { LiveConferencePlayer } from "@/components/news/LiveConferencePlayer";
 
 interface NewsArticle {
   id: number;
@@ -37,6 +38,7 @@ export default function News() {
   const [followedTopics, setFollowedTopics] = useState<string[]>(["earnings", "stocks"]);
   const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [livePlayerOpen, setLivePlayerOpen] = useState(false);
 
   const newsCategories = [
     { id: "for-you", label: "For You", icon: Zap },
@@ -202,11 +204,11 @@ export default function News() {
       <div className="px-4 py-3 space-y-4">
         {/* Live News Banner */}
         {liveNews.isLive && (
-          <Card className="bg-gradient-to-r from-red-500/10 via-red-500/5 to-transparent border-red-500/20">
+          <Card className="bg-gradient-to-r from-destructive/10 via-destructive/5 to-transparent border-destructive/20">
             <CardContent className="p-3 flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 bg-red-500 text-white px-2 py-0.5 rounded-full text-xs font-bold shrink-0">
-                  <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                <div className="flex items-center gap-1.5 bg-destructive text-destructive-foreground px-2 py-0.5 rounded-full text-xs font-bold shrink-0">
+                  <span className="w-1.5 h-1.5 bg-destructive-foreground rounded-full animate-pulse" />
                   LIVE
                 </div>
                 <div className="min-w-0 flex-1">
@@ -220,13 +222,24 @@ export default function News() {
                   </p>
                 </div>
               </div>
-              <Button size="sm" className="bg-red-500 hover:bg-red-600 shrink-0 h-8">
+              <Button 
+                size="sm" 
+                className="bg-destructive hover:bg-destructive/90 shrink-0 h-8"
+                onClick={() => setLivePlayerOpen(true)}
+              >
                 <Play className="h-3 w-3 mr-1" />
                 Watch
               </Button>
             </CardContent>
           </Card>
         )}
+
+        {/* Live Conference Player Dialog */}
+        <LiveConferencePlayer 
+          conference={liveNews}
+          open={livePlayerOpen}
+          onClose={() => setLivePlayerOpen(false)}
+        />
 
         {/* Breaking News Card */}
         <Card 
@@ -245,8 +258,8 @@ export default function News() {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
               <div className="absolute top-2.5 left-2.5 flex items-center gap-2">
-                <Badge className="bg-red-500 text-white text-[10px] px-2 py-0.5">BREAKING</Badge>
-                <Badge variant="secondary" className="bg-black/50 text-white text-[10px] px-2 py-0.5">
+                <Badge className="bg-destructive text-destructive-foreground text-[10px] px-2 py-0.5">BREAKING</Badge>
+                <Badge variant="secondary" className="bg-background/50 text-foreground text-[10px] px-2 py-0.5">
                   {breakingNews.readTime}
                 </Badge>
               </div>
@@ -288,7 +301,7 @@ export default function News() {
         <div>
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold flex items-center gap-2">
-              <Flame className="h-4 w-4 text-orange-500" />
+              <Flame className="h-4 w-4 text-accent" />
               Trending Topics
             </h3>
             <Button 
