@@ -1,73 +1,48 @@
-# Welcome to your Lovable project
+# Afrifinance Project Documentation
 
-## Project info
+## Overview
+Afrifinance is a comprehensive financial management application designed to meet the needs of individuals and small businesses in Africa. The application provides tools for budgeting, expense tracking, and financial reporting, helping users take control of their finances.
 
-**URL**: https://lovable.dev/projects/819a1fab-71ad-4169-8953-5c39d92dd392
+## Features
+- **Budgeting**: Users can create and manage budgets tailored to their financial goals.
+- **Expense Tracking**: Track daily expenses and categorize them for better analysis.
+- **Financial Reports**: Generate insightful reports to help understand spending habits.
+- **Multi-Currency Support**: Handle transactions in various currencies common in Africa.
 
-## How can I edit this code?
+## Architecture
+The Afrifinance application is built using a microservices architecture, enabling scalability and ease of maintenance. Key components include:
+- **Frontend**: Developed using React for a responsive user interface.
+- **Backend**: Node.js and Express.js for handling API requests and business logic.
+- **Database**: MongoDB for storing user data and financial records.
 
-There are several ways of editing your application.
+## Target Users
+Afrifinance is aimed at:
+- Individuals seeking to manage personal finances more effectively.
+- Small business owners who need to keep their finances organized.
+- Financial advisors looking for tools to assist their clients.
 
-**Use Lovable**
+## Development Roadmap
+1. **Q1 2026**: Initial release with basic budgeting and expense tracking features.
+2. **Q2 2026**: Introduction of financial reporting features.
+3. **Q3 2026**: Implementing multi-currency support and API integrations.
+4. **Q4 2026**: Enhancing the user experience based on feedback and analytics.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/819a1fab-71ad-4169-8953-5c39d92dd392) and start prompting.
+## API Integrations
+- **Payment Gateways**: Integration with popular African payment gateways for seamless transactions.
+- **Bank APIs**: Allow users to connect their bank accounts for automated tracking and reporting.
 
-Changes made via Lovable will be committed automatically to this repo.
+## Installation
+To install the Afrifinance application locally, follow these steps:
+1. Clone the repository: `git clone https://github.com/cypskip-create/Afrifinance`
+2. Navigate to the project directory: `cd Afrifinance`
+3. Install dependencies: `npm install`
+4. Start the application: `npm start`
 
-**Use your preferred IDE**
+## Contribution Guidelines
+We welcome contributions to improve Afrifinance! To contribute:
+1. Fork the repository.
+2. Create a new branch for your feature or bug fix.
+3. Make your changes and commit them with descriptive messages.
+4. Submit a pull request.
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/819a1fab-71ad-4169-8953-5c39d92dd392) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+For any questions, please reach out to the maintainers through issues or discussions in the repository.
