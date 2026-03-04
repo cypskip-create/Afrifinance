@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Search, X, Bell, Flame, Users, Plus, MessageCircle, Feather } from "lucide-react";
+import { Search, X, Bell, Flame, Users, MessageCircle, Feather } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,8 +13,8 @@ import { XPostCard } from "@/components/social/XPostCard";
 import { XComposeModal } from "@/components/social/XComposeModal";
 import { XCommentSheet } from "@/components/social/XCommentSheet";
 import { TrendingSidebar } from "@/components/social/TrendingSidebar";
+import { useEffect } from "react";
 
-// Mock prices for portfolio snapshot
 const MOCK_PRICES: Record<string, number> = {
   SCOM: 12.85, SAFCOM: 12.85, EQTY: 62.50, KCB: 45.30, COOP: 15.20,
   SCBK: 185.00, BAMB: 89.75, EABL: 155.00, BAT: 320.00, ABSA: 14.10,
@@ -34,8 +34,6 @@ export default function TradersHub() {
   const [activeTab, setActiveTab] = useState<"for-you" | "following" | "trending">("for-you");
   const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
   const [composeOpen, setComposeOpen] = useState(false);
-
-  // Comments
   const [commentSheetOpen, setCommentSheetOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -46,7 +44,6 @@ export default function TradersHub() {
     if (urlSearch) setSearchQuery(urlSearch);
   }, [searchParams]);
 
-  // Portfolio snapshot for compose
   const portfolioSnapshot = useMemo(() => {
     if (!portfolio || portfolio.length === 0) return null;
     const holdings = portfolio.map(h => {
@@ -61,14 +58,11 @@ export default function TradersHub() {
     return { totalValue, totalGain, gainPercent, holdings };
   }, [portfolio]);
 
-  // Filter posts
   const filteredPosts = useMemo(() => {
     return posts.filter(post => {
       if (searchQuery) {
         const q = searchQuery.toLowerCase().replace(/^[#$]/, "");
-        const contentMatch = post.content.toLowerCase().includes(q);
-        const stockMatch = post.stock_mentions?.some(s => s.toLowerCase().includes(q));
-        if (!contentMatch && !stockMatch) return false;
+        if (!post.content.toLowerCase().includes(q) && !post.stock_mentions?.some(s => s.toLowerCase().includes(q))) return false;
       }
       if (activeTab === "following") return isFollowing(post.user_id);
       if (activeTab === "trending") return post.likes_count >= 3 || post.reposts_count >= 1;
@@ -107,10 +101,7 @@ export default function TradersHub() {
   const handleAddComment = async (content: string) => {
     if (!selectedPost || !user) return;
     const { error } = await addComment(selectedPost.id, content);
-    if (!error) {
-      const updated = await fetchComments(selectedPost.id);
-      setComments(updated);
-    }
+    if (!error) { const updated = await fetchComments(selectedPost.id); setComments(updated); }
   };
 
   const tabs = [
@@ -120,20 +111,18 @@ export default function TradersHub() {
   ];
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      {/* Top header - X style */}
-      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border">
+    <div className="min-h-screen bg-background pb-24">
+      {/* Header */}
+      <header className="sticky top-0 z-40 bg-card/90 backdrop-blur-xl border-b border-border/60">
         <div className="flex items-center justify-between px-4 py-3">
-          <h1 className="text-xl font-bold text-foreground">TradersHub</h1>
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={() => navigate("/notifications")} data-small-target>
-              <Bell className="h-5 w-5" />
-              <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-primary rounded-full" />
-            </Button>
-          </div>
+          <h1 className="text-xl font-bold">TradersHub</h1>
+          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full relative" onClick={() => navigate("/notifications")}>
+            <Bell className="h-5 w-5" />
+            <span className="absolute top-1.5 right-2 w-2 h-2 bg-accent rounded-full" />
+          </Button>
         </div>
 
-        {/* Search bar */}
+        {/* Search */}
         <div className="px-4 pb-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -141,7 +130,7 @@ export default function TradersHub() {
               placeholder="Search posts, $stocks, #topics..."
               value={searchQuery}
               onChange={(e) => handleSearch(e.target.value)}
-              className="pl-10 pr-9 h-10 rounded-full bg-muted/50 border-border text-sm"
+              className="pl-10 pr-9 h-10 rounded-full bg-muted/50 border-0 text-sm"
             />
             {searchQuery && (
               <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full" onClick={clearSearch} data-small-target>
@@ -151,7 +140,7 @@ export default function TradersHub() {
           </div>
         </div>
 
-        {/* Tabs - X style underline tabs */}
+        {/* Tabs */}
         <div className="flex">
           {tabs.map(tab => (
             <button
@@ -165,26 +154,21 @@ export default function TradersHub() {
               {tab.id === "trending" && <Flame className="h-3.5 w-3.5 inline mr-1" />}
               {tab.label}
               {activeTab === tab.id && (
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-16 h-1 rounded-full bg-primary" />
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-[3px] rounded-full bg-primary" />
               )}
             </button>
           ))}
         </div>
       </header>
 
-      {/* Search results indicator */}
       {searchQuery && (
-        <div className="px-4 py-2 bg-muted/20 border-b border-border flex items-center justify-between">
-          <p className="text-xs text-muted-foreground">
-            Results for <span className="font-semibold text-foreground">"{searchQuery}"</span>
-          </p>
+        <div className="px-4 py-2 bg-muted/20 border-b border-border/40 flex items-center justify-between">
+          <p className="text-xs text-muted-foreground">Results for <span className="font-bold text-foreground">"{searchQuery}"</span></p>
           <Button variant="ghost" size="sm" className="h-7 text-xs rounded-full" onClick={clearSearch}>Clear</Button>
         </div>
       )}
 
-      {/* Main content area */}
       <div className="max-w-[1200px] mx-auto flex">
-        {/* Feed */}
         <div className="flex-1 max-w-[600px] min-w-0">
           {loading ? (
             <div className="flex justify-center py-16">
@@ -194,24 +178,24 @@ export default function TradersHub() {
             <div className="p-12 text-center">
               {activeTab === "following" ? (
                 <>
-                  <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground/40" />
-                  <p className="font-semibold mb-1">No posts from people you follow</p>
-                  <p className="text-sm text-muted-foreground mb-4">Follow traders to see their posts here</p>
+                  <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground/30" />
+                  <p className="font-bold mb-1">No posts yet</p>
+                  <p className="text-sm text-muted-foreground mb-4">Follow traders to see their posts</p>
                   <Button variant="outline" size="sm" className="rounded-full" onClick={() => setActiveTab("for-you")}>Discover traders</Button>
                 </>
               ) : activeTab === "trending" ? (
                 <>
-                  <Flame className="h-12 w-12 mx-auto mb-4 text-muted-foreground/40" />
-                  <p className="font-semibold mb-1">No trending posts yet</p>
-                  <p className="text-sm text-muted-foreground">Posts with high engagement will appear here</p>
+                  <Flame className="h-12 w-12 mx-auto mb-4 text-muted-foreground/30" />
+                  <p className="font-bold mb-1">No trending posts</p>
+                  <p className="text-sm text-muted-foreground">Posts with high engagement appear here</p>
                 </>
               ) : (
                 <>
-                  <MessageCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground/40" />
-                  <p className="font-semibold mb-1">No posts yet</p>
-                  <p className="text-sm text-muted-foreground mb-4">Be the first to share your market insights!</p>
+                  <MessageCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground/30" />
+                  <p className="font-bold mb-1">No posts yet</p>
+                  <p className="text-sm text-muted-foreground mb-4">Be the first to share your insights!</p>
                   {user && (
-                    <Button className="rounded-full" onClick={() => setComposeOpen(true)}>
+                    <Button className="rounded-full btn-primary" onClick={() => setComposeOpen(true)}>
                       <Feather className="h-4 w-4 mr-2" />Create post
                     </Button>
                   )}
@@ -219,34 +203,23 @@ export default function TradersHub() {
               )}
             </div>
           ) : (
-            <div className="divide-y divide-border">
+            <div>
               {filteredPosts.map(post => (
-                <XPostCard
-                  key={post.id}
-                  post={post}
-                  currentUserId={user?.id}
-                  onLike={handleLike}
-                  onComment={openComments}
-                  onRepost={handleRepost}
-                  onBookmark={handleBookmark}
-                  onShare={handleShare}
-                  onDelete={handleDelete}
-                />
+                <XPostCard key={post.id} post={post} currentUserId={user?.id} onLike={handleLike} onComment={openComments} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handleShare} onDelete={handleDelete} />
               ))}
             </div>
           )}
         </div>
 
-        {/* Desktop sidebar */}
-        <div className="hidden lg:block w-[350px] pl-6 pt-4 sticky top-[140px] self-start">
+        <div className="hidden lg:block w-[350px] pl-6 pt-4 sticky top-[160px] self-start">
           <TrendingSidebar />
         </div>
       </div>
 
-      {/* Floating compose button - X style */}
+      {/* FAB */}
       {user && (
         <button
-          className="fixed bottom-24 right-4 sm:bottom-28 sm:right-6 z-50 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+          className="fixed bottom-24 right-4 sm:bottom-28 sm:right-6 z-50 h-14 w-14 rounded-2xl bg-primary text-primary-foreground shadow-lg flex items-center justify-center transition-all hover:scale-105 active:scale-95"
           onClick={() => setComposeOpen(true)}
           style={{ boxShadow: "var(--shadow-primary)" }}
         >
@@ -254,31 +227,8 @@ export default function TradersHub() {
         </button>
       )}
 
-      {/* Compose modal */}
-      <XComposeModal
-        open={composeOpen}
-        onOpenChange={setComposeOpen}
-        user={user}
-        profile={profile}
-        onPost={handlePost}
-        portfolioSnapshot={portfolioSnapshot}
-      />
-
-      {/* Comment / Post detail sheet */}
-      <XCommentSheet
-        open={commentSheetOpen}
-        onOpenChange={setCommentSheetOpen}
-        post={selectedPost}
-        currentUserId={user?.id}
-        comments={comments}
-        loadingComments={loadingComments}
-        onAddComment={handleAddComment}
-        onLike={handleLike}
-        onRepost={handleRepost}
-        onBookmark={handleBookmark}
-        onShare={handleShare}
-        onDelete={handleDelete}
-      />
+      <XComposeModal open={composeOpen} onOpenChange={setComposeOpen} user={user} profile={profile} onPost={handlePost} portfolioSnapshot={portfolioSnapshot} />
+      <XCommentSheet open={commentSheetOpen} onOpenChange={setCommentSheetOpen} post={selectedPost} currentUserId={user?.id} comments={comments} loadingComments={loadingComments} onAddComment={handleAddComment} onLike={handleLike} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handleShare} onDelete={handleDelete} />
     </div>
   );
 }

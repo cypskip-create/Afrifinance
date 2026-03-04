@@ -1,13 +1,13 @@
 import { useState } from "react";
-import { Heart, MessageCircle, Repeat2, Share, Bookmark, BookmarkCheck, Trash2, MoreHorizontal, Verified, Eye, Quote, TrendingUp, TrendingDown } from "lucide-react";
+import { Heart, MessageCircle, Repeat2, Share, Bookmark, BookmarkCheck, Trash2, MoreHorizontal, Verified, Eye, Quote } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
 import { Post } from "@/hooks/usePosts";
+import { ImageViewer } from "./ImageViewer";
 
-// NSE mock prices
 const NSE_PRICES: Record<string, { price: number; change: number }> = {
   SCOM: { price: 12.85, change: 2.4 }, SAFCOM: { price: 12.85, change: 2.4 },
   EQTY: { price: 62.50, change: -1.2 }, KCB: { price: 45.30, change: 0.8 },
@@ -33,6 +33,7 @@ interface XPostCardProps {
 export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, onBookmark, onShare, onDelete }: XPostCardProps) {
   const navigate = useNavigate();
   const [showRepostMenu, setShowRepostMenu] = useState(false);
+  const [imageViewerOpen, setImageViewerOpen] = useState(false);
 
   const formatNumber = (num: number) => {
     if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
@@ -67,201 +68,129 @@ export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, on
         const priceData = NSE_PRICES[symbol];
         return (
           <span key={i} className="inline-flex items-center">
-            <span
-              className="text-primary font-semibold cursor-pointer hover:underline"
-              onClick={(e) => { e.stopPropagation(); navigate(`/stock/${symbol}`); }}
-            >
+            <span className="text-primary font-semibold cursor-pointer hover:underline" onClick={(e) => { e.stopPropagation(); navigate(`/stock/${symbol}`); }}>
               {part}
             </span>
             {priceData && (
               <span className={`ml-1 text-[11px] font-medium ${priceData.change >= 0 ? "text-bull" : "text-bear"}`}>
                 KES {priceData.price.toFixed(2)}
-                <span className="ml-0.5">
-                  {priceData.change >= 0 ? "↑" : "↓"}{Math.abs(priceData.change).toFixed(1)}%
-                </span>
+                <span className="ml-0.5">{priceData.change >= 0 ? "↑" : "↓"}{Math.abs(priceData.change).toFixed(1)}%</span>
               </span>
             )}
           </span>
         );
       }
-      if (part.startsWith("#")) {
-        return (
-          <span key={i} className="text-primary cursor-pointer hover:underline" onClick={(e) => { e.stopPropagation(); navigate(`/traders-hub?search=${encodeURIComponent(part)}`); }}>
-            {part}
-          </span>
-        );
-      }
-      if (part.startsWith("@")) {
-        return <span key={i} className="text-primary cursor-pointer hover:underline">{part}</span>;
-      }
+      if (part.startsWith("#")) return <span key={i} className="text-primary cursor-pointer hover:underline" onClick={(e) => { e.stopPropagation(); navigate(`/traders-hub?search=${encodeURIComponent(part)}`); }}>{part}</span>;
+      if (part.startsWith("@")) return <span key={i} className="text-primary cursor-pointer hover:underline">{part}</span>;
       return part;
     });
   };
 
   return (
-    <article className="px-4 py-3 border-b border-border hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => onComment(post)}>
-      <div className="flex gap-3">
-        {/* Avatar */}
-        <Avatar
-          className="h-10 w-10 shrink-0 cursor-pointer"
-          onClick={(e) => { e.stopPropagation(); navigate(`/profile/${post.user_id}`); }}
-        >
-          <AvatarImage src={post.author?.avatar_url || ""} className="object-cover" />
-          <AvatarFallback className="bg-primary/10 text-primary text-sm font-bold">
-            {getInitials(post.author?.full_name)}
-          </AvatarFallback>
-        </Avatar>
+    <>
+      <article className="px-4 py-3 border-b border-border/40 hover:bg-muted/20 transition-colors cursor-pointer" onClick={() => onComment(post)}>
+        <div className="flex gap-3">
+          <Avatar className="h-10 w-10 shrink-0 cursor-pointer ring-2 ring-primary/10" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${post.user_id}`); }}>
+            <AvatarImage src={post.author?.avatar_url || ""} className="object-cover" />
+            <AvatarFallback className="bg-primary/10 text-primary text-sm font-bold">{getInitials(post.author?.full_name)}</AvatarFallback>
+          </Avatar>
 
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          {/* Header row */}
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1 min-w-0 flex-wrap" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${post.user_id}`); }}>
-              <span className="font-bold text-sm text-foreground truncate max-w-[140px] sm:max-w-[200px] cursor-pointer hover:underline">
-                {post.author?.full_name || "User"}
-              </span>
-              <Verified className="h-3.5 w-3.5 text-primary fill-primary shrink-0" />
-              <span className="text-muted-foreground text-sm truncate">@{handle}</span>
-              <span className="text-muted-foreground text-sm">·</span>
-              <span className="text-muted-foreground text-sm shrink-0">{formatTimeAgo(post.created_at)}</span>
-            </div>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10" data-small-target>
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                {currentUserId === post.user_id && onDelete && (
-                  <>
-                    <DropdownMenuItem onClick={() => onDelete(post.id)} className="text-destructive focus:text-destructive">
-                      <Trash2 className="h-4 w-4 mr-2" />Delete
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
-                <DropdownMenuItem onClick={() => onShare(post)}>
-                  <Share className="h-4 w-4 mr-2" />Copy link
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-
-          {/* Post body */}
-          <p className="text-[15px] leading-[1.45] mt-0.5 whitespace-pre-wrap break-words text-foreground">
-            {renderContent(post.content)}
-          </p>
-
-          {/* Stock mention chips */}
-          {post.stock_mentions && post.stock_mentions.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-2">
-              {post.stock_mentions.map(stock => {
-                const priceData = NSE_PRICES[stock];
-                return (
-                  <Badge
-                    key={stock}
-                    variant="outline"
-                    className="text-[11px] px-2 py-0.5 cursor-pointer hover:bg-primary/10 border-border gap-1"
-                    onClick={(e) => { e.stopPropagation(); navigate(`/stock/${stock}`); }}
-                  >
-                    ${stock}
-                    {priceData && (
-                      <span className={priceData.change >= 0 ? "text-bull" : "text-bear"}>
-                        {priceData.change >= 0 ? "+" : ""}{priceData.change.toFixed(1)}%
-                      </span>
-                    )}
-                  </Badge>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Image */}
-          {post.image_url && (
-            <div className="mt-3 rounded-2xl overflow-hidden border border-border">
-              <img src={post.image_url} alt="Post" className="w-full max-h-[350px] object-cover" loading="lazy" onClick={(e) => e.stopPropagation()} />
-            </div>
-          )}
-
-          {/* Action bar - X style */}
-          <div className="flex items-center justify-between mt-3 -ml-2 max-w-[425px]">
-            {/* Reply */}
-            <button
-              className="group flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
-              onClick={(e) => { e.stopPropagation(); onComment(post); }}
-              data-small-target
-            >
-              <div className="p-2 rounded-full group-hover:bg-primary/10 transition-colors">
-                <MessageCircle className="h-[18px] w-[18px]" />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1 min-w-0 flex-wrap" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${post.user_id}`); }}>
+                <span className="font-bold text-sm truncate max-w-[140px] sm:max-w-[200px] cursor-pointer hover:underline">{post.author?.full_name || "User"}</span>
+                <Verified className="h-3.5 w-3.5 text-primary fill-primary shrink-0" />
+                <span className="text-muted-foreground text-sm">@{handle}</span>
+                <span className="text-muted-foreground text-sm">·</span>
+                <span className="text-muted-foreground text-sm shrink-0">{formatTimeAgo(post.created_at)}</span>
               </div>
-              <span className="text-xs">{formatNumber(post.comments_count)}</span>
-            </button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10" data-small-target>
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48 rounded-xl">
+                  {currentUserId === post.user_id && onDelete && (
+                    <>
+                      <DropdownMenuItem onClick={() => onDelete(post.id)} className="text-destructive"><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
+                  <DropdownMenuItem onClick={() => onShare(post)}><Share className="h-4 w-4 mr-2" />Copy link</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
 
-            {/* Repost */}
-            <DropdownMenu open={showRepostMenu} onOpenChange={setShowRepostMenu}>
-              <DropdownMenuTrigger asChild>
-                <button
-                  className={`group flex items-center gap-1 transition-colors ${post.is_reposted ? "text-bull" : "text-muted-foreground hover:text-bull"}`}
-                  onClick={(e) => { e.stopPropagation(); setShowRepostMenu(true); }}
-                  data-small-target
-                >
-                  <div className="p-2 rounded-full group-hover:bg-bull/10 transition-colors">
-                    <Repeat2 className="h-[18px] w-[18px]" />
-                  </div>
-                  <span className="text-xs">{formatNumber(post.reposts_count)}</span>
+            <p className="text-[15px] leading-[1.5] mt-1 whitespace-pre-wrap break-words">{renderContent(post.content)}</p>
+
+            {post.stock_mentions && post.stock_mentions.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {post.stock_mentions.map(stock => {
+                  const priceData = NSE_PRICES[stock];
+                  return (
+                    <Badge key={stock} variant="secondary" className="text-[11px] px-2 py-0.5 cursor-pointer hover:bg-primary/10 rounded-full gap-1 border-0" onClick={(e) => { e.stopPropagation(); navigate(`/stock/${stock}`); }}>
+                      ${stock}
+                      {priceData && <span className={priceData.change >= 0 ? "text-bull" : "text-bear"}>{priceData.change >= 0 ? "+" : ""}{priceData.change.toFixed(1)}%</span>}
+                    </Badge>
+                  );
+                })}
+              </div>
+            )}
+
+            {post.image_url && (
+              <div className="mt-3 rounded-2xl overflow-hidden border border-border/50" onClick={(e) => { e.stopPropagation(); setImageViewerOpen(true); }}>
+                <img src={post.image_url} alt="Post" className="w-full max-h-[350px] object-cover cursor-pointer hover:opacity-95 transition-opacity" loading="lazy" />
+              </div>
+            )}
+
+            {/* Action bar */}
+            <div className="flex items-center justify-between mt-3 -ml-2 max-w-[425px]">
+              <button className="group flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors" onClick={(e) => { e.stopPropagation(); onComment(post); }} data-small-target>
+                <div className="p-2 rounded-full group-hover:bg-primary/10 transition-colors"><MessageCircle className="h-[18px] w-[18px]" /></div>
+                <span className="text-xs">{formatNumber(post.comments_count)}</span>
+              </button>
+
+              <DropdownMenu open={showRepostMenu} onOpenChange={setShowRepostMenu}>
+                <DropdownMenuTrigger asChild>
+                  <button className={`group flex items-center gap-1 transition-colors ${post.is_reposted ? "text-bull" : "text-muted-foreground hover:text-bull"}`} onClick={(e) => { e.stopPropagation(); setShowRepostMenu(true); }} data-small-target>
+                    <div className="p-2 rounded-full group-hover:bg-bull/10 transition-colors"><Repeat2 className="h-[18px] w-[18px]" /></div>
+                    <span className="text-xs">{formatNumber(post.reposts_count)}</span>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-44 rounded-xl">
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onRepost(post.id); setShowRepostMenu(false); }}><Repeat2 className="h-4 w-4 mr-2" />Repost</DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setShowRepostMenu(false); }}><Quote className="h-4 w-4 mr-2" />Quote</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <button className={`group flex items-center gap-1 transition-colors ${post.is_liked ? "text-destructive" : "text-muted-foreground hover:text-destructive"}`} onClick={(e) => { e.stopPropagation(); onLike(post.id); }} data-small-target>
+                <div className="p-2 rounded-full group-hover:bg-destructive/10 transition-colors"><Heart className={`h-[18px] w-[18px] ${post.is_liked ? "fill-current" : ""}`} /></div>
+                <span className="text-xs">{formatNumber(post.likes_count)}</span>
+              </button>
+
+              <button className="group flex items-center gap-1 text-muted-foreground" data-small-target>
+                <div className="p-2 rounded-full group-hover:bg-primary/10 transition-colors"><Eye className="h-[18px] w-[18px]" /></div>
+                <span className="text-xs">{formatNumber(viewCount)}</span>
+              </button>
+
+              <div className="flex items-center">
+                <button className={`p-2 rounded-full transition-colors ${post.is_bookmarked ? "text-primary" : "text-muted-foreground hover:text-primary hover:bg-primary/10"}`} onClick={(e) => { e.stopPropagation(); onBookmark(post.id); }} data-small-target>
+                  {post.is_bookmarked ? <BookmarkCheck className="h-[18px] w-[18px] fill-current" /> : <Bookmark className="h-[18px] w-[18px]" />}
                 </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-44">
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onRepost(post.id); setShowRepostMenu(false); }}>
-                  <Repeat2 className="h-4 w-4 mr-2" />Repost
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setShowRepostMenu(false); }}>
-                  <Quote className="h-4 w-4 mr-2" />Quote
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* Like */}
-            <button
-              className={`group flex items-center gap-1 transition-colors ${post.is_liked ? "text-destructive" : "text-muted-foreground hover:text-destructive"}`}
-              onClick={(e) => { e.stopPropagation(); onLike(post.id); }}
-              data-small-target
-            >
-              <div className="p-2 rounded-full group-hover:bg-destructive/10 transition-colors">
-                <Heart className={`h-[18px] w-[18px] ${post.is_liked ? "fill-current" : ""}`} />
+                <button className="p-2 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors" onClick={(e) => { e.stopPropagation(); onShare(post); }} data-small-target>
+                  <Share className="h-[18px] w-[18px]" />
+                </button>
               </div>
-              <span className="text-xs">{formatNumber(post.likes_count)}</span>
-            </button>
-
-            {/* Views */}
-            <button className="group flex items-center gap-1 text-muted-foreground" data-small-target>
-              <div className="p-2 rounded-full group-hover:bg-primary/10 transition-colors">
-                <Eye className="h-[18px] w-[18px]" />
-              </div>
-              <span className="text-xs">{formatNumber(viewCount)}</span>
-            </button>
-
-            {/* Bookmark + Share */}
-            <div className="flex items-center">
-              <button
-                className={`p-2 rounded-full transition-colors ${post.is_bookmarked ? "text-primary" : "text-muted-foreground hover:text-primary hover:bg-primary/10"}`}
-                onClick={(e) => { e.stopPropagation(); onBookmark(post.id); }}
-                data-small-target
-              >
-                {post.is_bookmarked ? <BookmarkCheck className="h-[18px] w-[18px] fill-current" /> : <Bookmark className="h-[18px] w-[18px]" />}
-              </button>
-              <button
-                className="p-2 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-                onClick={(e) => { e.stopPropagation(); onShare(post); }}
-                data-small-target
-              >
-                <Share className="h-[18px] w-[18px]" />
-              </button>
             </div>
           </div>
         </div>
-      </div>
-    </article>
+      </article>
+
+      {/* Image viewer */}
+      {post.image_url && (
+        <ImageViewer open={imageViewerOpen} onOpenChange={setImageViewerOpen} images={[post.image_url]} />
+      )}
+    </>
   );
 }
