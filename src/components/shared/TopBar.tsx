@@ -1,8 +1,9 @@
-import { Search, Settings2, Bell } from "lucide-react";
+import { Search, Settings2, Bell, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { Logo } from "./Logo";
 
 interface TopBarProps {
   title: string;
@@ -16,14 +17,8 @@ interface TopBarProps {
 }
 
 export function TopBar({ 
-  title, 
-  subtitle, 
-  showSearch = true, 
-  showWidgetSettings = false, 
-  showNotifications = true,
-  onWidgetSettingsClick,
-  onSearch,
-  initialSearchQuery = ""
+  title, subtitle, showSearch = true, showWidgetSettings = false, 
+  showNotifications = true, onWidgetSettingsClick, onSearch, initialSearchQuery = ""
 }: TopBarProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -33,97 +28,55 @@ export function TopBar({
   const handleSearchSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (searchQuery.trim()) {
-      if (onSearch) {
-        onSearch(searchQuery.trim());
-      } else if (location.pathname !== '/traders-hub') {
-        // Navigate to TradersHub with search query
-        navigate(`/traders-hub?search=${encodeURIComponent(searchQuery.trim())}`);
-      }
-    }
-  };
-
-  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSearchSubmit();
+      if (onSearch) onSearch(searchQuery.trim());
+      else if (location.pathname !== '/traders-hub') navigate(`/traders-hub?search=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-sm border-b border-border">
-      <div className="flex items-center justify-between p-4">
-        <div className="flex-1">
-          <h1 className="text-xl font-bold text-primary">{title}</h1>
-          {subtitle && (
-            <p className="text-sm text-muted-foreground">{subtitle}</p>
-          )}
+    <header className="sticky top-0 z-40 bg-card/90 backdrop-blur-xl border-b border-border/60">
+      <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <Logo size="sm" showText={false} />
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold text-foreground truncate">{title}</h1>
+            {subtitle && <p className="text-xs text-muted-foreground truncate">{subtitle}</p>}
+          </div>
         </div>
         
-        <div className="flex items-center space-x-2">
-          {/* Search */}
+        <div className="flex items-center gap-1">
           {showSearch && (
-            <div className="flex items-center">
+            <>
               {searchOpen ? (
-                <form onSubmit={handleSearchSubmit} className="flex items-center space-x-2">
+                <form onSubmit={handleSearchSubmit} className="flex items-center gap-1">
                   <Input 
-                    placeholder="Search stocks, topics..." 
-                    className="w-48 h-9 text-sm"
+                    placeholder="Search..." 
+                    className="w-40 h-9 text-sm rounded-full bg-muted/50 border-0"
                     autoFocus
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={handleSearchKeyDown}
-                    onBlur={() => {
-                      if (!searchQuery) setSearchOpen(false);
-                    }}
+                    onBlur={() => { if (!searchQuery) setSearchOpen(false); }}
                   />
-                  <Button 
-                    type="button"
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-9 w-9 p-0"
-                    onClick={() => {
-                      setSearchQuery("");
-                      setSearchOpen(false);
-                    }}
-                  >
-                    ✕
+                  <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={() => { setSearchQuery(""); setSearchOpen(false); }}>
+                    <X className="h-4 w-4" />
                   </Button>
                 </form>
               ) : (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-9 w-9 p-0"
-                  onClick={() => setSearchOpen(true)}
-                >
-                  <Search className="h-4 w-4" />
+                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full" onClick={() => setSearchOpen(true)}>
+                  <Search className="h-[18px] w-[18px]" />
                 </Button>
               )}
-            </div>
+            </>
           )}
-
-          {/* Widget Settings */}
           {showWidgetSettings && onWidgetSettingsClick && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-9 w-9 p-0"
-              onClick={onWidgetSettingsClick}
-              title="Customize Widgets"
-            >
-              <Settings2 className="h-4 w-4" />
+            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full" onClick={onWidgetSettingsClick}>
+              <Settings2 className="h-[18px] w-[18px]" />
             </Button>
           )}
-
-          {/* Notifications */}
           {showNotifications && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-9 w-9 p-0 relative"
-              onClick={() => navigate('/notifications')}
-            >
-              <Bell className="h-4 w-4" />
-              <div className="absolute -top-1 -right-1 w-2 h-2 bg-accent rounded-full"></div>
+            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full relative" onClick={() => navigate('/notifications')}>
+              <Bell className="h-[18px] w-[18px]" />
+              <span className="absolute top-2 right-2.5 w-2 h-2 bg-accent rounded-full" />
             </Button>
           )}
         </div>
