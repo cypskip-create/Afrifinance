@@ -1,16 +1,19 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { TopBar } from "@/components/shared/TopBar";
 import { SparklineChart } from "@/components/shared/SparklineChart";
 import { MarketStatusIndicator } from "@/components/shared/MarketStatusIndicator";
-import { Progress } from "@/components/ui/progress";
+import { AllStocksList } from "@/components/markets/AllStocksList";
+import { EconomicCalendar } from "@/components/home/EconomicCalendar";
 import {
   TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Search, Clock,
   BarChart3, Globe, Calendar, Star, ChevronRight, Flame, Filter,
-  Building2, Zap, Award, DollarSign, Percent, Activity, Bell, Landmark
+  Building2, Zap, Award, DollarSign, Percent, Activity, Bell, Landmark,
+  Lightbulb, Volume2, BarChart2
 } from "lucide-react";
 
 const tabs = ["Overview", "NSE", "Global", "IPOs", "Dividends"] as const;
@@ -56,12 +59,12 @@ const topLosers = [
 ];
 
 const sectors = [
-  { name: "Banking", change: 2.4, isUp: true, color: "bg-primary", stocks: 12, topStock: "EQTY" },
-  { name: "Telecom", change: 1.8, isUp: true, color: "bg-accent", stocks: 3, topStock: "SAFCOM" },
-  { name: "Energy", change: -1.2, isUp: false, color: "bg-destructive", stocks: 5, topStock: "KPLC" },
-  { name: "Manufacturing", change: 0.7, isUp: true, color: "bg-chart-3", stocks: 8, topStock: "BAMB" },
-  { name: "Insurance", change: -0.4, isUp: false, color: "bg-chart-4", stocks: 6, topStock: "BRIT" },
-  { name: "Agriculture", change: 1.1, isUp: true, color: "bg-chart-5", stocks: 7, topStock: "SASN" },
+  { name: "Banking", change: 2.4, isUp: true, stocks: 12, topStock: "EQTY" },
+  { name: "Telecom", change: 1.8, isUp: true, stocks: 3, topStock: "SAFCOM" },
+  { name: "Energy", change: -1.2, isUp: false, stocks: 5, topStock: "KPLC" },
+  { name: "Manufacturing", change: 0.7, isUp: true, stocks: 8, topStock: "BAMB" },
+  { name: "Insurance", change: -0.4, isUp: false, stocks: 6, topStock: "BRIT" },
+  { name: "Agriculture", change: 1.1, isUp: true, stocks: 7, topStock: "SASN" },
 ];
 
 const allNseStocks = [
@@ -113,6 +116,27 @@ const featuredLists = [
   { title: "Undervalued", desc: "P/B < 1.0", icon: Award, count: 6, color: "bg-chart-3/10 text-chart-3" },
 ];
 
+const investmentThemes = [
+  { title: "Banking Revolution", desc: "Digital banking leaders outperforming", stocks: ["EQTY", "KCB", "COOP"], change: 8.2, icon: "🏦" },
+  { title: "Digital Payments", desc: "M-Pesa & fintech ecosystem", stocks: ["SAFCOM", "NCBA", "ABSA"], change: 5.4, icon: "💳" },
+  { title: "Energy Transition", desc: "Green energy & power infrastructure", stocks: ["KPLC", "KEGN", "TOTL"], change: -1.8, icon: "⚡" },
+  { title: "High Dividend Leaders", desc: "Consistent income generators", stocks: ["EABL", "SCBK", "BAT"], change: 3.1, icon: "💰" },
+];
+
+const earningsCalendar = [
+  { symbol: "EABL", name: "EABL", date: "Mar 8, 2026", time: "2:00 PM EAT", expected: "KES 9.80", impact: "high" as const },
+  { symbol: "SAFCOM", name: "Safaricom", date: "Mar 15, 2026", time: "10:00 AM EAT", expected: "KES 1.08", impact: "high" as const },
+  { symbol: "KCB", name: "KCB Group", date: "Mar 22, 2026", time: "11:00 AM EAT", expected: "KES 7.20", impact: "medium" as const },
+  { symbol: "BAMB", name: "Bamburi", date: "Apr 2, 2026", time: "3:00 PM EAT", expected: "KES 2.30", impact: "low" as const },
+];
+
+const volumeLeaders = [
+  { symbol: "KPLC", name: "Kenya Power", volume: "15.2M", avgVolume: "8.5M", ratio: 1.79, price: 1.95, change: 4.2 },
+  { symbol: "SAFCOM", name: "Safaricom", volume: "8.1M", avgVolume: "6.2M", ratio: 1.31, price: 12.85, change: 2.4 },
+  { symbol: "EQTY", name: "Equity Group", volume: "2.4M", avgVolume: "1.8M", ratio: 1.33, price: 62.50, change: 13.12 },
+  { symbol: "BRIT", name: "Britam", volume: "1.8M", avgVolume: "950K", ratio: 1.89, price: 6.85, change: -1.2 },
+];
+
 const analystRatings = [
   { symbol: "SAFCOM", rating: "Buy", target: 15.50, current: 12.85, upside: 20.6, firm: "Genghis Capital" },
   { symbol: "EQTY", rating: "Strong Buy", target: 75.00, current: 62.50, upside: 20.0, firm: "SBG Securities" },
@@ -120,9 +144,9 @@ const analystRatings = [
   { symbol: "SCBK", rating: "Sell", target: 155.00, current: 185.00, upside: -16.2, firm: "Standard Investment" },
 ];
 
-function StockRow({ stock, onTap }: { stock: typeof allNseStocks[0]; onTap: () => void }) {
+function StockRow({ stock, onTap }: { stock: { symbol: string; name: string; price: number; change: number }; onTap: () => void }) {
   return (
-    <div onClick={onTap} className="flex items-center justify-between py-3 px-1 border-b border-border/40 last:border-0 cursor-pointer active:bg-muted/30 transition-colors">
+    <div onClick={onTap} className="flex items-center justify-between py-3 px-1 border-b border-border/40 last:border-0 cursor-pointer active:bg-muted/30 active:scale-[0.99] transition-all duration-150">
       <div className="flex items-center gap-3 flex-1 min-w-0">
         <div className="w-9 h-9 rounded-xl bg-primary/8 flex items-center justify-center text-xs font-bold text-primary shrink-0">
           {stock.symbol.slice(0, 2)}
@@ -177,7 +201,7 @@ export default function Markets() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`py-3 px-4 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors ${
+              className={`py-3 px-4 text-sm font-semibold whitespace-nowrap border-b-2 transition-all duration-200 ${
                 activeTab === tab
                   ? 'border-primary text-primary'
                   : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -189,7 +213,7 @@ export default function Markets() {
         </div>
       </div>
 
-      <div className="px-4 pt-4 space-y-5">
+      <div className="px-4 pt-4 space-y-5 animate-fade-in">
         {/* ─── OVERVIEW TAB ─── */}
         {activeTab === "Overview" && (
           <>
@@ -211,7 +235,7 @@ export default function Markets() {
               </h3>
               <div className="grid grid-cols-2 gap-2.5">
                 {indices.map(idx => (
-                  <Card key={idx.name} className="soft-card p-3">
+                  <Card key={idx.name} className="soft-card p-3 active:scale-[0.98] transition-transform cursor-pointer" onClick={() => navigate('/markets')}>
                     <p className="text-xs font-medium text-muted-foreground">{idx.name}</p>
                     <p className="text-lg font-bold mt-0.5">{idx.value}</p>
                     <div className="flex items-center gap-1.5 mt-1">
@@ -225,6 +249,33 @@ export default function Markets() {
                     </div>
                     <div className="mt-2">
                       <SparklineChart isPositive={idx.isUp} width={120} height={28} />
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+
+            {/* Investment Themes */}
+            <div>
+              <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+                <Lightbulb className="h-4 w-4 text-accent" />
+                Investment Themes
+              </h3>
+              <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-2">
+                {investmentThemes.map(theme => (
+                  <Card key={theme.title} className="soft-card min-w-[200px] flex-shrink-0 p-4 cursor-pointer active:scale-[0.97] transition-transform">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-2xl">{theme.icon}</span>
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${theme.change >= 0 ? 'bg-bull/10 text-bull' : 'bg-bear/10 text-bear'}`}>
+                        {theme.change >= 0 ? '+' : ''}{theme.change}%
+                      </span>
+                    </div>
+                    <p className="text-sm font-bold">{theme.title}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{theme.desc}</p>
+                    <div className="flex gap-1 mt-2">
+                      {theme.stocks.map(s => (
+                        <Badge key={s} variant="secondary" className="text-[10px] py-0 px-1.5">{s}</Badge>
+                      ))}
                     </div>
                   </Card>
                 ))}
@@ -255,7 +306,7 @@ export default function Markets() {
               <h3 className="text-sm font-bold mb-3">Featured Lists</h3>
               <div className="grid grid-cols-2 gap-2.5">
                 {featuredLists.map(list => (
-                  <Card key={list.title} className="soft-card p-4 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => setActiveTab("NSE")}>
+                  <Card key={list.title} className="soft-card p-4 cursor-pointer active:scale-[0.97] transition-transform" onClick={() => setActiveTab("NSE")}>
                     <div className={`w-10 h-10 rounded-2xl ${list.color} flex items-center justify-center mb-3`}>
                       <list.icon className="h-5 w-5" />
                     </div>
@@ -267,6 +318,63 @@ export default function Markets() {
               </div>
             </div>
 
+            {/* Earnings Calendar */}
+            <div>
+              <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-primary" />
+                Upcoming Earnings
+              </h3>
+              <Card className="soft-card overflow-hidden">
+                {earningsCalendar.map(e => (
+                  <div key={e.symbol} onClick={() => navigate(`/stock/${e.symbol}`)} className="flex items-center justify-between py-3 px-4 border-b border-border/40 last:border-0 cursor-pointer active:bg-muted/30 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2 h-2 rounded-full ${e.impact === 'high' ? 'bg-bear' : e.impact === 'medium' ? 'bg-accent' : 'bg-muted-foreground'}`} />
+                      <div>
+                        <p className="text-sm font-semibold">{e.symbol} · {e.name}</p>
+                        <p className="text-xs text-muted-foreground">{e.date} · {e.time}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">Est. EPS</p>
+                      <p className="text-sm font-bold">{e.expected}</p>
+                    </div>
+                  </div>
+                ))}
+              </Card>
+            </div>
+
+            {/* Volume Leaders */}
+            <div>
+              <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+                <Volume2 className="h-4 w-4 text-accent" />
+                Volume Leaders
+              </h3>
+              <Card className="soft-card overflow-hidden">
+                {volumeLeaders.map(v => (
+                  <div key={v.symbol} onClick={() => navigate(`/stock/${v.symbol}`)} className="flex items-center justify-between py-3 px-4 border-b border-border/40 last:border-0 cursor-pointer active:bg-muted/30 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-accent/10 flex items-center justify-center text-xs font-bold text-accent shrink-0">
+                        {v.symbol.slice(0, 2)}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold">{v.symbol}</p>
+                        <p className="text-xs text-muted-foreground">Vol: {v.volume}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-bold">{v.ratio.toFixed(1)}x</p>
+                      <p className={`text-xs font-semibold ${v.change >= 0 ? 'text-bull' : 'text-bear'}`}>
+                        {v.change >= 0 ? '+' : ''}{v.change}%
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </Card>
+            </div>
+
+            {/* Economic Calendar */}
+            <EconomicCalendar />
+
             {/* Top Gainers & Losers */}
             <div>
               <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
@@ -276,7 +384,7 @@ export default function Markets() {
               <Card className="soft-card overflow-hidden">
                 <div className="divide-y divide-border/40">
                   {topGainers.slice(0, 5).map(s => (
-                    <StockRow key={s.symbol} stock={{ ...s, pe: 0, divYield: 0, mcap: "" }} onTap={() => navigate(`/stock/${s.symbol}`)} />
+                    <StockRow key={s.symbol} stock={s} onTap={() => navigate(`/stock/${s.symbol}`)} />
                   ))}
                 </div>
               </Card>
@@ -290,7 +398,7 @@ export default function Markets() {
               <Card className="soft-card overflow-hidden">
                 <div className="divide-y divide-border/40">
                   {topLosers.slice(0, 5).map(s => (
-                    <StockRow key={s.symbol} stock={{ ...s, pe: 0, divYield: 0, mcap: "" }} onTap={() => navigate(`/stock/${s.symbol}`)} />
+                    <StockRow key={s.symbol} stock={s} onTap={() => navigate(`/stock/${s.symbol}`)} />
                   ))}
                 </div>
               </Card>
@@ -335,7 +443,7 @@ export default function Markets() {
               </h3>
               <div className="grid grid-cols-2 gap-2">
                 {sectors.map(s => (
-                  <Card key={s.name} className={`soft-card p-3 cursor-pointer active:scale-[0.98] transition-transform border-l-4 ${s.isUp ? 'border-l-bull' : 'border-l-bear'}`} onClick={() => { setNseFilter(s.name === "Telecom" ? "Telecom" : s.name); setActiveTab("NSE"); }}>
+                  <Card key={s.name} className={`soft-card p-3 cursor-pointer active:scale-[0.97] transition-transform border-l-4 ${s.isUp ? 'border-l-bull' : 'border-l-bear'}`} onClick={() => { setNseFilter(s.name === "Telecom" ? "Telecom" : s.name); setActiveTab("NSE"); }}>
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-semibold">{s.name}</p>
                       <p className={`text-sm font-bold ${s.isUp ? 'text-bull' : 'text-bear'}`}>
@@ -347,6 +455,9 @@ export default function Markets() {
                 ))}
               </div>
             </div>
+
+            {/* All Stocks Section */}
+            <AllStocksList />
           </>
         )}
 
@@ -359,7 +470,7 @@ export default function Markets() {
                 <Badge
                   key={f}
                   variant={nseFilter === f ? "default" : "secondary"}
-                  className={`cursor-pointer whitespace-nowrap text-xs py-1.5 px-3 rounded-full ${
+                  className={`cursor-pointer whitespace-nowrap text-xs py-1.5 px-3 rounded-full transition-all ${
                     nseFilter === f ? 'bg-primary text-primary-foreground' : ''
                   }`}
                   onClick={() => setNseFilter(f)}
@@ -381,7 +492,7 @@ export default function Markets() {
                   key={s.key}
                   variant={nseSortBy === s.key ? "default" : "outline"}
                   size="sm"
-                  className={`text-xs rounded-full h-8 ${nseSortBy === s.key ? 'bg-primary text-primary-foreground' : ''}`}
+                  className={`text-xs rounded-full h-8 transition-all ${nseSortBy === s.key ? 'bg-primary text-primary-foreground' : ''}`}
                   onClick={() => setNseSortBy(s.key)}
                 >
                   {s.label}
@@ -391,7 +502,6 @@ export default function Markets() {
 
             {/* Stock List */}
             <Card className="soft-card overflow-hidden">
-              {/* Header */}
               <div className="flex items-center justify-between py-2 px-4 border-b border-border/60 bg-muted/30">
                 <span className="text-xs font-semibold text-muted-foreground">Stock</span>
                 <div className="flex items-center gap-6">
@@ -402,7 +512,7 @@ export default function Markets() {
               </div>
               <div className="divide-y divide-border/30">
                 {filteredNseStocks.map(stock => (
-                  <div key={stock.symbol} onClick={() => navigate(`/stock/${stock.symbol}`)} className="flex items-center justify-between py-3 px-4 cursor-pointer active:bg-muted/30 transition-colors">
+                  <div key={stock.symbol} onClick={() => navigate(`/stock/${stock.symbol}`)} className="flex items-center justify-between py-3 px-4 cursor-pointer active:bg-muted/30 active:scale-[0.99] transition-all duration-150">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div className="w-9 h-9 rounded-xl bg-primary/8 flex items-center justify-center text-xs font-bold text-primary shrink-0">
                         {stock.symbol.slice(0, 2)}
@@ -459,7 +569,7 @@ export default function Markets() {
             </h3>
             <div className="grid grid-cols-2 gap-2.5">
               {globalIndices.map(idx => (
-                <Card key={idx.name} className="soft-card p-3.5">
+                <Card key={idx.name} className="soft-card p-3.5 active:scale-[0.98] transition-transform">
                   <p className="text-xs font-medium text-muted-foreground">{idx.name}</p>
                   <p className="text-base font-bold mt-1">{idx.value}</p>
                   <p className={`text-xs font-semibold mt-1 flex items-center gap-0.5 ${idx.isUp ? 'text-bull' : 'text-bear'}`}>
@@ -524,7 +634,7 @@ export default function Markets() {
                       </div>
                     </div>
                     {ipo.status === "Open" && (
-                      <Button className="w-full h-10 rounded-2xl bg-primary text-primary-foreground font-semibold text-sm">
+                      <Button className="w-full h-10 rounded-2xl bg-primary text-primary-foreground font-semibold text-sm active:scale-[0.98] transition-transform">
                         Subscribe Now
                       </Button>
                     )}
@@ -559,7 +669,6 @@ export default function Markets() {
         {/* ─── DIVIDENDS TAB ─── */}
         {activeTab === "Dividends" && (
           <>
-            {/* Dividend Calendar */}
             <h3 className="text-sm font-bold flex items-center gap-2">
               <Calendar className="h-4 w-4 text-primary" />
               Upcoming Dividends
@@ -587,7 +696,6 @@ export default function Markets() {
               ))}
             </Card>
 
-            {/* High Dividend Ranking */}
             <div className="flex items-center justify-between mt-2">
               <h3 className="text-sm font-bold flex items-center gap-2">
                 <DollarSign className="h-4 w-4 text-bull" />

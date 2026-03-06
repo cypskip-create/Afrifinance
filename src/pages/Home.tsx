@@ -9,7 +9,6 @@ import { WidgetManager, WidgetConfig, defaultWidgets } from "@/components/home/W
 import { TopBar } from "@/components/shared/TopBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Search, TrendingUp, LogIn, ChevronRight, ArrowUpRight, ArrowDownRight,
   Wallet, Eye, EyeOff, BarChart3
@@ -36,6 +35,7 @@ export default function Home() {
   });
 
   const firstName = profile?.full_name ? profile.full_name.split(' ')[0] : 'Investor';
+  const hasPortfolio = user && portfolio.length > 0;
 
   const handleSaveWidgets = (newWidgets: WidgetConfig[]) => {
     setWidgets(newWidgets);
@@ -81,52 +81,65 @@ export default function Home() {
       <div className="px-4 pt-3 space-y-4">
         {/* Auth CTA */}
         {!user && (
-          <Card className="soft-card bg-gradient-to-br from-primary/10 to-accent/5 border-primary/20">
-            <CardContent className="p-5 text-center">
-              <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                <LogIn className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="font-bold mb-1">Start Your Journey</h3>
-              <p className="text-xs text-muted-foreground mb-4">Track your portfolio & join the community.</p>
-              <Button className="btn-primary w-full h-11" onClick={() => navigate('/auth')}>Sign Up / Login</Button>
-            </CardContent>
-          </Card>
+          <>
+            {/* Market Brief first for non-traders */}
+            <MorningBrief />
+            <Card className="soft-card bg-gradient-to-br from-primary/10 to-accent/5 border-primary/20">
+              <CardContent className="p-5 text-center">
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                  <LogIn className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="font-bold mb-1">Start Your Journey</h3>
+                <p className="text-xs text-muted-foreground mb-4">Track your portfolio & join the community.</p>
+                <Button className="btn-primary w-full h-11" onClick={() => navigate('/auth')}>Sign Up / Login</Button>
+              </CardContent>
+            </Card>
+          </>
         )}
 
-        {/* ── COMPACT Portfolio Card ── */}
-        {user && portfolio.length > 0 && (
-          <Card className="soft-card border-0 bg-gradient-to-r from-primary/8 to-accent/5 cursor-pointer" onClick={() => navigate('/track-investments')}>
-            <CardContent className="p-3.5 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center">
-                  <Wallet className="h-5 w-5 text-primary" />
+        {/* For traders: Portfolio card → Market Brief → rest */}
+        {hasPortfolio && (
+          <>
+            {/* Compact Portfolio Card */}
+            <Card className="soft-card border-0 bg-gradient-to-r from-primary/8 to-accent/5 cursor-pointer active:scale-[0.99] transition-transform" onClick={() => navigate('/track-investments')}>
+              <CardContent className="p-3 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Wallet className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground font-medium">Portfolio</p>
+                    <p className="text-base font-bold leading-tight">
+                      {showBalance ? `KES ${portfolioValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : '••••••'}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[10px] text-muted-foreground font-medium">Portfolio</p>
-                  <p className="text-lg font-bold leading-tight">
-                    {showBalance ? `KES ${portfolioValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : '••••••'}
-                  </p>
+                <div className="flex items-center gap-2">
+                  <div className={`flex items-center gap-0.5 text-xs font-semibold ${portfolioGain >= 0 ? 'text-bull' : 'text-bear'}`}>
+                    {portfolioGain >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                    {portfolioGainPct >= 0 ? '+' : ''}{portfolioGainPct.toFixed(1)}%
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={e => { e.stopPropagation(); setShowBalance(!showBalance); }}>
+                    {showBalance ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                  </Button>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className={`flex items-center gap-0.5 text-xs font-semibold ${portfolioGain >= 0 ? 'text-bull' : 'text-bear'}`}>
-                  {portfolioGain >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                  {portfolioGainPct >= 0 ? '+' : ''}{portfolioGainPct.toFixed(1)}%
-                </div>
-                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={e => { e.stopPropagation(); setShowBalance(!showBalance); }}>
-                  {showBalance ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-                </Button>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+
+            {/* Market Brief right below portfolio */}
+            <MorningBrief />
+          </>
         )}
 
-        {/* ── Market Indices ── */}
+        {/* For logged-in users without portfolio, Market Brief first */}
+        {user && !hasPortfolio && <MorningBrief />}
+
+        {/* Market Indices */}
         <div>
           <div className="flex items-center justify-between mb-2.5">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold">Market Brief</h3>
+              <h3 className="text-sm font-bold">Live Indices</h3>
               <MarketStatusIndicator />
             </div>
             <Button variant="ghost" size="sm" className="h-7 text-xs text-primary rounded-full px-3" onClick={() => navigate('/markets')}>
@@ -135,7 +148,7 @@ export default function Home() {
           </div>
           <div className="flex gap-2.5 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-1">
             {nseIndices.map(idx => (
-              <Card key={idx.name} className="soft-card min-w-[110px] flex-shrink-0 p-2.5" onClick={() => navigate('/markets')}>
+              <Card key={idx.name} className="soft-card min-w-[110px] flex-shrink-0 p-2.5 active:scale-[0.97] transition-transform cursor-pointer" onClick={() => navigate('/markets')}>
                 <p className="text-[10px] font-medium text-muted-foreground">{idx.name}</p>
                 <p className="text-sm font-bold mt-0.5">{idx.value}</p>
                 <p className={`text-[10px] font-semibold flex items-center gap-0.5 ${idx.isUp ? 'text-bull' : 'text-bear'}`}>
@@ -147,7 +160,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ── Watchlist ── */}
+        {/* Watchlist */}
         <div>
           <div className="flex items-center justify-between mb-2.5">
             <h3 className="text-sm font-bold flex items-center gap-2">
@@ -160,7 +173,7 @@ export default function Home() {
           </div>
           <div className="flex gap-2.5 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-1">
             {watchlistStocks.map(stock => (
-              <Card key={stock.symbol} className="soft-card min-w-[120px] flex-shrink-0 p-2.5 cursor-pointer" onClick={() => navigate(`/stock/${stock.symbol}`)}>
+              <Card key={stock.symbol} className="soft-card min-w-[120px] flex-shrink-0 p-2.5 cursor-pointer active:scale-[0.97] transition-transform" onClick={() => navigate(`/stock/${stock.symbol}`)}>
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
                     {stock.symbol.slice(0, 2)}
@@ -180,7 +193,6 @@ export default function Home() {
         </div>
 
         {/* Widgets */}
-        <MorningBrief />
         <FearGreedIndex />
         {user && <QuickTradeWidget />}
         {user && <RealtimeWatchlistWidget />}
