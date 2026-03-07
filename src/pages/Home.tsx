@@ -199,6 +199,22 @@ export default function Home() {
         <TrendingStocks />
         <TopMoversLosers />
 
+        {/* Upgrade Banner for Free Users */}
+        {user && (!profile?.subscription_plan || profile.subscription_plan === 'free') && (
+          <Card className="soft-card bg-gradient-to-r from-primary/10 via-accent/5 to-primary/10 border-primary/20 cursor-pointer active:scale-[0.99] transition-transform" onClick={() => navigate('/account')}>
+            <CardContent className="p-3 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-accent/20 flex items-center justify-center shrink-0">
+                <TrendingUp className="h-4 w-4 text-accent" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold">Upgrade to Premium</p>
+                <p className="text-[10px] text-muted-foreground">Advanced charts, AI insights & more — KES 999/mo</p>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+            </CardContent>
+          </Card>
+        )}
+
         {/* Quick Actions */}
         <div className="grid grid-cols-2 gap-3">
           <NavLink to="/track-investments">
