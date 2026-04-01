@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Heart, TrendingUp, TrendingDown, Newspaper, Activity, Target, Award, PieChart, FileText, Banknote, UserCheck, Briefcase, Building, Globe, Users, Calendar, Bell, GitCompare, Plus, Share2, MessageSquare, BarChart3, ChevronRight } from "lucide-react";
+import { ArrowLeft, Heart, TrendingUp, TrendingDown, Newspaper, Activity, Target, Award, PieChart, FileText, Banknote, UserCheck, Briefcase, Building, Globe, Users, Calendar, Bell, GitCompare, Plus, Share2, MessageSquare, BarChart3, ChevronRight, DollarSign } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { StockPriceChart } from "@/components/stock/StockPriceChart";
 import { useWatchlist } from "@/hooks/useWatchlist";
@@ -9,13 +9,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PriceAlertsManager } from "@/components/alerts/PriceAlertsManager";
-import { AddTradeDialog } from "@/components/portfolio/AddTradeDialog";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { AnalystRatings } from "@/components/stock/AnalystRatings";
 import { MarketStatusIndicator } from "@/components/shared/MarketStatusIndicator";
 import { SparklineChart } from "@/components/shared/SparklineChart";
+import { TradeSheet } from "@/components/trade/TradeSheet";
 
-// Stock data map
 const stockData: Record<string, {
   name: string; price: number; change: number; changePercent: string; isUp: boolean;
   marketCap: string; pe: string; eps: string; dividend: string; high52: string; low52: string;
@@ -52,7 +51,6 @@ const companyInfo: Record<string, { description: string; sector: string; headqua
   EABL: { description: "East African Breweries Limited is the largest brewer in East Africa, producing Tusker, Guinness, and Bell lager.", sector: "Manufacturing & Allied", headquarters: "Nairobi, Kenya", ceo: "Jane Karuku", employees: "4,000+", founded: "1922" },
 };
 
-// Mock news for the stock
 const stockNews = [
   { id: 1, title: "Strong quarterly earnings beat expectations", source: "Business Daily", time: "2h ago", sentiment: "bullish" as const },
   { id: 2, title: "Analyst raises price target amid sector rally", source: "The Standard", time: "4h ago", sentiment: "bullish" as const },
@@ -60,7 +58,6 @@ const stockNews = [
   { id: 4, title: "Board announces share buyback program", source: "NSE Filings", time: "1d ago", sentiment: "bullish" as const },
 ];
 
-// Mock community posts
 const communityPosts = [
   { id: 1, user: "TraderMike", content: "Just loaded up on more shares. The fundamentals are strong 📈", likes: 24, replies: 8, time: "1h ago" },
   { id: 2, user: "NairobiInvestor", content: "Great earnings call today. Management is confident about next quarter.", likes: 18, replies: 5, time: "3h ago" },
@@ -72,7 +69,7 @@ export default function StockDetail() {
   const { symbol } = useParams();
   const [selectedTimeframe, setSelectedTimeframe] = useState("1D");
   const [showAlertsDialog, setShowAlertsDialog] = useState(false);
-  const [showAddTradeDialog, setShowAddTradeDialog] = useState(false);
+  const [tradeSheetOpen, setTradeSheetOpen] = useState(false);
   const { addToWatchlist, removeFromWatchlist, isInWatchlist } = useWatchlist();
   const { addToPortfolio } = usePortfolio();
   const { toast } = useToast();
@@ -90,23 +87,31 @@ export default function StockDetail() {
 
   const handleWatchlistToggle = async () => {
     if (!symbol) return;
-    const isCurrentlyWatchlisted = isInWatchlist(symbol);
-    if (isCurrentlyWatchlisted) {
+    if (isInWatchlist(symbol)) {
       const result = await removeFromWatchlist(symbol);
-      if (result?.error) { toast({ title: "Error", description: "Failed to remove from watchlist", variant: "destructive" }); }
-      else { toast({ title: "Removed from watchlist" }); }
+      if (result?.error) toast({ title: "Error", variant: "destructive" });
+      else toast({ title: "Removed from watchlist" });
     } else {
       const result = await addToWatchlist(symbol, stock.name);
-      if (result?.error) { toast({ title: "Error", description: result.error.message, variant: "destructive" }); }
-      else { toast({ title: "Added to watchlist" }); }
+      if (result?.error) toast({ title: "Error", description: result.error.message, variant: "destructive" });
+      else toast({ title: "Added to watchlist" });
     }
   };
 
   const timeframes = ["1D", "5D", "1M", "3M", "6M", "1Y", "ALL"];
   const divYield = stock.pe !== "N/A" ? ((parseFloat(stock.dividend) / stock.price) * 100).toFixed(1) : "0.0";
 
+  // Revenue breakdown mock
+  const revenueSegments = [
+    { segment: "M-Pesa", revenue: "KES 125.8B", pct: 38 },
+    { segment: "Voice", revenue: "KES 72.4B", pct: 22 },
+    { segment: "Data", revenue: "KES 65.8B", pct: 20 },
+    { segment: "SMS", revenue: "KES 32.9B", pct: 10 },
+    { segment: "Other", revenue: "KES 31.6B", pct: 10 },
+  ];
+
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-24">
       {/* Sticky Header */}
       <header className="sticky top-0 z-40 bg-background/90 backdrop-blur-xl border-b border-border/50">
         <div className="flex items-center justify-between p-3">
@@ -137,15 +142,13 @@ export default function StockDetail() {
       </header>
 
       <div className="p-4 space-y-4">
-        {/* Hero Price Section */}
+        {/* Hero Price */}
         <div className="animate-fade-in">
           <div className="flex items-center gap-2 mb-1">
             <Badge variant="secondary" className="text-[10px] py-0">{stock.exchange}</Badge>
             <Badge variant="outline" className="text-[10px] py-0">{stock.sector}</Badge>
           </div>
-          <div className="text-3xl font-bold tracking-tight">
-            KES {stock.price.toFixed(2)}
-          </div>
+          <div className="text-3xl font-bold tracking-tight">KES {stock.price.toFixed(2)}</div>
           <div className={`text-sm font-semibold flex items-center gap-1 mt-0.5 ${stock.isUp ? 'text-bull' : 'text-bear'}`}>
             {stock.isUp ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
             <span>{stock.isUp ? '+' : ''}KES {stock.change.toFixed(2)} ({stock.changePercent}%)</span>
@@ -153,28 +156,20 @@ export default function StockDetail() {
           </div>
         </div>
 
-        {/* Interactive Chart - Hero */}
+        {/* Chart */}
         <div>
           <div className="flex gap-1 mb-3">
             {timeframes.map((tf) => (
-              <Button
-                key={tf}
-                variant="ghost"
-                size="sm"
-                className={`h-8 px-3 text-xs flex-1 rounded-full font-semibold transition-all ${
-                  tf === selectedTimeframe ? 'bg-primary/10 text-primary' : 'text-muted-foreground'
-                }`}
-                onClick={() => setSelectedTimeframe(tf)}
-              >
+              <Button key={tf} variant="ghost" size="sm"
+                className={`h-8 px-3 text-xs flex-1 rounded-full font-semibold transition-all ${tf === selectedTimeframe ? 'bg-primary/10 text-primary' : 'text-muted-foreground'}`}
+                onClick={() => setSelectedTimeframe(tf)}>
                 {tf}
               </Button>
             ))}
           </div>
           <Card className="soft-card overflow-hidden">
             <CardContent className="p-3">
-              <div className="h-56">
-                <StockPriceChart symbol={symbol} timeframe={selectedTimeframe} />
-              </div>
+              <div className="h-56"><StockPriceChart symbol={symbol} timeframe={selectedTimeframe} /></div>
             </CardContent>
           </Card>
         </div>
@@ -183,7 +178,7 @@ export default function StockDetail() {
         <div className="grid grid-cols-4 gap-2">
           {[
             { icon: Bell, label: "Alert", action: () => setShowAlertsDialog(true), color: "bg-accent/10 text-accent" },
-            { icon: Plus, label: "Trade", action: () => setShowAddTradeDialog(true), color: "bg-primary/10 text-primary" },
+            { icon: DollarSign, label: "Trade", action: () => setTradeSheetOpen(true), color: "bg-bull/10 text-bull" },
             { icon: GitCompare, label: "Compare", action: () => navigate(`/compare?stock=${symbol}`), color: "bg-chart-3/10 text-chart-3" },
             { icon: MessageSquare, label: "Discuss", action: () => navigate(`/tradershub`), color: "bg-chart-4/10 text-chart-4" },
           ].map(btn => (
@@ -194,11 +189,10 @@ export default function StockDetail() {
           ))}
         </div>
 
-        {/* Key Statistics Grid */}
+        {/* Key Statistics */}
         <div>
           <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
-            <BarChart3 className="h-4 w-4 text-primary" />
-            Key Statistics
+            <BarChart3 className="h-4 w-4 text-primary" />Key Statistics
           </h3>
           <Card className="soft-card">
             <CardContent className="p-4">
@@ -231,19 +225,10 @@ export default function StockDetail() {
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold">{stock.low52}</span>
               <div className="flex-1 h-2 bg-muted rounded-full relative">
-                <div
-                  className="absolute top-0 h-2 rounded-full bg-primary"
-                  style={{
-                    left: '0%',
-                    width: `${Math.min(100, Math.max(5, ((stock.price - parseFloat(stock.low52 === 'N/A' ? '0' : stock.low52)) / (parseFloat(stock.high52 === 'N/A' ? '100' : stock.high52) - parseFloat(stock.low52 === 'N/A' ? '0' : stock.low52))) * 100))}%`
-                  }}
-                />
-                <div
-                  className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-primary border-2 border-background shadow-sm"
-                  style={{
-                    left: `${Math.min(97, Math.max(3, ((stock.price - parseFloat(stock.low52 === 'N/A' ? '0' : stock.low52)) / (parseFloat(stock.high52 === 'N/A' ? '100' : stock.high52) - parseFloat(stock.low52 === 'N/A' ? '0' : stock.low52))) * 100))}%`
-                  }}
-                />
+                <div className="absolute top-0 h-2 rounded-full bg-primary"
+                  style={{ left: '0%', width: `${Math.min(100, Math.max(5, ((stock.price - parseFloat(stock.low52 === 'N/A' ? '0' : stock.low52)) / (parseFloat(stock.high52 === 'N/A' ? '100' : stock.high52) - parseFloat(stock.low52 === 'N/A' ? '0' : stock.low52))) * 100))}%` }} />
+                <div className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-primary border-2 border-background shadow-sm"
+                  style={{ left: `${Math.min(97, Math.max(3, ((stock.price - parseFloat(stock.low52 === 'N/A' ? '0' : stock.low52)) / (parseFloat(stock.high52 === 'N/A' ? '100' : stock.high52) - parseFloat(stock.low52 === 'N/A' ? '0' : stock.low52))) * 100))}%` }} />
               </div>
               <span className="text-xs font-semibold">{stock.high52}</span>
             </div>
@@ -253,24 +238,16 @@ export default function StockDetail() {
         {/* Analyst Ratings */}
         <Card className="soft-card">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Award className="h-4 w-4 text-accent" />
-              Analyst Ratings
-            </CardTitle>
+            <CardTitle className="text-sm flex items-center gap-2"><Award className="h-4 w-4 text-accent" />Analyst Ratings</CardTitle>
           </CardHeader>
-          <CardContent className="pb-4">
-            <AnalystRatings currentPrice={stock.price} />
-          </CardContent>
+          <CardContent className="pb-4"><AnalystRatings currentPrice={stock.price} /></CardContent>
         </Card>
 
         {/* Money Flow */}
         <Card className="soft-card">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-3">
-              <h4 className="text-sm font-bold flex items-center gap-2">
-                <Activity className="h-4 w-4 text-primary" />
-                Money Flow
-              </h4>
+              <h4 className="text-sm font-bold flex items-center gap-2"><Activity className="h-4 w-4 text-primary" />Money Flow</h4>
               <Badge variant="secondary" className="text-[10px]">Net Inflow</Badge>
             </div>
             <div className="flex justify-between items-center mb-1.5">
@@ -286,13 +263,8 @@ export default function StockDetail() {
         {/* Stock-Specific News */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold flex items-center gap-2">
-              <Newspaper className="h-4 w-4 text-accent" />
-              Latest News
-            </h3>
-            <Button variant="ghost" size="sm" className="h-7 text-xs text-primary rounded-full px-3">
-              All <ChevronRight className="h-3 w-3 ml-0.5" />
-            </Button>
+            <h3 className="text-sm font-bold flex items-center gap-2"><Newspaper className="h-4 w-4 text-accent" />Latest News</h3>
+            <Button variant="ghost" size="sm" className="h-7 text-xs text-primary rounded-full px-3">All <ChevronRight className="h-3 w-3 ml-0.5" /></Button>
           </div>
           <div className="space-y-2">
             {stockNews.map(news => (
@@ -306,9 +278,7 @@ export default function StockDetail() {
                       <span className="text-xs text-muted-foreground">{news.time}</span>
                     </div>
                   </div>
-                  <Badge className={`text-[10px] py-0 px-1.5 shrink-0 ${
-                    news.sentiment === 'bullish' ? 'bg-bull/10 text-bull border-bull/20' : 'bg-bear/10 text-bear border-bear/20'
-                  }`}>
+                  <Badge className={`text-[10px] py-0 px-1.5 shrink-0 ${news.sentiment === 'bullish' ? 'bg-bull/10 text-bull border-bull/20' : 'bg-bear/10 text-bear border-bear/20'}`}>
                     {news.sentiment}
                   </Badge>
                 </div>
@@ -320,47 +290,31 @@ export default function StockDetail() {
         {/* Community Discussions */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold flex items-center gap-2">
-              <MessageSquare className="h-4 w-4 text-chart-4" />
-              Community
-            </h3>
-            <Button variant="ghost" size="sm" className="h-7 text-xs text-primary rounded-full px-3" onClick={() => navigate('/tradershub')}>
-              All <ChevronRight className="h-3 w-3 ml-0.5" />
-            </Button>
+            <h3 className="text-sm font-bold flex items-center gap-2"><MessageSquare className="h-4 w-4 text-chart-4" />Community</h3>
+            <Button variant="ghost" size="sm" className="h-7 text-xs text-primary rounded-full px-3" onClick={() => navigate('/tradershub')}>All <ChevronRight className="h-3 w-3 ml-0.5" /></Button>
           </div>
           <div className="space-y-2">
             {communityPosts.map(post => (
               <Card key={post.id} className="soft-card p-3 cursor-pointer active:scale-[0.99] transition-transform" onClick={() => navigate('/tradershub')}>
                 <div className="flex items-center gap-2 mb-1.5">
-                  <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
-                    {post.user.slice(0, 1)}
-                  </div>
+                  <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">{post.user.slice(0, 1)}</div>
                   <span className="text-xs font-semibold">{post.user}</span>
                   <span className="text-xs text-muted-foreground">· {post.time}</span>
                 </div>
                 <p className="text-sm text-muted-foreground line-clamp-2">{post.content}</p>
                 <div className="flex items-center gap-4 mt-2">
-                  <span className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Heart className="h-3 w-3" /> {post.likes}
-                  </span>
-                  <span className="text-xs text-muted-foreground flex items-center gap-1">
-                    <MessageSquare className="h-3 w-3" /> {post.replies}
-                  </span>
+                  <span className="text-xs text-muted-foreground flex items-center gap-1"><Heart className="h-3 w-3" /> {post.likes}</span>
+                  <span className="text-xs text-muted-foreground flex items-center gap-1"><MessageSquare className="h-3 w-3" /> {post.replies}</span>
                 </div>
               </Card>
             ))}
           </div>
-          <Button
-            variant="outline"
-            className="w-full mt-2 h-10 rounded-2xl text-sm font-semibold gap-2"
-            onClick={() => navigate('/tradershub')}
-          >
-            <MessageSquare className="h-4 w-4" />
-            Post about ${symbol}
+          <Button variant="outline" className="w-full mt-2 h-10 rounded-2xl text-sm font-semibold gap-2" onClick={() => navigate('/tradershub')}>
+            <MessageSquare className="h-4 w-4" />Post about ${symbol}
           </Button>
         </div>
 
-        {/* Detailed Tabs */}
+        {/* Detailed Tabs: Overview / Financials / Profile */}
         <Tabs defaultValue="overview" className="w-full">
           <TabsList className="grid w-full grid-cols-3 gap-1">
             <TabsTrigger value="overview" className="text-xs px-2">Overview</TabsTrigger>
@@ -371,10 +325,7 @@ export default function StockDetail() {
           <TabsContent value="overview" className="space-y-3 mt-4">
             <Card className="soft-card">
               <CardContent className="p-4">
-                <h4 className="text-sm font-bold mb-3 flex items-center gap-2">
-                  <Target className="h-4 w-4 text-accent" />
-                  Technical Sentiment
-                </h4>
+                <h4 className="text-sm font-bold mb-3 flex items-center gap-2"><Target className="h-4 w-4 text-accent" />Technical Sentiment</h4>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs">Overall Signal</span>
                   <Badge className="bg-bull/10 text-bull border-bull/20 text-xs">Strong Buy</Badge>
@@ -396,131 +347,133 @@ export default function StockDetail() {
           </TabsContent>
 
           <TabsContent value="financials" className="space-y-3 mt-4">
-            <Tabs defaultValue="analytics" className="w-full">
-              <TabsList className="grid w-full grid-cols-5 h-12">
-                <TabsTrigger value="analytics" className="flex flex-col items-center gap-0.5 py-2">
-                  <Award className="h-4 w-4" />
-                  <span className="text-[9px]">Analytics</span>
-                </TabsTrigger>
-                <TabsTrigger value="estimates" className="flex flex-col items-center gap-0.5 py-2">
-                  <Target className="h-4 w-4" />
-                  <span className="text-[9px]">Estimates</span>
-                </TabsTrigger>
-                <TabsTrigger value="statements" className="flex flex-col items-center gap-0.5 py-2">
-                  <FileText className="h-4 w-4" />
-                  <span className="text-[9px]">Statements</span>
-                </TabsTrigger>
-                <TabsTrigger value="shareholders" className="flex flex-col items-center gap-0.5 py-2">
-                  <Users className="h-4 w-4" />
-                  <span className="text-[9px]">Holders</span>
-                </TabsTrigger>
-                <TabsTrigger value="dividends" className="flex flex-col items-center gap-0.5 py-2">
-                  <Banknote className="h-4 w-4" />
-                  <span className="text-[9px]">Dividends</span>
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="analytics" className="space-y-3 mt-4">
-                <Card className="soft-card">
-                  <CardContent className="p-4">
-                    <h4 className="text-sm font-bold mb-3">Key Financial Indicators</h4>
-                    <div className="grid grid-cols-2 gap-3">
-                      {[
-                        { label: "ROE", value: "18.5%" }, { label: "ROA", value: "12.3%" },
-                        { label: "EBITDA Margin", value: "45.2%" }, { label: "FCF", value: "KES 89.2B" },
-                        { label: "P/B Ratio", value: "2.8" }, { label: "Debt/Equity", value: "0.25" },
-                      ].map(s => (
-                        <div key={s.label} className="flex justify-between">
-                          <span className="text-xs text-muted-foreground">{s.label}</span>
-                          <span className="text-xs font-semibold">{s.value}</span>
-                        </div>
-                      ))}
+            {/* Valuation Metrics */}
+            <Card className="soft-card">
+              <CardContent className="p-4">
+                <h4 className="text-sm font-bold mb-3 flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4 text-primary" />Valuation Metrics
+                </h4>
+                <div className="space-y-2.5">
+                  {[
+                    { label: "P/E Ratio", value: stock.pe, sector: "8.5", note: stock.pe !== "N/A" && parseFloat(stock.pe) < 10 ? "Below sector avg" : "Above sector avg" },
+                    { label: "P/B Ratio", value: "2.8", sector: "1.9", note: "Premium valuation" },
+                    { label: "P/S Ratio", value: "1.6", sector: "2.1", note: "Below sector avg" },
+                    { label: "EV/EBITDA", value: "8.2", sector: "7.5", note: "Near sector avg" },
+                  ].map(m => (
+                    <div key={m.label} className="flex items-center justify-between">
+                      <div>
+                        <span className="text-xs text-muted-foreground">{m.label}</span>
+                        <p className="text-[10px] text-muted-foreground/60">{m.note}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-sm font-bold">{m.value}</span>
+                        <p className="text-[10px] text-muted-foreground">Sector: {m.sector}</p>
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
 
-              <TabsContent value="estimates" className="space-y-3 mt-4">
-                <Card className="soft-card">
-                  <CardContent className="p-4">
-                    <h4 className="text-sm font-bold mb-3">Earnings Estimates</h4>
-                    {[
-                      { label: "Q4 2025 Est.", value: "KES 1.12" },
-                      { label: "FY 2025 Est.", value: "KES 4.85" },
-                      { label: "FY 2026 Est.", value: "KES 5.20" },
-                    ].map(s => (
-                      <div key={s.label} className="flex justify-between py-1.5">
-                        <span className="text-xs text-muted-foreground">{s.label}</span>
-                        <span className="text-xs font-semibold">{s.value}</span>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-              </TabsContent>
+            {/* Key Financial Indicators */}
+            <Card className="soft-card">
+              <CardContent className="p-4">
+                <h4 className="text-sm font-bold mb-3">Key Financial Indicators</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: "ROE", value: "18.5%" }, { label: "ROA", value: "12.3%" },
+                    { label: "EBITDA Margin", value: "45.2%" }, { label: "FCF", value: "KES 89.2B" },
+                    { label: "Debt/Equity", value: "0.25" }, { label: "Current Ratio", value: "1.8" },
+                  ].map(s => (
+                    <div key={s.label} className="flex justify-between">
+                      <span className="text-xs text-muted-foreground">{s.label}</span>
+                      <span className="text-xs font-semibold">{s.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
 
-              <TabsContent value="statements" className="space-y-3 mt-4">
-                <Card className="soft-card">
-                  <CardContent className="p-4">
-                    <h4 className="text-sm font-bold mb-3">Financial Statements</h4>
-                    {[
-                      { label: "Revenue (TTM)", value: "KES 328.5B" },
-                      { label: "Net Income (TTM)", value: "KES 68.2B" },
-                      { label: "Total Assets", value: "KES 512.8B" },
-                    ].map(s => (
-                      <div key={s.label} className="flex justify-between py-1.5">
-                        <span className="text-xs text-muted-foreground">{s.label}</span>
-                        <span className="text-xs font-semibold">{s.value}</span>
+            {/* Revenue Breakdown */}
+            <Card className="soft-card">
+              <CardContent className="p-4">
+                <h4 className="text-sm font-bold mb-3 flex items-center gap-2">
+                  <PieChart className="h-4 w-4 text-accent" />Revenue Breakdown
+                </h4>
+                <div className="space-y-2">
+                  {revenueSegments.map((seg, i) => (
+                    <div key={seg.segment}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-medium">{seg.segment}</span>
+                        <span className="text-xs text-muted-foreground">{seg.revenue} ({seg.pct}%)</span>
                       </div>
-                    ))}
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                      <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-2 rounded-full transition-all duration-700"
+                          style={{
+                            width: `${seg.pct}%`,
+                            backgroundColor: `hsl(${152 + i * 30}, 60%, ${45 + i * 5}%)`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
 
-              <TabsContent value="shareholders" className="space-y-3 mt-4">
-                <Card className="soft-card">
-                  <CardContent className="p-4">
-                    <h4 className="text-sm font-bold mb-3">Major Shareholders</h4>
-                    {[
-                      { label: "Institutional", value: "45.2%" },
-                      { label: "Retail", value: "32.8%" },
-                      { label: "Government", value: "22.0%" },
-                    ].map(s => (
-                      <div key={s.label} className="flex justify-between py-1.5">
-                        <span className="text-xs text-muted-foreground">{s.label}</span>
-                        <span className="text-xs font-semibold">{s.value}</span>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-              </TabsContent>
+            {/* Financial Statements Summary */}
+            <Card className="soft-card">
+              <CardContent className="p-4">
+                <h4 className="text-sm font-bold mb-3 flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-primary" />Financial Statements
+                </h4>
+                {[
+                  { label: "Revenue (TTM)", value: "KES 328.5B", change: "+12.4%" },
+                  { label: "Net Income (TTM)", value: "KES 68.2B", change: "+8.7%" },
+                  { label: "Total Assets", value: "KES 512.8B", change: "+5.2%" },
+                  { label: "Total Equity", value: "KES 285.3B", change: "+6.1%" },
+                ].map(s => (
+                  <div key={s.label} className="flex justify-between items-center py-2 border-b border-border/50 last:border-0">
+                    <span className="text-xs text-muted-foreground">{s.label}</span>
+                    <div className="text-right">
+                      <span className="text-xs font-semibold">{s.value}</span>
+                      <span className="text-[10px] text-bull ml-1.5">{s.change}</span>
+                    </div>
+                  </div>
+                ))}
+                <Button variant="outline" size="sm" className="w-full mt-3 h-9 rounded-full text-xs font-semibold gap-1.5">
+                  <FileText className="h-3.5 w-3.5" />
+                  View Full NSE Report
+                </Button>
+              </CardContent>
+            </Card>
 
-              <TabsContent value="dividends" className="space-y-3 mt-4">
-                <Card className="soft-card">
-                  <CardContent className="p-4">
-                    <h4 className="text-sm font-bold mb-3">Dividend History</h4>
-                    {[
-                      { label: "Annual Dividend", value: `KES ${stock.dividend}` },
-                      { label: "Dividend Yield", value: `${divYield}%` },
-                      { label: "Payout Ratio", value: "45.8%" },
-                    ].map(s => (
-                      <div key={s.label} className="flex justify-between py-1.5">
-                        <span className="text-xs text-muted-foreground">{s.label}</span>
-                        <span className="text-xs font-semibold">{s.value}</span>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
+            {/* Dividend History */}
+            <Card className="soft-card">
+              <CardContent className="p-4">
+                <h4 className="text-sm font-bold mb-3 flex items-center gap-2">
+                  <Banknote className="h-4 w-4 text-bull" />Dividend History
+                </h4>
+                {[
+                  { label: "Annual Dividend", value: `KES ${stock.dividend}` },
+                  { label: "Dividend Yield", value: `${divYield}%` },
+                  { label: "Payout Ratio", value: "45.8%" },
+                  { label: "5Y Avg Yield", value: `${(parseFloat(divYield) * 0.9).toFixed(1)}%` },
+                ].map(s => (
+                  <div key={s.label} className="flex justify-between py-1.5">
+                    <span className="text-xs text-muted-foreground">{s.label}</span>
+                    <span className="text-xs font-semibold">{s.value}</span>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="profile" className="space-y-3 mt-4">
             <Card className="soft-card">
               <CardContent className="p-4">
-                <h4 className="text-sm font-bold mb-2 flex items-center gap-2">
-                  <Building className="h-4 w-4 text-accent" />
-                  About {stock.name}
-                </h4>
+                <h4 className="text-sm font-bold mb-2 flex items-center gap-2"><Building className="h-4 w-4 text-accent" />About {stock.name}</h4>
                 <p className="text-xs text-muted-foreground leading-relaxed">{company.description}</p>
               </CardContent>
             </Card>
@@ -549,11 +502,22 @@ export default function StockDetail() {
 
       {/* Floating Trade Button */}
       <div className="fixed bottom-20 left-4 right-4 z-30">
-        <Button className="w-full h-12 rounded-2xl btn-primary text-sm font-bold shadow-lg gap-2" onClick={() => setShowAddTradeDialog(true)}>
-          <Plus className="h-5 w-5" />
+        <Button className="w-full h-12 rounded-2xl btn-primary text-sm font-bold shadow-lg gap-2" onClick={() => setTradeSheetOpen(true)}>
+          <DollarSign className="h-5 w-5" />
           Trade {symbol}
         </Button>
       </div>
+
+      {/* Trade Sheet */}
+      <TradeSheet
+        open={tradeSheetOpen}
+        onOpenChange={setTradeSheetOpen}
+        symbol={symbol || ""}
+        stockName={stock.name}
+        currentPrice={stock.price}
+        isUp={stock.isUp}
+        changePercent={stock.changePercent}
+      />
 
       {/* Price Alerts Dialog */}
       {showAlertsDialog && (
@@ -564,27 +528,6 @@ export default function StockDetail() {
               <Button variant="ghost" size="icon" onClick={() => setShowAlertsDialog(false)} className="h-8 w-8">✕</Button>
             </div>
             <div className="p-4"><PriceAlertsManager initialSymbol={symbol} /></div>
-          </div>
-        </div>
-      )}
-
-      {/* Add Trade Dialog */}
-      {showAddTradeDialog && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setShowAddTradeDialog(false)}>
-          <div className="bg-background rounded-2xl w-full max-w-md max-h-[80vh] overflow-auto" onClick={e => e.stopPropagation()}>
-            <div className="sticky top-0 bg-background border-b p-4 flex items-center justify-between rounded-t-2xl">
-              <h2 className="text-base font-bold">Add Trade</h2>
-              <Button variant="ghost" size="icon" onClick={() => setShowAddTradeDialog(false)} className="h-8 w-8">✕</Button>
-            </div>
-            <div className="p-4">
-              <AddTradeDialog
-                onTradeAdded={async (sym, name, shares, avgCost, sector) => {
-                  const result = await addToPortfolio(sym, name, shares, avgCost, sector);
-                  if (!result.error) { setShowAddTradeDialog(false); }
-                  return result;
-                }}
-              />
-            </div>
           </div>
         </div>
       )}
