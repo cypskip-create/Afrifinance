@@ -155,7 +155,7 @@ export default function Discover() {
         <div>
           <div className="flex items-center justify-between mb-2.5">
             <h3 className="text-sm font-bold flex items-center gap-1.5">
-              <Flame className="h-4 w-4 text-orange-500" />
+              <Flame className="h-4 w-4 text-accent" />
               Trending Now
             </h3>
             <Button variant="ghost" size="sm" className="h-7 text-xs text-primary rounded-full px-2" onClick={() => navigate('/markets')}>
