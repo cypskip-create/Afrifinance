@@ -1,12 +1,11 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Calendar, Settings, UserPlus, UserMinus, MessageCircle, MoreHorizontal, Lock, Verified, Heart, Repeat2, FileText, Bookmark, Camera, Loader2, Share, TrendingUp, TrendingDown, Award, Target, PieChart, ChevronRight, Image as ImageIcon, MapPin, ExternalLink } from "lucide-react";
+import { ArrowLeft, Calendar, UserPlus, MessageCircle, MoreHorizontal, Lock, Verified, Heart, Repeat2, FileText, Camera, Loader2, Share, TrendingUp, TrendingDown, Award, Target, PieChart, ChevronRight, Image as ImageIcon, MapPin, Pin } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -63,8 +62,6 @@ export default function UserProfile() {
   const [followersDialogOpen, setFollowersDialogOpen] = useState(false);
   const [dialogTab, setDialogTab] = useState<"followers" | "following">("followers");
   const [editProfileOpen, setEditProfileOpen] = useState(false);
-
-  // Comment sheet
   const [commentSheetOpen, setCommentSheetOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -72,17 +69,12 @@ export default function UserProfile() {
 
   const isOwnProfile = user?.id === userId;
   const userIsFollowing = userId ? isFollowing(userId) : false;
-
   const performanceStats = { winRate: 73, avgReturn: 12.4, streak: 5 };
 
   useEffect(() => {
     if (userId) {
-      fetchProfile();
-      fetchUserPosts();
-      fetchUserLikes();
-      fetchUserReposts();
-      loadFollowCounts();
-      fetchPublicPortfolio();
+      fetchProfile(); fetchUserPosts(); fetchUserLikes(); fetchUserReposts();
+      loadFollowCounts(); fetchPublicPortfolio();
     }
   }, [userId, user]);
 
@@ -91,7 +83,7 @@ export default function UserProfile() {
     setLoading(true);
     try {
       const { data } = await supabase.from("profiles_public").select("id, user_id, full_name, avatar_url, banner_url, bio, portfolio_public, followers_count, following_count, created_at").eq("user_id", userId).maybeSingle();
-      if (data) { setProfileData(data as UserProfileData); }
+      if (data) setProfileData(data as UserProfileData);
       else {
         const { data: fb } = await supabase.from("profiles").select("id, user_id, full_name, avatar_url, banner_url, bio, portfolio_public, followers_count, following_count, created_at").eq("user_id", userId).maybeSingle();
         if (fb) setProfileData(fb as UserProfileData);
@@ -103,8 +95,7 @@ export default function UserProfile() {
   const loadFollowCounts = async () => {
     if (!userId) return;
     const [f1, f2] = await Promise.all([fetchFollowers(userId), fetchFollowing(userId)]);
-    setFollowersCount(f1.length);
-    setFollowingCount(f2.length);
+    setFollowersCount(f1.length); setFollowingCount(f2.length);
   };
 
   const fetchPublicPortfolio = async () => {
@@ -210,7 +201,6 @@ export default function UserProfile() {
     else { await navigator.clipboard.writeText(window.location.href); toast({ title: "Profile link copied!" }); }
   };
 
-  // Post interactions
   const handleLike = async (postId: string) => { if (!user) { navigate("/auth"); return; } await likePost(postId); };
   const handleRepost = async (postId: string) => { if (!user) { navigate("/auth"); return; } await repostPost(postId); };
   const handleBookmark = async (postId: string) => { if (!user) { navigate("/auth"); return; } await bookmarkPost(postId); };
@@ -218,12 +208,9 @@ export default function UserProfile() {
   const handleDelete = async (postId: string) => { await deletePost(postId); fetchUserPosts(); };
 
   const openComments = async (post: Post) => {
-    setSelectedPost(post);
-    setCommentSheetOpen(true);
-    setLoadingComments(true);
+    setSelectedPost(post); setCommentSheetOpen(true); setLoadingComments(true);
     const fetched = await fetchComments(post.id);
-    setComments(fetched);
-    setLoadingComments(false);
+    setComments(fetched); setLoadingComments(false);
   };
 
   const handleAddComment = async (content: string) => {
@@ -249,9 +236,9 @@ export default function UserProfile() {
   }, [publicPortfolio]);
 
   const castToPost = (p: UserPost): Post => ({
-    ...p,
-    updated_at: p.created_at,
-    author: p.author ? { id: p.author.id || "", user_id: p.author.user_id || p.user_id, full_name: p.author.full_name, avatar_url: p.author.avatar_url, bio: p.author.bio || null } : { id: "", user_id: p.user_id, full_name: profileData?.full_name || null, avatar_url: profileData?.avatar_url || null, bio: null },
+    ...p, updated_at: p.created_at,
+    author: p.author ? { id: p.author.id || "", user_id: p.author.user_id || p.user_id, full_name: p.author.full_name, avatar_url: p.author.avatar_url, bio: p.author.bio || null }
+      : { id: "", user_id: p.user_id, full_name: profileData?.full_name || null, avatar_url: profileData?.avatar_url || null, bio: null },
   });
 
   if (loading) {
@@ -274,6 +261,10 @@ export default function UserProfile() {
       </div>
     );
   }
+
+  // Find first post to "pin" (most liked)
+  const pinnedPost = userPosts.length > 0 ? [...userPosts].sort((a, b) => b.likes_count - a.likes_count)[0] : null;
+  const regularPosts = userPosts.filter(p => p.id !== pinnedPost?.id);
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -304,7 +295,7 @@ export default function UserProfile() {
       </header>
 
       {/* Banner */}
-      <div className="relative h-32 sm:h-40 bg-gradient-to-r from-primary/20 to-accent/20 overflow-hidden">
+      <div className="relative h-36 sm:h-44 bg-gradient-to-br from-primary/30 via-accent/20 to-primary/10 overflow-hidden">
         {profileData.banner_url && <img src={profileData.banner_url} alt="Banner" className="w-full h-full object-cover" />}
         {isOwnProfile && (
           <>
@@ -319,7 +310,7 @@ export default function UserProfile() {
       {/* Avatar + actions */}
       <div className="px-4 -mt-16">
         <div className="flex justify-between items-end">
-          <Avatar className="h-28 w-28 sm:h-32 sm:w-32 ring-4 ring-background">
+          <Avatar className="h-28 w-28 sm:h-32 sm:w-32 ring-4 ring-background shadow-xl">
             <AvatarImage src={profileData.avatar_url || ""} className="object-cover" />
             <AvatarFallback className="bg-primary text-primary-foreground text-3xl font-bold">{getInitials(profileData.full_name)}</AvatarFallback>
           </Avatar>
@@ -339,25 +330,31 @@ export default function UserProfile() {
 
         {/* Name + bio */}
         <div className="mt-3">
-          <h2 className="text-xl font-extrabold flex items-center gap-1">
+          <h2 className="text-xl font-extrabold flex items-center gap-1.5">
             {profileData.full_name || "User"}
-            <Verified className="h-4 w-4 text-primary fill-primary" />
+            <Verified className="h-4.5 w-4.5 text-primary fill-primary" />
           </h2>
           <p className="text-sm text-muted-foreground">@{handle}</p>
 
           {profileData.bio && <p className="mt-2 text-[15px] leading-relaxed">{profileData.bio}</p>}
 
-          {/* Performance badges */}
-          <div className="flex flex-wrap gap-1.5 mt-3">
-            <Badge variant="outline" className="text-[11px] gap-1 bg-bull/5 text-bull border-bull/20 rounded-full px-2.5">
-              <Target className="h-3 w-3" />{performanceStats.winRate}% Win Rate
-            </Badge>
-            <Badge variant="outline" className="text-[11px] gap-1 bg-primary/5 text-primary border-primary/20 rounded-full px-2.5">
-              <TrendingUp className="h-3 w-3" />+{performanceStats.avgReturn}% Avg
-            </Badge>
-            <Badge variant="outline" className="text-[11px] gap-1 bg-accent/5 text-accent border-accent/20 rounded-full px-2.5">
-              <Award className="h-3 w-3" />{performanceStats.streak} Streak
-            </Badge>
+          {/* Enhanced Performance Badges */}
+          <div className="flex flex-wrap gap-2 mt-3">
+            <div className="flex items-center gap-1.5 bg-bull/10 border border-bull/20 rounded-full px-3 py-1.5">
+              <Target className="h-4 w-4 text-bull" />
+              <span className="text-sm font-bold text-bull">{performanceStats.winRate}%</span>
+              <span className="text-xs text-bull/70">Win Rate</span>
+            </div>
+            <div className="flex items-center gap-1.5 bg-primary/10 border border-primary/20 rounded-full px-3 py-1.5">
+              <TrendingUp className="h-4 w-4 text-primary" />
+              <span className="text-sm font-bold text-primary">+{performanceStats.avgReturn}%</span>
+              <span className="text-xs text-primary/70">Avg Return</span>
+            </div>
+            <div className="flex items-center gap-1.5 bg-accent/10 border border-accent/20 rounded-full px-3 py-1.5">
+              <Award className="h-4 w-4 text-accent" />
+              <span className="text-sm font-bold text-accent">{performanceStats.streak}</span>
+              <span className="text-xs text-accent/70">Streak 🔥</span>
+            </div>
           </div>
 
           {/* Location + join date */}
@@ -367,7 +364,7 @@ export default function UserProfile() {
           </div>
 
           {/* Following/Followers */}
-          <div className="flex gap-4 mt-2">
+          <div className="flex gap-4 mt-2.5">
             <button className="hover:underline text-sm" onClick={() => { setDialogTab("following"); setFollowersDialogOpen(true); }}>
               <span className="font-bold">{followingCount}</span> <span className="text-muted-foreground">Following</span>
             </button>
@@ -398,20 +395,30 @@ export default function UserProfile() {
           ))}
         </TabsList>
 
-        {/* Posts tab */}
+        {/* Posts tab with pinned post */}
         <TabsContent value="posts" className="mt-0">
           {userPosts.length === 0 ? (
             <div className="p-12 text-center text-muted-foreground"><FileText className="h-10 w-10 mx-auto mb-3 opacity-40" /><p className="text-sm">No posts yet</p></div>
           ) : (
             <div className="divide-y divide-border">
-              {userPosts.map(post => (
+              {/* Pinned Post */}
+              {pinnedPost && (
+                <div>
+                  <div className="flex items-center gap-1.5 px-4 pt-2 text-xs text-muted-foreground">
+                    <Pin className="h-3 w-3" />
+                    <span className="font-medium">Pinned</span>
+                  </div>
+                  <XPostCard post={castToPost(pinnedPost)} currentUserId={user?.id} onLike={handleLike} onComment={openComments} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handlePostShare} onDelete={isOwnProfile ? handleDelete : undefined} />
+                </div>
+              )}
+              {regularPosts.map(post => (
                 <XPostCard key={post.id} post={castToPost(post)} currentUserId={user?.id} onLike={handleLike} onComment={openComments} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handlePostShare} onDelete={isOwnProfile ? handleDelete : undefined} />
               ))}
             </div>
           )}
         </TabsContent>
 
-        {/* Replies tab - show reposts for now */}
+        {/* Replies tab */}
         <TabsContent value="replies" className="mt-0">
           {repostedPosts.length === 0 ? (
             <div className="p-12 text-center text-muted-foreground"><MessageCircle className="h-10 w-10 mx-auto mb-3 opacity-40" /><p className="text-sm">No replies yet</p></div>
@@ -451,7 +458,7 @@ export default function UserProfile() {
           )}
         </TabsContent>
 
-        {/* Portfolio tab */}
+        {/* Portfolio tab — enhanced */}
         <TabsContent value="portfolio" className="mt-0">
           {!profileData.portfolio_public && !isOwnProfile ? (
             <div className="p-12 text-center">
@@ -467,23 +474,29 @@ export default function UserProfile() {
               {isOwnProfile && <Button className="mt-4 rounded-full" onClick={() => navigate("/track-investments")}>Add Trade</Button>}
             </div>
           ) : (
-            <div className="p-4">
-              {/* Portfolio summary header */}
+            <div className="p-4 space-y-4">
+              {/* Portfolio Summary Card */}
               {portfolioSummary && (
-                <Card className="mb-4 border-border overflow-hidden">
+                <Card className="soft-card overflow-hidden">
                   <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-sm font-semibold text-muted-foreground">Portfolio Value</span>
-                      {isOwnProfile && (
-                        <Button variant="outline" size="sm" className="h-7 rounded-full text-xs" onClick={() => navigate("/track-investments")}>
-                          Manage <ChevronRight className="h-3 w-3 ml-1" />
-                        </Button>
-                      )}
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-muted-foreground font-medium">Portfolio Value</span>
+                      <Button variant="ghost" size="sm" className="h-7 rounded-full text-xs text-primary" onClick={() => navigate("/track-investments")}>
+                        View Full Portfolio <ChevronRight className="h-3 w-3 ml-0.5" />
+                      </Button>
                     </div>
                     <div className="text-2xl font-extrabold">KES {portfolioSummary.totalValue.toLocaleString()}</div>
                     <div className={`text-sm font-semibold mt-1 flex items-center gap-1 ${portfolioSummary.totalGain >= 0 ? "text-bull" : "text-bear"}`}>
                       {portfolioSummary.totalGain >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-                      {portfolioSummary.totalGain >= 0 ? "+" : ""}KES {portfolioSummary.totalGain.toLocaleString()} ({portfolioSummary.gainPercent.toFixed(1)}%)
+                      {portfolioSummary.totalGain >= 0 ? "+" : ""}KES {Math.abs(portfolioSummary.totalGain).toLocaleString()} ({portfolioSummary.gainPercent.toFixed(1)}%)
+                    </div>
+                    
+                    {/* Mini performance chart placeholder */}
+                    <div className="mt-3 h-16 flex items-end gap-0.5">
+                      {Array.from({ length: 20 }).map((_, i) => {
+                        const h = 20 + Math.random() * 80;
+                        return <div key={i} className="flex-1 bg-primary/20 rounded-t" style={{ height: `${h}%` }} />;
+                      })}
                     </div>
                   </CardContent>
                 </Card>
@@ -492,9 +505,9 @@ export default function UserProfile() {
               {/* Holdings list */}
               <div className="space-y-1">
                 {portfolioSummary?.holdings.map(h => (
-                  <div key={h.symbol} className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => navigate(`/stock/${h.symbol}`)}>
+                  <div key={h.symbol} className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/30 transition-colors cursor-pointer tap-scale" onClick={() => navigate(`/stock/${h.symbol}`)}>
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-muted/50 flex items-center justify-center text-xs font-bold text-primary">{h.symbol.slice(0, 2)}</div>
+                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">{h.symbol.slice(0, 2)}</div>
                       <div>
                         <div className="font-semibold text-sm">${h.symbol}</div>
                         <div className="text-xs text-muted-foreground">{h.shares} shares · KES {h.avg_cost.toFixed(2)} avg</div>
@@ -515,7 +528,7 @@ export default function UserProfile() {
 
               {/* Share portfolio button */}
               {isOwnProfile && (
-                <Button className="w-full mt-4 rounded-full h-11 font-bold" onClick={() => toast({ title: "Portfolio shared to compose!" })}>
+                <Button className="w-full rounded-full h-11 font-bold btn-primary" onClick={() => toast({ title: "Portfolio shared to compose!" })}>
                   <Share className="h-4 w-4 mr-2" />Share Portfolio
                 </Button>
               )}
@@ -525,21 +538,7 @@ export default function UserProfile() {
       </Tabs>
 
       {/* Comment sheet */}
-      <XCommentSheet
-        open={commentSheetOpen}
-        onOpenChange={setCommentSheetOpen}
-        post={selectedPost}
-        currentUserId={user?.id}
-        comments={comments}
-        loadingComments={loadingComments}
-        onAddComment={handleAddComment}
-        onLike={handleLike}
-        onRepost={handleRepost}
-        onBookmark={handleBookmark}
-        onShare={handlePostShare}
-        onDelete={isOwnProfile ? handleDelete : undefined}
-      />
-
+      <XCommentSheet open={commentSheetOpen} onOpenChange={setCommentSheetOpen} post={selectedPost} currentUserId={user?.id} comments={comments} loadingComments={loadingComments} onAddComment={handleAddComment} onLike={handleLike} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handlePostShare} onDelete={isOwnProfile ? handleDelete : undefined} />
       {userId && <FollowersDialog open={followersDialogOpen} onOpenChange={setFollowersDialogOpen} userId={userId} initialTab={dialogTab} />}
       <EditProfileDialog open={editProfileOpen} onOpenChange={(open) => { setEditProfileOpen(open); if (!open) fetchProfile(); }} />
     </div>

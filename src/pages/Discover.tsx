@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { Users, Trophy, MessageCircle, BookOpen, TrendingUp, Hash, Play, PieChart, Coffee, Heart, Repeat2, UserPlus } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Users, Trophy, MessageCircle, BookOpen, TrendingUp, Hash, Play, PieChart, Coffee, Heart, Repeat2, UserPlus, Flame, ChevronRight } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TopBar } from "@/components/shared/TopBar";
@@ -12,6 +12,7 @@ import { useFollows } from "@/hooks/useFollows";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { SparklineChart } from "@/components/shared/SparklineChart";
 
 interface TopTrader {
   id: string;
@@ -20,6 +21,16 @@ interface TopTrader {
   avatar_url: string | null;
   posts_count: number;
 }
+
+const trendingStocks = [
+  { symbol: "SAFCOM", name: "Safaricom", price: 12.85, change: "+1.18%", isUp: true },
+  { symbol: "EQTY", name: "Equity Group", price: 62.50, change: "+13.12%", isUp: true },
+  { symbol: "KCB", name: "KCB Group", price: 45.75, change: "+2.81%", isUp: true },
+  { symbol: "COOP", name: "Co-op Bank", price: 17.25, change: "+2.68%", isUp: true },
+  { symbol: "SCBK", name: "StanChart", price: 185.00, change: "+3.18%", isUp: true },
+  { symbol: "BAT", name: "BAT Kenya", price: 425.00, change: "+1.19%", isUp: true },
+  { symbol: "NCBA", name: "NCBA Group", price: 52.25, change: "-1.42%", isUp: false },
+];
 
 export default function Discover() {
   const navigate = useNavigate();
@@ -38,30 +49,9 @@ export default function Discover() {
   };
 
   const courses = [
-    { 
-      title: "Stock Market Basics", 
-      progress: 0, 
-      lessons: 12, 
-      duration: "2 hours",
-      level: "Beginner",
-      type: "video"
-    },
-    { 
-      title: "Technical Analysis", 
-      progress: 40, 
-      lessons: 8, 
-      duration: "3 hours",
-      level: "Intermediate",
-      type: "text"
-    },
-    { 
-      title: "Portfolio Management", 
-      progress: 100, 
-      lessons: 10, 
-      duration: "2.5 hours",
-      level: "Advanced",
-      type: "audio"
-    },
+    { title: "Stock Market Basics", progress: 0, lessons: 12, duration: "2 hours", level: "Beginner", type: "video" },
+    { title: "Technical Analysis", progress: 40, lessons: 8, duration: "3 hours", level: "Intermediate", type: "text" },
+    { title: "Portfolio Management", progress: 100, lessons: 10, duration: "2.5 hours", level: "Advanced", type: "audio" },
   ];
 
   useEffect(() => {
@@ -69,7 +59,6 @@ export default function Discover() {
   }, []);
 
   const fetchTopTraders = async () => {
-    // Use public view to exclude sensitive data like email
     const { data: profiles } = await supabase
       .from('profiles_public')
       .select('id, user_id, full_name, avatar_url')
@@ -85,7 +74,6 @@ export default function Discover() {
           return { ...profile, posts_count: count || 0 };
         })
       );
-      
       setTopTraders(
         tradersWithCounts
           .sort((a, b) => b.posts_count - a.posts_count)
@@ -94,10 +82,8 @@ export default function Discover() {
     }
   };
 
-  // Filter posts based on feed tab
   const getFilteredPosts = () => {
     let filtered = [...posts];
-    
     if (feedTab === "latest") {
       filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     } else if (feedTab === "top") {
@@ -105,25 +91,18 @@ export default function Discover() {
     } else if (feedTab === "following") {
       filtered = filtered.filter(post => isFollowing(post.user_id));
     }
-    
-    return filtered.slice(0, 5);
+    return filtered.slice(0, 8);
   };
 
   const filteredPosts = getFilteredPosts();
 
   const handleLike = async (postId: string) => {
-    if (!user) {
-      navigate('/auth');
-      return;
-    }
+    if (!user) { navigate('/auth'); return; }
     await likePost(postId);
   };
 
   const handleFollow = async (targetUserId: string) => {
-    if (!user) {
-      navigate('/auth');
-      return;
-    }
+    if (!user) { navigate('/auth'); return; }
     const { error } = await toggleFollow(targetUserId);
     if (!error) {
       toast({ title: isFollowing(targetUserId) ? "Unfollowed" : "Following!" });
@@ -150,23 +129,13 @@ export default function Discover() {
     return content.split(/(\$[A-Z]+|#\w+)/g).map((part, i) => {
       if (part.startsWith('$')) {
         return (
-          <span 
-            key={i} 
-            className="text-primary font-medium cursor-pointer hover:underline"
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate(`/stock/${part.slice(1)}`);
-            }}
-          >
+          <span key={i} className="text-primary font-medium cursor-pointer hover:underline"
+            onClick={(e) => { e.stopPropagation(); navigate(`/stock/${part.slice(1)}`); }}>
             {part}
           </span>
         );
       } else if (part.startsWith('#')) {
-        return (
-          <span key={i} className="text-primary cursor-pointer hover:underline">
-            {part}
-          </span>
-        );
+        return <span key={i} className="text-primary cursor-pointer hover:underline">{part}</span>;
       }
       return part;
     });
@@ -181,8 +150,44 @@ export default function Discover() {
         showNotifications={true}
       />
 
-      <div className="p-4 space-y-4 stagger-children">
-        {/* Large Insights Card */}
+      <div className="p-4 space-y-5 stagger-children">
+        {/* Trending Stocks Carousel */}
+        <div>
+          <div className="flex items-center justify-between mb-2.5">
+            <h3 className="text-sm font-bold flex items-center gap-1.5">
+              <Flame className="h-4 w-4 text-accent" />
+              Trending Now
+            </h3>
+            <Button variant="ghost" size="sm" className="h-7 text-xs text-primary rounded-full px-2" onClick={() => navigate('/markets')}>
+              All <ChevronRight className="h-3 w-3" />
+            </Button>
+          </div>
+          <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-hide -mx-4 px-4">
+            {trendingStocks.map((s) => (
+              <Card
+                key={s.symbol}
+                className="soft-card shrink-0 w-[120px] cursor-pointer tap-scale"
+                onClick={() => navigate(`/stock/${s.symbol}`)}
+              >
+                <CardContent className="p-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-bold">${s.symbol}</span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground truncate">{s.name}</p>
+                  <div className="my-1.5">
+                    <SparklineChart isPositive={s.isUp} width={80} height={20} />
+                  </div>
+                  <div className="text-xs font-bold">KES {s.price}</div>
+                  <div className={`text-[10px] font-semibold ${s.isUp ? 'text-bull' : 'text-bear'}`}>
+                    {s.change}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+
+        {/* Portfolio Insights Card */}
         <Card className="card-hero cursor-pointer" onClick={() => navigate('/track-investments')}>
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-3">
@@ -194,15 +199,12 @@ export default function Discover() {
                 {portfolioInsights.totalReturn}
               </Badge>
             </div>
-            
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <div className="text-xs text-muted-foreground mb-1">Top Holdings</div>
                 <div className="flex space-x-1">
                   {portfolioInsights.holdings.map((stock) => (
-                    <Badge key={stock} variant="outline" className="text-xs px-1">
-                      {stock}
-                    </Badge>
+                    <Badge key={stock} variant="outline" className="text-xs px-1">{stock}</Badge>
                   ))}
                 </div>
                 <div className="mt-2 text-xs">
@@ -212,7 +214,6 @@ export default function Discover() {
                   </span>
                 </div>
               </div>
-              
               <div className="w-12 h-12 rounded-full bg-gradient-primary flex items-center justify-center">
                 <PieChart className="h-6 w-6 text-white" />
               </div>
@@ -221,118 +222,89 @@ export default function Discover() {
         </Card>
 
         {/* 2-Column Grid of Main Cards */}
-        <div className="grid grid-cols-2 gap-4">
-          <Card className="card-gradient cursor-pointer" onClick={() => navigate('/traders-hub')}>
-            <CardContent className="p-4">
+        <div className="grid grid-cols-2 gap-3">
+          <Card className="card-gradient cursor-pointer tap-scale" onClick={() => navigate('/traders-hub')}>
+            <CardContent className="p-3.5">
               <div className="flex items-center space-x-2 mb-2">
                 <Users className="h-4 w-4 text-primary" />
                 <h4 className="font-semibold text-sm">TradersHub</h4>
               </div>
-              <p className="text-xs text-muted-foreground mb-3">
-                Connect & interact with traders
-              </p>
-              <div className="text-xs">
-                <div className="flex items-center space-x-1 text-accent">
-                  <Users className="h-3 w-3" />
-                  <span>1.2K active traders</span>
-                </div>
+              <p className="text-xs text-muted-foreground mb-2.5">Connect & interact with traders</p>
+              <div className="text-xs flex items-center space-x-1 text-accent">
+                <Users className="h-3 w-3" />
+                <span>1.2K active traders</span>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="card-gradient cursor-pointer" onClick={() => navigate('/learn')}>
-            <CardContent className="p-4">
+          <Card className="card-gradient cursor-pointer tap-scale" onClick={() => navigate('/learn')}>
+            <CardContent className="p-3.5">
               <div className="flex items-center space-x-2 mb-2">
                 <BookOpen className="h-4 w-4 text-primary" />
                 <h4 className="font-semibold text-sm">Learn</h4>
               </div>
-              <p className="text-xs text-muted-foreground mb-3">
-                Investment courses & guides
-              </p>
-              <div className="text-xs">
-                <div className="flex items-center space-x-1 text-accent">
-                  <Play className="h-3 w-3" />
-                  <span>12 courses available</span>
-                </div>
+              <p className="text-xs text-muted-foreground mb-2.5">Investment courses & guides</p>
+              <div className="text-xs flex items-center space-x-1 text-accent">
+                <Play className="h-3 w-3" />
+                <span>12 courses available</span>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="card-gradient cursor-pointer" onClick={() => navigate('/track-investments')}>
-            <CardContent className="p-4">
+          <Card className="card-gradient cursor-pointer tap-scale" onClick={() => navigate('/track-investments')}>
+            <CardContent className="p-3.5">
               <div className="flex items-center space-x-2 mb-2">
                 <TrendingUp className="h-4 w-4 text-primary" />
                 <h4 className="font-semibold text-sm">My Investments</h4>
               </div>
-              <p className="text-xs text-muted-foreground mb-3">
-                Track your portfolio
-              </p>
-              <div className="text-xs">
-                <div className="flex items-center space-x-1 text-accent">
-                  <PieChart className="h-3 w-3" />
-                  <span>View holdings</span>
-                </div>
+              <p className="text-xs text-muted-foreground mb-2.5">Track your portfolio</p>
+              <div className="text-xs flex items-center space-x-1 text-accent">
+                <PieChart className="h-3 w-3" />
+                <span>View holdings</span>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="card-gradient cursor-pointer" onClick={() => navigate('/rooms')}>
-            <CardContent className="p-4">
+          <Card className="card-gradient cursor-pointer tap-scale" onClick={() => navigate('/rooms')}>
+            <CardContent className="p-3.5">
               <div className="flex items-center space-x-2 mb-2">
                 <Hash className="h-4 w-4 text-primary" />
                 <h4 className="font-semibold text-sm">Rooms</h4>
               </div>
-              <p className="text-xs text-muted-foreground mb-3">
-                Real-time trading rooms
-              </p>
-              <div className="text-xs">
-                <div className="flex items-center space-x-1 text-accent">
-                  <Coffee className="h-3 w-3" />
-                  <span>3 active rooms</span>
-                </div>
+              <p className="text-xs text-muted-foreground mb-2.5">Real-time trading rooms</p>
+              <div className="text-xs flex items-center space-x-1 text-accent">
+                <Coffee className="h-3 w-3" />
+                <span>3 active rooms</span>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Expanded Sections */}
+        {/* Feed / Learn / Top Traders Tabs */}
         <Tabs defaultValue="hub" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="hub" className="text-xs">Feed</TabsTrigger>
-            <TabsTrigger value="learn" className="text-xs">Learn</TabsTrigger>
-            <TabsTrigger value="insights" className="text-xs">Top Traders</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 h-10">
+            <TabsTrigger value="hub" className="text-xs font-semibold">Feed</TabsTrigger>
+            <TabsTrigger value="learn" className="text-xs font-semibold">Learn</TabsTrigger>
+            <TabsTrigger value="insights" className="text-xs font-semibold">Top Traders</TabsTrigger>
           </TabsList>
 
           {/* TradersHub Feed */}
           <TabsContent value="hub" className="space-y-3 mt-4">
             <div className="flex justify-between items-center">
-              <div className="flex space-x-2">
-                <Button 
-                  variant={feedTab === "latest" ? "default" : "outline"} 
-                  size="sm" 
-                  className="text-xs"
-                  onClick={() => setFeedTab("latest")}
-                >
-                  Latest
-                </Button>
-                <Button 
-                  variant={feedTab === "top" ? "default" : "ghost"} 
-                  size="sm" 
-                  className="text-xs"
-                  onClick={() => setFeedTab("top")}
-                >
-                  Top
-                </Button>
-                <Button 
-                  variant={feedTab === "following" ? "default" : "ghost"} 
-                  size="sm" 
-                  className="text-xs"
-                  onClick={() => setFeedTab("following")}
-                >
-                  Following
-                </Button>
+              <div className="flex space-x-1.5">
+                {["latest", "top", "following"].map(tab => (
+                  <Button 
+                    key={tab}
+                    variant={feedTab === tab ? "default" : "ghost"} 
+                    size="sm" 
+                    className="text-xs h-8 rounded-full capitalize"
+                    onClick={() => setFeedTab(tab)}
+                  >
+                    {tab}
+                  </Button>
+                ))}
               </div>
-              <Button size="sm" className="text-xs" onClick={() => navigate('/traders-hub')}>
+              <Button size="sm" className="text-xs h-8 rounded-full" onClick={() => navigate('/traders-hub')}>
                 <MessageCircle className="h-3 w-3 mr-1" />
                 Post
               </Button>
@@ -357,11 +329,11 @@ export default function Discover() {
               </Card>
             ) : (
               filteredPosts.map((post) => (
-                <Card key={post.id} className="card-gradient">
+                <Card key={post.id} className="soft-card">
                   <CardContent className="p-3">
                     <div className="flex items-start space-x-3">
                       <Avatar 
-                        className="h-8 w-8 cursor-pointer"
+                        className="h-9 w-9 cursor-pointer shrink-0"
                         onClick={() => navigate(`/profile/${post.user_id}`)}
                       >
                         <AvatarImage src={post.author?.avatar_url || ""} />
@@ -369,38 +341,38 @@ export default function Discover() {
                           {getInitials(post.author?.full_name)}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center space-x-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center space-x-1.5">
                             <h4 
-                              className="font-semibold text-xs cursor-pointer hover:underline"
+                              className="font-semibold text-sm cursor-pointer hover:underline truncate"
                               onClick={() => navigate(`/profile/${post.user_id}`)}
                             >
                               {post.author?.full_name || 'User'}
                             </h4>
                           </div>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-muted-foreground shrink-0">
                             {formatTimeAgo(post.created_at)}
                           </span>
                         </div>
-                        <p className="text-xs mb-3">{renderPostContent(post.content)}</p>
-                        <div className="flex items-center space-x-4 text-xs text-muted-foreground">
+                        <p className="text-sm leading-relaxed mb-3">{renderPostContent(post.content)}</p>
+                        <div className="flex items-center space-x-5 text-xs text-muted-foreground">
                           <button 
-                            className={`flex items-center space-x-1 hover:text-red-500 ${post.is_liked ? 'text-red-500' : ''}`}
+                            className={`flex items-center space-x-1 hover:text-red-500 transition-colors ${post.is_liked ? 'text-red-500' : ''}`}
                             onClick={() => handleLike(post.id)}
                           >
-                            <Heart className={`h-3 w-3 ${post.is_liked ? 'fill-current' : ''}`} />
+                            <Heart className={`h-3.5 w-3.5 ${post.is_liked ? 'fill-current' : ''}`} />
                             <span>{post.likes_count}</span>
                           </button>
                           <button 
-                            className="flex items-center space-x-1 hover:text-primary"
+                            className="flex items-center space-x-1 hover:text-primary transition-colors"
                             onClick={() => navigate('/traders-hub')}
                           >
-                            <MessageCircle className="h-3 w-3" />
+                            <MessageCircle className="h-3.5 w-3.5" />
                             <span>{post.comments_count}</span>
                           </button>
-                          <button className="flex items-center space-x-1 hover:text-green-500">
-                            <Repeat2 className="h-3 w-3" />
+                          <button className="flex items-center space-x-1 hover:text-bull transition-colors">
+                            <Repeat2 className="h-3.5 w-3.5" />
                             <span>{post.reposts_count}</span>
                           </button>
                         </div>
@@ -414,26 +386,24 @@ export default function Discover() {
 
           {/* Learn Courses */}
           <TabsContent value="learn" className="space-y-3 mt-4">
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex space-x-2">
-                <Button variant="outline" size="sm" className="text-xs">Beginner</Button>
-                <Button variant="ghost" size="sm" className="text-xs">Intermediate</Button>
-                <Button variant="ghost" size="sm" className="text-xs">Advanced</Button>
+            <div className="flex justify-between items-center mb-3">
+              <div className="flex space-x-1.5">
+                <Button variant="outline" size="sm" className="text-xs h-8 rounded-full">Beginner</Button>
+                <Button variant="ghost" size="sm" className="text-xs h-8 rounded-full">Intermediate</Button>
+                <Button variant="ghost" size="sm" className="text-xs h-8 rounded-full">Advanced</Button>
               </div>
-              <Button size="sm" className="text-xs" onClick={() => navigate('/learn')}>
+              <Button size="sm" className="text-xs h-8 rounded-full" onClick={() => navigate('/learn')}>
                 View All
               </Button>
             </div>
 
-            {courses.slice(0, 3).map((course, index) => (
-              <Card key={index} className="card-gradient cursor-pointer" onClick={() => navigate('/learn')}>
-                <CardContent className="p-3">
+            {courses.map((course, index) => (
+              <Card key={index} className="soft-card cursor-pointer tap-scale" onClick={() => navigate('/learn')}>
+                <CardContent className="p-3.5">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center space-x-2">
-                      <h4 className="font-semibold text-xs">{course.title}</h4>
-                      <Badge variant="outline" className="text-xs px-1">
-                        {course.level}
-                      </Badge>
+                      <h4 className="font-semibold text-sm">{course.title}</h4>
+                      <Badge variant="outline" className="text-[10px] px-1.5 rounded-full">{course.level}</Badge>
                     </div>
                     <div className="flex items-center space-x-1">
                       {course.type === 'video' && <Play className="h-3 w-3" />}
@@ -444,44 +414,44 @@ export default function Discover() {
                   </div>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs text-muted-foreground">{course.lessons} lessons</span>
-                    <span className="text-xs text-primary">{course.progress}%</span>
+                    <span className="text-xs text-primary font-medium">{course.progress}%</span>
                   </div>
-                  <div className="w-full bg-muted rounded-full h-1">
+                  <div className="w-full bg-muted rounded-full h-1.5">
                     <div 
-                      className="bg-primary rounded-full h-1 transition-all"
+                      className="bg-primary rounded-full h-1.5 transition-all"
                       style={{ width: `${course.progress}%` }}
-                    ></div>
+                    />
                   </div>
                 </CardContent>
               </Card>
             ))}
           </TabsContent>
 
-          {/* Top Traders Insights */}
+          {/* Top Traders */}
           <TabsContent value="insights" className="space-y-3 mt-4">
             {topTraders.length === 0 ? (
-              <Card className="card-gradient">
+              <Card className="soft-card">
                 <CardContent className="p-6 text-center">
                   <p className="text-muted-foreground text-sm">No traders to show yet</p>
                 </CardContent>
               </Card>
             ) : (
               topTraders.map((trader) => (
-                <Card key={trader.id} className="card-gradient">
-                  <CardContent className="p-3">
+                <Card key={trader.id} className="soft-card tap-scale">
+                  <CardContent className="p-3.5">
                     <div className="flex items-center justify-between">
                       <div 
                         className="flex items-center space-x-3 cursor-pointer"
                         onClick={() => navigate(`/profile/${trader.user_id}`)}
                       >
-                        <Avatar className="h-8 w-8">
+                        <Avatar className="h-10 w-10">
                           <AvatarImage src={trader.avatar_url || ""} />
                           <AvatarFallback className="bg-accent text-accent-foreground text-xs">
                             {getInitials(trader.full_name)}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <div className="font-medium text-xs">{trader.full_name || "Trader"}</div>
+                          <div className="font-semibold text-sm">{trader.full_name || "Trader"}</div>
                           <div className="text-xs text-muted-foreground">{trader.posts_count} posts</div>
                         </div>
                       </div>
@@ -490,7 +460,7 @@ export default function Discover() {
                           <Button 
                             variant={isFollowing(trader.user_id) ? "outline" : "default"} 
                             size="sm" 
-                            className="text-xs h-7"
+                            className="text-xs h-8 rounded-full"
                             onClick={() => handleFollow(trader.user_id)}
                           >
                             {isFollowing(trader.user_id) ? "Following" : (
