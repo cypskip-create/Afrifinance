@@ -362,6 +362,18 @@
     100% { transform: translateX(-50%); }
   }
 
+  /* Auto-scrolling ticker */
+  .animate-ticker {
+    animation: ticker 20s linear infinite;
+  }
+  .animate-ticker:hover {
+    animation-play-state: paused;
+  }
+  @keyframes ticker {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
   /* Premium pill buttons */
   .pill-tab {
     @apply px-4 py-2 rounded-full text-sm font-medium transition-all;
@@ -380,6 +392,13 @@
   .soft-card:hover {
     box-shadow: var(--shadow-lg);
     transform: translateY(-1px);
+  }
+
+  /* Upgrade banner */
+  .upgrade-banner {
+    @apply rounded-2xl p-3 flex items-center justify-between cursor-pointer;
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.1), hsl(var(--accent) / 0.1));
+    border: 1px solid hsl(var(--primary) / 0.2);
   }
 }
 
