@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { User, Settings, CreditCard, Users, Bell, Shield, Crown, Zap, LogOut, ChevronRight, Smartphone, Globe, HelpCircle, FileText, Star, Eye, EyeOff, Lock } from "lucide-react";
+import { User, Settings, CreditCard, Users, Bell, Shield, Crown, Zap, LogOut, ChevronRight, Smartphone, Globe, HelpCircle, FileText, Star, Eye, EyeOff, Check } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,24 @@ import { useNavigate } from "react-router-dom";
 import { EditProfileDialog } from "@/components/profile/EditProfileDialog";
 import { useToast } from "@/hooks/use-toast";
 
+const freeFeatures = [
+  "Basic market data & charts",
+  "Standard watchlist (5 stocks)",
+  "Community access (read-only)",
+  "Ads included",
+];
+
+const premiumFeatures = [
+  "Ad-free experience",
+  "Advanced charts & 90+ indicators",
+  "AI-powered insights & recommendations",
+  "Unlimited price alerts",
+  "Priority support",
+  "Exclusive portfolio analytics",
+  "Full TradersHub posting access",
+  "Real-time NSE data",
+];
+
 export default function Account() {
   const [editProfileOpen, setEditProfileOpen] = useState(false);
   const [portfolioPublic, setPortfolioPublic] = useState(true);
@@ -27,35 +45,8 @@ export default function Account() {
     navigate('/auth');
   };
 
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
-  const subscriptionPlans = [
-    {
-      name: "Free",
-      price: "KES 0",
-      features: ["Basic features", "Standard tools", "Ads included"],
-      current: profile?.subscription_plan === 'free' || !profile?.subscription_plan
-    },
-    {
-      name: "Premium",
-      price: "KES 999/month",
-      features: ["Ad-free experience", "Enhanced tools", "Advanced analytics"],
-      current: profile?.subscription_plan === 'premium'
-    },
-    {
-      name: "Premium+",
-      price: "KES 1,999/month", 
-      features: ["Everything included", "Real-time data", "Priority support"],
-      current: profile?.subscription_plan === 'premium+'
-    }
-  ];
+  const getInitials = (name: string) => name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+  const isPremium = profile?.subscription_plan === 'premium' || profile?.subscription_plan === 'premium+';
 
   const menuItems = [
     { icon: CreditCard, label: "Payment Methods", description: "Manage your cards", action: () => {} },
@@ -70,15 +61,10 @@ export default function Account() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <TopBar 
-        title="Account" 
-        subtitle="Profile & settings"
-        showSearch={false}
-        showNotifications={true}
-      />
+      <TopBar title="Account" subtitle="Profile & settings" showSearch={false} showNotifications={true} />
 
       <div className="p-4 space-y-5">
-        {/* Professional Profile Card */}
+        {/* Profile Card */}
         <Card className="card-gradient overflow-hidden">
           <div className="h-20 bg-gradient-primary" />
           <CardContent className="relative pt-0 pb-4">
@@ -89,13 +75,12 @@ export default function Account() {
                   {profile?.full_name ? getInitials(profile.full_name) : <User className="h-10 w-10" />}
                 </AvatarFallback>
               </Avatar>
-              
               <div className="mt-3 text-center">
                 <h3 className="font-bold text-xl flex items-center justify-center gap-2">
                   {profile?.full_name || user?.email?.split('@')[0] || 'User'}
                   <Badge variant="secondary" className="text-xs font-medium">
                     <Crown className="h-3 w-3 mr-1" />
-                    {profile?.subscription_plan?.charAt(0).toUpperCase() + profile?.subscription_plan?.slice(1) || 'Free'}
+                    {isPremium ? 'Premium' : 'Free'}
                   </Badge>
                 </h3>
                 <p className="text-sm text-muted-foreground mt-1">{user?.email}</p>
@@ -103,11 +88,7 @@ export default function Account() {
                   Member since {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Recently'}
                 </p>
               </div>
-              
-              <Button 
-                className="mt-4 w-full max-w-[200px] btn-primary" 
-                onClick={() => setEditProfileOpen(true)}
-              >
+              <Button className="mt-4 w-full max-w-[200px] btn-primary" onClick={() => setEditProfileOpen(true)}>
                 Edit Profile
               </Button>
             </div>
@@ -116,49 +97,66 @@ export default function Account() {
 
         <EditProfileDialog open={editProfileOpen} onOpenChange={setEditProfileOpen} />
 
-        {/* Subscription Plans */}
+        {/* Subscription Plans — Side by Side Comparison */}
         <Card className="card-gradient">
-          <CardHeader>
+          <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center space-x-2">
               <Crown className="h-5 w-5 text-accent" />
               <span>Subscription Plans</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {subscriptionPlans.map((plan, index) => (
-              <div 
-                key={plan.name}
-                className={`p-4 rounded-lg border-2 transition-all ${
-                  plan.current 
-                    ? 'border-primary bg-primary/5' 
-                    : 'border-border hover:border-primary/50'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <h4 className="font-semibold flex items-center space-x-2">
-                      <span>{plan.name}</span>
-                      {plan.current && <Badge variant="default">Current</Badge>}
-                      {plan.name === "Premium+" && <Zap className="h-4 w-4 text-accent" />}
-                    </h4>
-                    <p className="text-sm text-muted-foreground">{plan.price}</p>
-                  </div>
-                  {!plan.current && (
-                    <Button size="sm" variant={plan.name === "Premium+" ? "default" : "outline"}>
-                      Upgrade
-                    </Button>
-                  )}
+            {/* Free Plan */}
+            <div className={`p-4 rounded-2xl border-2 transition-all ${!isPremium ? 'border-primary bg-primary/5' : 'border-border'}`}>
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h4 className="font-bold text-base flex items-center gap-2">
+                    Free
+                    {!isPremium && <Badge variant="default" className="text-[10px]">Current</Badge>}
+                  </h4>
+                  <p className="text-xs text-muted-foreground">KES 0/month</p>
                 </div>
-                <ul className="text-xs space-y-1 text-muted-foreground">
-                  {plan.features.map((feature, i) => (
-                    <li key={i} className="flex items-center space-x-2">
-                      <div className="w-1 h-1 bg-primary rounded-full"></div>
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
               </div>
-            ))}
+              <ul className="space-y-1.5">
+                {freeFeatures.map((f, i) => (
+                  <li key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Check className="h-3 w-3 text-muted-foreground shrink-0" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Premium Plan */}
+            <div className={`p-4 rounded-2xl border-2 transition-all relative overflow-hidden ${isPremium ? 'border-primary bg-primary/5' : 'border-accent/50 bg-accent/5'}`}>
+              <div className="absolute top-0 right-0 bg-accent text-accent-foreground text-[9px] font-bold px-2 py-0.5 rounded-bl-lg">
+                RECOMMENDED
+              </div>
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h4 className="font-bold text-base flex items-center gap-2">
+                    <Zap className="h-4 w-4 text-accent" />
+                    Premium
+                    {isPremium && <Badge variant="default" className="text-[10px]">Current</Badge>}
+                  </h4>
+                  <p className="text-sm font-semibold text-foreground">KES 999<span className="text-xs text-muted-foreground font-normal">/month</span></p>
+                </div>
+              </div>
+              <ul className="space-y-1.5 mb-4">
+                {premiumFeatures.map((f, i) => (
+                  <li key={i} className="flex items-center gap-2 text-xs">
+                    <Check className="h-3 w-3 text-primary shrink-0" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              {!isPremium && (
+                <Button className="w-full h-11 rounded-2xl btn-primary font-bold text-sm">
+                  <Crown className="h-4 w-4 mr-2" />
+                  Upgrade to Premium
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -173,9 +171,7 @@ export default function Account() {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between py-2">
               <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-lg bg-muted/50 flex items-center justify-center">
-                  <Star className="h-4 w-4" />
-                </div>
+                <div className="h-9 w-9 rounded-lg bg-muted/50 flex items-center justify-center"><Star className="h-4 w-4" /></div>
                 <div>
                   <div className="font-medium text-sm">Theme</div>
                   <div className="text-xs text-muted-foreground">Light / Dark mode</div>
@@ -183,9 +179,7 @@ export default function Account() {
               </div>
               <ThemeToggle />
             </div>
-            
             <Separator />
-
             <div className="flex items-center justify-between py-2">
               <div className="flex items-center gap-3">
                 <div className="h-9 w-9 rounded-lg bg-muted/50 flex items-center justify-center">
@@ -193,31 +187,19 @@ export default function Account() {
                 </div>
                 <div>
                   <div className="font-medium text-sm">Portfolio Visibility</div>
-                  <div className="text-xs text-muted-foreground">
-                    {portfolioPublic ? "Public - Others can see your investments" : "Private - Only you can see"}
-                  </div>
+                  <div className="text-xs text-muted-foreground">{portfolioPublic ? "Public" : "Private"}</div>
                 </div>
               </div>
-              <Switch 
-                checked={portfolioPublic} 
-                onCheckedChange={async (checked) => {
-                  setPortfolioPublic(checked);
-                  await updateProfile({ portfolio_public: checked } as any);
-                  toast({ 
-                    title: checked ? "Portfolio is now public" : "Portfolio is now private",
-                    description: checked ? "Other users can view your investments" : "Your investments are hidden from others"
-                  });
-                }} 
-              />
+              <Switch checked={portfolioPublic} onCheckedChange={async (checked) => {
+                setPortfolioPublic(checked);
+                await updateProfile({ portfolio_public: checked } as any);
+                toast({ title: checked ? "Portfolio is now public" : "Portfolio is now private" });
+              }} />
             </div>
-            
             <Separator />
-            
             <div className="flex items-center justify-between py-2">
               <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-lg bg-muted/50 flex items-center justify-center">
-                  <Bell className="h-4 w-4" />
-                </div>
+                <div className="h-9 w-9 rounded-lg bg-muted/50 flex items-center justify-center"><Bell className="h-4 w-4" /></div>
                 <div>
                   <div className="font-medium text-sm">Price Alerts</div>
                   <div className="text-xs text-muted-foreground">Push notifications</div>
@@ -225,14 +207,10 @@ export default function Account() {
               </div>
               <Switch defaultChecked />
             </div>
-            
             <Separator />
-            
             <div className="flex items-center justify-between py-2">
               <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-lg bg-muted/50 flex items-center justify-center">
-                  <Globe className="h-4 w-4" />
-                </div>
+                <div className="h-9 w-9 rounded-lg bg-muted/50 flex items-center justify-center"><Globe className="h-4 w-4" /></div>
                 <div>
                   <div className="font-medium text-sm">News Alerts</div>
                   <div className="text-xs text-muted-foreground">Market updates</div>
@@ -243,7 +221,7 @@ export default function Account() {
           </CardContent>
         </Card>
 
-        {/* Quick Actions Menu */}
+        {/* Quick Actions */}
         <Card className="card-gradient">
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center space-x-2">
@@ -254,10 +232,7 @@ export default function Account() {
           <CardContent className="p-0">
             {menuItems.map((item, index) => (
               <div key={item.label}>
-                <button
-                  onClick={item.action}
-                  className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
-                >
+                <button onClick={item.action} className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-xl bg-muted/50 flex items-center justify-center">
                       <item.icon className="h-5 w-5 text-muted-foreground" />
@@ -275,19 +250,12 @@ export default function Account() {
           </CardContent>
         </Card>
 
-        {/* Sign Out */}
-        <Button 
-          variant="outline" 
-          className="w-full h-12 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30" 
-          onClick={handleSignOut}
-        >
+        <Button variant="outline" className="w-full h-12 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30" onClick={handleSignOut}>
           <LogOut className="h-5 w-5 mr-2" />
           Sign Out
         </Button>
         
-        <p className="text-center text-xs text-muted-foreground">
-          AfriFinance v1.0.0 • Made with ❤️ in Kenya
-        </p>
+        <p className="text-center text-xs text-muted-foreground">AfriFinance v1.0.0 • Made with ❤️ in Kenya</p>
       </div>
     </div>
   );
