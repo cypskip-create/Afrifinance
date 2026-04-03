@@ -193,6 +193,20 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Upgrade Banner for free users */}
+        {user && profile?.subscription_plan !== 'premium' && (
+          <div className="upgrade-banner" onClick={() => navigate('/account')}>
+            <div className="flex items-center gap-2">
+              <Crown className="h-4 w-4 text-primary" />
+              <div>
+                <p className="text-xs font-semibold">Unlock Premium</p>
+                <p className="text-[10px] text-muted-foreground">Advanced charts, AI insights & more</p>
+              </div>
+            </div>
+            <span className="text-xs font-bold text-primary">KES 999/mo →</span>
+          </div>
+        )}
+
         {/* Widgets */}
         <FearGreedIndex />
         {user && <QuickTradeWidget />}
