@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Crown } from "lucide-react";
 import { MorningBrief } from "@/components/home/MorningBrief";
 import { TopMoversLosers } from "@/components/home/TopMoversLosers";
 import { TrendingStocks } from "@/components/home/TrendingStocks";
