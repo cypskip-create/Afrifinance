@@ -250,7 +250,7 @@ export default function TradersHub() {
         </button>
       )}
 
-      <XComposeModal open={composeOpen} onOpenChange={setComposeOpen} user={user} profile={profile} onPost={handlePost} portfolioSnapshot={portfolioSnapshot} />
+      <XComposeModal open={composeOpen} onOpenChange={(o) => { setComposeOpen(o); if (!o) setPrefillContent(""); }} user={user} profile={profile} onPost={handlePost} portfolioSnapshot={portfolioSnapshot} prefillContent={prefillContent} />
       <XCommentSheet open={commentSheetOpen} onOpenChange={setCommentSheetOpen} post={selectedPost} currentUserId={user?.id} comments={comments} loadingComments={loadingComments} onAddComment={handleAddComment} onLike={handleLike} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handleShare} onDelete={handleDelete} />
     </div>
   );
