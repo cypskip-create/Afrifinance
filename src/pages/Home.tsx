@@ -28,6 +28,7 @@ export default function Home() {
   const { user } = useAuth();
   const { profile } = useProfile();
   const { portfolio } = usePortfolio();
+  const { posts } = usePosts();
   const navigate = useNavigate();
   const { greeting } = getTimeBasedGreeting();
   const [widgetManagerOpen, setWidgetManagerOpen] = useState(false);
