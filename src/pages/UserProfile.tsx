@@ -22,6 +22,7 @@ interface UserProfileData {
   id: string; user_id: string; full_name: string | null; avatar_url: string | null;
   banner_url: string | null; bio: string | null; portfolio_public: boolean;
   followers_count: number; following_count: number; created_at: string;
+  handle?: string | null;
 }
 
 interface UserPost {
@@ -82,10 +83,10 @@ export default function UserProfile() {
     if (!userId) return;
     setLoading(true);
     try {
-      const { data } = await supabase.from("profiles_public").select("id, user_id, full_name, avatar_url, banner_url, bio, portfolio_public, followers_count, following_count, created_at").eq("user_id", userId).maybeSingle();
+      const { data } = await supabase.from("profiles_public").select("id, user_id, full_name, avatar_url, banner_url, bio, portfolio_public, followers_count, following_count, created_at, handle").eq("user_id", userId).maybeSingle();
       if (data) setProfileData(data as UserProfileData);
       else {
-        const { data: fb } = await supabase.from("profiles").select("id, user_id, full_name, avatar_url, banner_url, bio, portfolio_public, followers_count, following_count, created_at").eq("user_id", userId).maybeSingle();
+        const { data: fb } = await supabase.from("profiles").select("id, user_id, full_name, avatar_url, banner_url, bio, portfolio_public, followers_count, following_count, created_at, handle").eq("user_id", userId).maybeSingle();
         if (fb) setProfileData(fb as UserProfileData);
       }
     } catch (err) { console.error(err); }
@@ -221,7 +222,7 @@ export default function UserProfile() {
 
   const getInitials = (name: string | null) => name ? name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) : "U";
   const formatDate = (date: string) => new Date(date).toLocaleDateString("en-US", { month: "long", year: "numeric" });
-  const handle = profileData?.full_name?.toLowerCase().replace(/\s+/g, "") || "user";
+  const handle = profileData?.handle || profileData?.full_name?.toLowerCase().replace(/\s+/g, "") || "user";
 
   const portfolioSummary = useMemo(() => {
     if (!publicPortfolio.length) return null;

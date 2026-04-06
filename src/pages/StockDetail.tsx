@@ -180,7 +180,7 @@ export default function StockDetail() {
             { icon: Bell, label: "Alert", action: () => setShowAlertsDialog(true), color: "bg-accent/10 text-accent" },
             { icon: DollarSign, label: "Trade", action: () => setTradeSheetOpen(true), color: "bg-bull/10 text-bull" },
             { icon: GitCompare, label: "Compare", action: () => navigate(`/compare?stock=${symbol}`), color: "bg-chart-3/10 text-chart-3" },
-            { icon: MessageSquare, label: "Discuss", action: () => navigate(`/tradershub`), color: "bg-chart-4/10 text-chart-4" },
+            { icon: MessageSquare, label: "Discuss", action: () => navigate(`/traders-hub?compose=true&ticker=${symbol}`), color: "bg-chart-4/10 text-chart-4" },
           ].map(btn => (
             <Button key={btn.label} variant="ghost" className={`h-14 flex-col gap-1 rounded-2xl ${btn.color} tap-scale`} onClick={btn.action}>
               <btn.icon className="h-5 w-5" />

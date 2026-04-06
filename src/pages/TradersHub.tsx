@@ -38,10 +38,31 @@ export default function TradersHub() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
+  const [prefillContent, setPrefillContent] = useState("");
+  const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
 
   useEffect(() => {
     const urlSearch = searchParams.get("search");
     if (urlSearch) setSearchQuery(urlSearch);
+    
+    // Auto-open compose with prefilled ticker from stock page
+    const shouldCompose = searchParams.get("compose");
+    const ticker = searchParams.get("ticker");
+    if (shouldCompose === "true" && ticker) {
+      setComposeOpen(true);
+      // The compose modal will receive the prefilled content
+      setPrefillContent(`$${ticker} `);
+    }
+    
+    // Scroll to specific post
+    const postId = searchParams.get("post");
+    if (postId) {
+      setHighlightedPostId(postId);
+      setTimeout(() => {
+        const el = document.getElementById(`post-${postId}`);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 500);
+    }
   }, [searchParams]);
 
   const portfolioSnapshot = useMemo(() => {
@@ -205,7 +226,9 @@ export default function TradersHub() {
           ) : (
             <div>
               {filteredPosts.map(post => (
-                <XPostCard key={post.id} post={post} currentUserId={user?.id} onLike={handleLike} onComment={openComments} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handleShare} onDelete={handleDelete} />
+                <div key={post.id} id={`post-${post.id}`} className={`transition-colors ${highlightedPostId === post.id ? 'bg-primary/5 ring-1 ring-primary/20 rounded-xl' : ''}`}>
+                  <XPostCard post={post} currentUserId={user?.id} onLike={handleLike} onComment={openComments} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handleShare} onDelete={handleDelete} />
+                </div>
               ))}
             </div>
           )}
@@ -227,7 +250,7 @@ export default function TradersHub() {
         </button>
       )}
 
-      <XComposeModal open={composeOpen} onOpenChange={setComposeOpen} user={user} profile={profile} onPost={handlePost} portfolioSnapshot={portfolioSnapshot} />
+      <XComposeModal open={composeOpen} onOpenChange={(o) => { setComposeOpen(o); if (!o) setPrefillContent(""); }} user={user} profile={profile} onPost={handlePost} portfolioSnapshot={portfolioSnapshot} prefillContent={prefillContent} />
       <XCommentSheet open={commentSheetOpen} onOpenChange={setCommentSheetOpen} post={selectedPost} currentUserId={user?.id} comments={comments} loadingComments={loadingComments} onAddComment={handleAddComment} onLike={handleLike} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handleShare} onDelete={handleDelete} />
     </div>
   );

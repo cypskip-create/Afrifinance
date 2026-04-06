@@ -20,9 +20,10 @@ interface XComposeModalProps {
   profile: { avatar_url?: string | null; full_name?: string | null } | null;
   onPost: (content: string, imageUrl?: string) => Promise<{ error?: any }>;
   portfolioSnapshot?: PortfolioSnapshot | null;
+  prefillContent?: string;
 }
 
-export function XComposeModal({ open, onOpenChange, user, profile, onPost, portfolioSnapshot }: XComposeModalProps) {
+export function XComposeModal({ open, onOpenChange, user, profile, onPost, portfolioSnapshot, prefillContent }: XComposeModalProps) {
   const navigate = useNavigate();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -33,10 +34,13 @@ export function XComposeModal({ open, onOpenChange, user, profile, onPost, portf
   const [isPosting, setIsPosting] = useState(false);
 
   useEffect(() => {
-    if (open && textareaRef.current) {
+    if (open) {
+      if (prefillContent && !content) {
+        setContent(prefillContent);
+      }
       setTimeout(() => textareaRef.current?.focus(), 100);
     }
-  }, [open]);
+  }, [open, prefillContent]);
 
   const getInitials = (name: string | null | undefined) => {
     if (!name) return "U";

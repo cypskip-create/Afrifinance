@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Crown } from "lucide-react";
+import { Crown, MessageCircle, ChevronRight } from "lucide-react";
 import { MorningBrief } from "@/components/home/MorningBrief";
 import { TopMoversLosers } from "@/components/home/TopMoversLosers";
 import { TrendingStocks } from "@/components/home/TrendingStocks";
@@ -10,14 +10,16 @@ import { WidgetManager, WidgetConfig, defaultWidgets } from "@/components/home/W
 import { TopBar } from "@/components/shared/TopBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  Search, TrendingUp, LogIn, ChevronRight, ArrowUpRight, ArrowDownRight,
+  Search, TrendingUp, LogIn, ArrowUpRight, ArrowDownRight,
   Wallet, Eye, EyeOff, BarChart3
 } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { usePortfolio } from "@/hooks/usePortfolio";
+import { usePosts } from "@/hooks/usePosts";
 import { getTimeBasedGreeting } from "@/utils/timeGreeting";
 import { SparklineChart } from "@/components/shared/SparklineChart";
 import { MarketStatusIndicator } from "@/components/shared/MarketStatusIndicator";
@@ -26,6 +28,7 @@ export default function Home() {
   const { user } = useAuth();
   const { profile } = useProfile();
   const { portfolio } = usePortfolio();
+  const { posts } = usePosts();
   const navigate = useNavigate();
   const { greeting } = getTimeBasedGreeting();
   const [widgetManagerOpen, setWidgetManagerOpen] = useState(false);
@@ -213,6 +216,46 @@ export default function Home() {
         {user && <RealtimeWatchlistWidget />}
         <TrendingStocks />
         <TopMoversLosers />
+
+        {/* Latest from TradersHub */}
+        {posts.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-2.5">
+              <h3 className="text-sm font-bold flex items-center gap-2">
+                <MessageCircle className="h-4 w-4 text-primary" />
+                TradersHub
+              </h3>
+              <Button variant="ghost" size="sm" className="h-7 text-xs text-primary rounded-full px-3" onClick={() => navigate('/traders-hub')}>
+                All <ChevronRight className="h-3 w-3 ml-0.5" />
+              </Button>
+            </div>
+            <div className="space-y-2">
+              {posts.slice(0, 3).map(post => (
+                <Card key={post.id} className="soft-card cursor-pointer active:scale-[0.99] transition-transform" onClick={() => navigate(`/traders-hub?post=${post.id}`)}>
+                  <CardContent className="p-3">
+                    <div className="flex items-start gap-2.5">
+                      <Avatar className="h-8 w-8 shrink-0">
+                        <AvatarImage src={post.author?.avatar_url || ""} />
+                        <AvatarFallback className="bg-primary text-primary-foreground text-[10px]">
+                          {post.author?.full_name?.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) || "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-semibold truncate">{post.author?.full_name || "User"}</span>
+                          <span className="text-[10px] text-muted-foreground shrink-0">
+                            · {Math.floor((Date.now() - new Date(post.created_at).getTime()) / 3600000)}h
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{post.content}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Quick Actions */}
         <div className="grid grid-cols-2 gap-3">
