@@ -347,6 +347,7 @@ export type Database = {
           followers_count: number | null
           following_count: number | null
           full_name: string | null
+          handle: string | null
           id: string
           portfolio_public: boolean | null
           subscription_plan: string | null
@@ -362,6 +363,7 @@ export type Database = {
           followers_count?: number | null
           following_count?: number | null
           full_name?: string | null
+          handle?: string | null
           id?: string
           portfolio_public?: boolean | null
           subscription_plan?: string | null
@@ -377,6 +379,7 @@ export type Database = {
           followers_count?: number | null
           following_count?: number | null
           full_name?: string | null
+          handle?: string | null
           id?: string
           portfolio_public?: boolean | null
           subscription_plan?: string | null
@@ -441,6 +444,7 @@ export type Database = {
           followers_count: number | null
           following_count: number | null
           full_name: string | null
+          handle: string | null
           id: string | null
           portfolio_public: boolean | null
           subscription_plan: string | null
@@ -455,6 +459,7 @@ export type Database = {
           followers_count?: number | null
           following_count?: number | null
           full_name?: string | null
+          handle?: string | null
           id?: string | null
           portfolio_public?: boolean | null
           subscription_plan?: string | null
@@ -469,6 +474,7 @@ export type Database = {
           followers_count?: number | null
           following_count?: number | null
           full_name?: string | null
+          handle?: string | null
           id?: string | null
           portfolio_public?: boolean | null
           subscription_plan?: string | null
