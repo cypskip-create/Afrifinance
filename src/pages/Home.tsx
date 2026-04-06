@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Crown } from "lucide-react";
+import { Crown, MessageCircle, ChevronRight } from "lucide-react";
 import { MorningBrief } from "@/components/home/MorningBrief";
 import { TopMoversLosers } from "@/components/home/TopMoversLosers";
 import { TrendingStocks } from "@/components/home/TrendingStocks";
@@ -10,14 +10,16 @@ import { WidgetManager, WidgetConfig, defaultWidgets } from "@/components/home/W
 import { TopBar } from "@/components/shared/TopBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  Search, TrendingUp, LogIn, ChevronRight, ArrowUpRight, ArrowDownRight,
+  Search, TrendingUp, LogIn, ArrowUpRight, ArrowDownRight,
   Wallet, Eye, EyeOff, BarChart3
 } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { usePortfolio } from "@/hooks/usePortfolio";
+import { usePosts } from "@/hooks/usePosts";
 import { getTimeBasedGreeting } from "@/utils/timeGreeting";
 import { SparklineChart } from "@/components/shared/SparklineChart";
 import { MarketStatusIndicator } from "@/components/shared/MarketStatusIndicator";
