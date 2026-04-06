@@ -23,6 +23,7 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [fullName, setFullName] = useState("");
+  const [handle, setHandle] = useState("");
   const [bio, setBio] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [previewUrl, setPreviewUrl] = useState("");
@@ -31,6 +32,7 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
   useEffect(() => {
     if (open && profile) {
       setFullName(profile.full_name || "");
+      setHandle((profile as any).handle || "");
       setBio(profile.bio || "");
       setAvatarUrl(profile.avatar_url || "");
       setPreviewUrl(profile.avatar_url || "");
@@ -111,7 +113,8 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
         full_name: fullName,
         bio: bio,
         avatar_url: avatarUrl,
-      });
+        handle: handle.replace(/^@/, '').toLowerCase().replace(/[^a-z0-9_]/g, '') || null,
+      } as any);
       
       if (result?.error) {
         toast({
@@ -232,6 +235,26 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
                 placeholder="Enter your full name"
                 className="h-11"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="handle" className="text-sm font-medium">
+                Handle
+              </Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">@</span>
+                <Input
+                  id="handle"
+                  value={handle}
+                  onChange={(e) => setHandle(e.target.value.replace(/^@/, '').toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                  placeholder="cypskip"
+                  className="h-11 pl-8"
+                  maxLength={30}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Letters, numbers, and underscores only
+              </p>
             </div>
 
             <div className="space-y-2">
