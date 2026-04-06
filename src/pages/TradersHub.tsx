@@ -230,7 +230,6 @@ export default function TradersHub() {
                   <XPostCard post={post} currentUserId={user?.id} onLike={handleLike} onComment={openComments} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handleShare} onDelete={handleDelete} />
                 </div>
               ))}
-              ))}
             </div>
           )}
         </div>
