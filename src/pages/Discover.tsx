@@ -322,7 +322,7 @@ export default function Discover() {
                   <div 
                     key={post.id} 
                     className="py-3 cursor-pointer active:bg-muted/20 transition-colors"
-                    onClick={() => navigate('/traders-hub')}
+                    onClick={() => navigate(`/traders-hub?post=${post.id}`)}
                   >
                     <div className="flex items-start space-x-3">
                       <Avatar 
