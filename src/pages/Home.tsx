@@ -217,6 +217,46 @@ export default function Home() {
         <TrendingStocks />
         <TopMoversLosers />
 
+        {/* Latest from TradersHub */}
+        {posts.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-2.5">
+              <h3 className="text-sm font-bold flex items-center gap-2">
+                <MessageCircle className="h-4 w-4 text-primary" />
+                TradersHub
+              </h3>
+              <Button variant="ghost" size="sm" className="h-7 text-xs text-primary rounded-full px-3" onClick={() => navigate('/traders-hub')}>
+                All <ChevronRight className="h-3 w-3 ml-0.5" />
+              </Button>
+            </div>
+            <div className="space-y-2">
+              {posts.slice(0, 3).map(post => (
+                <Card key={post.id} className="soft-card cursor-pointer active:scale-[0.99] transition-transform" onClick={() => navigate(`/traders-hub?post=${post.id}`)}>
+                  <CardContent className="p-3">
+                    <div className="flex items-start gap-2.5">
+                      <Avatar className="h-8 w-8 shrink-0">
+                        <AvatarImage src={post.author?.avatar_url || ""} />
+                        <AvatarFallback className="bg-primary text-primary-foreground text-[10px]">
+                          {post.author?.full_name?.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) || "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-semibold truncate">{post.author?.full_name || "User"}</span>
+                          <span className="text-[10px] text-muted-foreground shrink-0">
+                            · {Math.floor((Date.now() - new Date(post.created_at).getTime()) / 3600000)}h
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{post.content}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Quick Actions */}
         <div className="grid grid-cols-2 gap-3">
           <NavLink to="/track-investments">
