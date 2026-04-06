@@ -38,10 +38,31 @@ export default function TradersHub() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
+  const [prefillContent, setPrefillContent] = useState("");
+  const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
 
   useEffect(() => {
     const urlSearch = searchParams.get("search");
     if (urlSearch) setSearchQuery(urlSearch);
+    
+    // Auto-open compose with prefilled ticker from stock page
+    const shouldCompose = searchParams.get("compose");
+    const ticker = searchParams.get("ticker");
+    if (shouldCompose === "true" && ticker) {
+      setComposeOpen(true);
+      // The compose modal will receive the prefilled content
+      setPrefillContent(`$${ticker} `);
+    }
+    
+    // Scroll to specific post
+    const postId = searchParams.get("post");
+    if (postId) {
+      setHighlightedPostId(postId);
+      setTimeout(() => {
+        const el = document.getElementById(`post-${postId}`);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 500);
+    }
   }, [searchParams]);
 
   const portfolioSnapshot = useMemo(() => {
