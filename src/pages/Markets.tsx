@@ -194,19 +194,26 @@ export default function Markets() {
     <div className="min-h-screen bg-background pb-24">
       <TopBar title="Markets" subtitle="Explore & discover" showSearch showNotifications />
 
-      {/* Tab Navigation */}
+      {/* Premium Tab Navigation */}
       <div className="sticky top-[57px] z-30 bg-background/95 backdrop-blur-xl border-b border-border/50">
-        <div className="flex overflow-x-auto scrollbar-hide px-4 gap-1">
-          {tabs.map(tab => (
+        <div className="flex overflow-x-auto scrollbar-hide px-3 gap-1 py-2">
+          {[
+            { tab: "Overview" as Tab, icon: BarChart3, emoji: "📊" },
+            { tab: "NSE" as Tab, icon: Landmark, emoji: "🇰🇪" },
+            { tab: "Global" as Tab, icon: Globe, emoji: "🌍" },
+            { tab: "IPOs" as Tab, icon: Flame, emoji: "🔥" },
+            { tab: "Dividends" as Tab, icon: DollarSign, emoji: "💰" },
+          ].map(({ tab, icon: Icon, emoji }) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`py-3 px-4 text-sm font-semibold whitespace-nowrap border-b-2 transition-all duration-200 ${
+              className={`flex items-center gap-2 py-2 px-4 text-sm font-semibold whitespace-nowrap rounded-full transition-all duration-200 ${
                 activeTab === tab
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
               }`}
             >
+              <Icon className="h-4 w-4" />
               {tab}
             </button>
           ))}
