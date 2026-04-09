@@ -343,16 +343,16 @@ export default function TrackInvestments() {
         {holdings.length > 0 && (
           <div className="grid grid-cols-2 gap-3">
             {/* Top Movers */}
-            <Card className="soft-card p-4">
+            <Card className="border-0 rounded-2xl p-4 shadow-sm bg-gradient-to-br from-card to-muted/20">
               <h4 className="text-xs font-bold text-muted-foreground mb-3 flex items-center gap-1.5">
                 <TrendingUp className="h-3.5 w-3.5 text-primary" />
                 Portfolio Movers
               </h4>
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {topMovers.map(m => (
-                  <div key={m.id} className="flex items-center justify-between">
-                    <span className="text-xs font-semibold">{m.symbol}</span>
-                    <span className={`text-xs font-bold ${m.gain >= 0 ? 'text-bull' : 'text-bear'}`}>
+                  <div key={m.id} className="flex items-center justify-between bg-muted/30 rounded-lg p-2">
+                    <span className="text-xs font-bold">{m.symbol}</span>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${m.gain >= 0 ? 'bg-bull/10 text-bull' : 'bg-bear/10 text-bear'}`}>
                       {m.gain >= 0 ? '+' : ''}{m.gainPct.toFixed(1)}%
                     </span>
                   </div>
@@ -361,15 +361,23 @@ export default function TrackInvestments() {
             </Card>
 
             {/* Diversification */}
-            <Card className="soft-card p-4">
+            <Card className="border-0 rounded-2xl p-4 shadow-sm bg-gradient-to-br from-card to-muted/20">
               <h4 className="text-xs font-bold text-muted-foreground mb-3 flex items-center gap-1.5">
                 <Shield className="h-3.5 w-3.5 text-primary" />
                 Diversification
               </h4>
               <div className="text-center">
-                <p className="text-3xl font-bold text-primary">{diversificationScore}/10</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {diversificationScore >= 7 ? 'Well Balanced' : diversificationScore >= 4 ? 'Moderate' : 'Concentrated'}
+                <div className="relative w-20 h-20 mx-auto mb-2">
+                  <svg className="w-20 h-20 -rotate-90" viewBox="0 0 36 36">
+                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="hsl(var(--muted))" strokeWidth="3" />
+                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="hsl(var(--primary))" strokeWidth="3" strokeDasharray={`${diversificationScore * 10}, 100`} strokeLinecap="round" />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-xl font-extrabold text-primary">{diversificationScore}</span>
+                  </div>
+                </div>
+                <p className="text-xs font-semibold text-muted-foreground">
+                  {diversificationScore >= 7 ? '🟢 Well Balanced' : diversificationScore >= 4 ? '🟡 Moderate' : '🔴 Concentrated'}
                 </p>
               </div>
             </Card>
@@ -378,8 +386,8 @@ export default function TrackInvestments() {
 
         {/* Floating Trade Button */}
         <div className="fixed bottom-24 right-4 z-30">
-          <Button className="h-12 px-5 rounded-full bg-primary text-primary-foreground shadow-primary font-semibold gap-2">
-            <Wallet className="h-4 w-4" />
+          <Button className="h-14 px-6 rounded-2xl bg-primary text-primary-foreground shadow-lg font-bold gap-2 text-sm hover:scale-105 active:scale-95 transition-transform">
+            <Wallet className="h-5 w-5" />
             Trade
           </Button>
         </div>
