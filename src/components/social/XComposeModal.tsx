@@ -1,16 +1,24 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { X, Image, BarChart3, DollarSign, TrendingUp, PieChart, Globe } from "lucide-react";
+import { X, Image, BarChart3, DollarSign, TrendingUp, PieChart, Globe, AtSign } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PortfolioSnapshot {
   totalValue: number;
   totalGain: number;
   gainPercent: number;
   holdings: { symbol: string; name: string; shares: number; avgCost: number; currentPrice: number; gain: number }[];
+}
+
+interface MentionSuggestion {
+  user_id: string;
+  handle: string | null;
+  full_name: string | null;
+  avatar_url: string | null;
 }
 
 interface XComposeModalProps {
@@ -32,6 +40,9 @@ export function XComposeModal({ open, onOpenChange, user, profile, onPost, portf
   const [attachedPL, setAttachedPL] = useState(false);
   const [attachedPortfolio, setAttachedPortfolio] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionSuggestions, setMentionSuggestions] = useState<MentionSuggestion[]>([]);
+  const [mentionCursorPos, setMentionCursorPos] = useState(0);
 
   useEffect(() => {
     if (open) {
@@ -41,6 +52,53 @@ export function XComposeModal({ open, onOpenChange, user, profile, onPost, portf
       setTimeout(() => textareaRef.current?.focus(), 100);
     }
   }, [open, prefillContent]);
+
+  // Search for @mention suggestions
+  useEffect(() => {
+    if (mentionQuery === null || mentionQuery.length < 1) {
+      setMentionSuggestions([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('user_id, handle, full_name, avatar_url')
+        .or(`handle.ilike.%${mentionQuery}%,full_name.ilike.%${mentionQuery}%`)
+        .limit(5);
+      if (data) setMentionSuggestions(data as MentionSuggestion[]);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [mentionQuery]);
+
+  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setContent(val);
+    
+    // Detect @mention typing
+    const cursorPos = e.target.selectionStart || 0;
+    setMentionCursorPos(cursorPos);
+    const textBeforeCursor = val.slice(0, cursorPos);
+    const mentionMatch = textBeforeCursor.match(/@([\w]*)$/);
+    if (mentionMatch) {
+      setMentionQuery(mentionMatch[1]);
+    } else {
+      setMentionQuery(null);
+    }
+  };
+
+  const insertMention = (suggestion: MentionSuggestion) => {
+    const textBeforeCursor = content.slice(0, mentionCursorPos);
+    const mentionMatch = textBeforeCursor.match(/@([\w]*)$/);
+    if (mentionMatch) {
+      const handle = suggestion.handle || suggestion.full_name?.toLowerCase().replace(/\s+/g, "") || "user";
+      const before = textBeforeCursor.slice(0, mentionMatch.index);
+      const after = content.slice(mentionCursorPos);
+      setContent(`${before}@${handle} ${after}`);
+    }
+    setMentionQuery(null);
+    setMentionSuggestions([]);
+    setTimeout(() => textareaRef.current?.focus(), 50);
+  };
 
   const getInitials = (name: string | null | undefined) => {
     if (!name) return "U";
