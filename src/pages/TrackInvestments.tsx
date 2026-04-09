@@ -8,7 +8,7 @@ import { RobinhoodPerformanceChart } from "@/components/portfolio/RobinhoodPerfo
 import {
   Trash2, TrendingUp, TrendingDown, ArrowLeft, ArrowUpRight, ArrowDownRight,
   Eye, EyeOff, MoreHorizontal, Plus, RefreshCw, Share, ChevronDown, ChevronUp,
-  Wallet, Target, Shield, FileText
+  Wallet, Target, Shield, FileText, Activity
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -127,16 +127,19 @@ export default function TrackInvestments() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-card/90 backdrop-blur-xl border-b border-border/50">
+      {/* Premium Header */}
+      <header className="sticky top-0 z-40 bg-gradient-to-b from-card to-card/95 backdrop-blur-xl border-b border-border/30">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-full h-9 w-9">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-full h-9 w-9 hover:bg-muted/50">
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-lg font-bold">My Portfolio</h1>
+            <div>
+              <h1 className="text-lg font-bold">My Portfolio</h1>
+              <p className="text-[10px] text-muted-foreground">{holdings.length} holdings · Last updated now</p>
+            </div>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <Button variant="ghost" size="icon" className={`rounded-full h-9 w-9 ${isRefreshing ? 'animate-spin' : ''}`} onClick={handleRefresh}>
               <RefreshCw className="h-4 w-4" />
             </Button>
@@ -147,46 +150,49 @@ export default function TrackInvestments() {
 
       <div className="px-4 pt-4 space-y-5">
         {/* ── HERO ── */}
-        <Card className="soft-card border-0 bg-gradient-to-br from-primary/8 via-card to-accent/5 overflow-hidden">
+        <Card className="border-0 bg-gradient-to-br from-primary/10 via-card to-accent/5 overflow-hidden rounded-3xl shadow-lg">
           <CardContent className="p-5">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-medium text-muted-foreground">Total Value</span>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Portfolio Value</span>
               <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => setShowBalance(!showBalance)}>
-                  {showBalance ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-background/50" onClick={() => setShowBalance(!showBalance)}>
+                  {showBalance ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                 </Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full">
-                  <Share className="h-3.5 w-3.5" />
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-background/50">
+                  <Share className="h-4 w-4" />
                 </Button>
               </div>
             </div>
 
-            <h2 className="text-3xl font-bold tracking-tight">
+            <h2 className="text-4xl font-extrabold tracking-tight">
               {showBalance ? `KES ${stats.totalValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '••••••'}
             </h2>
 
-            <div className="flex items-center gap-3 mt-1">
-              <span className={`flex items-center gap-0.5 text-sm font-semibold ${stats.totalGain >= 0 ? 'text-bull' : 'text-bear'}`}>
+            <div className="flex items-center gap-3 mt-2">
+              <span className={`flex items-center gap-1 text-sm font-bold px-3 py-1 rounded-full ${stats.totalGain >= 0 ? 'bg-bull/15 text-bull' : 'bg-bear/15 text-bear'}`}>
                 {stats.totalGain >= 0 ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
                 {showBalance ? `${stats.totalGain >= 0 ? '+' : ''}KES ${Math.abs(stats.totalGain).toFixed(2)}` : '••••'}
-                <span className="text-xs ml-0.5">({stats.gainPct >= 0 ? '+' : ''}{stats.gainPct.toFixed(1)}%)</span>
+                <span className="text-xs ml-1">({stats.gainPct >= 0 ? '+' : ''}{stats.gainPct.toFixed(1)}%)</span>
               </span>
-              <Badge variant="secondary" className="text-[10px] rounded-full bg-primary/10 text-primary border-0">All time</Badge>
+              <Badge variant="secondary" className="text-[10px] rounded-full bg-primary/10 text-primary border-0 font-semibold">All time</Badge>
             </div>
 
-            <div className="grid grid-cols-2 gap-2.5 mt-4">
-              <div className="bg-background/60 rounded-2xl p-3">
-                <p className="text-[10px] text-muted-foreground mb-0.5">Today</p>
-                <p className={`text-sm font-bold ${stats.todayGain >= 0 ? 'text-bull' : 'text-bear'}`}>
+            <div className="grid grid-cols-2 gap-3 mt-5">
+              <div className="bg-background/70 backdrop-blur-sm rounded-2xl p-3.5 border border-border/20">
+                <p className="text-[10px] text-muted-foreground font-medium mb-1">Today's P/L</p>
+                <p className={`text-base font-bold ${stats.todayGain >= 0 ? 'text-bull' : 'text-bear'}`}>
                   {showBalance ? `${stats.todayGain >= 0 ? '+' : ''}KES ${Math.abs(stats.todayGain).toFixed(2)}` : '••••'}
-                  <span className="text-xs ml-1">({stats.todayPct >= 0 ? '+' : ''}{stats.todayPct.toFixed(1)}%)</span>
+                </p>
+                <p className={`text-[10px] font-medium ${stats.todayPct >= 0 ? 'text-bull' : 'text-bear'}`}>
+                  {stats.todayPct >= 0 ? '+' : ''}{stats.todayPct.toFixed(1)}%
                 </p>
               </div>
-              <div className="bg-background/60 rounded-2xl p-3">
-                <p className="text-[10px] text-muted-foreground mb-0.5">Invested</p>
-                <p className="text-sm font-bold">
+              <div className="bg-background/70 backdrop-blur-sm rounded-2xl p-3.5 border border-border/20">
+                <p className="text-[10px] text-muted-foreground font-medium mb-1">Total Invested</p>
+                <p className="text-base font-bold">
                   {showBalance ? `KES ${stats.totalCost.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '••••'}
                 </p>
+                <p className="text-[10px] text-muted-foreground font-medium">{holdings.length} stocks</p>
               </div>
             </div>
           </CardContent>
@@ -194,20 +200,26 @@ export default function TrackInvestments() {
 
         {/* ── PERFORMANCE CHART ── */}
         <div>
-          <div className="flex items-center gap-1.5 mb-3 overflow-x-auto scrollbar-hide">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold flex items-center gap-2">
+              <Activity className="h-4 w-4 text-primary" />
+              Performance
+            </h3>
+          </div>
+          <div className="flex items-center gap-1 mb-3 bg-muted/30 p-1 rounded-full">
             {["1D", "5D", "1M", "3M", "6M", "1Y", "All"].map(p => (
               <Button
                 key={p}
-                variant={chartPeriod === p ? "default" : "outline"}
+                variant="ghost"
                 size="sm"
-                className={`text-xs rounded-full h-7 px-3 ${chartPeriod === p ? 'bg-primary text-primary-foreground' : ''}`}
+                className={`text-xs rounded-full h-7 px-3 flex-1 ${chartPeriod === p ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                 onClick={() => setChartPeriod(p)}
               >
                 {p}
               </Button>
             ))}
           </div>
-          <Card className="soft-card overflow-hidden">
+          <Card className="border-0 rounded-2xl overflow-hidden shadow-sm">
             <RobinhoodPerformanceChart currentValue={stats.totalValue} initialValue={stats.totalCost} />
           </Card>
         </div>
@@ -215,20 +227,23 @@ export default function TrackInvestments() {
         {/* ── ALLOCATION ── */}
         {sectorAlloc.length > 0 && (
           <div>
-            <h3 className="text-sm font-bold mb-3">Asset Allocation</h3>
-            <Card className="soft-card p-4">
+            <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+              <Target className="h-4 w-4 text-accent" />
+              Asset Allocation
+            </h3>
+            <Card className="border-0 rounded-2xl p-4 shadow-sm">
               {/* Bar-style allocation */}
-              <div className="flex h-3 rounded-full overflow-hidden mb-4">
+              <div className="flex h-4 rounded-full overflow-hidden mb-4 shadow-inner">
                 {sectorAlloc.map(s => (
-                  <div key={s.name} className={`${s.color} transition-all`} style={{ width: `${s.pct}%` }} />
+                  <div key={s.name} className={`${s.color} transition-all duration-500`} style={{ width: `${s.pct}%` }} />
                 ))}
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2.5">
                 {sectorAlloc.map(s => (
-                  <div key={s.name} className="flex items-center gap-2">
-                    <div className={`w-2.5 h-2.5 rounded-full ${s.color}`} />
+                  <div key={s.name} className="flex items-center gap-2 bg-muted/30 rounded-xl p-2">
+                    <div className={`w-3 h-3 rounded-full ${s.color}`} />
                     <span className="text-xs text-muted-foreground flex-1">{s.name}</span>
-                    <span className="text-xs font-semibold">{s.pct.toFixed(1)}%</span>
+                    <span className="text-xs font-bold">{s.pct.toFixed(1)}%</span>
                   </div>
                 ))}
               </div>
@@ -239,7 +254,10 @@ export default function TrackInvestments() {
         {/* ── HOLDINGS ── */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold">Holdings ({holdings.length})</h3>
+            <h3 className="text-sm font-bold flex items-center gap-2">
+              <Wallet className="h-4 w-4 text-primary" />
+              Holdings ({holdings.length})
+            </h3>
             <div className="flex gap-1">
               {([["name", "A-Z"], ["value", "Value"], ["gain", "P/L"]] as [SortKey, string][]).map(([key, label]) => (
                 <Button key={key} variant="ghost" size="sm" className={`text-xs h-7 rounded-full px-2.5 ${sortBy === key ? 'bg-primary/10 text-primary' : ''}`} onClick={() => toggleSort(key)}>
@@ -325,16 +343,16 @@ export default function TrackInvestments() {
         {holdings.length > 0 && (
           <div className="grid grid-cols-2 gap-3">
             {/* Top Movers */}
-            <Card className="soft-card p-4">
+            <Card className="border-0 rounded-2xl p-4 shadow-sm bg-gradient-to-br from-card to-muted/20">
               <h4 className="text-xs font-bold text-muted-foreground mb-3 flex items-center gap-1.5">
                 <TrendingUp className="h-3.5 w-3.5 text-primary" />
                 Portfolio Movers
               </h4>
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {topMovers.map(m => (
-                  <div key={m.id} className="flex items-center justify-between">
-                    <span className="text-xs font-semibold">{m.symbol}</span>
-                    <span className={`text-xs font-bold ${m.gain >= 0 ? 'text-bull' : 'text-bear'}`}>
+                  <div key={m.id} className="flex items-center justify-between bg-muted/30 rounded-lg p-2">
+                    <span className="text-xs font-bold">{m.symbol}</span>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${m.gain >= 0 ? 'bg-bull/10 text-bull' : 'bg-bear/10 text-bear'}`}>
                       {m.gain >= 0 ? '+' : ''}{m.gainPct.toFixed(1)}%
                     </span>
                   </div>
@@ -343,15 +361,23 @@ export default function TrackInvestments() {
             </Card>
 
             {/* Diversification */}
-            <Card className="soft-card p-4">
+            <Card className="border-0 rounded-2xl p-4 shadow-sm bg-gradient-to-br from-card to-muted/20">
               <h4 className="text-xs font-bold text-muted-foreground mb-3 flex items-center gap-1.5">
                 <Shield className="h-3.5 w-3.5 text-primary" />
                 Diversification
               </h4>
               <div className="text-center">
-                <p className="text-3xl font-bold text-primary">{diversificationScore}/10</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {diversificationScore >= 7 ? 'Well Balanced' : diversificationScore >= 4 ? 'Moderate' : 'Concentrated'}
+                <div className="relative w-20 h-20 mx-auto mb-2">
+                  <svg className="w-20 h-20 -rotate-90" viewBox="0 0 36 36">
+                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="hsl(var(--muted))" strokeWidth="3" />
+                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="hsl(var(--primary))" strokeWidth="3" strokeDasharray={`${diversificationScore * 10}, 100`} strokeLinecap="round" />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-xl font-extrabold text-primary">{diversificationScore}</span>
+                  </div>
+                </div>
+                <p className="text-xs font-semibold text-muted-foreground">
+                  {diversificationScore >= 7 ? '🟢 Well Balanced' : diversificationScore >= 4 ? '🟡 Moderate' : '🔴 Concentrated'}
                 </p>
               </div>
             </Card>
@@ -360,8 +386,8 @@ export default function TrackInvestments() {
 
         {/* Floating Trade Button */}
         <div className="fixed bottom-24 right-4 z-30">
-          <Button className="h-12 px-5 rounded-full bg-primary text-primary-foreground shadow-primary font-semibold gap-2">
-            <Wallet className="h-4 w-4" />
+          <Button className="h-14 px-6 rounded-2xl bg-primary text-primary-foreground shadow-lg font-bold gap-2 text-sm hover:scale-105 active:scale-95 transition-transform">
+            <Wallet className="h-5 w-5" />
             Trade
           </Button>
         </div>

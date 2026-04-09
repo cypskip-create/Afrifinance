@@ -287,32 +287,7 @@ export default function StockDetail() {
           </div>
         </div>
 
-        {/* Community Discussions */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold flex items-center gap-2"><MessageSquare className="h-4 w-4 text-chart-4" />Community</h3>
-            <Button variant="ghost" size="sm" className="h-7 text-xs text-primary rounded-full px-3" onClick={() => navigate('/tradershub')}>All <ChevronRight className="h-3 w-3 ml-0.5" /></Button>
-          </div>
-          <div className="space-y-2">
-            {communityPosts.map(post => (
-              <Card key={post.id} className="soft-card p-3 cursor-pointer active:scale-[0.99] transition-transform" onClick={() => navigate('/tradershub')}>
-                <div className="flex items-center gap-2 mb-1.5">
-                  <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">{post.user.slice(0, 1)}</div>
-                  <span className="text-xs font-semibold">{post.user}</span>
-                  <span className="text-xs text-muted-foreground">· {post.time}</span>
-                </div>
-                <p className="text-sm text-muted-foreground line-clamp-2">{post.content}</p>
-                <div className="flex items-center gap-4 mt-2">
-                  <span className="text-xs text-muted-foreground flex items-center gap-1"><Heart className="h-3 w-3" /> {post.likes}</span>
-                  <span className="text-xs text-muted-foreground flex items-center gap-1"><MessageSquare className="h-3 w-3" /> {post.replies}</span>
-                </div>
-              </Card>
-            ))}
-          </div>
-          <Button variant="outline" className="w-full mt-2 h-10 rounded-2xl text-sm font-semibold gap-2" onClick={() => navigate('/tradershub')}>
-            <MessageSquare className="h-4 w-4" />Post about ${symbol}
-          </Button>
-        </div>
+        {/* Removed community posts section - discuss button in quick actions navigates to TradersHub */}
 
         {/* Detailed Tabs: Overview / Financials / Profile */}
         <Tabs defaultValue="overview" className="w-full">

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Heart, MessageCircle, Repeat2, Share, Bookmark, BookmarkCheck, Trash2, MoreHorizontal, Verified, Eye, Quote } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useNavigate } from "react-router-dom";
 import { Post } from "@/hooks/usePosts";
 import { ImageViewer } from "./ImageViewer";
+import { supabase } from "@/integrations/supabase/client";
 
 const NSE_PRICES: Record<string, { price: number; change: number }> = {
   SCOM: { price: 12.85, change: 2.4 }, SAFCOM: { price: 12.85, change: 2.4 },
@@ -58,11 +59,14 @@ export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, on
     return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
   };
 
-  const handle = post.author?.full_name?.toLowerCase().replace(/\s+/g, "") || "user";
+  const handle = (post.author as any)?.handle || post.author?.full_name?.toLowerCase().replace(/\s+/g, "") || "user";
   const viewCount = Math.floor(Math.random() * 5000) + 100;
 
+  // Parse @mentions from content to find tagged users
+  const mentionedHandles = (post.content.match(/@[\w]+/g) || []).map(m => m.slice(1));
+
   const renderContent = (content: string) => {
-    return content.split(/(\$[A-Z]+|#\w+|@\w+)/g).map((part, i) => {
+    return content.split(/(\$[A-Z]+|#\w+|@[\w]+)/g).map((part, i) => {
       if (part.startsWith("$")) {
         const symbol = part.slice(1);
         const priceData = NSE_PRICES[symbol];
@@ -81,7 +85,28 @@ export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, on
         );
       }
       if (part.startsWith("#")) return <span key={i} className="text-primary cursor-pointer hover:underline" onClick={(e) => { e.stopPropagation(); navigate(`/traders-hub?search=${encodeURIComponent(part)}`); }}>{part}</span>;
-      if (part.startsWith("@")) return <span key={i} className="text-primary cursor-pointer hover:underline">{part}</span>;
+      if (part.startsWith("@")) {
+        const username = part.slice(1);
+        return (
+          <span key={i} className="text-primary font-semibold cursor-pointer hover:underline" onClick={async (e) => { 
+            e.stopPropagation();
+            // Look up profile by handle
+            const { data } = await supabase
+              .from('profiles')
+              .select('user_id')
+              .eq('handle', username)
+              .maybeSingle();
+            if (data?.user_id) {
+              navigate(`/profile/${data.user_id}`);
+            } else {
+              // Fallback: search in TradersHub
+              navigate(`/traders-hub?search=${encodeURIComponent(part)}`);
+            }
+          }}>
+            {part}
+          </span>
+        );
+      }
       return part;
     });
   };
