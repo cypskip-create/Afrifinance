@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Heart, MessageCircle, Repeat2, Share, Bookmark, BookmarkCheck, Trash2, MoreHorizontal, Verified, Eye, Quote } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useNavigate } from "react-router-dom";
 import { Post } from "@/hooks/usePosts";
 import { ImageViewer } from "./ImageViewer";
+import { supabase } from "@/integrations/supabase/client";
 
 const NSE_PRICES: Record<string, { price: number; change: number }> = {
   SCOM: { price: 12.85, change: 2.4 }, SAFCOM: { price: 12.85, change: 2.4 },
@@ -87,10 +88,20 @@ export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, on
       if (part.startsWith("@")) {
         const username = part.slice(1);
         return (
-          <span key={i} className="text-primary font-semibold cursor-pointer hover:underline" onClick={(e) => { 
-            e.stopPropagation(); 
-            // Navigate to profile - search by handle
-            navigate(`/traders-hub?search=${encodeURIComponent(part)}`);
+          <span key={i} className="text-primary font-semibold cursor-pointer hover:underline" onClick={async (e) => { 
+            e.stopPropagation();
+            // Look up profile by handle
+            const { data } = await supabase
+              .from('profiles')
+              .select('user_id')
+              .eq('handle', username)
+              .maybeSingle();
+            if (data?.user_id) {
+              navigate(`/profile/${data.user_id}`);
+            } else {
+              // Fallback: search in TradersHub
+              navigate(`/traders-hub?search=${encodeURIComponent(part)}`);
+            }
           }}>
             {part}
           </span>
