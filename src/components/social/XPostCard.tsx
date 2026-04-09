@@ -58,11 +58,14 @@ export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, on
     return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
   };
 
-  const handle = post.author?.full_name?.toLowerCase().replace(/\s+/g, "") || "user";
+  const handle = (post.author as any)?.handle || post.author?.full_name?.toLowerCase().replace(/\s+/g, "") || "user";
   const viewCount = Math.floor(Math.random() * 5000) + 100;
 
+  // Parse @mentions from content to find tagged users
+  const mentionedHandles = (post.content.match(/@[\w]+/g) || []).map(m => m.slice(1));
+
   const renderContent = (content: string) => {
-    return content.split(/(\$[A-Z]+|#\w+|@\w+)/g).map((part, i) => {
+    return content.split(/(\$[A-Z]+|#\w+|@[\w]+)/g).map((part, i) => {
       if (part.startsWith("$")) {
         const symbol = part.slice(1);
         const priceData = NSE_PRICES[symbol];
@@ -81,7 +84,18 @@ export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, on
         );
       }
       if (part.startsWith("#")) return <span key={i} className="text-primary cursor-pointer hover:underline" onClick={(e) => { e.stopPropagation(); navigate(`/traders-hub?search=${encodeURIComponent(part)}`); }}>{part}</span>;
-      if (part.startsWith("@")) return <span key={i} className="text-primary cursor-pointer hover:underline">{part}</span>;
+      if (part.startsWith("@")) {
+        const username = part.slice(1);
+        return (
+          <span key={i} className="text-primary font-semibold cursor-pointer hover:underline" onClick={(e) => { 
+            e.stopPropagation(); 
+            // Navigate to profile - search by handle
+            navigate(`/traders-hub?search=${encodeURIComponent(part)}`);
+          }}>
+            {part}
+          </span>
+        );
+      }
       return part;
     });
   };
