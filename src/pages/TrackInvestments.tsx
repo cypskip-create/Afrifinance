@@ -8,7 +8,7 @@ import { RobinhoodPerformanceChart } from "@/components/portfolio/RobinhoodPerfo
 import {
   Trash2, TrendingUp, TrendingDown, ArrowLeft, ArrowUpRight, ArrowDownRight,
   Eye, EyeOff, MoreHorizontal, Plus, RefreshCw, Share, ChevronDown, ChevronUp,
-  Wallet, Target, Shield, FileText
+  Wallet, Target, Shield, FileText, Activity
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
