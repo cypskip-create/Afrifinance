@@ -175,14 +175,40 @@ export function XComposeModal({ open, onOpenChange, user, profile, onPost, portf
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <textarea
-              ref={textareaRef}
-              placeholder="What's happening in the markets?"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className="w-full bg-transparent border-0 outline-none resize-none text-[17px] leading-[1.4] placeholder:text-muted-foreground/50 min-h-[120px]"
-              maxLength={maxChars + 50}
-            />
+            <div className="relative">
+              <textarea
+                ref={textareaRef}
+                placeholder="What's happening in the markets? Use @handle to tag people"
+                value={content}
+                onChange={handleContentChange}
+                className="w-full bg-transparent border-0 outline-none resize-none text-[17px] leading-[1.4] placeholder:text-muted-foreground/50 min-h-[120px]"
+                maxLength={maxChars + 50}
+              />
+
+              {/* @Mention Suggestions Dropdown */}
+              {mentionQuery !== null && mentionSuggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 z-50 bg-card border border-border rounded-xl shadow-lg overflow-hidden mt-1">
+                  {mentionSuggestions.map(s => (
+                    <button
+                      key={s.user_id}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted/50 transition-colors text-left"
+                      onClick={() => insertMention(s)}
+                    >
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={s.avatar_url || ""} />
+                        <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
+                          {(s.full_name || "U").slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold truncate">{s.full_name || "User"}</p>
+                        <p className="text-xs text-muted-foreground">@{s.handle || s.full_name?.toLowerCase().replace(/\s+/g, "")}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* Preview image */}
             {selectedImage && (
