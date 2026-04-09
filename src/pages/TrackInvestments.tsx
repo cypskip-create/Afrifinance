@@ -254,7 +254,10 @@ export default function TrackInvestments() {
         {/* ── HOLDINGS ── */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold">Holdings ({holdings.length})</h3>
+            <h3 className="text-sm font-bold flex items-center gap-2">
+              <Wallet className="h-4 w-4 text-primary" />
+              Holdings ({holdings.length})
+            </h3>
             <div className="flex gap-1">
               {([["name", "A-Z"], ["value", "Value"], ["gain", "P/L"]] as [SortKey, string][]).map(([key, label]) => (
                 <Button key={key} variant="ghost" size="sm" className={`text-xs h-7 rounded-full px-2.5 ${sortBy === key ? 'bg-primary/10 text-primary' : ''}`} onClick={() => toggleSort(key)}>
