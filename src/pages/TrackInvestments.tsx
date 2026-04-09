@@ -127,16 +127,19 @@ export default function TrackInvestments() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-card/90 backdrop-blur-xl border-b border-border/50">
+      {/* Premium Header */}
+      <header className="sticky top-0 z-40 bg-gradient-to-b from-card to-card/95 backdrop-blur-xl border-b border-border/30">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-full h-9 w-9">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-full h-9 w-9 hover:bg-muted/50">
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-lg font-bold">My Portfolio</h1>
+            <div>
+              <h1 className="text-lg font-bold">My Portfolio</h1>
+              <p className="text-[10px] text-muted-foreground">{holdings.length} holdings · Last updated now</p>
+            </div>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <Button variant="ghost" size="icon" className={`rounded-full h-9 w-9 ${isRefreshing ? 'animate-spin' : ''}`} onClick={handleRefresh}>
               <RefreshCw className="h-4 w-4" />
             </Button>
@@ -147,46 +150,49 @@ export default function TrackInvestments() {
 
       <div className="px-4 pt-4 space-y-5">
         {/* ── HERO ── */}
-        <Card className="soft-card border-0 bg-gradient-to-br from-primary/8 via-card to-accent/5 overflow-hidden">
+        <Card className="border-0 bg-gradient-to-br from-primary/10 via-card to-accent/5 overflow-hidden rounded-3xl shadow-lg">
           <CardContent className="p-5">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-medium text-muted-foreground">Total Value</span>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Portfolio Value</span>
               <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => setShowBalance(!showBalance)}>
-                  {showBalance ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-background/50" onClick={() => setShowBalance(!showBalance)}>
+                  {showBalance ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                 </Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full">
-                  <Share className="h-3.5 w-3.5" />
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-background/50">
+                  <Share className="h-4 w-4" />
                 </Button>
               </div>
             </div>
 
-            <h2 className="text-3xl font-bold tracking-tight">
+            <h2 className="text-4xl font-extrabold tracking-tight">
               {showBalance ? `KES ${stats.totalValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '••••••'}
             </h2>
 
-            <div className="flex items-center gap-3 mt-1">
-              <span className={`flex items-center gap-0.5 text-sm font-semibold ${stats.totalGain >= 0 ? 'text-bull' : 'text-bear'}`}>
+            <div className="flex items-center gap-3 mt-2">
+              <span className={`flex items-center gap-1 text-sm font-bold px-3 py-1 rounded-full ${stats.totalGain >= 0 ? 'bg-bull/15 text-bull' : 'bg-bear/15 text-bear'}`}>
                 {stats.totalGain >= 0 ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
                 {showBalance ? `${stats.totalGain >= 0 ? '+' : ''}KES ${Math.abs(stats.totalGain).toFixed(2)}` : '••••'}
-                <span className="text-xs ml-0.5">({stats.gainPct >= 0 ? '+' : ''}{stats.gainPct.toFixed(1)}%)</span>
+                <span className="text-xs ml-1">({stats.gainPct >= 0 ? '+' : ''}{stats.gainPct.toFixed(1)}%)</span>
               </span>
-              <Badge variant="secondary" className="text-[10px] rounded-full bg-primary/10 text-primary border-0">All time</Badge>
+              <Badge variant="secondary" className="text-[10px] rounded-full bg-primary/10 text-primary border-0 font-semibold">All time</Badge>
             </div>
 
-            <div className="grid grid-cols-2 gap-2.5 mt-4">
-              <div className="bg-background/60 rounded-2xl p-3">
-                <p className="text-[10px] text-muted-foreground mb-0.5">Today</p>
-                <p className={`text-sm font-bold ${stats.todayGain >= 0 ? 'text-bull' : 'text-bear'}`}>
+            <div className="grid grid-cols-2 gap-3 mt-5">
+              <div className="bg-background/70 backdrop-blur-sm rounded-2xl p-3.5 border border-border/20">
+                <p className="text-[10px] text-muted-foreground font-medium mb-1">Today's P/L</p>
+                <p className={`text-base font-bold ${stats.todayGain >= 0 ? 'text-bull' : 'text-bear'}`}>
                   {showBalance ? `${stats.todayGain >= 0 ? '+' : ''}KES ${Math.abs(stats.todayGain).toFixed(2)}` : '••••'}
-                  <span className="text-xs ml-1">({stats.todayPct >= 0 ? '+' : ''}{stats.todayPct.toFixed(1)}%)</span>
+                </p>
+                <p className={`text-[10px] font-medium ${stats.todayPct >= 0 ? 'text-bull' : 'text-bear'}`}>
+                  {stats.todayPct >= 0 ? '+' : ''}{stats.todayPct.toFixed(1)}%
                 </p>
               </div>
-              <div className="bg-background/60 rounded-2xl p-3">
-                <p className="text-[10px] text-muted-foreground mb-0.5">Invested</p>
-                <p className="text-sm font-bold">
+              <div className="bg-background/70 backdrop-blur-sm rounded-2xl p-3.5 border border-border/20">
+                <p className="text-[10px] text-muted-foreground font-medium mb-1">Total Invested</p>
+                <p className="text-base font-bold">
                   {showBalance ? `KES ${stats.totalCost.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '••••'}
                 </p>
+                <p className="text-[10px] text-muted-foreground font-medium">{holdings.length} stocks</p>
               </div>
             </div>
           </CardContent>
