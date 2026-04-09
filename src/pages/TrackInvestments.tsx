@@ -200,20 +200,26 @@ export default function TrackInvestments() {
 
         {/* ── PERFORMANCE CHART ── */}
         <div>
-          <div className="flex items-center gap-1.5 mb-3 overflow-x-auto scrollbar-hide">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold flex items-center gap-2">
+              <Activity className="h-4 w-4 text-primary" />
+              Performance
+            </h3>
+          </div>
+          <div className="flex items-center gap-1 mb-3 bg-muted/30 p-1 rounded-full">
             {["1D", "5D", "1M", "3M", "6M", "1Y", "All"].map(p => (
               <Button
                 key={p}
-                variant={chartPeriod === p ? "default" : "outline"}
+                variant="ghost"
                 size="sm"
-                className={`text-xs rounded-full h-7 px-3 ${chartPeriod === p ? 'bg-primary text-primary-foreground' : ''}`}
+                className={`text-xs rounded-full h-7 px-3 flex-1 ${chartPeriod === p ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                 onClick={() => setChartPeriod(p)}
               >
                 {p}
               </Button>
             ))}
           </div>
-          <Card className="soft-card overflow-hidden">
+          <Card className="border-0 rounded-2xl overflow-hidden shadow-sm">
             <RobinhoodPerformanceChart currentValue={stats.totalValue} initialValue={stats.totalCost} />
           </Card>
         </div>
