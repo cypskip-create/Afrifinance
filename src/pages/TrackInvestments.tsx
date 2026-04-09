@@ -227,20 +227,23 @@ export default function TrackInvestments() {
         {/* ── ALLOCATION ── */}
         {sectorAlloc.length > 0 && (
           <div>
-            <h3 className="text-sm font-bold mb-3">Asset Allocation</h3>
-            <Card className="soft-card p-4">
+            <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+              <Target className="h-4 w-4 text-accent" />
+              Asset Allocation
+            </h3>
+            <Card className="border-0 rounded-2xl p-4 shadow-sm">
               {/* Bar-style allocation */}
-              <div className="flex h-3 rounded-full overflow-hidden mb-4">
+              <div className="flex h-4 rounded-full overflow-hidden mb-4 shadow-inner">
                 {sectorAlloc.map(s => (
-                  <div key={s.name} className={`${s.color} transition-all`} style={{ width: `${s.pct}%` }} />
+                  <div key={s.name} className={`${s.color} transition-all duration-500`} style={{ width: `${s.pct}%` }} />
                 ))}
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2.5">
                 {sectorAlloc.map(s => (
-                  <div key={s.name} className="flex items-center gap-2">
-                    <div className={`w-2.5 h-2.5 rounded-full ${s.color}`} />
+                  <div key={s.name} className="flex items-center gap-2 bg-muted/30 rounded-xl p-2">
+                    <div className={`w-3 h-3 rounded-full ${s.color}`} />
                     <span className="text-xs text-muted-foreground flex-1">{s.name}</span>
-                    <span className="text-xs font-semibold">{s.pct.toFixed(1)}%</span>
+                    <span className="text-xs font-bold">{s.pct.toFixed(1)}%</span>
                   </div>
                 ))}
               </div>
