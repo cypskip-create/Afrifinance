@@ -164,15 +164,15 @@ export default function TrackInvestments() {
               </div>
             </div>
 
-            <h2 className="text-4xl font-extrabold tracking-tight">
+            <h2 className="text-2xl font-bold tracking-tight">
               {showBalance ? `KES ${stats.totalValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '••••••'}
             </h2>
 
             <div className="flex items-center gap-3 mt-2">
-              <span className={`flex items-center gap-1 text-sm font-bold px-3 py-1 rounded-full ${stats.totalGain >= 0 ? 'bg-bull/15 text-bull' : 'bg-bear/15 text-bear'}`}>
-                {stats.totalGain >= 0 ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
+              <span className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full ${stats.totalGain >= 0 ? 'bg-bull/15 text-bull' : 'bg-bear/15 text-bear'}`}>
+                {stats.totalGain >= 0 ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
                 {showBalance ? `${stats.totalGain >= 0 ? '+' : ''}KES ${Math.abs(stats.totalGain).toFixed(2)}` : '••••'}
-                <span className="text-xs ml-1">({stats.gainPct >= 0 ? '+' : ''}{stats.gainPct.toFixed(1)}%)</span>
+                <span className="text-[10px] ml-1">({stats.gainPct >= 0 ? '+' : ''}{stats.gainPct.toFixed(1)}%)</span>
               </span>
               <Badge variant="secondary" className="text-[10px] rounded-full bg-primary/10 text-primary border-0 font-semibold">All time</Badge>
             </div>
@@ -180,7 +180,7 @@ export default function TrackInvestments() {
             <div className="grid grid-cols-2 gap-3 mt-5">
               <div className="bg-background/70 backdrop-blur-sm rounded-2xl p-3.5 border border-border/20">
                 <p className="text-[10px] text-muted-foreground font-medium mb-1">Today's P/L</p>
-                <p className={`text-base font-bold ${stats.todayGain >= 0 ? 'text-bull' : 'text-bear'}`}>
+                <p className={`text-sm font-semibold ${stats.todayGain >= 0 ? 'text-bull' : 'text-bear'}`}>
                   {showBalance ? `${stats.todayGain >= 0 ? '+' : ''}KES ${Math.abs(stats.todayGain).toFixed(2)}` : '••••'}
                 </p>
                 <p className={`text-[10px] font-medium ${stats.todayPct >= 0 ? 'text-bull' : 'text-bear'}`}>
@@ -189,7 +189,7 @@ export default function TrackInvestments() {
               </div>
               <div className="bg-background/70 backdrop-blur-sm rounded-2xl p-3.5 border border-border/20">
                 <p className="text-[10px] text-muted-foreground font-medium mb-1">Total Invested</p>
-                <p className="text-base font-bold">
+                <p className="text-sm font-semibold">
                   {showBalance ? `KES ${stats.totalCost.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '••••'}
                 </p>
                 <p className="text-[10px] text-muted-foreground font-medium">{holdings.length} stocks</p>
