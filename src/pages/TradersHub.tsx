@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Search, X, Bell, Flame, Users, MessageCircle, Feather } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,12 +8,14 @@ import { useProfile } from "@/hooks/useProfile";
 import { usePosts, Post, Comment } from "@/hooks/usePosts";
 import { useFollows } from "@/hooks/useFollows";
 import { usePortfolio } from "@/hooks/usePortfolio";
+import { useWatchlist } from "@/hooks/useWatchlist";
 import { useToast } from "@/hooks/use-toast";
 import { XPostCard } from "@/components/social/XPostCard";
 import { XComposeModal } from "@/components/social/XComposeModal";
 import { XCommentSheet } from "@/components/social/XCommentSheet";
 import { TrendingSidebar } from "@/components/social/TrendingSidebar";
-import { useEffect } from "react";
+import { TradersHubDisclaimer } from "@/components/social/TradersHubDisclaimer";
+import { supabase } from "@/integrations/supabase/client";
 
 const MOCK_PRICES: Record<string, number> = {
   SCOM: 12.85, SAFCOM: 12.85, EQTY: 62.50, KCB: 45.30, COOP: 15.20,
@@ -26,9 +28,10 @@ export default function TradersHub() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const { profile } = useProfile();
-  const { posts, loading, createPost, likePost, repostPost, bookmarkPost, fetchComments, addComment, deletePost } = usePosts();
+  const { posts, loading, createPost, likePost, repostPost, bookmarkPost, fetchComments, addComment, deletePost, editPost } = usePosts();
   const { isFollowing } = useFollows();
   const { portfolio } = usePortfolio();
+  const { watchlist } = useWatchlist();
   const { toast } = useToast();
 
   const [activeTab, setActiveTab] = useState<"for-you" | "following" | "trending">("for-you");
@@ -40,21 +43,20 @@ export default function TradersHub() {
   const [loadingComments, setLoadingComments] = useState(false);
   const [prefillContent, setPrefillContent] = useState("");
   const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
+  const [disclaimerDone, setDisclaimerDone] = useState(() => {
+    if (!user) return true;
+    return !!localStorage.getItem(`tradershub_disclaimer_${user.id}`);
+  });
 
   useEffect(() => {
     const urlSearch = searchParams.get("search");
     if (urlSearch) setSearchQuery(urlSearch);
-    
-    // Auto-open compose with prefilled ticker from stock page
     const shouldCompose = searchParams.get("compose");
     const ticker = searchParams.get("ticker");
     if (shouldCompose === "true" && ticker) {
       setComposeOpen(true);
-      // The compose modal will receive the prefilled content
       setPrefillContent(`$${ticker} `);
     }
-    
-    // Scroll to specific post
     const postId = searchParams.get("post");
     if (postId) {
       setHighlightedPostId(postId);
@@ -64,6 +66,9 @@ export default function TradersHub() {
       }, 500);
     }
   }, [searchParams]);
+
+  const portfolioSymbols = useMemo(() => new Set(portfolio.map(h => h.symbol)), [portfolio]);
+  const watchlistSymbols = useMemo(() => new Set(watchlist.map(w => w.symbol)), [watchlist]);
 
   const portfolioSnapshot = useMemo(() => {
     if (!portfolio || portfolio.length === 0) return null;
@@ -79,8 +84,9 @@ export default function TradersHub() {
     return { totalValue, totalGain, gainPercent, holdings };
   }, [portfolio]);
 
+  // Smart "For You" algorithm
   const filteredPosts = useMemo(() => {
-    return posts.filter(post => {
+    let result = posts.filter(post => {
       if (searchQuery) {
         const q = searchQuery.toLowerCase().replace(/^[#$]/, "");
         if (!post.content.toLowerCase().includes(q) && !post.stock_mentions?.some(s => s.toLowerCase().includes(q))) return false;
@@ -89,7 +95,35 @@ export default function TradersHub() {
       if (activeTab === "trending") return post.likes_count >= 3 || post.reposts_count >= 1;
       return true;
     });
-  }, [posts, searchQuery, activeTab, isFollowing]);
+
+    // For You: smart sort
+    if (activeTab === "for-you" && !searchQuery) {
+      result = result.map(post => {
+        let score = 0;
+        // Recency: newer = higher
+        const ageHours = (Date.now() - new Date(post.created_at).getTime()) / 3600000;
+        score += Math.max(0, 100 - ageHours * 2);
+        // From followed users
+        if (isFollowing(post.user_id)) score += 40;
+        // Own posts slight boost
+        if (user && post.user_id === user.id) score += 10;
+        // Mentions stocks in portfolio/watchlist
+        if (post.stock_mentions) {
+          post.stock_mentions.forEach(s => {
+            if (portfolioSymbols.has(s)) score += 30;
+            if (watchlistSymbols.has(s)) score += 20;
+          });
+        }
+        // Engagement
+        score += Math.min(post.likes_count * 5, 50);
+        score += Math.min(post.comments_count * 8, 40);
+        score += Math.min(post.reposts_count * 10, 30);
+        return { ...post, _score: score };
+      }).sort((a, b) => (b as any)._score - (a as any)._score);
+    }
+
+    return result;
+  }, [posts, searchQuery, activeTab, isFollowing, portfolioSymbols, watchlistSymbols, user]);
 
   const handleSearch = (q: string) => { setSearchQuery(q); setSearchParams(q ? { search: q } : {}); };
   const clearSearch = () => { setSearchQuery(""); setSearchParams({}); };
@@ -109,6 +143,12 @@ export default function TradersHub() {
     else { await navigator.clipboard.writeText(window.location.href); toast({ title: "Link copied" }); }
   };
   const handleDelete = async (postId: string) => { const { error } = await deletePost(postId); if (!error) toast({ title: "Deleted" }); };
+  const handleEdit = async (postId: string, newContent: string) => {
+    if (!editPost) return;
+    const { error } = await editPost(postId, newContent);
+    if (error) toast({ title: "Error", description: "Failed to edit", variant: "destructive" });
+    else toast({ title: "Post updated" });
+  };
 
   const openComments = async (post: Post) => {
     setSelectedPost(post);
@@ -133,6 +173,9 @@ export default function TradersHub() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
+      {/* First-time disclaimer */}
+      {!disclaimerDone && <TradersHubDisclaimer userId={user?.id} onAccept={() => setDisclaimerDone(true)} />}
+
       {/* Header */}
       <header className="sticky top-0 z-40 bg-card/90 backdrop-blur-xl border-b border-border/60">
         <div className="flex items-center justify-between px-4 py-3">
@@ -143,7 +186,6 @@ export default function TradersHub() {
           </Button>
         </div>
 
-        {/* Search */}
         <div className="px-4 pb-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -161,7 +203,6 @@ export default function TradersHub() {
           </div>
         </div>
 
-        {/* Tabs */}
         <div className="flex">
           {tabs.map(tab => (
             <button
@@ -191,7 +232,7 @@ export default function TradersHub() {
 
       <div className="max-w-[1200px] mx-auto flex">
         <div className="flex-1 max-w-[600px] min-w-0">
-          {loading ? (
+          {loading || !disclaimerDone ? (
             <div className="flex justify-center py-16">
               <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary/30 border-t-primary" />
             </div>
@@ -227,7 +268,7 @@ export default function TradersHub() {
             <div>
               {filteredPosts.map(post => (
                 <div key={post.id} id={`post-${post.id}`} className={`transition-colors ${highlightedPostId === post.id ? 'bg-primary/5 ring-1 ring-primary/20 rounded-xl' : ''}`}>
-                  <XPostCard post={post} currentUserId={user?.id} onLike={handleLike} onComment={openComments} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handleShare} onDelete={handleDelete} />
+                  <XPostCard post={post} currentUserId={user?.id} onLike={handleLike} onComment={openComments} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handleShare} onDelete={handleDelete} onEdit={handleEdit} />
                 </div>
               ))}
             </div>
@@ -239,7 +280,6 @@ export default function TradersHub() {
         </div>
       </div>
 
-      {/* FAB */}
       {user && (
         <button
           className="fixed bottom-24 right-4 sm:bottom-28 sm:right-6 z-50 h-14 w-14 rounded-2xl bg-primary text-primary-foreground shadow-lg flex items-center justify-center transition-all hover:scale-105 active:scale-95"
