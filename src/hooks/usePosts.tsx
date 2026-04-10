@@ -18,6 +18,7 @@ export interface Post {
   stock_mentions: string[] | null;
   created_at: string;
   updated_at: string;
+  edited_at?: string | null;
   author?: PostAuthor;
   likes_count: number;
   reposts_count: number;
@@ -311,6 +312,39 @@ export function usePosts() {
     return { data, error };
   };
 
+  const editPost = async (postId: string, newContent: string) => {
+    if (!user) return { error: { message: 'Must be logged in' } };
+
+    const post = posts.find(p => p.id === postId);
+    if (!post) return { error: { message: 'Post not found' } };
+
+    // Check 30 minute window
+    const ageMinutes = (Date.now() - new Date(post.created_at).getTime()) / 60000;
+    if (ageMinutes > 30) return { error: { message: 'Posts can only be edited within 30 minutes' } };
+
+    const stockMentions = newContent.match(/\$[A-Z]+/g)?.map(s => s.slice(1)) || [];
+
+    const { error } = await supabase
+      .from('posts')
+      .update({
+        content: newContent,
+        stock_mentions: stockMentions.length > 0 ? stockMentions : null,
+        edited_at: new Date().toISOString(),
+      } as any)
+      .eq('id', postId)
+      .eq('user_id', user.id);
+
+    if (!error) {
+      setPosts(prev => prev.map(p =>
+        p.id === postId
+          ? { ...p, content: newContent, stock_mentions: stockMentions.length > 0 ? stockMentions : null, edited_at: new Date().toISOString() } as any
+          : p
+      ));
+    }
+
+    return { error };
+  };
+
   return {
     posts,
     loading,
@@ -318,6 +352,7 @@ export function usePosts() {
     fetchPosts,
     createPost,
     deletePost,
+    editPost,
     likePost,
     repostPost,
     bookmarkPost,
