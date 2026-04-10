@@ -1,9 +1,10 @@
-import { useState, useCallback } from "react";
-import { Heart, MessageCircle, Repeat2, Share, Bookmark, BookmarkCheck, Trash2, MoreHorizontal, Verified, Eye, Quote } from "lucide-react";
+import { useState } from "react";
+import { Heart, MessageCircle, Repeat2, Share, Bookmark, BookmarkCheck, Trash2, MoreHorizontal, Verified, Eye, Quote, Pencil } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
 import { Post } from "@/hooks/usePosts";
 import { ImageViewer } from "./ImageViewer";
@@ -29,12 +30,18 @@ interface XPostCardProps {
   onBookmark: (postId: string) => void;
   onShare: (post: Post) => void;
   onDelete?: (postId: string) => void;
+  onEdit?: (postId: string, newContent: string) => void;
 }
 
-export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, onBookmark, onShare, onDelete }: XPostCardProps) {
+export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, onBookmark, onShare, onDelete, onEdit }: XPostCardProps) {
   const navigate = useNavigate();
   const [showRepostMenu, setShowRepostMenu] = useState(false);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editContent, setEditContent] = useState(post.content);
+
+  const canEdit = currentUserId === post.user_id && onEdit &&
+    (Date.now() - new Date(post.created_at).getTime()) < 30 * 60 * 1000;
 
   const formatNumber = (num: number) => {
     if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
@@ -62,9 +69,6 @@ export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, on
   const handle = (post.author as any)?.handle || post.author?.full_name?.toLowerCase().replace(/\s+/g, "") || "user";
   const viewCount = Math.floor(Math.random() * 5000) + 100;
 
-  // Parse @mentions from content to find tagged users
-  const mentionedHandles = (post.content.match(/@[\w]+/g) || []).map(m => m.slice(1));
-
   const renderContent = (content: string) => {
     return content.split(/(\$[A-Z]+|#\w+|@[\w]+)/g).map((part, i) => {
       if (part.startsWith("$")) {
@@ -88,20 +92,11 @@ export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, on
       if (part.startsWith("@")) {
         const username = part.slice(1);
         return (
-          <span key={i} className="text-primary font-semibold cursor-pointer hover:underline" onClick={async (e) => { 
+          <span key={i} className="text-primary font-semibold cursor-pointer hover:underline" onClick={async (e) => {
             e.stopPropagation();
-            // Look up profile by handle
-            const { data } = await supabase
-              .from('profiles')
-              .select('user_id')
-              .eq('handle', username)
-              .maybeSingle();
-            if (data?.user_id) {
-              navigate(`/profile/${data.user_id}`);
-            } else {
-              // Fallback: search in TradersHub
-              navigate(`/traders-hub?search=${encodeURIComponent(part)}`);
-            }
+            const { data } = await supabase.from('profiles').select('user_id').eq('handle', username).maybeSingle();
+            if (data?.user_id) navigate(`/profile/${data.user_id}`);
+            else navigate(`/traders-hub?search=${encodeURIComponent(part)}`);
           }}>
             {part}
           </span>
@@ -109,6 +104,13 @@ export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, on
       }
       return part;
     });
+  };
+
+  const handleSaveEdit = () => {
+    if (onEdit && editContent.trim()) {
+      onEdit(post.id, editContent);
+      setEditOpen(false);
+    }
   };
 
   return (
@@ -128,6 +130,9 @@ export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, on
                 <span className="text-muted-foreground text-sm">@{handle}</span>
                 <span className="text-muted-foreground text-sm">·</span>
                 <span className="text-muted-foreground text-sm shrink-0">{formatTimeAgo(post.created_at)}</span>
+                {(post as any).edited_at && (
+                  <span className="text-muted-foreground text-[11px] italic ml-0.5">(edited)</span>
+                )}
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -136,9 +141,18 @@ export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, on
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48 rounded-xl">
-                  {currentUserId === post.user_id && onDelete && (
+                  {currentUserId === post.user_id && (
                     <>
-                      <DropdownMenuItem onClick={() => onDelete(post.id)} className="text-destructive"><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
+                      {canEdit && (
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setEditContent(post.content); setEditOpen(true); }}>
+                          <Pencil className="h-4 w-4 mr-2" />Edit
+                        </DropdownMenuItem>
+                      )}
+                      {onDelete && (
+                        <DropdownMenuItem onClick={() => onDelete(post.id)} className="text-destructive">
+                          <Trash2 className="h-4 w-4 mr-2" />Delete
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuSeparator />
                     </>
                   )}
@@ -216,6 +230,25 @@ export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, on
       {post.image_url && (
         <ImageViewer open={imageViewerOpen} onOpenChange={setImageViewerOpen} images={[post.image_url]} />
       )}
+
+      {/* Edit dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-md rounded-2xl p-0 gap-0">
+          <div className="p-4 border-b border-border flex items-center justify-between">
+            <h3 className="font-bold">Edit Post</h3>
+            <Button size="sm" className="rounded-full px-5 font-bold" onClick={handleSaveEdit} disabled={!editContent.trim()}>Save</Button>
+          </div>
+          <div className="p-4">
+            <textarea
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              className="w-full bg-transparent border-0 outline-none resize-none text-[15px] leading-[1.5] min-h-[120px]"
+              maxLength={500}
+            />
+            <p className="text-xs text-muted-foreground mt-2">You can edit posts within 30 minutes of posting.</p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

@@ -448,9 +448,15 @@ export default function UserProfile() {
           })()}
         </TabsContent>
 
-        {/* Likes tab */}
+        {/* Likes tab — private to owner */}
         <TabsContent value="likes" className="mt-0">
-          {likedPosts.length === 0 ? (
+          {!isOwnProfile ? (
+            <div className="p-12 text-center text-muted-foreground">
+              <Lock className="h-10 w-10 mx-auto mb-3 opacity-40" />
+              <p className="text-sm font-medium">Likes are private</p>
+              <p className="text-xs text-muted-foreground mt-1">Only visible to the account owner</p>
+            </div>
+          ) : likedPosts.length === 0 ? (
             <div className="p-12 text-center text-muted-foreground"><Heart className="h-10 w-10 mx-auto mb-3 opacity-40" /><p className="text-sm">No likes yet</p></div>
           ) : (
             <div className="divide-y divide-border">
