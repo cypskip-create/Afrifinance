@@ -255,7 +255,7 @@ export default function StockDetail() {
           </TabsList>
 
           <TabsContent value="overview" className="mt-3 space-y-4">
-            <AnalystRatings symbol={symbol || ""} />
+            <AnalystRatings />
           </TabsContent>
 
           <TabsContent value="financials" className="mt-3 space-y-4">
@@ -324,8 +324,8 @@ export default function StockDetail() {
         </Button>
       </div>
 
-      {showAlertsDialog && <PriceAlertsManager symbol={symbol || ""} />}
-      <TradeSheet open={tradeSheetOpen} onOpenChange={setTradeSheetOpen} symbol={symbol || "SAFCOM"} stockName={stock.name} currentPrice={stock.price} />
+      {showAlertsDialog && <PriceAlertsManager />}
+      <TradeSheet open={tradeSheetOpen} onOpenChange={setTradeSheetOpen} symbol={symbol || "SAFCOM"} stockName={stock.name} currentPrice={stock.price} isUp={stock.isUp} changePercent={stock.changePercent} />
     </div>
   );
 }
