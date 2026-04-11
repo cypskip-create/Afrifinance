@@ -8,7 +8,7 @@ import { RobinhoodPerformanceChart } from "@/components/portfolio/RobinhoodPerfo
 import {
   Trash2, TrendingUp, TrendingDown, ArrowLeft, ArrowUpRight, ArrowDownRight,
   Eye, EyeOff, MoreHorizontal, Plus, RefreshCw, Share, ChevronDown, ChevronUp,
-  Wallet, Target, Shield, FileText, Activity
+  Wallet, Target, Shield, Activity
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -33,6 +33,7 @@ export default function TrackInvestments() {
   const [sortBy, setSortBy] = useState<SortKey>("value");
   const [sortAsc, setSortAsc] = useState(false);
   const [chartPeriod, setChartPeriod] = useState("1M");
+  const [chartMode, setChartMode] = useState<"value" | "performance">("value");
 
   const getPrice = (symbol: string) => PRICES[symbol] || 50;
 
@@ -127,7 +128,7 @@ export default function TrackInvestments() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      {/* Premium Header */}
+      {/* Header */}
       <header className="sticky top-0 z-40 bg-gradient-to-b from-card to-card/95 backdrop-blur-xl border-b border-border/30">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
@@ -153,46 +154,46 @@ export default function TrackInvestments() {
         <Card className="border-0 bg-gradient-to-br from-primary/10 via-card to-accent/5 overflow-hidden rounded-3xl shadow-lg">
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Portfolio Value</span>
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Total Portfolio Value</span>
               <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-background/50" onClick={() => setShowBalance(!showBalance)}>
-                  {showBalance ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-background/50" onClick={() => setShowBalance(!showBalance)}>
+                  {showBalance ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                 </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-background/50">
-                  <Share className="h-4 w-4" />
+                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-background/50">
+                  <Share className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </div>
 
-            <h2 className="text-2xl font-bold tracking-tight">
+            <h2 className="text-xl font-bold tracking-tight">
               {showBalance ? `KES ${stats.totalValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '••••••'}
             </h2>
 
-            <div className="flex items-center gap-3 mt-2">
-              <span className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full ${stats.totalGain >= 0 ? 'bg-bull/15 text-bull' : 'bg-bear/15 text-bear'}`}>
-                {stats.totalGain >= 0 ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
+            <div className="flex items-center gap-3 mt-1.5">
+              <span className={`flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full ${stats.totalGain >= 0 ? 'bg-bull/15 text-bull' : 'bg-bear/15 text-bear'}`}>
+                {stats.totalGain >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
                 {showBalance ? `${stats.totalGain >= 0 ? '+' : ''}KES ${Math.abs(stats.totalGain).toFixed(2)}` : '••••'}
-                <span className="text-[10px] ml-1">({stats.gainPct >= 0 ? '+' : ''}{stats.gainPct.toFixed(1)}%)</span>
+                <span className="text-[9px] ml-0.5">({stats.gainPct >= 0 ? '+' : ''}{stats.gainPct.toFixed(1)}%)</span>
               </span>
-              <Badge variant="secondary" className="text-[10px] rounded-full bg-primary/10 text-primary border-0 font-semibold">All time</Badge>
+              <Badge variant="secondary" className="text-[9px] rounded-full bg-primary/10 text-primary border-0 font-semibold">All time</Badge>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 mt-5">
-              <div className="bg-background/70 backdrop-blur-sm rounded-2xl p-3.5 border border-border/20">
-                <p className="text-[10px] text-muted-foreground font-medium mb-1">Today's P/L</p>
-                <p className={`text-sm font-semibold ${stats.todayGain >= 0 ? 'text-bull' : 'text-bear'}`}>
+            <div className="grid grid-cols-2 gap-2.5 mt-4">
+              <div className="bg-background/70 backdrop-blur-sm rounded-2xl p-3 border border-border/20">
+                <p className="text-[9px] text-muted-foreground font-medium mb-0.5">Today's P/L</p>
+                <p className={`text-xs font-semibold ${stats.todayGain >= 0 ? 'text-bull' : 'text-bear'}`}>
                   {showBalance ? `${stats.todayGain >= 0 ? '+' : ''}KES ${Math.abs(stats.todayGain).toFixed(2)}` : '••••'}
                 </p>
-                <p className={`text-[10px] font-medium ${stats.todayPct >= 0 ? 'text-bull' : 'text-bear'}`}>
+                <p className={`text-[9px] font-medium ${stats.todayPct >= 0 ? 'text-bull' : 'text-bear'}`}>
                   {stats.todayPct >= 0 ? '+' : ''}{stats.todayPct.toFixed(1)}%
                 </p>
               </div>
-              <div className="bg-background/70 backdrop-blur-sm rounded-2xl p-3.5 border border-border/20">
-                <p className="text-[10px] text-muted-foreground font-medium mb-1">Total Invested</p>
-                <p className="text-sm font-semibold">
+              <div className="bg-background/70 backdrop-blur-sm rounded-2xl p-3 border border-border/20">
+                <p className="text-[9px] text-muted-foreground font-medium mb-0.5">Total Invested</p>
+                <p className="text-xs font-semibold">
                   {showBalance ? `KES ${stats.totalCost.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '••••'}
                 </p>
-                <p className="text-[10px] text-muted-foreground font-medium">{holdings.length} stocks</p>
+                <p className="text-[9px] text-muted-foreground font-medium">{holdings.length} stocks</p>
               </div>
             </div>
           </CardContent>
@@ -205,6 +206,25 @@ export default function TrackInvestments() {
               <Activity className="h-4 w-4 text-primary" />
               Performance
             </h3>
+            {/* Value / Performance toggle */}
+            <div className="flex items-center bg-muted/40 rounded-full p-0.5">
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`text-[10px] rounded-full h-6 px-3 font-semibold ${chartMode === 'value' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground'}`}
+                onClick={() => setChartMode('value')}
+              >
+                Value
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`text-[10px] rounded-full h-6 px-3 font-semibold ${chartMode === 'performance' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground'}`}
+                onClick={() => setChartMode('performance')}
+              >
+                Performance
+              </Button>
+            </div>
           </div>
           <div className="flex items-center gap-1 mb-3 bg-muted/30 p-1 rounded-full">
             {["1D", "5D", "1M", "3M", "6M", "1Y", "All"].map(p => (
@@ -220,7 +240,10 @@ export default function TrackInvestments() {
             ))}
           </div>
           <Card className="border-0 rounded-2xl overflow-hidden shadow-sm">
-            <RobinhoodPerformanceChart currentValue={stats.totalValue} initialValue={stats.totalCost} />
+            <RobinhoodPerformanceChart
+              currentValue={chartMode === 'value' ? stats.totalValue : stats.gainPct}
+              initialValue={chartMode === 'value' ? stats.totalCost : 0}
+            />
           </Card>
         </div>
 
@@ -232,7 +255,6 @@ export default function TrackInvestments() {
               Asset Allocation
             </h3>
             <Card className="border-0 rounded-2xl p-4 shadow-sm">
-              {/* Bar-style allocation */}
               <div className="flex h-4 rounded-full overflow-hidden mb-4 shadow-inner">
                 {sectorAlloc.map(s => (
                   <div key={s.name} className={`${s.color} transition-all duration-500`} style={{ width: `${s.pct}%` }} />
@@ -280,7 +302,6 @@ export default function TrackInvestments() {
             </Card>
           ) : (
             <Card className="soft-card overflow-hidden">
-              {/* Table Header */}
               <div className="grid grid-cols-12 gap-1 py-2 px-4 border-b border-border/50 bg-muted/30 text-xs font-semibold text-muted-foreground">
                 <span className="col-span-4">Stock</span>
                 <span className="col-span-2 text-right">Shares</span>
@@ -342,7 +363,6 @@ export default function TrackInvestments() {
         {/* ── INSIGHTS ── */}
         {holdings.length > 0 && (
           <div className="grid grid-cols-2 gap-3">
-            {/* Top Movers */}
             <Card className="border-0 rounded-2xl p-4 shadow-sm bg-gradient-to-br from-card to-muted/20">
               <h4 className="text-xs font-bold text-muted-foreground mb-3 flex items-center gap-1.5">
                 <TrendingUp className="h-3.5 w-3.5 text-primary" />
@@ -360,7 +380,6 @@ export default function TrackInvestments() {
               </div>
             </Card>
 
-            {/* Diversification */}
             <Card className="border-0 rounded-2xl p-4 shadow-sm bg-gradient-to-br from-card to-muted/20">
               <h4 className="text-xs font-bold text-muted-foreground mb-3 flex items-center gap-1.5">
                 <Shield className="h-3.5 w-3.5 text-primary" />
@@ -383,14 +402,6 @@ export default function TrackInvestments() {
             </Card>
           </div>
         )}
-
-        {/* Floating Trade Button */}
-        <div className="fixed bottom-24 right-4 z-30">
-          <Button className="h-14 px-6 rounded-2xl bg-primary text-primary-foreground shadow-lg font-bold gap-2 text-sm hover:scale-105 active:scale-95 transition-transform">
-            <Wallet className="h-5 w-5" />
-            Trade
-          </Button>
-        </div>
       </div>
     </div>
   );

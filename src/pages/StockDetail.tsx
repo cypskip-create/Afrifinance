@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { StockPriceChart } from "@/components/stock/StockPriceChart";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PriceAlertsManager } from "@/components/alerts/PriceAlertsManager";
 import { usePortfolio } from "@/hooks/usePortfolio";
@@ -58,18 +58,14 @@ const stockNews = [
   { id: 4, title: "Board announces share buyback program", source: "NSE Filings", time: "1d ago", sentiment: "bullish" as const },
 ];
 
-const communityPosts = [
-  { id: 1, user: "TraderMike", content: "Just loaded up on more shares. The fundamentals are strong 📈", likes: 24, replies: 8, time: "1h ago" },
-  { id: 2, user: "NairobiInvestor", content: "Great earnings call today. Management is confident about next quarter.", likes: 18, replies: 5, time: "3h ago" },
-  { id: 3, user: "StockPickerKE", content: "Watch the support level at KES 12.50. If it holds, we're going higher.", likes: 31, replies: 12, time: "5h ago" },
-];
-
 export default function StockDetail() {
   const navigate = useNavigate();
   const { symbol } = useParams();
   const [selectedTimeframe, setSelectedTimeframe] = useState("1D");
   const [showAlertsDialog, setShowAlertsDialog] = useState(false);
   const [tradeSheetOpen, setTradeSheetOpen] = useState(false);
+  const [hoverPrice, setHoverPrice] = useState<number | null>(null);
+  const [hoverDate, setHoverDate] = useState<string | null>(null);
   const { addToWatchlist, removeFromWatchlist, isInWatchlist } = useWatchlist();
   const { addToPortfolio } = usePortfolio();
   const { toast } = useToast();
@@ -98,10 +94,21 @@ export default function StockDetail() {
     }
   };
 
+  const handleChartHover = useCallback((price: number | null, date: string | null) => {
+    setHoverPrice(price);
+    setHoverDate(date);
+  }, []);
+
   const timeframes = ["1D", "5D", "1M", "3M", "6M", "1Y", "ALL"];
   const divYield = stock.pe !== "N/A" ? ((parseFloat(stock.dividend) / stock.price) * 100).toFixed(1) : "0.0";
 
-  // Revenue breakdown mock
+  const displayPrice = hoverPrice ?? stock.price;
+  const priceChange = hoverPrice ? hoverPrice - stock.price : stock.change;
+  const priceChangePercent = hoverPrice
+    ? ((hoverPrice - stock.price) / stock.price * 100).toFixed(2)
+    : stock.changePercent;
+  const displayIsUp = hoverPrice ? hoverPrice >= stock.price : stock.isUp;
+
   const revenueSegments = [
     { segment: "M-Pesa", revenue: "KES 125.8B", pct: 38 },
     { segment: "Voice", revenue: "KES 72.4B", pct: 22 },
@@ -142,17 +149,21 @@ export default function StockDetail() {
       </header>
 
       <div className="p-4 space-y-4">
-        {/* Hero Price */}
+        {/* Hero Price — updates on chart drag */}
         <div className="animate-fade-in">
           <div className="flex items-center gap-2 mb-1">
             <Badge variant="secondary" className="text-[10px] py-0">{stock.exchange}</Badge>
             <Badge variant="outline" className="text-[10px] py-0">{stock.sector}</Badge>
           </div>
-          <div className="text-3xl font-bold tracking-tight">KES {stock.price.toFixed(2)}</div>
-          <div className={`text-sm font-semibold flex items-center gap-1 mt-0.5 ${stock.isUp ? 'text-bull' : 'text-bear'}`}>
-            {stock.isUp ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-            <span>{stock.isUp ? '+' : ''}KES {stock.change.toFixed(2)} ({stock.changePercent}%)</span>
-            <span className="text-muted-foreground text-xs ml-1">Today</span>
+          <div className="text-3xl font-bold tracking-tight transition-all">
+            KES {displayPrice.toFixed(2)}
+          </div>
+          <div className={`text-sm font-semibold flex items-center gap-1 mt-0.5 ${displayIsUp ? 'text-bull' : 'text-bear'}`}>
+            {displayIsUp ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+            <span>{priceChange >= 0 ? '+' : ''}KES {Math.abs(priceChange).toFixed(2)} ({priceChangePercent}%)</span>
+            <span className="text-muted-foreground text-xs ml-1">
+              {hoverDate || "Today"}
+            </span>
           </div>
         </div>
 
@@ -169,7 +180,9 @@ export default function StockDetail() {
           </div>
           <Card className="soft-card overflow-hidden">
             <CardContent className="p-3">
-              <div className="h-56"><StockPriceChart symbol={symbol} timeframe={selectedTimeframe} /></div>
+              <div className="h-56">
+                <StockPriceChart symbol={symbol} timeframe={selectedTimeframe} onHoverPrice={handleChartHover} />
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -226,286 +239,93 @@ export default function StockDetail() {
               <span className="text-xs font-semibold">{stock.low52}</span>
               <div className="flex-1 h-2 bg-muted rounded-full relative">
                 <div className="absolute top-0 h-2 rounded-full bg-primary"
-                  style={{ left: '0%', width: `${Math.min(100, Math.max(5, ((stock.price - parseFloat(stock.low52 === 'N/A' ? '0' : stock.low52)) / (parseFloat(stock.high52 === 'N/A' ? '100' : stock.high52) - parseFloat(stock.low52 === 'N/A' ? '0' : stock.low52))) * 100))}%` }} />
-                <div className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-primary border-2 border-background shadow-sm"
-                  style={{ left: `${Math.min(97, Math.max(3, ((stock.price - parseFloat(stock.low52 === 'N/A' ? '0' : stock.low52)) / (parseFloat(stock.high52 === 'N/A' ? '100' : stock.high52) - parseFloat(stock.low52 === 'N/A' ? '0' : stock.low52))) * 100))}%` }} />
+                  style={{ width: `${stock.high52 !== "N/A" ? ((stock.price - parseFloat(stock.low52)) / (parseFloat(stock.high52) - parseFloat(stock.low52))) * 100 : 50}%` }} />
               </div>
               <span className="text-xs font-semibold">{stock.high52}</span>
             </div>
           </CardContent>
         </Card>
 
-        {/* Analyst Ratings */}
-        <Card className="soft-card">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2"><Award className="h-4 w-4 text-accent" />Analyst Ratings</CardTitle>
-          </CardHeader>
-          <CardContent className="pb-4"><AnalystRatings currentPrice={stock.price} /></CardContent>
-        </Card>
-
-        {/* Money Flow */}
-        <Card className="soft-card">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="text-sm font-bold flex items-center gap-2"><Activity className="h-4 w-4 text-primary" />Money Flow</h4>
-              <Badge variant="secondary" className="text-[10px]">Net Inflow</Badge>
-            </div>
-            <div className="flex justify-between items-center mb-1.5">
-              <span className="text-xs text-bull font-semibold">Inflow 65%</span>
-              <span className="text-xs text-bear font-semibold">Outflow 35%</span>
-            </div>
-            <div className="w-full bg-bear/20 rounded-full h-2.5 overflow-hidden">
-              <div className="bg-bull h-2.5 rounded-full transition-all duration-500" style={{ width: '65%' }} />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Stock-Specific News */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold flex items-center gap-2"><Newspaper className="h-4 w-4 text-accent" />Latest News</h3>
-            <Button variant="ghost" size="sm" className="h-7 text-xs text-primary rounded-full px-3">All <ChevronRight className="h-3 w-3 ml-0.5" /></Button>
-          </div>
-          <div className="space-y-2">
-            {stockNews.map(news => (
-              <Card key={news.id} className="soft-card p-3 cursor-pointer active:scale-[0.99] transition-transform">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold line-clamp-2">{news.title}</p>
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <span className="text-xs text-muted-foreground">{news.source}</span>
-                      <span className="text-xs text-muted-foreground">·</span>
-                      <span className="text-xs text-muted-foreground">{news.time}</span>
-                    </div>
-                  </div>
-                  <Badge className={`text-[10px] py-0 px-1.5 shrink-0 ${news.sentiment === 'bullish' ? 'bg-bull/10 text-bull border-bull/20' : 'bg-bear/10 text-bear border-bear/20'}`}>
-                    {news.sentiment}
-                  </Badge>
-                </div>
-              </Card>
+        {/* Financials */}
+        <Tabs defaultValue="overview">
+          <TabsList className="w-full grid grid-cols-4 bg-muted/40 rounded-full h-9 p-0.5">
+            {["Overview", "Financials", "News", "About"].map(tab => (
+              <TabsTrigger key={tab} value={tab.toLowerCase()} className="text-xs rounded-full data-[state=active]:bg-card data-[state=active]:shadow-sm h-full">{tab}</TabsTrigger>
             ))}
-          </div>
-        </div>
-
-        {/* Removed community posts section - discuss button in quick actions navigates to TradersHub */}
-
-        {/* Detailed Tabs: Overview / Financials / Profile */}
-        <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 gap-1">
-            <TabsTrigger value="overview" className="text-xs px-2">Overview</TabsTrigger>
-            <TabsTrigger value="financials" className="text-xs px-2">Financials</TabsTrigger>
-            <TabsTrigger value="profile" className="text-xs px-2">Profile</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-3 mt-4">
-            <Card className="soft-card">
-              <CardContent className="p-4">
-                <h4 className="text-sm font-bold mb-3 flex items-center gap-2"><Target className="h-4 w-4 text-accent" />Technical Sentiment</h4>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs">Overall Signal</span>
-                  <Badge className="bg-bull/10 text-bull border-bull/20 text-xs">Strong Buy</Badge>
-                </div>
-                <div className="grid grid-cols-3 gap-2 mt-3">
-                  {[
-                    { label: "RSI (14)", value: "68.2", status: "Neutral" },
-                    { label: "MACD", value: "Bullish", status: "Buy" },
-                    { label: "SMA 50", value: "Above", status: "Buy" },
-                  ].map(i => (
-                    <div key={i.label} className="text-center p-2 bg-muted/30 rounded-xl">
-                      <p className="text-[10px] text-muted-foreground">{i.label}</p>
-                      <p className="text-xs font-bold mt-0.5">{i.value}</p>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+          <TabsContent value="overview" className="mt-3 space-y-4">
+            <AnalystRatings />
           </TabsContent>
 
-          <TabsContent value="financials" className="space-y-3 mt-4">
-            {/* Valuation Metrics */}
+          <TabsContent value="financials" className="mt-3 space-y-4">
             <Card className="soft-card">
-              <CardContent className="p-4">
-                <h4 className="text-sm font-bold mb-3 flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4 text-primary" />Valuation Metrics
-                </h4>
-                <div className="space-y-2.5">
-                  {[
-                    { label: "P/E Ratio", value: stock.pe, sector: "8.5", note: stock.pe !== "N/A" && parseFloat(stock.pe) < 10 ? "Below sector avg" : "Above sector avg" },
-                    { label: "P/B Ratio", value: "2.8", sector: "1.9", note: "Premium valuation" },
-                    { label: "P/S Ratio", value: "1.6", sector: "2.1", note: "Below sector avg" },
-                    { label: "EV/EBITDA", value: "8.2", sector: "7.5", note: "Near sector avg" },
-                  ].map(m => (
-                    <div key={m.label} className="flex items-center justify-between">
-                      <div>
-                        <span className="text-xs text-muted-foreground">{m.label}</span>
-                        <p className="text-[10px] text-muted-foreground/60">{m.note}</p>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-bold">{m.value}</span>
-                        <p className="text-[10px] text-muted-foreground">Sector: {m.sector}</p>
-                      </div>
+              <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><PieChart className="h-4 w-4 text-primary" />Revenue Breakdown</CardTitle></CardHeader>
+              <CardContent className="space-y-2">
+                {revenueSegments.map(seg => (
+                  <div key={seg.segment}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-medium">{seg.segment}</span>
+                      <span className="text-xs text-muted-foreground">{seg.revenue} ({seg.pct}%)</span>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Key Financial Indicators */}
-            <Card className="soft-card">
-              <CardContent className="p-4">
-                <h4 className="text-sm font-bold mb-3">Key Financial Indicators</h4>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { label: "ROE", value: "18.5%" }, { label: "ROA", value: "12.3%" },
-                    { label: "EBITDA Margin", value: "45.2%" }, { label: "FCF", value: "KES 89.2B" },
-                    { label: "Debt/Equity", value: "0.25" }, { label: "Current Ratio", value: "1.8" },
-                  ].map(s => (
-                    <div key={s.label} className="flex justify-between">
-                      <span className="text-xs text-muted-foreground">{s.label}</span>
-                      <span className="text-xs font-semibold">{s.value}</span>
+                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${seg.pct}%` }} />
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Revenue Breakdown */}
-            <Card className="soft-card">
-              <CardContent className="p-4">
-                <h4 className="text-sm font-bold mb-3 flex items-center gap-2">
-                  <PieChart className="h-4 w-4 text-accent" />Revenue Breakdown
-                </h4>
-                <div className="space-y-2">
-                  {revenueSegments.map((seg, i) => (
-                    <div key={seg.segment}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-medium">{seg.segment}</span>
-                        <span className="text-xs text-muted-foreground">{seg.revenue} ({seg.pct}%)</span>
-                      </div>
-                      <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className="h-2 rounded-full transition-all duration-700"
-                          style={{
-                            width: `${seg.pct}%`,
-                            backgroundColor: `hsl(${152 + i * 30}, 60%, ${45 + i * 5}%)`,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Financial Statements Summary */}
-            <Card className="soft-card">
-              <CardContent className="p-4">
-                <h4 className="text-sm font-bold mb-3 flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-primary" />Financial Statements
-                </h4>
-                {[
-                  { label: "Revenue (TTM)", value: "KES 328.5B", change: "+12.4%" },
-                  { label: "Net Income (TTM)", value: "KES 68.2B", change: "+8.7%" },
-                  { label: "Total Assets", value: "KES 512.8B", change: "+5.2%" },
-                  { label: "Total Equity", value: "KES 285.3B", change: "+6.1%" },
-                ].map(s => (
-                  <div key={s.label} className="flex justify-between items-center py-2 border-b border-border/50 last:border-0">
-                    <span className="text-xs text-muted-foreground">{s.label}</span>
-                    <div className="text-right">
-                      <span className="text-xs font-semibold">{s.value}</span>
-                      <span className="text-[10px] text-bull ml-1.5">{s.change}</span>
-                    </div>
-                  </div>
-                ))}
-                <Button variant="outline" size="sm" className="w-full mt-3 h-9 rounded-full text-xs font-semibold gap-1.5">
-                  <FileText className="h-3.5 w-3.5" />
-                  View Full NSE Report
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Dividend History */}
-            <Card className="soft-card">
-              <CardContent className="p-4">
-                <h4 className="text-sm font-bold mb-3 flex items-center gap-2">
-                  <Banknote className="h-4 w-4 text-bull" />Dividend History
-                </h4>
-                {[
-                  { label: "Annual Dividend", value: `KES ${stock.dividend}` },
-                  { label: "Dividend Yield", value: `${divYield}%` },
-                  { label: "Payout Ratio", value: "45.8%" },
-                  { label: "5Y Avg Yield", value: `${(parseFloat(divYield) * 0.9).toFixed(1)}%` },
-                ].map(s => (
-                  <div key={s.label} className="flex justify-between py-1.5">
-                    <span className="text-xs text-muted-foreground">{s.label}</span>
-                    <span className="text-xs font-semibold">{s.value}</span>
                   </div>
                 ))}
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="profile" className="space-y-3 mt-4">
-            <Card className="soft-card">
-              <CardContent className="p-4">
-                <h4 className="text-sm font-bold mb-2 flex items-center gap-2"><Building className="h-4 w-4 text-accent" />About {stock.name}</h4>
-                <p className="text-xs text-muted-foreground leading-relaxed">{company.description}</p>
-              </CardContent>
-            </Card>
+          <TabsContent value="news" className="mt-3 space-y-3">
+            {stockNews.map(n => (
+              <Card key={n.id} className="soft-card cursor-pointer active:scale-[0.98] transition-transform" onClick={() => navigate('/news')}>
+                <CardContent className="p-3 flex items-start gap-3">
+                  <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${n.sentiment === 'bullish' ? 'bg-bull' : 'bg-bear'}`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium line-clamp-2">{n.title}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{n.source} · {n.time}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </TabsContent>
+
+          <TabsContent value="about" className="mt-3 space-y-3">
             <Card className="soft-card">
               <CardContent className="p-4 space-y-3">
-                {[
-                  { icon: Building, label: "Sector", value: company.sector },
-                  { icon: Globe, label: "HQ", value: company.headquarters },
-                  { icon: UserCheck, label: "CEO", value: company.ceo },
-                  { icon: Users, label: "Employees", value: company.employees },
-                  { icon: Calendar, label: "Founded", value: company.founded },
-                ].map(item => (
-                  <div key={item.label} className="flex items-center gap-3">
-                    <item.icon className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <div className="flex-1 flex justify-between">
-                      <span className="text-xs text-muted-foreground">{item.label}</span>
-                      <span className="text-xs font-medium">{item.value}</span>
+                <p className="text-sm leading-relaxed text-muted-foreground">{company.description}</p>
+                <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border/50">
+                  {[
+                    { icon: Building, label: "HQ", value: company.headquarters },
+                    { icon: Users, label: "Employees", value: company.employees },
+                    { icon: UserCheck, label: "CEO", value: company.ceo },
+                    { icon: Calendar, label: "Founded", value: company.founded },
+                  ].map(info => (
+                    <div key={info.label} className="flex items-center gap-2">
+                      <info.icon className="h-3.5 w-3.5 text-muted-foreground" />
+                      <div>
+                        <p className="text-[10px] text-muted-foreground">{info.label}</p>
+                        <p className="text-xs font-medium">{info.value}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
       </div>
 
-      {/* Floating Trade Button */}
-      <div className="fixed bottom-20 left-4 right-4 z-30">
-        <Button className="w-full h-12 rounded-2xl btn-primary text-sm font-bold shadow-lg gap-2" onClick={() => setTradeSheetOpen(true)}>
-          <DollarSign className="h-5 w-5" />
+      {/* Fixed Trade Button */}
+      <div className="fixed bottom-24 left-4 right-4 z-30">
+        <Button className="w-full h-12 rounded-2xl bg-primary text-primary-foreground font-bold text-base shadow-xl hover:shadow-2xl" onClick={() => setTradeSheetOpen(true)}>
           Trade {symbol}
         </Button>
       </div>
 
-      {/* Trade Sheet */}
-      <TradeSheet
-        open={tradeSheetOpen}
-        onOpenChange={setTradeSheetOpen}
-        symbol={symbol || ""}
-        stockName={stock.name}
-        currentPrice={stock.price}
-        isUp={stock.isUp}
-        changePercent={stock.changePercent}
-      />
-
-      {/* Price Alerts Dialog */}
-      {showAlertsDialog && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setShowAlertsDialog(false)}>
-          <div className="bg-background rounded-2xl w-full max-w-md max-h-[80vh] overflow-auto" onClick={e => e.stopPropagation()}>
-            <div className="sticky top-0 bg-background border-b p-4 flex items-center justify-between rounded-t-2xl">
-              <h2 className="text-base font-bold">Price Alerts</h2>
-              <Button variant="ghost" size="icon" onClick={() => setShowAlertsDialog(false)} className="h-8 w-8">✕</Button>
-            </div>
-            <div className="p-4"><PriceAlertsManager initialSymbol={symbol} /></div>
-          </div>
-        </div>
-      )}
+      {showAlertsDialog && <PriceAlertsManager />}
+      <TradeSheet open={tradeSheetOpen} onOpenChange={setTradeSheetOpen} symbol={symbol || "SAFCOM"} stockName={stock.name} currentPrice={stock.price} isUp={stock.isUp} changePercent={stock.changePercent} />
     </div>
   );
 }

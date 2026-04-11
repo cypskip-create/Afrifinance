@@ -1,12 +1,13 @@
-import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, ComposedChart, Bar, Line } from "recharts";
-import { useMemo, useState } from "react";
+import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, ComposedChart, Bar, Line, ReferenceLine } from "recharts";
+import { useMemo, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Activity, TrendingUp, TrendingDown } from "lucide-react";
+import { Activity } from "lucide-react";
 
 interface StockPriceChartProps {
   symbol?: string;
   timeframe: string;
+  onHoverPrice?: (price: number | null, date: string | null) => void;
 }
 
 const generateMockData = (timeframe: string) => {
@@ -43,7 +44,6 @@ const generateMockData = (timeframe: string) => {
     const sma20 = i >= 19 ? prices.slice(i - 19, i + 1).reduce((a, b) => a + b, 0) / 20 : undefined;
     const sma50 = i >= 49 ? prices.slice(i - 49, i + 1).reduce((a, b) => a + b, 0) / 50 : undefined;
     
-    // Bollinger Bands
     let bb_upper, bb_lower;
     if (sma20 && i >= 19) {
       const slice = prices.slice(i - 19, i + 1);
@@ -67,20 +67,20 @@ const generateMockData = (timeframe: string) => {
   return dataPoints;
 };
 
-const CustomTooltip = ({ active, payload }: any) => {
+const CrosshairTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
-      <div className="bg-popover/95 backdrop-blur-sm border border-border rounded-lg px-3 py-2 shadow-lg">
-        <p className="text-foreground font-semibold text-lg">KES {data.price.toFixed(2)}</p>
-        <p className="text-xs text-muted-foreground">Vol: {(data.volume / 1000000).toFixed(2)}M</p>
+      <div className="bg-foreground text-background rounded-lg px-3 py-1.5 shadow-xl text-center">
+        <p className="font-bold text-sm">KES {data.price.toFixed(2)}</p>
+        <p className="text-[10px] opacity-80">{data.date}</p>
       </div>
     );
   }
   return null;
 };
 
-export const StockPriceChart = ({ symbol, timeframe }: StockPriceChartProps) => {
+export const StockPriceChart = ({ symbol, timeframe, onHoverPrice }: StockPriceChartProps) => {
   const [advanced, setAdvanced] = useState(false);
   const [showVolume, setShowVolume] = useState(false);
   const [showSMA20, setShowSMA20] = useState(false);
@@ -99,8 +99,17 @@ export const StockPriceChart = ({ symbol, timeframe }: StockPriceChartProps) => 
   const maxPrice = Math.max(...data.map(d => d.price));
   const padding = (maxPrice - minPrice) * 0.1;
 
+  const handleMouseMove = useCallback((e: any) => {
+    if (e?.activePayload?.[0] && onHoverPrice) {
+      onHoverPrice(e.activePayload[0].payload.price, e.activePayload[0].payload.date);
+    }
+  }, [onHoverPrice]);
+
+  const handleMouseLeave = useCallback(() => {
+    if (onHoverPrice) onHoverPrice(null, null);
+  }, [onHoverPrice]);
+
   if (!advanced) {
-    // Clean Robinhood-style line chart
     return (
       <div className="space-y-2">
         <div className="flex items-center justify-end">
@@ -116,7 +125,12 @@ export const StockPriceChart = ({ symbol, timeframe }: StockPriceChartProps) => 
         </div>
         <div className="h-full w-full" style={{ minHeight: 200 }}>
           <ResponsiveContainer width="100%" height={200}>
-            <AreaChart data={data} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+            <AreaChart
+              data={data}
+              margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
+              onMouseMove={handleMouseMove}
+              onMouseLeave={handleMouseLeave}
+            >
               <defs>
                 <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={strokeColor} stopOpacity={0.2} />
@@ -125,8 +139,15 @@ export const StockPriceChart = ({ symbol, timeframe }: StockPriceChartProps) => 
               </defs>
               <XAxis dataKey="date" hide />
               <YAxis hide domain={[minPrice - padding, maxPrice + padding]} />
-              <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '4 4' }} />
-              <Area type="monotone" dataKey="price" stroke={strokeColor} strokeWidth={2} fill={`url(#${gradientId})`} dot={false} activeDot={{ r: 4, fill: strokeColor, stroke: 'hsl(var(--background))', strokeWidth: 2 }} />
+              <Tooltip
+                content={<CrosshairTooltip />}
+                cursor={{
+                  stroke: 'hsl(var(--foreground))',
+                  strokeWidth: 1,
+                  strokeDasharray: '4 4',
+                }}
+              />
+              <Area type="monotone" dataKey="price" stroke={strokeColor} strokeWidth={2} fill={`url(#${gradientId})`} dot={false} activeDot={{ r: 5, fill: strokeColor, stroke: 'hsl(var(--background))', strokeWidth: 2 }} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -134,7 +155,6 @@ export const StockPriceChart = ({ symbol, timeframe }: StockPriceChartProps) => 
     );
   }
 
-  // Advanced mode with indicators
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between flex-wrap gap-1.5">
@@ -152,7 +172,12 @@ export const StockPriceChart = ({ symbol, timeframe }: StockPriceChartProps) => 
 
       <div style={{ minHeight: showRSI ? 280 : 220 }}>
         <ResponsiveContainer width="100%" height={showRSI ? 280 : 220}>
-          <ComposedChart data={data} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+          <ComposedChart
+            data={data}
+            margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+          >
             <defs>
               <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor={strokeColor} stopOpacity={0.15} />
@@ -162,7 +187,14 @@ export const StockPriceChart = ({ symbol, timeframe }: StockPriceChartProps) => 
             <XAxis dataKey="date" hide />
             <YAxis hide domain={[minPrice - padding, maxPrice + padding]} yAxisId="price" />
             <YAxis hide orientation="right" yAxisId="volume" />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip
+              content={<CrosshairTooltip />}
+              cursor={{
+                stroke: 'hsl(var(--foreground))',
+                strokeWidth: 1,
+                strokeDasharray: '4 4',
+              }}
+            />
             
             {showVolume && <Bar dataKey="volume" yAxisId="volume" fill="hsl(var(--muted))" opacity={0.3} barSize={2} />}
             
@@ -173,7 +205,7 @@ export const StockPriceChart = ({ symbol, timeframe }: StockPriceChartProps) => 
               </>
             )}
             
-            <Area type="monotone" dataKey="price" yAxisId="price" stroke={strokeColor} strokeWidth={2} fill={`url(#${gradientId})`} dot={false} activeDot={{ r: 4, fill: strokeColor, stroke: 'hsl(var(--background))', strokeWidth: 2 }} />
+            <Area type="monotone" dataKey="price" yAxisId="price" stroke={strokeColor} strokeWidth={2} fill={`url(#${gradientId})`} dot={false} activeDot={{ r: 5, fill: strokeColor, stroke: 'hsl(var(--background))', strokeWidth: 2 }} />
             
             {showSMA20 && <Line type="monotone" dataKey="sma20" yAxisId="price" stroke="#3b82f6" strokeWidth={1} strokeDasharray="4 4" dot={false} />}
             {showSMA50 && <Line type="monotone" dataKey="sma50" yAxisId="price" stroke="#f97316" strokeWidth={1} strokeDasharray="4 4" dot={false} />}
@@ -181,7 +213,6 @@ export const StockPriceChart = ({ symbol, timeframe }: StockPriceChartProps) => 
         </ResponsiveContainer>
       </div>
 
-      {/* OHLC summary */}
       <div className="grid grid-cols-4 gap-2 pt-2 border-t border-border/50">
         <div className="text-center">
           <p className="text-[10px] text-muted-foreground">Open</p>
