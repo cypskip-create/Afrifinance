@@ -378,12 +378,12 @@ export default function UserProfile() {
 
       {/* Tabs */}
       <Tabs defaultValue="posts" className="mt-4">
-        <TabsList className="w-full grid grid-cols-5 bg-transparent border-b border-border rounded-none h-11 p-0">
+        <TabsList className="w-full grid bg-transparent border-b border-border rounded-none h-11 p-0" style={{ gridTemplateColumns: isOwnProfile ? 'repeat(5, 1fr)' : 'repeat(4, 1fr)' }}>
           {[
             { value: "posts", label: "Posts" },
             { value: "replies", label: "Replies" },
             { value: "media", label: "Media" },
-            { value: "likes", label: "Likes" },
+            ...(isOwnProfile ? [{ value: "likes", label: "Likes" }] : []),
             { value: "portfolio", label: "Portfolio" },
           ].map(tab => (
             <TabsTrigger

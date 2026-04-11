@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { 
-  Newspaper, Filter, Clock, TrendingUp, Bookmark, BookmarkCheck,
+  Newspaper, Clock, TrendingUp, Bookmark, BookmarkCheck,
   Play, Share2, MessageCircle, Bell, ChevronRight,
-  Flame, Globe, BarChart3, Zap, Eye, ArrowUpRight, ArrowDownRight, Search
+  Flame, Globe, BarChart3, Zap, Eye, Search
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,7 @@ export default function News() {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [livePlayerOpen, setLivePlayerOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showBookmarks, setShowBookmarks] = useState(false);
 
   const tabs = [
     { id: "for-you", label: "For You", icon: Zap },
@@ -39,6 +40,7 @@ export default function News() {
     { id: "stocks", label: "My Stocks", icon: BarChart3 },
     { id: "economy", label: "Kenya", icon: Globe },
     { id: "earnings", label: "Earnings", icon: TrendingUp },
+    { id: "bookmarks", label: "Saved", icon: Bookmark },
   ];
 
   const liveNews = { isLive: true, title: "LIVE: CBK Press Conference on Monetary Policy", viewers: 1243, source: "CBK Official" };
@@ -66,12 +68,18 @@ export default function News() {
 
   const toggleSave = (id: number) => {
     setSavedArticles(prev => prev.includes(id) ? prev.filter(a => a !== id) : [...prev, id]);
-    toast({ title: savedArticles.includes(id) ? "Removed" : "Saved" });
+    toast({ title: savedArticles.includes(id) ? "Removed from bookmarks" : "Bookmarked!" });
   };
 
   const filteredNews = (category: string) => {
+    if (category === "bookmarks") {
+      return newsItems.filter(item => savedArticles.includes(item.id));
+    }
     let items = newsItems;
-    if (category === "for-you") items = newsItems.filter(item => followedTopics.some(topic => item.category === topic));
+    if (category === "for-you") {
+      // Include bookmarked articles in For You feed + followed topics
+      items = newsItems.filter(item => followedTopics.some(topic => item.category === topic) || savedArticles.includes(item.id));
+    }
     else if (category !== "latest" && category !== "trending") items = newsItems.filter(item => item.category === category);
     if (searchQuery) items = items.filter(i => i.title.toLowerCase().includes(searchQuery.toLowerCase()));
     return items;
@@ -93,8 +101,13 @@ export default function News() {
             <h1 className="text-lg font-bold">News</h1>
           </div>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full relative">
-              <Bookmark className="h-[18px] w-[18px]" />
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`h-10 w-10 rounded-full relative ${showBookmarks ? 'bg-primary/10' : ''}`}
+              onClick={() => setShowBookmarks(!showBookmarks)}
+            >
+              {showBookmarks ? <BookmarkCheck className="h-[18px] w-[18px] text-primary" /> : <Bookmark className="h-[18px] w-[18px]" />}
               {savedArticles.length > 0 && (
                 <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-primary text-[10px] flex items-center justify-center text-primary-foreground font-bold">
                   {savedArticles.length}
@@ -118,174 +131,237 @@ export default function News() {
       </header>
 
       <div className="px-4 pt-3 space-y-4">
-        {/* Live Banner */}
-        {liveNews.isLive && (
-          <Card className="bg-gradient-to-r from-destructive/8 to-transparent border-destructive/20 animate-fade-in">
-            <CardContent className="p-3 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <Badge className="bg-destructive text-destructive-foreground text-[10px] px-2 py-0.5 rounded-full shrink-0">
-                  <span className="w-1.5 h-1.5 bg-destructive-foreground rounded-full animate-pulse mr-1 inline-block" />
-                  LIVE
-                </Badge>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{liveNews.title}</p>
-                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                    {liveNews.source} · <Eye className="h-3 w-3" />{liveNews.viewers.toLocaleString()}
-                  </p>
-                </div>
-              </div>
-              <Button size="sm" className="bg-destructive hover:bg-destructive/90 h-8 rounded-full shrink-0" onClick={() => setLivePlayerOpen(true)}>
-                <Play className="h-3 w-3 mr-1" />Watch
+        {/* Bookmarks View */}
+        {showBookmarks ? (
+          <div className="space-y-3 animate-fade-in">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-bold flex items-center gap-2">
+                <BookmarkCheck className="h-4 w-4 text-primary" />
+                Saved Articles ({savedArticles.length})
+              </h2>
+              <Button variant="ghost" size="sm" className="text-xs h-7 rounded-full" onClick={() => setShowBookmarks(false)}>
+                Back to Feed
               </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        <LiveConferencePlayer conference={liveNews} open={livePlayerOpen} onClose={() => setLivePlayerOpen(false)} />
-
-        {/* Breaking News */}
-        <Card 
-          className="soft-card border-0 overflow-hidden cursor-pointer animate-fade-in"
-          onClick={() => { setSelectedArticle(breakingNews); setDetailDialogOpen(true); }}
-        >
-          <div className="relative">
-            <img src={breakingNews.imageUrl} alt={breakingNews.title} className="w-full h-44 object-cover rounded-t-2xl" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent rounded-t-2xl" />
-            <div className="absolute top-3 left-3 flex gap-2">
-              <Badge className="bg-destructive text-destructive-foreground text-[10px] px-2.5 py-0.5 rounded-full">BREAKING</Badge>
-              {breakingNews.sentiment && (
-                <Badge className={`text-[10px] px-2 py-0.5 rounded-full border-0 ${getSentimentColor(breakingNews.sentiment)}`}>
-                  {breakingNews.sentiment === "bullish" ? "↑ Bullish" : breakingNews.sentiment === "bearish" ? "↓ Bearish" : "Neutral"}
-                </Badge>
-              )}
             </div>
-            <div className="absolute bottom-0 left-0 right-0 p-4">
-              <h3 className="text-white font-bold text-sm leading-snug mb-1.5">{breakingNews.title}</h3>
-              <div className="flex items-center gap-2 text-white/70 text-xs">
-                <span className="font-medium text-white">{breakingNews.source}</span>
-                <span>·</span>
-                <span>{breakingNews.time}</span>
-                <span>·</span>
-                <span>{breakingNews.readTime}</span>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        {/* Trending Topics */}
-        <div className="animate-fade-in">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-bold flex items-center gap-2">
-              <Flame className="h-4 w-4 text-accent" />
-              Trending
-            </h3>
-          </div>
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-            {trendingTopics.map((topic, idx) => (
-              <Badge key={idx} variant="secondary" className="cursor-pointer hover:bg-primary/10 hover:text-primary transition-colors py-1.5 px-3 text-xs rounded-full whitespace-nowrap" onClick={() => navigate(`/traders-hub?search=${encodeURIComponent(topic.tag)}`)}>
-                {topic.tag}
-                <span className="ml-1.5 text-muted-foreground">{topic.count}</span>
-              </Badge>
-            ))}
-          </div>
-        </div>
-
-        {/* News Tabs */}
-        <Tabs defaultValue="for-you" className="w-full animate-fade-in">
-          <ScrollArea className="w-full">
-            <TabsList className="inline-flex h-10 w-max bg-muted/40 p-1 rounded-full gap-0.5">
-              {tabs.map((tab) => (
-                <TabsTrigger key={tab.id} value={tab.id} className="flex items-center gap-1.5 px-3.5 text-xs rounded-full data-[state=active]:bg-card data-[state=active]:shadow-sm">
-                  <tab.icon className="h-3.5 w-3.5" />
-                  {tab.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
-
-          {tabs.map((tab) => (
-            <TabsContent key={tab.id} value={tab.id} className="space-y-3 mt-3">
-              {filteredNews(tab.id).length === 0 ? (
-                <Card className="soft-card">
-                  <CardContent className="p-8 text-center">
-                    <Bell className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
-                    <p className="font-semibold text-sm mb-1">No articles</p>
-                    <p className="text-xs text-muted-foreground">Follow topics to see personalized news</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                filteredNews(tab.id).map((article) => (
-                  <Card key={article.id} className="soft-card overflow-hidden cursor-pointer" onClick={() => { setSelectedArticle(article); setDetailDialogOpen(true); }}>
-                    <div className="flex">
-                      <div className="relative w-28 shrink-0">
-                        <img src={article.imageUrl} alt="" className="w-full h-full object-cover min-h-[110px] rounded-l-2xl" />
-                        {article.hasVideo && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-l-2xl">
-                            <div className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center">
-                              <Play className="h-3.5 w-3.5 text-foreground ml-0.5" />
-                            </div>
-                          </div>
-                        )}
-                        {article.isPremium && (
-                          <Badge className="absolute top-2 left-2 bg-accent text-accent-foreground text-[9px] px-1.5 py-0 rounded-full">PRO</Badge>
-                        )}
+            {savedArticles.length === 0 ? (
+              <Card className="soft-card">
+                <CardContent className="p-8 text-center">
+                  <Bookmark className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
+                  <p className="font-semibold text-sm mb-1">No saved articles</p>
+                  <p className="text-xs text-muted-foreground">Tap the bookmark icon on any article to save it here</p>
+                </CardContent>
+              </Card>
+            ) : (
+              filteredNews("bookmarks").map((article) => (
+                <Card key={article.id} className="soft-card overflow-hidden cursor-pointer" onClick={() => { setSelectedArticle(article); setDetailDialogOpen(true); }}>
+                  <div className="flex">
+                    <div className="relative w-28 shrink-0">
+                      <img src={article.imageUrl} alt="" className="w-full h-full object-cover min-h-[110px] rounded-l-2xl" />
+                    </div>
+                    <div className="flex-1 p-3 flex flex-col justify-between min-w-0">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[11px] font-semibold text-primary">{article.source}</span>
+                          <span className="text-[11px] text-muted-foreground">{article.time}</span>
+                        </div>
+                        <h3 className="font-bold text-xs leading-snug line-clamp-2">{article.title}</h3>
                       </div>
-                      <div className="flex-1 p-3 flex flex-col justify-between min-w-0">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-[11px] font-semibold text-primary">{article.source}</span>
-                            <span className="text-[11px] text-muted-foreground">{article.time}</span>
-                          </div>
-                          <h3 className="font-bold text-xs leading-snug line-clamp-2 mb-1.5">{article.title}</h3>
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            {article.sentiment && (
-                              <Badge className={`text-[9px] px-1.5 py-0 rounded-full border-0 ${getSentimentColor(article.sentiment)}`}>
-                                {article.sentiment === "bullish" ? "↑ Bullish" : article.sentiment === "bearish" ? "↓ Bearish" : "—"}
-                              </Badge>
-                            )}
-                            {article.stockMentions?.slice(0, 2).map((stock) => (
-                              <Badge key={stock} variant="outline" className="text-[9px] px-1.5 py-0 rounded-full cursor-pointer hover:bg-primary/10" onClick={(e) => { e.stopPropagation(); navigate(`/stock/${stock}`); }}>
-                                ${stock}
-                              </Badge>
-                            ))}
-                          </div>
+                      <div className="flex items-center justify-between mt-2">
+                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                          <span className="flex items-center gap-0.5"><Eye className="h-3 w-3" />{((article.views || 0) / 1000).toFixed(1)}K</span>
                         </div>
-                        <div className="flex items-center justify-between mt-2">
-                          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                            <span className="flex items-center gap-0.5"><Eye className="h-3 w-3" />{((article.views || 0) / 1000).toFixed(1)}K</span>
-                            <span className="flex items-center gap-0.5"><MessageCircle className="h-3 w-3" />{article.comments}</span>
-                          </div>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={(e) => { e.stopPropagation(); toggleSave(article.id); }}>
-                            {savedArticles.includes(article.id) ? <BookmarkCheck className="h-3.5 w-3.5 text-primary" /> : <Bookmark className="h-3.5 w-3.5" />}
-                          </Button>
-                        </div>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={(e) => { e.stopPropagation(); toggleSave(article.id); }}>
+                          <BookmarkCheck className="h-3.5 w-3.5 text-primary" />
+                        </Button>
                       </div>
                     </div>
-                  </Card>
-                ))
-              )}
-            </TabsContent>
-          ))}
-        </Tabs>
+                  </div>
+                </Card>
+              ))
+            )}
+          </div>
+        ) : (
+          <>
+            {/* Live Banner */}
+            {liveNews.isLive && (
+              <Card className="bg-gradient-to-r from-destructive/8 to-transparent border-destructive/20 animate-fade-in">
+                <CardContent className="p-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <Badge className="bg-destructive text-destructive-foreground text-[10px] px-2 py-0.5 rounded-full shrink-0">
+                      <span className="w-1.5 h-1.5 bg-destructive-foreground rounded-full animate-pulse mr-1 inline-block" />
+                      LIVE
+                    </Badge>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{liveNews.title}</p>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                        {liveNews.source} · <Eye className="h-3 w-3" />{liveNews.viewers.toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                  <Button size="sm" className="bg-destructive hover:bg-destructive/90 h-8 rounded-full shrink-0" onClick={() => setLivePlayerOpen(true)}>
+                    <Play className="h-3 w-3 mr-1" />Watch
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
-        {/* Personalization */}
-        <Card className="soft-card border-primary/20 animate-fade-in">
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-                  <Bell className="h-4 w-4 text-primary" />
+            <LiveConferencePlayer conference={liveNews} open={livePlayerOpen} onClose={() => setLivePlayerOpen(false)} />
+
+            {/* Breaking News */}
+            <Card 
+              className="soft-card border-0 overflow-hidden cursor-pointer animate-fade-in"
+              onClick={() => { setSelectedArticle(breakingNews); setDetailDialogOpen(true); }}
+            >
+              <div className="relative">
+                <img src={breakingNews.imageUrl} alt={breakingNews.title} className="w-full h-44 object-cover rounded-t-2xl" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent rounded-t-2xl" />
+                <div className="absolute top-3 left-3 flex gap-2">
+                  <Badge className="bg-destructive text-destructive-foreground text-[10px] px-2.5 py-0.5 rounded-full">BREAKING</Badge>
+                  {breakingNews.sentiment && (
+                    <Badge className={`text-[10px] px-2 py-0.5 rounded-full border-0 ${getSentimentColor(breakingNews.sentiment)}`}>
+                      {breakingNews.sentiment === "bullish" ? "↑ Bullish" : breakingNews.sentiment === "bearish" ? "↓ Bearish" : "Neutral"}
+                    </Badge>
+                  )}
                 </div>
-                <div className="min-w-0">
-                  <h4 className="font-bold text-sm">Personalized News</h4>
-                  <p className="text-[11px] text-muted-foreground truncate">Follow topics you care about</p>
+                <div className="absolute bottom-0 left-0 right-0 p-4">
+                  <h3 className="text-white font-bold text-sm leading-snug mb-1.5">{breakingNews.title}</h3>
+                  <div className="flex items-center gap-2 text-white/70 text-xs">
+                    <span className="font-medium text-white">{breakingNews.source}</span>
+                    <span>·</span>
+                    <span>{breakingNews.time}</span>
+                    <span>·</span>
+                    <span>{breakingNews.readTime}</span>
+                  </div>
                 </div>
               </div>
-              <Button size="sm" variant="outline" className="h-8 px-3 text-xs shrink-0 rounded-full">Customize</Button>
+            </Card>
+
+            {/* Trending Topics */}
+            <div className="animate-fade-in">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-bold flex items-center gap-2">
+                  <Flame className="h-4 w-4 text-accent" />
+                  Trending
+                </h3>
+              </div>
+              <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+                {trendingTopics.map((topic, idx) => (
+                  <Badge key={idx} variant="secondary" className="cursor-pointer hover:bg-primary/10 hover:text-primary transition-colors py-1.5 px-3 text-xs rounded-full whitespace-nowrap" onClick={() => navigate(`/traders-hub?search=${encodeURIComponent(topic.tag)}`)}>
+                    {topic.tag}
+                    <span className="ml-1.5 text-muted-foreground">{topic.count}</span>
+                  </Badge>
+                ))}
+              </div>
             </div>
-          </CardContent>
-        </Card>
+
+            {/* News Tabs */}
+            <Tabs defaultValue="for-you" className="w-full animate-fade-in">
+              <ScrollArea className="w-full">
+                <TabsList className="inline-flex h-10 w-max bg-muted/40 p-1 rounded-full gap-0.5">
+                  {tabs.map((tab) => (
+                    <TabsTrigger key={tab.id} value={tab.id} className="flex items-center gap-1.5 px-3.5 text-xs rounded-full data-[state=active]:bg-card data-[state=active]:shadow-sm">
+                      <tab.icon className="h-3.5 w-3.5" />
+                      {tab.label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+                <ScrollBar orientation="horizontal" />
+              </ScrollArea>
+
+              {tabs.map((tab) => (
+                <TabsContent key={tab.id} value={tab.id} className="space-y-3 mt-3">
+                  {filteredNews(tab.id).length === 0 ? (
+                    <Card className="soft-card">
+                      <CardContent className="p-8 text-center">
+                        {tab.id === "bookmarks" ? (
+                          <>
+                            <Bookmark className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
+                            <p className="font-semibold text-sm mb-1">No saved articles</p>
+                            <p className="text-xs text-muted-foreground">Bookmark articles to find them here</p>
+                          </>
+                        ) : (
+                          <>
+                            <Bell className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
+                            <p className="font-semibold text-sm mb-1">No articles</p>
+                            <p className="text-xs text-muted-foreground">Follow topics to see personalized news</p>
+                          </>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    filteredNews(tab.id).map((article) => (
+                      <Card key={article.id} className="soft-card overflow-hidden cursor-pointer" onClick={() => { setSelectedArticle(article); setDetailDialogOpen(true); }}>
+                        <div className="flex">
+                          <div className="relative w-28 shrink-0">
+                            <img src={article.imageUrl} alt="" className="w-full h-full object-cover min-h-[110px] rounded-l-2xl" />
+                            {article.hasVideo && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-l-2xl">
+                                <div className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center">
+                                  <Play className="h-3.5 w-3.5 text-foreground ml-0.5" />
+                                </div>
+                              </div>
+                            )}
+                            {article.isPremium && (
+                              <Badge className="absolute top-2 left-2 bg-accent text-accent-foreground text-[9px] px-1.5 py-0 rounded-full">PRO</Badge>
+                            )}
+                          </div>
+                          <div className="flex-1 p-3 flex flex-col justify-between min-w-0">
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-[11px] font-semibold text-primary">{article.source}</span>
+                                <span className="text-[11px] text-muted-foreground">{article.time}</span>
+                              </div>
+                              <h3 className="font-bold text-xs leading-snug line-clamp-2 mb-1.5">{article.title}</h3>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                {article.sentiment && (
+                                  <Badge className={`text-[9px] px-1.5 py-0 rounded-full border-0 ${getSentimentColor(article.sentiment)}`}>
+                                    {article.sentiment === "bullish" ? "↑ Bullish" : article.sentiment === "bearish" ? "↓ Bearish" : "—"}
+                                  </Badge>
+                                )}
+                                {article.stockMentions?.slice(0, 2).map((stock) => (
+                                  <Badge key={stock} variant="outline" className="text-[9px] px-1.5 py-0 rounded-full cursor-pointer hover:bg-primary/10" onClick={(e) => { e.stopPropagation(); navigate(`/stock/${stock}`); }}>
+                                    ${stock}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between mt-2">
+                              <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                                <span className="flex items-center gap-0.5"><Eye className="h-3 w-3" />{((article.views || 0) / 1000).toFixed(1)}K</span>
+                                <span className="flex items-center gap-0.5"><MessageCircle className="h-3 w-3" />{article.comments}</span>
+                              </div>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={(e) => { e.stopPropagation(); toggleSave(article.id); }}>
+                                {savedArticles.includes(article.id) ? <BookmarkCheck className="h-3.5 w-3.5 text-primary" /> : <Bookmark className="h-3.5 w-3.5" />}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    ))
+                  )}
+                </TabsContent>
+              ))}
+            </Tabs>
+
+            {/* Personalization */}
+            <Card className="soft-card border-primary/20 animate-fade-in">
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+                      <Bell className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="font-bold text-sm">Personalized News</h4>
+                      <p className="text-[11px] text-muted-foreground truncate">Follow topics you care about</p>
+                    </div>
+                  </div>
+                  <Button size="sm" variant="outline" className="h-8 px-3 text-xs shrink-0 rounded-full">Customize</Button>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
       <NewsDetailDialog article={selectedArticle} open={detailDialogOpen} onOpenChange={setDetailDialogOpen} savedArticles={savedArticles} onToggleSave={toggleSave} />

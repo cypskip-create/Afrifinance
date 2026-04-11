@@ -450,14 +450,14 @@ export default function Markets() {
               </h3>
               <div className="grid grid-cols-2 gap-2">
                 {sectors.map(s => (
-                  <Card key={s.name} className={`soft-card p-3 cursor-pointer active:scale-[0.97] transition-transform border-l-4 ${s.isUp ? 'border-l-bull' : 'border-l-bear'}`} onClick={() => { setNseFilter(s.name === "Telecom" ? "Telecom" : s.name); setActiveTab("NSE"); }}>
+                  <Card key={s.name} className="soft-card p-3 cursor-pointer active:scale-[0.97] transition-transform" onClick={() => { setNseFilter(s.name === "Telecom" ? "Telecom" : s.name); setActiveTab("NSE"); }}>
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-semibold">{s.name}</p>
-                      <p className={`text-sm font-bold ${s.isUp ? 'text-bull' : 'text-bear'}`}>
+                      <p className={`text-xs font-bold px-2 py-0.5 rounded-full ${s.isUp ? 'bg-bull/10 text-bull' : 'bg-bear/10 text-bear'}`}>
                         {s.isUp ? '+' : ''}{s.change}%
                       </p>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">{s.stocks} stocks · Top: {s.topStock}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{s.stocks} stocks · Top: {s.topStock}</p>
                   </Card>
                 ))}
               </div>
