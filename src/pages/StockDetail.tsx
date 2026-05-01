@@ -189,10 +189,9 @@ export default function StockDetail() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           {[
             { icon: Bell, label: "Alert", action: () => setShowAlertsDialog(true), color: "bg-accent/10 text-accent" },
-            { icon: DollarSign, label: "Trade", action: () => setTradeSheetOpen(true), color: "bg-bull/10 text-bull" },
             { icon: GitCompare, label: "Compare", action: () => navigate(`/compare?stock=${symbol}`), color: "bg-chart-3/10 text-chart-3" },
             { icon: MessageSquare, label: "Discuss", action: () => navigate(`/traders-hub?compose=true&ticker=${symbol}`), color: "bg-chart-4/10 text-chart-4" },
           ].map(btn => (
@@ -202,6 +201,51 @@ export default function StockDetail() {
             </Button>
           ))}
         </div>
+
+        {/* My Holdings card — visible only when the user owns this stock */}
+        {myHolding && (
+          <Card className="soft-card border-primary/20">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Wallet className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Your Position</p>
+                    <p className="text-sm font-bold">{myHolding.shares} shares</p>
+                  </div>
+                </div>
+                <AddInvestmentDialog
+                  lockedSymbol={symbol}
+                  lockedName={stock.name}
+                  lockedSector={stock.sector}
+                  trigger={
+                    <Button size="sm" variant="outline" className="h-8 rounded-full text-xs font-semibold">
+                      <Pencil className="h-3 w-3 mr-1.5" /> Edit
+                    </Button>
+                  }
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-2 pt-3 border-t border-border/50">
+                <div>
+                  <p className="text-[10px] text-muted-foreground">Avg Price</p>
+                  <p className="text-sm font-bold">KES {myHolding.avg_cost.toFixed(2)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground">Market Value</p>
+                  <p className="text-sm font-bold">KES {(myHolding.shares * stock.price).toFixed(2)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground">P/L</p>
+                  <p className={`text-sm font-bold ${(stock.price - myHolding.avg_cost) >= 0 ? 'text-bull' : 'text-bear'}`}>
+                    {(stock.price - myHolding.avg_cost) >= 0 ? '+' : ''}{(((stock.price - myHolding.avg_cost) / myHolding.avg_cost) * 100).toFixed(1)}%
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Key Statistics */}
         <div>
