@@ -362,15 +362,22 @@ export default function StockDetail() {
         </Tabs>
       </div>
 
-      {/* Fixed Trade Button */}
+      {/* Fixed Add Investment Button */}
       <div className="fixed bottom-24 left-4 right-4 z-30">
-        <Button className="w-full h-12 rounded-2xl bg-primary text-primary-foreground font-bold text-base shadow-xl hover:shadow-2xl" onClick={() => setTradeSheetOpen(true)}>
-          Trade {symbol}
-        </Button>
+        <AddInvestmentDialog
+          lockedSymbol={symbol}
+          lockedName={stock.name}
+          lockedSector={stock.sector}
+          trigger={
+            <Button className="w-full h-12 rounded-2xl bg-primary text-primary-foreground font-bold text-base shadow-xl hover:shadow-2xl">
+              <Plus className="h-4 w-4 mr-2" />
+              {myHolding ? `Update ${symbol} Holding` : `Add ${symbol} to Portfolio`}
+            </Button>
+          }
+        />
       </div>
 
       {showAlertsDialog && <PriceAlertsManager />}
-      <TradeSheet open={tradeSheetOpen} onOpenChange={setTradeSheetOpen} symbol={symbol || "SAFCOM"} stockName={stock.name} currentPrice={stock.price} isUp={stock.isUp} changePercent={stock.changePercent} />
     </div>
   );
 }
