@@ -1,24 +1,16 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { X, Image, BarChart3, DollarSign, TrendingUp, PieChart, Globe, AtSign } from "lucide-react";
+import { X, Image, BarChart3, DollarSign, TrendingUp, PieChart, Globe } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 
 interface PortfolioSnapshot {
   totalValue: number;
   totalGain: number;
   gainPercent: number;
   holdings: { symbol: string; name: string; shares: number; avgCost: number; currentPrice: number; gain: number }[];
-}
-
-interface MentionSuggestion {
-  user_id: string;
-  handle: string | null;
-  full_name: string | null;
-  avatar_url: string | null;
 }
 
 interface XComposeModalProps {
