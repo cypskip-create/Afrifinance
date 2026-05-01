@@ -3,11 +3,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { usePortfolio } from "@/hooks/usePortfolio";
-import { AddTradeDialog } from "@/components/portfolio/AddTradeDialog";
+import { AddInvestmentDialog } from "@/components/portfolio/AddInvestmentDialog";
 import { RobinhoodPerformanceChart } from "@/components/portfolio/RobinhoodPerformanceChart";
 import {
-  Trash2, TrendingUp, TrendingDown, ArrowLeft, ArrowUpRight, ArrowDownRight,
-  Eye, EyeOff, MoreHorizontal, Plus, RefreshCw, Share, ChevronDown, ChevronUp,
+  Trash2, TrendingUp, ArrowLeft, ArrowUpRight, ArrowDownRight,
+  Eye, EyeOff, MoreHorizontal, Plus, RefreshCw, ChevronDown, ChevronUp,
   Wallet, Target, Shield, Activity
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -25,7 +25,7 @@ const PRICES: Record<string, number> = {
 type SortKey = "value" | "gain" | "name";
 
 export default function TrackInvestments() {
-  const { portfolio, loading, removeFromPortfolio, addToPortfolio, refetch } = usePortfolio();
+  const { portfolio, loading, removeFromPortfolio, refetch } = usePortfolio();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [showBalance, setShowBalance] = useState(true);
