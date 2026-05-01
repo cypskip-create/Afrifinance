@@ -292,7 +292,7 @@ export default function TrackInvestments() {
                 </div>
                 <h3 className="font-bold mb-2">Start Building</h3>
                 <p className="text-sm text-muted-foreground mb-4">Add your first investment to track.</p>
-                <AddTradeDialog onTradeAdded={addToPortfolio} />
+                <AddInvestmentDialog />
               </CardContent>
             </Card>
           ) : (
