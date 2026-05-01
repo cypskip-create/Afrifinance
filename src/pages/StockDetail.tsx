@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Heart, TrendingUp, TrendingDown, Newspaper, Activity, Target, Award, PieChart, FileText, Banknote, UserCheck, Briefcase, Building, Globe, Users, Calendar, Bell, GitCompare, Plus, Share2, MessageSquare, BarChart3, ChevronRight, DollarSign } from "lucide-react";
+import { ArrowLeft, Heart, TrendingUp, TrendingDown, Newspaper, Activity, Target, Award, PieChart, FileText, Banknote, UserCheck, Briefcase, Building, Globe, Users, Calendar, Bell, GitCompare, Plus, Pencil, Share2, MessageSquare, BarChart3, ChevronRight, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { StockPriceChart } from "@/components/stock/StockPriceChart";
 import { useWatchlist } from "@/hooks/useWatchlist";
@@ -13,7 +13,7 @@ import { usePortfolio } from "@/hooks/usePortfolio";
 import { AnalystRatings } from "@/components/stock/AnalystRatings";
 import { MarketStatusIndicator } from "@/components/shared/MarketStatusIndicator";
 import { SparklineChart } from "@/components/shared/SparklineChart";
-import { TradeSheet } from "@/components/trade/TradeSheet";
+import { AddInvestmentDialog } from "@/components/portfolio/AddInvestmentDialog";
 
 const stockData: Record<string, {
   name: string; price: number; change: number; changePercent: string; isUp: boolean;
@@ -63,12 +63,13 @@ export default function StockDetail() {
   const { symbol } = useParams();
   const [selectedTimeframe, setSelectedTimeframe] = useState("1D");
   const [showAlertsDialog, setShowAlertsDialog] = useState(false);
-  const [tradeSheetOpen, setTradeSheetOpen] = useState(false);
   const [hoverPrice, setHoverPrice] = useState<number | null>(null);
   const [hoverDate, setHoverDate] = useState<string | null>(null);
   const { addToWatchlist, removeFromWatchlist, isInWatchlist } = useWatchlist();
-  const { addToPortfolio } = usePortfolio();
+  const { portfolio } = usePortfolio();
   const { toast } = useToast();
+
+  const myHolding = portfolio.find(p => p.symbol.toUpperCase() === (symbol || "").toUpperCase());
 
   const stock = stockData[symbol as keyof typeof stockData] || {
     name: symbol || "Unknown Stock", price: 0, change: 0, changePercent: "0.00", isUp: true,
