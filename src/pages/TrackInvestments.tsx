@@ -144,7 +144,7 @@ export default function TrackInvestments() {
             <Button variant="ghost" size="icon" className={`rounded-full h-9 w-9 ${isRefreshing ? 'animate-spin' : ''}`} onClick={handleRefresh}>
               <RefreshCw className="h-4 w-4" />
             </Button>
-            <AddTradeDialog onTradeAdded={addToPortfolio} />
+            <AddInvestmentDialog size="sm" />
           </div>
         </div>
       </header>
@@ -153,27 +153,22 @@ export default function TrackInvestments() {
         {/* ── HERO ── */}
         <Card className="border-0 bg-gradient-to-br from-primary/10 via-card to-accent/5 overflow-hidden rounded-3xl shadow-lg">
           <CardContent className="p-5">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-1.5">
               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Total Portfolio Value</span>
-              <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-background/50" onClick={() => setShowBalance(!showBalance)}>
-                  {showBalance ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-                </Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-background/50">
-                  <Share className="h-3.5 w-3.5" />
-                </Button>
-              </div>
+              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-background/50" onClick={() => setShowBalance(!showBalance)}>
+                {showBalance ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+              </Button>
             </div>
 
-            <h2 className="text-xl font-bold tracking-tight">
+            <h2 className="text-[22px] font-bold tracking-tight leading-none">
               {showBalance ? `KES ${stats.totalValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '••••••'}
             </h2>
 
-            <div className="flex items-center gap-3 mt-1.5">
+            <div className="flex items-center gap-2 mt-2">
               <span className={`flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full ${stats.totalGain >= 0 ? 'bg-bull/15 text-bull' : 'bg-bear/15 text-bear'}`}>
                 {stats.totalGain >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
                 {showBalance ? `${stats.totalGain >= 0 ? '+' : ''}KES ${Math.abs(stats.totalGain).toFixed(2)}` : '••••'}
-                <span className="text-[9px] ml-0.5">({stats.gainPct >= 0 ? '+' : ''}{stats.gainPct.toFixed(1)}%)</span>
+                <span className="text-[9px] ml-0.5 opacity-80">({stats.gainPct >= 0 ? '+' : ''}{stats.gainPct.toFixed(1)}%)</span>
               </span>
               <Badge variant="secondary" className="text-[9px] rounded-full bg-primary/10 text-primary border-0 font-semibold">All time</Badge>
             </div>
