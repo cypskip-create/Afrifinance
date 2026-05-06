@@ -236,6 +236,30 @@ export default function News() {
               </div>
             </Card>
 
+            {/* Market Pulse Strip */}
+            <div className="animate-fade-in">
+              <div className="flex items-center gap-2 mb-2">
+                <Zap className="h-4 w-4 text-primary" />
+                <h3 className="text-sm font-bold">Market Pulse</h3>
+                <span className="text-[10px] text-muted-foreground ml-auto">Live</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { label: "NSE 20", value: "1,847.32", change: "+1.24%", up: true },
+                  { label: "NASI", value: "118.45", change: "+0.82%", up: true },
+                  { label: "USD/KES", value: "129.20", change: "-0.15%", up: false },
+                ].map(m => (
+                  <Card key={m.label} className="soft-card">
+                    <CardContent className="p-2.5">
+                      <p className="text-[10px] text-muted-foreground">{m.label}</p>
+                      <p className="text-sm font-bold tabular-nums leading-tight mt-0.5">{m.value}</p>
+                      <p className={`text-[10px] font-semibold ${m.up ? 'text-bull' : 'text-bear'}`}>{m.change}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+
             {/* Trending Topics */}
             <div className="animate-fade-in">
               <div className="flex items-center justify-between mb-2">
@@ -250,6 +274,33 @@ export default function News() {
                     {topic.tag}
                     <span className="ml-1.5 text-muted-foreground">{topic.count}</span>
                   </Badge>
+                ))}
+              </div>
+            </div>
+
+            {/* Most Discussed */}
+            <div className="animate-fade-in">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-bold flex items-center gap-2">
+                  <MessageCircle className="h-4 w-4 text-primary" />
+                  Most Discussed
+                </h3>
+                <button className="text-[11px] text-primary font-medium" onClick={() => navigate('/traders-hub')}>See all</button>
+              </div>
+              <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+                {newsItems.slice(0, 4).map(article => (
+                  <Card key={`md-${article.id}`} className="soft-card overflow-hidden cursor-pointer shrink-0 w-44"
+                        onClick={() => { setSelectedArticle(article); setDetailDialogOpen(true); }}>
+                    <img src={article.imageUrl} alt="" className="w-full h-20 object-cover" />
+                    <div className="p-2">
+                      <p className="text-[10px] text-primary font-semibold">{article.source}</p>
+                      <h4 className="text-[11px] font-bold leading-snug line-clamp-2 mt-0.5">{article.title}</h4>
+                      <div className="flex items-center gap-2 mt-1.5 text-[10px] text-muted-foreground">
+                        <span className="flex items-center gap-0.5"><MessageCircle className="h-2.5 w-2.5" />{article.comments}</span>
+                        <span className="flex items-center gap-0.5"><Eye className="h-2.5 w-2.5" />{((article.views || 0) / 1000).toFixed(1)}K</span>
+                      </div>
+                    </div>
+                  </Card>
                 ))}
               </div>
             </div>
