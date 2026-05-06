@@ -164,37 +164,8 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Watchlist */}
-        <div>
-          <div className="flex items-center justify-between mb-2.5">
-            <h3 className="text-sm font-bold flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-primary" />
-              Quick Watch
-            </h3>
-            <Button variant="ghost" size="sm" className="h-7 text-xs text-primary rounded-full px-3" onClick={() => navigate('/watchlist')}>
-              All <ChevronRight className="h-3 w-3 ml-0.5" />
-            </Button>
-          </div>
-          <div className="flex gap-2.5 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-1">
-            {watchlistStocks.map(stock => (
-              <Card key={stock.symbol} className="soft-card min-w-[120px] flex-shrink-0 p-2.5 cursor-pointer active:scale-[0.97] transition-transform" onClick={() => navigate(`/stock/${stock.symbol}`)}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
-                    {stock.symbol.slice(0, 2)}
-                  </div>
-                  <SparklineChart isPositive={stock.change >= 0} width={36} height={16} />
-                </div>
-                <p className="text-xs font-bold">${stock.symbol}</p>
-                <div className="flex items-center justify-between mt-0.5">
-                  <span className="text-[10px] text-muted-foreground">{stock.price}</span>
-                  <span className={`text-[10px] font-semibold ${stock.change >= 0 ? 'text-bull' : 'text-bear'}`}>
-                    {stock.change >= 0 ? '+' : ''}{stock.change}%
-                  </span>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
+        {/* Quick Watch (auto-scrolling) */}
+        {user && <QuickTradeWidget />}
 
         {/* Upgrade Banner for free users */}
         {user && profile?.subscription_plan !== 'premium' && (
