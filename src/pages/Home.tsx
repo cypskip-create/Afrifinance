@@ -183,7 +183,6 @@ export default function Home() {
 
         {/* Widgets */}
         <FearGreedIndex />
-        {user && <QuickTradeWidget />}
         {user && <RealtimeWatchlistWidget />}
         <TrendingStocks />
         <TopMoversLosers />
