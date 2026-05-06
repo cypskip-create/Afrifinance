@@ -373,6 +373,11 @@
     0% { transform: translateX(0); }
     100% { transform: translateX(-50%); }
   }
+  @keyframes reaction-float {
+    0%   { transform: translateY(0) scale(0.7); opacity: 0; }
+    15%  { opacity: 1; transform: translateY(-20px) scale(1.1); }
+    100% { transform: translateY(-220px) scale(0.9); opacity: 0; }
+  }
 
   /* Premium pill buttons */
   .pill-tab {
