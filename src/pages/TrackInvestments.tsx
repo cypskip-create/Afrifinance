@@ -18,8 +18,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const PRICES: Record<string, number> = {
-  SAFCOM: 12.85, EQTY: 62.50, SCBK: 185.00, BAMB: 89.75, KCB: 45.30,
-  COOP: 15.20, EABL: 142.00, ABSA: 13.85, NCBA: 42.50, BRIT: 6.85, KPLC: 1.95,
+  SAFCOM: 17.85, EQTY: 48.50, SCBK: 215.75, BAMB: 38.95, KCB: 38.20,
+  COOP: 16.45, EABL: 165.50, ABSA: 17.10, NCBA: 49.85, BRIT: 5.42, KPLC: 4.18,
 };
 
 type SortKey = "value" | "gain" | "name";
