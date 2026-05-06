@@ -148,15 +148,17 @@ export function RobinhoodPerformanceChart({
         </div>
 
         {/* Chart */}
-        <div className="h-[170px] -mx-4 touch-none select-none">
+        <div
+          className="h-[170px] -mx-4 touch-none select-none"
+          onTouchStart={() => haptic(10)}
+          onTouchMove={() => haptic(4)}
+          onTouchEnd={() => { setHoverValue(null); setHoverDate(null); }}
+        >
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
               data={chartData}
               onMouseMove={handleMove}
               onMouseLeave={() => { setHoverValue(null); setHoverDate(null); }}
-              onTouchStart={() => haptic(10)}
-              onTouchMove={(e: any) => handleMove(e)}
-              onTouchEnd={() => { setHoverValue(null); setHoverDate(null); }}
               margin={{ top: 5, right: 0, left: 0, bottom: 5 }}
             >
               <defs>
