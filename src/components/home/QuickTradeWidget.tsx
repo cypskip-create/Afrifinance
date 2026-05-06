@@ -11,48 +11,58 @@ interface QuickStock {
 }
 
 const QUICK_STOCKS: QuickStock[] = [
-  { symbol: 'SAFCOM', name: 'Safaricom PLC', price: 12.85, change: 4.52 },
-  { symbol: 'EQTY', name: 'Equity Group', price: 62.50, change: 2.89 },
-  { symbol: 'KCB', name: 'KCB Group', price: 45.30, change: -1.24 },
-  { symbol: 'SCBK', name: 'StanChart Kenya', price: 185.00, change: 1.15 },
+  { symbol: 'SAFCOM', name: 'Safaricom PLC', price: 17.85, change: 1.42 },
+  { symbol: 'EQTY', name: 'Equity Group', price: 48.50, change: 2.89 },
+  { symbol: 'KCB', name: 'KCB Group', price: 38.20, change: -1.24 },
+  { symbol: 'SCBK', name: 'StanChart Kenya', price: 215.75, change: 1.15 },
+  { symbol: 'EABL', name: 'EABL', price: 165.50, change: 0.85 },
+  { symbol: 'COOP', name: 'Co-op Bank', price: 16.45, change: 2.10 },
+  { symbol: 'ABSA', name: 'Absa Bank', price: 17.10, change: -0.55 },
+  { symbol: 'NCBA', name: 'NCBA Group', price: 49.85, change: 1.78 },
+  { symbol: 'BAMB', name: 'Bamburi Cement', price: 38.95, change: -0.92 },
+  { symbol: 'BRIT', name: 'Britam', price: 5.42, change: 3.21 },
+  { symbol: 'KPLC', name: 'Kenya Power', price: 4.18, change: -2.05 },
 ];
 
 export function QuickTradeWidget() {
   const navigate = useNavigate();
+  const loop = [...QUICK_STOCKS, ...QUICK_STOCKS];
 
   return (
     <Card className="card-gradient overflow-hidden">
       <div className="relative">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
         <CardContent className="p-4 relative">
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 mb-3">
             <div className="p-2 rounded-lg bg-primary/20">
               <Zap className="h-4 w-4 text-primary" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold">Quick Look</h3>
+              <h3 className="text-sm font-semibold">Quick Watch</h3>
               <p className="text-xs text-muted-foreground">Tap any stock to view & add</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            {QUICK_STOCKS.map((stock) => (
-              <button
-                key={stock.symbol}
-                onClick={() => navigate(`/stock/${stock.symbol}`)}
-                className="p-3 rounded-xl bg-muted/50 hover:bg-muted text-left transition-all active:scale-[0.97] tap-scale"
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-xs font-bold">${stock.symbol}</p>
-                  <SparklineChart isPositive={stock.change >= 0} width={32} height={14} />
-                </div>
-                <p className="text-sm font-bold">KES {stock.price}</p>
-                <p className={`text-[10px] font-semibold flex items-center gap-0.5 ${stock.change >= 0 ? 'text-bull' : 'text-bear'}`}>
-                  {stock.change >= 0 ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
-                  {stock.change >= 0 ? '+' : ''}{stock.change}%
-                </p>
-              </button>
-            ))}
+          <div className="marquee-container -mx-4 px-0">
+            <div className="marquee-content gap-2 px-4">
+              {loop.map((stock, i) => (
+                <button
+                  key={`${stock.symbol}-${i}`}
+                  onClick={() => navigate(`/stock/${stock.symbol}`)}
+                  className="shrink-0 w-[140px] p-3 rounded-xl bg-muted/50 hover:bg-muted text-left transition-all active:scale-[0.97] tap-scale"
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-xs font-bold">${stock.symbol}</p>
+                    <SparklineChart isPositive={stock.change >= 0} width={32} height={14} />
+                  </div>
+                  <p className="text-sm font-bold tabular-nums">KES {stock.price.toFixed(2)}</p>
+                  <p className={`text-[10px] font-semibold flex items-center gap-0.5 ${stock.change >= 0 ? 'text-bull' : 'text-bear'}`}>
+                    {stock.change >= 0 ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
+                    {stock.change >= 0 ? '+' : ''}{stock.change}%
+                  </p>
+                </button>
+              ))}
+            </div>
           </div>
         </CardContent>
       </div>
