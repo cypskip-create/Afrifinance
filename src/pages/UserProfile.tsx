@@ -295,33 +295,33 @@ export default function UserProfile() {
         </div>
       </header>
 
-      {/* Banner */}
-      <div className="relative h-36 sm:h-44 bg-gradient-to-br from-primary/30 via-accent/20 to-primary/10 overflow-hidden">
+      {/* Banner — X-style compact */}
+      <div className="relative h-28 sm:h-32 bg-gradient-to-br from-primary/30 via-accent/20 to-primary/10 overflow-hidden">
         {profileData.banner_url && <img src={profileData.banner_url} alt="Banner" className="w-full h-full object-cover" />}
         {isOwnProfile && (
           <>
             <input type="file" ref={bannerInputRef} className="hidden" accept="image/*" onChange={handleBannerUpload} />
-            <Button size="icon" variant="secondary" className="absolute bottom-3 right-3 h-8 w-8 rounded-full bg-background/70 hover:bg-background/90 backdrop-blur-sm" onClick={() => bannerInputRef.current?.click()} disabled={uploadingBanner}>
-              {uploadingBanner ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+            <Button size="icon" variant="secondary" className="absolute bottom-2 right-2 h-7 w-7 rounded-full bg-background/70 hover:bg-background/90 backdrop-blur-sm" onClick={() => bannerInputRef.current?.click()} disabled={uploadingBanner}>
+              {uploadingBanner ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
             </Button>
           </>
         )}
       </div>
 
-      {/* Avatar + actions */}
-      <div className="px-4 -mt-16">
+      {/* Avatar + actions — X-style */}
+      <div className="px-4 -mt-10">
         <div className="flex justify-between items-end">
-          <Avatar className="h-28 w-28 sm:h-32 sm:w-32 ring-4 ring-background shadow-xl">
+          <Avatar className="h-20 w-20 sm:h-24 sm:w-24 ring-4 ring-background shadow-md">
             <AvatarImage src={profileData.avatar_url || ""} className="object-cover" />
-            <AvatarFallback className="bg-primary text-primary-foreground text-3xl font-bold">{getInitials(profileData.full_name)}</AvatarFallback>
+            <AvatarFallback className="bg-primary text-primary-foreground text-xl font-bold">{getInitials(profileData.full_name)}</AvatarFallback>
           </Avatar>
-          <div className="flex gap-2 mb-2">
+          <div className="flex gap-1.5 mb-1.5">
             {isOwnProfile ? (
-              <Button variant="outline" size="sm" className="h-9 rounded-full font-bold text-sm" onClick={() => setEditProfileOpen(true)}>Edit profile</Button>
+              <Button variant="outline" size="sm" className="h-8 rounded-full font-semibold text-[13px] px-4" onClick={() => setEditProfileOpen(true)}>Edit profile</Button>
             ) : (
               <>
-                <Button variant="outline" size="icon" className="h-9 w-9 rounded-full"><MessageCircle className="h-4 w-4" /></Button>
-                <Button variant={userIsFollowing ? "outline" : "default"} size="sm" onClick={handleFollow} className="h-9 rounded-full font-bold text-sm px-5">
+                <Button variant="outline" size="icon" className="h-8 w-8 rounded-full"><MessageCircle className="h-3.5 w-3.5" /></Button>
+                <Button variant={userIsFollowing ? "outline" : "default"} size="sm" onClick={handleFollow} className="h-8 rounded-full font-semibold text-[13px] px-4">
                   {userIsFollowing ? "Following" : "Follow"}
                 </Button>
               </>
@@ -329,47 +329,46 @@ export default function UserProfile() {
           </div>
         </div>
 
-        {/* Name + bio */}
-        <div className="mt-3">
-          <h2 className="text-xl font-extrabold flex items-center gap-1.5">
+        {/* Name + bio — X-sized */}
+        <div className="mt-2">
+          <h2 className="text-[17px] font-extrabold leading-tight flex items-center gap-1">
             {profileData.full_name || "User"}
-            <Verified className="h-4.5 w-4.5 text-primary fill-primary" />
+            <Verified className="h-4 w-4 text-primary fill-primary" />
           </h2>
-          <p className="text-sm text-muted-foreground">@{handle}</p>
+          <p className="text-[13px] text-muted-foreground leading-tight">@{handle}</p>
 
-          {profileData.bio && <p className="mt-2 text-[15px] leading-relaxed">{profileData.bio}</p>}
+          {profileData.bio && <p className="mt-2 text-[14px] leading-snug">{profileData.bio}</p>}
 
-          {/* Enhanced Performance Badges */}
-          <div className="flex flex-wrap gap-2 mt-3">
-            <div className="flex items-center gap-1.5 bg-bull/10 border border-bull/20 rounded-full px-3 py-1.5">
-              <Target className="h-4 w-4 text-bull" />
-              <span className="text-sm font-bold text-bull">{performanceStats.winRate}%</span>
-              <span className="text-xs text-bull/70">Win Rate</span>
+          {/* Compact Performance Badges */}
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            <div className="flex items-center gap-1 bg-bull/10 border border-bull/20 rounded-full px-2 py-0.5">
+              <Target className="h-3 w-3 text-bull" />
+              <span className="text-[11px] font-bold text-bull">{performanceStats.winRate}%</span>
+              <span className="text-[10px] text-bull/70">Win</span>
             </div>
-            <div className="flex items-center gap-1.5 bg-primary/10 border border-primary/20 rounded-full px-3 py-1.5">
-              <TrendingUp className="h-4 w-4 text-primary" />
-              <span className="text-sm font-bold text-primary">+{performanceStats.avgReturn}%</span>
-              <span className="text-xs text-primary/70">Avg Return</span>
+            <div className="flex items-center gap-1 bg-primary/10 border border-primary/20 rounded-full px-2 py-0.5">
+              <TrendingUp className="h-3 w-3 text-primary" />
+              <span className="text-[11px] font-bold text-primary">+{performanceStats.avgReturn}%</span>
+              <span className="text-[10px] text-primary/70">Avg</span>
             </div>
-            <div className="flex items-center gap-1.5 bg-accent/10 border border-accent/20 rounded-full px-3 py-1.5">
-              <Award className="h-4 w-4 text-accent" />
-              <span className="text-sm font-bold text-accent">{performanceStats.streak}</span>
-              <span className="text-xs text-accent/70">Streak 🔥</span>
+            <div className="flex items-center gap-1 bg-accent/10 border border-accent/20 rounded-full px-2 py-0.5">
+              <Award className="h-3 w-3 text-accent" />
+              <span className="text-[11px] font-bold text-accent">{performanceStats.streak}🔥</span>
             </div>
           </div>
 
-          {/* Location + join date */}
-          <div className="flex items-center gap-3 mt-3 text-sm text-muted-foreground flex-wrap">
-            <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />Kenya</span>
-            <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" />Joined {formatDate(profileData.created_at)}</span>
+          {/* Location + join date — X-sized */}
+          <div className="flex items-center gap-3 mt-2 text-[13px] text-muted-foreground flex-wrap">
+            <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />Kenya</span>
+            <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />Joined {formatDate(profileData.created_at)}</span>
           </div>
 
           {/* Following/Followers */}
-          <div className="flex gap-4 mt-2.5">
-            <button className="hover:underline text-sm" onClick={() => { setDialogTab("following"); setFollowersDialogOpen(true); }}>
+          <div className="flex gap-4 mt-2">
+            <button className="hover:underline text-[13px]" onClick={() => { setDialogTab("following"); setFollowersDialogOpen(true); }}>
               <span className="font-bold">{followingCount}</span> <span className="text-muted-foreground">Following</span>
             </button>
-            <button className="hover:underline text-sm" onClick={() => { setDialogTab("followers"); setFollowersDialogOpen(true); }}>
+            <button className="hover:underline text-[13px]" onClick={() => { setDialogTab("followers"); setFollowersDialogOpen(true); }}>
               <span className="font-bold">{followersCount}</span> <span className="text-muted-foreground">Followers</span>
             </button>
           </div>
