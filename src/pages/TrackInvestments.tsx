@@ -238,6 +238,7 @@ export default function TrackInvestments() {
             <RobinhoodPerformanceChart
               currentValue={chartMode === 'value' ? stats.totalValue : stats.gainPct}
               initialValue={chartMode === 'value' ? stats.totalCost : 0}
+              mode={chartMode}
             />
           </Card>
         </div>
