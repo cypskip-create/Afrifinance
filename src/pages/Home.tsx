@@ -5,7 +5,7 @@ import { TopMoversLosers } from "@/components/home/TopMoversLosers";
 import { TrendingStocks } from "@/components/home/TrendingStocks";
 import { QuickTradeWidget } from "@/components/home/QuickTradeWidget";
 import { RealtimeWatchlistWidget } from "@/components/home/RealtimeWatchlistWidget";
-import { FearGreedIndex } from "@/components/home/FearGreedIndex";
+
 import { WidgetManager, WidgetConfig, defaultWidgets } from "@/components/home/WidgetManager";
 import { TopBar } from "@/components/shared/TopBar";
 import { Button } from "@/components/ui/button";
@@ -182,7 +182,6 @@ export default function Home() {
         )}
 
         {/* Widgets */}
-        <FearGreedIndex />
         {user && <RealtimeWatchlistWidget />}
         <TrendingStocks />
         <TopMoversLosers />

@@ -150,8 +150,8 @@
   body {
     @apply bg-background text-foreground;
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-    font-size: 14px;
-    line-height: 1.6;
+    font-size: 12.5px;
+    line-height: 1.55;
     overscroll-behavior-y: contain;
     -webkit-overflow-scrolling: touch;
   }

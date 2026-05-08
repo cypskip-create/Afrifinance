@@ -159,9 +159,9 @@ export default function TradersHub() {
     setLoadingComments(false);
   };
 
-  const handleAddComment = async (content: string) => {
+  const handleAddComment = async (content: string, parentCommentId?: string) => {
     if (!selectedPost || !user) return;
-    const { error } = await addComment(selectedPost.id, content);
+    const { error } = await addComment(selectedPost.id, content, parentCommentId);
     if (!error) { const updated = await fetchComments(selectedPost.id); setComments(updated); }
   };
 

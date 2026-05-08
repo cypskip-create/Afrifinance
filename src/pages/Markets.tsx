@@ -16,7 +16,7 @@ import {
   Lightbulb, Volume2, BarChart2
 } from "lucide-react";
 
-const tabs = ["Overview", "NSE", "Global", "IPOs", "Dividends"] as const;
+const tabs = ["Overview", "NSE", "IPOs", "Dividends"] as const;
 type Tab = typeof tabs[number];
 
 const indices = [
@@ -26,20 +26,11 @@ const indices = [
   { name: "FTSE Kenya", value: "1,234.56", change: 2.1, isUp: true, points: "+25.9" },
 ];
 
-const globalIndices = [
-  { name: "S&P 500", value: "5,832.76", change: 0.5, isUp: true },
-  { name: "NASDAQ", value: "18,423.43", change: -0.2, isUp: false },
-  { name: "FTSE 100", value: "7,634.21", change: 0.3, isUp: true },
-  { name: "DAX", value: "18,123.45", change: 1.1, isUp: true },
-  { name: "Nikkei 225", value: "39,523.55", change: -0.8, isUp: false },
-  { name: "Shanghai", value: "3,089.34", change: 0.4, isUp: true },
-];
-
 const commodities = [
-  { name: "Gold", value: "$2,342.50", change: 0.8, isUp: true },
-  { name: "Brent Crude", value: "$82.15", change: -1.2, isUp: false },
-  { name: "Silver", value: "$27.85", change: 1.5, isUp: true },
   { name: "Tea (Mombasa)", value: "KES 312/kg", change: 2.1, isUp: true },
+  { name: "Coffee (Nairobi)", value: "KES 580/kg", change: 1.4, isUp: true },
+  { name: "Maize (90kg)", value: "KES 4,800", change: -0.6, isUp: false },
+  { name: "Avocado (export)", value: "KES 95/kg", change: 0.9, isUp: true },
 ];
 
 const topGainers = [
@@ -198,12 +189,11 @@ export default function Markets() {
       <div className="sticky top-[57px] z-30 bg-background/95 backdrop-blur-xl border-b border-border/50">
         <div className="flex overflow-x-auto scrollbar-hide px-3 gap-1 py-2">
           {[
-            { tab: "Overview" as Tab, icon: BarChart3, emoji: "📊" },
-            { tab: "NSE" as Tab, icon: Landmark, emoji: "🇰🇪" },
-            { tab: "Global" as Tab, icon: Globe, emoji: "🌍" },
-            { tab: "IPOs" as Tab, icon: Flame, emoji: "🔥" },
-            { tab: "Dividends" as Tab, icon: DollarSign, emoji: "💰" },
-          ].map(({ tab, icon: Icon, emoji }) => (
+            { tab: "Overview" as Tab, icon: BarChart3 },
+            { tab: "NSE" as Tab, icon: Landmark },
+            { tab: "IPOs" as Tab, icon: Flame },
+            { tab: "Dividends" as Tab, icon: DollarSign },
+          ].map(({ tab, icon: Icon }) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -289,11 +279,11 @@ export default function Markets() {
               </div>
             </div>
 
-            {/* Commodities */}
+            {/* Local Commodities */}
             <div>
               <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
                 <Zap className="h-4 w-4 text-accent" />
-                Commodities
+                Local Commodities
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {commodities.map(c => (
@@ -567,44 +557,7 @@ export default function Markets() {
           </>
         )}
 
-        {/* ─── GLOBAL TAB ─── */}
-        {activeTab === "Global" && (
-          <>
-            <h3 className="text-sm font-bold flex items-center gap-2">
-              <Globe className="h-4 w-4 text-primary" />
-              Global Indices
-            </h3>
-            <div className="grid grid-cols-2 gap-2.5">
-              {globalIndices.map(idx => (
-                <Card key={idx.name} className="soft-card p-3.5 active:scale-[0.98] transition-transform">
-                  <p className="text-xs font-medium text-muted-foreground">{idx.name}</p>
-                  <p className="text-base font-bold mt-1">{idx.value}</p>
-                  <p className={`text-xs font-semibold mt-1 flex items-center gap-0.5 ${idx.isUp ? 'text-bull' : 'text-bear'}`}>
-                    {idx.isUp ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                    {idx.isUp ? '+' : ''}{idx.change}%
-                  </p>
-                  <div className="mt-2"><SparklineChart isPositive={idx.isUp} width={120} height={28} /></div>
-                </Card>
-              ))}
-            </div>
-
-            <h3 className="text-sm font-bold flex items-center gap-2 mt-2">
-              <Zap className="h-4 w-4 text-accent" />
-              Global Commodities
-            </h3>
-            <div className="grid grid-cols-2 gap-2.5">
-              {commodities.map(c => (
-                <Card key={c.name} className="soft-card p-3.5">
-                  <p className="text-xs text-muted-foreground font-medium">{c.name}</p>
-                  <p className="text-base font-bold mt-1">{c.value}</p>
-                  <p className={`text-xs font-semibold mt-1 ${c.isUp ? 'text-bull' : 'text-bear'}`}>
-                    {c.isUp ? '+' : ''}{c.change}%
-                  </p>
-                </Card>
-              ))}
-            </div>
-          </>
-        )}
+        {/* Global tab removed — focused on Kenyan market */}
 
         {/* ─── IPOs TAB ─── */}
         {activeTab === "IPOs" && (

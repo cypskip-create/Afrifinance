@@ -34,7 +34,9 @@ export interface Comment {
   user_id: string;
   content: string;
   created_at: string;
+  parent_comment_id?: string | null;
   author?: PostAuthor;
+  replies?: Comment[];
 }
 
 export function usePosts() {
@@ -43,55 +45,59 @@ export function usePosts() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchPosts = useCallback(async (filter?: 'for-you' | 'following' | 'trending') => {
+  const fetchPosts = useCallback(async () => {
     setLoading(true);
     try {
-      // Fetch posts
-      let query = supabase
+      const { data: postsData, error: postsError } = await supabase
         .from('posts')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(50);
 
-      const { data: postsData, error: postsError } = await query;
-
       if (postsError) throw postsError;
+      if (!postsData || postsData.length === 0) {
+        setPosts([]); setError(null); setLoading(false); return;
+      }
 
-      // Fetch profiles for each post using public view (excludes sensitive data like email)
-      const userIds = [...new Set(postsData?.map(p => p.user_id) || [])];
-      const { data: profiles } = await supabase
-        .from('profiles_public')
-        .select('id, user_id, full_name, avatar_url, bio')
-        .in('user_id', userIds);
+      const postIds = postsData.map(p => p.id);
+      const userIds = [...new Set(postsData.map(p => p.user_id))];
 
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p]));
+      // Bulk fetch — eliminate N+1
+      const [profilesRes, likesRes, repostsRes, commentsRes, myLikesRes, myRepostsRes, myBookmarksRes] = await Promise.all([
+        supabase.from('profiles_public').select('id, user_id, full_name, avatar_url, bio').in('user_id', userIds),
+        supabase.from('post_likes').select('post_id').in('post_id', postIds),
+        supabase.from('post_reposts').select('post_id').in('post_id', postIds),
+        supabase.from('post_comments').select('post_id').in('post_id', postIds),
+        user ? supabase.from('post_likes').select('post_id').eq('user_id', user.id).in('post_id', postIds) : Promise.resolve({ data: [] as any[] }),
+        user ? supabase.from('post_reposts').select('post_id').eq('user_id', user.id).in('post_id', postIds) : Promise.resolve({ data: [] as any[] }),
+        user ? supabase.from('post_bookmarks').select('post_id').eq('user_id', user.id).in('post_id', postIds) : Promise.resolve({ data: [] as any[] }),
+      ]);
 
-      // Get counts and user interactions for each post
-      const postsWithDetails = await Promise.all(
-        (postsData || []).map(async (post) => {
-          const [likesRes, repostsRes, commentsRes, likedRes, repostedRes, bookmarkedRes] = await Promise.all([
-            supabase.from('post_likes').select('id', { count: 'exact', head: true }).eq('post_id', post.id),
-            supabase.from('post_reposts').select('id', { count: 'exact', head: true }).eq('post_id', post.id),
-            supabase.from('post_comments').select('id', { count: 'exact', head: true }).eq('post_id', post.id),
-            user ? supabase.from('post_likes').select('id').eq('post_id', post.id).eq('user_id', user.id).maybeSingle() : Promise.resolve({ data: null }),
-            user ? supabase.from('post_reposts').select('id').eq('post_id', post.id).eq('user_id', user.id).maybeSingle() : Promise.resolve({ data: null }),
-            user ? supabase.from('post_bookmarks').select('id').eq('post_id', post.id).eq('user_id', user.id).maybeSingle() : Promise.resolve({ data: null }),
-          ]);
+      const profileMap = new Map(profilesRes.data?.map((p: any) => [p.user_id, p]));
+      const tally = (rows: any[] | null | undefined) => {
+        const m = new Map<string, number>();
+        rows?.forEach(r => m.set(r.post_id, (m.get(r.post_id) || 0) + 1));
+        return m;
+      };
+      const likeCounts = tally(likesRes.data);
+      const repostCounts = tally(repostsRes.data);
+      const commentCounts = tally(commentsRes.data);
+      const myLikes = new Set(myLikesRes.data?.map((r: any) => r.post_id));
+      const myReposts = new Set(myRepostsRes.data?.map((r: any) => r.post_id));
+      const myBookmarks = new Set(myBookmarksRes.data?.map((r: any) => r.post_id));
 
-          return {
-            ...post,
-            author: profileMap.get(post.user_id),
-            likes_count: likesRes.count || 0,
-            reposts_count: repostsRes.count || 0,
-            comments_count: commentsRes.count || 0,
-            is_liked: !!likedRes.data,
-            is_reposted: !!repostedRes.data,
-            is_bookmarked: !!bookmarkedRes.data,
-          };
-        })
-      );
+      const enriched = postsData.map(post => ({
+        ...post,
+        author: profileMap.get(post.user_id),
+        likes_count: likeCounts.get(post.id) || 0,
+        reposts_count: repostCounts.get(post.id) || 0,
+        comments_count: commentCounts.get(post.id) || 0,
+        is_liked: myLikes.has(post.id),
+        is_reposted: myReposts.has(post.id),
+        is_bookmarked: myBookmarks.has(post.id),
+      }));
 
-      setPosts(postsWithDetails);
+      setPosts(enriched as Post[]);
       setError(null);
     } catch (err) {
       console.error('Error fetching posts:', err);
@@ -101,263 +107,134 @@ export function usePosts() {
     }
   }, [user]);
 
-  useEffect(() => {
-    fetchPosts();
-  }, [fetchPosts]);
+  useEffect(() => { fetchPosts(); }, [fetchPosts]);
 
   const createPost = async (content: string, imageUrl?: string) => {
     if (!user) return { error: { message: 'Must be logged in' } };
-
-    // Extract stock mentions ($SYMBOL)
     const stockMentions = content.match(/\$[A-Z]+/g)?.map(s => s.slice(1)) || [];
-
     const { data, error } = await supabase
       .from('posts')
-      .insert({
-        user_id: user.id,
-        content,
-        image_url: imageUrl || null,
-        stock_mentions: stockMentions.length > 0 ? stockMentions : null,
-      })
-      .select()
-      .single();
-
-    if (!error) {
-      fetchPosts();
-    }
-
+      .insert({ user_id: user.id, content, image_url: imageUrl || null, stock_mentions: stockMentions.length > 0 ? stockMentions : null })
+      .select().single();
+    if (!error) fetchPosts();
     return { data, error };
   };
 
   const deletePost = async (postId: string) => {
     if (!user) return { error: { message: 'Must be logged in' } };
-
-    const { error } = await supabase
-      .from('posts')
-      .delete()
-      .eq('id', postId)
-      .eq('user_id', user.id);
-
-    if (!error) {
-      setPosts(prev => prev.filter(p => p.id !== postId));
-    }
-
+    const { error } = await supabase.from('posts').delete().eq('id', postId).eq('user_id', user.id);
+    if (!error) setPosts(prev => prev.filter(p => p.id !== postId));
     return { error };
   };
 
   const likePost = async (postId: string) => {
     if (!user) return { error: { message: 'Must be logged in' } };
-
     const post = posts.find(p => p.id === postId);
     if (!post) return { error: { message: 'Post not found' } };
-
     if (post.is_liked) {
-      // Unlike
-      const { error } = await supabase
-        .from('post_likes')
-        .delete()
-        .eq('post_id', postId)
-        .eq('user_id', user.id);
-
-      if (!error) {
-        setPosts(prev => prev.map(p => 
-          p.id === postId 
-            ? { ...p, is_liked: false, likes_count: p.likes_count - 1 }
-            : p
-        ));
-      }
+      const { error } = await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', user.id);
+      if (!error) setPosts(prev => prev.map(p => p.id === postId ? { ...p, is_liked: false, likes_count: p.likes_count - 1 } : p));
       return { error };
     } else {
-      // Like
-      const { error } = await supabase
-        .from('post_likes')
-        .insert({ post_id: postId, user_id: user.id });
-
-      if (!error) {
-        setPosts(prev => prev.map(p => 
-          p.id === postId 
-            ? { ...p, is_liked: true, likes_count: p.likes_count + 1 }
-            : p
-        ));
-      }
+      const { error } = await supabase.from('post_likes').insert({ post_id: postId, user_id: user.id });
+      if (!error) setPosts(prev => prev.map(p => p.id === postId ? { ...p, is_liked: true, likes_count: p.likes_count + 1 } : p));
       return { error };
     }
   };
 
   const repostPost = async (postId: string) => {
     if (!user) return { error: { message: 'Must be logged in' } };
-
     const post = posts.find(p => p.id === postId);
     if (!post) return { error: { message: 'Post not found' } };
-
     if (post.is_reposted) {
-      const { error } = await supabase
-        .from('post_reposts')
-        .delete()
-        .eq('post_id', postId)
-        .eq('user_id', user.id);
-
-      if (!error) {
-        setPosts(prev => prev.map(p => 
-          p.id === postId 
-            ? { ...p, is_reposted: false, reposts_count: p.reposts_count - 1 }
-            : p
-        ));
-      }
+      const { error } = await supabase.from('post_reposts').delete().eq('post_id', postId).eq('user_id', user.id);
+      if (!error) setPosts(prev => prev.map(p => p.id === postId ? { ...p, is_reposted: false, reposts_count: p.reposts_count - 1 } : p));
       return { error };
     } else {
-      const { error } = await supabase
-        .from('post_reposts')
-        .insert({ post_id: postId, user_id: user.id });
-
-      if (!error) {
-        setPosts(prev => prev.map(p => 
-          p.id === postId 
-            ? { ...p, is_reposted: true, reposts_count: p.reposts_count + 1 }
-            : p
-        ));
-      }
+      const { error } = await supabase.from('post_reposts').insert({ post_id: postId, user_id: user.id });
+      if (!error) setPosts(prev => prev.map(p => p.id === postId ? { ...p, is_reposted: true, reposts_count: p.reposts_count + 1 } : p));
       return { error };
     }
   };
 
   const bookmarkPost = async (postId: string) => {
     if (!user) return { error: { message: 'Must be logged in' } };
-
     const post = posts.find(p => p.id === postId);
     if (!post) return { error: { message: 'Post not found' } };
-
     if (post.is_bookmarked) {
-      const { error } = await supabase
-        .from('post_bookmarks')
-        .delete()
-        .eq('post_id', postId)
-        .eq('user_id', user.id);
-
-      if (!error) {
-        setPosts(prev => prev.map(p => 
-          p.id === postId 
-            ? { ...p, is_bookmarked: false }
-            : p
-        ));
-      }
+      const { error } = await supabase.from('post_bookmarks').delete().eq('post_id', postId).eq('user_id', user.id);
+      if (!error) setPosts(prev => prev.map(p => p.id === postId ? { ...p, is_bookmarked: false } : p));
       return { error };
     } else {
-      const { error } = await supabase
-        .from('post_bookmarks')
-        .insert({ post_id: postId, user_id: user.id });
-
-      if (!error) {
-        setPosts(prev => prev.map(p => 
-          p.id === postId 
-            ? { ...p, is_bookmarked: true }
-            : p
-        ));
-      }
+      const { error } = await supabase.from('post_bookmarks').insert({ post_id: postId, user_id: user.id });
+      if (!error) setPosts(prev => prev.map(p => p.id === postId ? { ...p, is_bookmarked: true } : p));
       return { error };
     }
   };
 
   const fetchComments = async (postId: string): Promise<Comment[]> => {
     const { data: comments } = await supabase
-      .from('post_comments')
-      .select('*')
-      .eq('post_id', postId)
-      .order('created_at', { ascending: true });
-
+      .from('post_comments').select('*').eq('post_id', postId).order('created_at', { ascending: true });
     if (!comments) return [];
-
-    const userIds = [...new Set(comments.map(c => c.user_id))];
-    // Use public view to exclude sensitive data like email
+    const userIds = [...new Set(comments.map((c: any) => c.user_id))];
     const { data: profiles } = await supabase
-      .from('profiles_public')
-      .select('id, user_id, full_name, avatar_url, bio')
-      .in('user_id', userIds);
+      .from('profiles_public').select('id, user_id, full_name, avatar_url, bio').in('user_id', userIds);
+    const profileMap = new Map(profiles?.map((p: any) => [p.user_id, p]));
 
-    const profileMap = new Map(profiles?.map(p => [p.user_id, p]));
-
-    return comments.map(c => ({
-      ...c,
-      author: profileMap.get(c.user_id),
-    }));
+    // Build tree
+    const all: Comment[] = comments.map((c: any) => ({ ...c, author: profileMap.get(c.user_id), replies: [] }));
+    const byId = new Map(all.map(c => [c.id, c]));
+    const roots: Comment[] = [];
+    all.forEach(c => {
+      if (c.parent_comment_id && byId.has(c.parent_comment_id)) {
+        byId.get(c.parent_comment_id)!.replies!.push(c);
+      } else {
+        roots.push(c);
+      }
+    });
+    return roots;
   };
 
-  const addComment = async (postId: string, content: string) => {
+  const addComment = async (postId: string, content: string, parentCommentId?: string) => {
     if (!user) return { error: { message: 'Must be logged in' } };
-
     const { data, error } = await supabase
       .from('post_comments')
-      .insert({ post_id: postId, user_id: user.id, content })
-      .select()
-      .single();
-
+      .insert({ post_id: postId, user_id: user.id, content, parent_comment_id: parentCommentId || null } as any)
+      .select().single();
     if (!error) {
-      setPosts(prev => prev.map(p => 
-        p.id === postId 
-          ? { ...p, comments_count: p.comments_count + 1 }
-          : p
-      ));
+      setPosts(prev => prev.map(p => p.id === postId ? { ...p, comments_count: p.comments_count + 1 } : p));
     }
-
     return { data, error };
   };
 
   const getUserPosts = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('posts')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
+    const { data, error } = await supabase.from('posts').select('*').eq('user_id', userId).order('created_at', { ascending: false });
     return { data, error };
   };
 
   const editPost = async (postId: string, newContent: string) => {
     if (!user) return { error: { message: 'Must be logged in' } };
-
     const post = posts.find(p => p.id === postId);
     if (!post) return { error: { message: 'Post not found' } };
-
-    // Check 30 minute window
     const ageMinutes = (Date.now() - new Date(post.created_at).getTime()) / 60000;
     if (ageMinutes > 30) return { error: { message: 'Posts can only be edited within 30 minutes' } };
-
     const stockMentions = newContent.match(/\$[A-Z]+/g)?.map(s => s.slice(1)) || [];
-
     const { error } = await supabase
       .from('posts')
-      .update({
-        content: newContent,
-        stock_mentions: stockMentions.length > 0 ? stockMentions : null,
-        edited_at: new Date().toISOString(),
-      } as any)
-      .eq('id', postId)
-      .eq('user_id', user.id);
-
+      .update({ content: newContent, stock_mentions: stockMentions.length > 0 ? stockMentions : null, edited_at: new Date().toISOString() } as any)
+      .eq('id', postId).eq('user_id', user.id);
     if (!error) {
-      setPosts(prev => prev.map(p =>
-        p.id === postId
-          ? { ...p, content: newContent, stock_mentions: stockMentions.length > 0 ? stockMentions : null, edited_at: new Date().toISOString() } as any
-          : p
-      ));
+      setPosts(prev => prev.map(p => p.id === postId
+        ? { ...p, content: newContent, stock_mentions: stockMentions.length > 0 ? stockMentions : null, edited_at: new Date().toISOString() } as any
+        : p));
     }
-
     return { error };
   };
 
   return {
-    posts,
-    loading,
-    error,
-    fetchPosts,
-    createPost,
-    deletePost,
-    editPost,
-    likePost,
-    repostPost,
-    bookmarkPost,
-    fetchComments,
-    addComment,
-    getUserPosts,
+    posts, loading, error,
+    fetchPosts, createPost, deletePost, editPost,
+    likePost, repostPost, bookmarkPost,
+    fetchComments, addComment, getUserPosts,
   };
 }
