@@ -3,14 +3,14 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Verified, Send, ArrowLeft, SlidersHorizontal, ChevronDown, MessageCircle, X } from "lucide-react";
+import { Verified, Send, ArrowLeft, SlidersHorizontal, ChevronDown, MessageCircle, X, Heart, Repeat2, Quote, MoreHorizontal, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { Post, Comment } from "@/hooks/usePosts";
+import { Post, Comment, usePosts } from "@/hooks/usePosts";
 import { XPostCard } from "./XPostCard";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useToast } from "@/hooks/use-toast";
 
 interface XCommentSheetProps {
   open: boolean;
@@ -25,6 +25,8 @@ interface XCommentSheetProps {
   onBookmark: (postId: string) => void;
   onShare: (post: Post) => void;
   onDelete?: (postId: string) => void;
+  onQuote?: (post: Post, comment?: Comment) => void;
+  onCommentsRefresh?: () => Promise<void>;
 }
 
 const getInitials = (name?: string | null) =>
@@ -39,14 +41,43 @@ const formatTimeAgo = (date: string) => {
 };
 
 function CommentNode({
-  comment, depth, onReply, replyingTo, navigateTo,
+  comment, depth, onReply, onQuote, replyingTo, navigateTo, onRefresh,
 }: {
   comment: Comment;
   depth: number;
   onReply: (c: Comment) => void;
+  onQuote: (c: Comment) => void;
   replyingTo: string | null;
   navigateTo: (url: string) => void;
+  onRefresh: () => Promise<void>;
 }) {
+  const { likeComment, repostComment } = usePosts();
+  const { toast } = useToast();
+  const [expanded, setExpanded] = useState(depth < 1); // Auto-expand top-level only
+  const [optimistic, setOptimistic] = useState({
+    is_liked: !!comment.is_liked,
+    likes_count: comment.likes_count || 0,
+    is_reposted: !!comment.is_reposted,
+    reposts_count: comment.reposts_count || 0,
+  });
+
+  const replyCount = comment.replies?.length || 0;
+
+  const handleLikeReply = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const wasLiked = optimistic.is_liked;
+    setOptimistic(o => ({ ...o, is_liked: !wasLiked, likes_count: o.likes_count + (wasLiked ? -1 : 1) }));
+    await likeComment(comment.id, wasLiked);
+  };
+
+  const handleRepostReply = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const wasReposted = optimistic.is_reposted;
+    setOptimistic(o => ({ ...o, is_reposted: !wasReposted, reposts_count: o.reposts_count + (wasReposted ? -1 : 1) }));
+    await repostComment(comment.id, wasReposted);
+    if (!wasReposted) toast({ title: "Reposted!" });
+  };
+
   const renderContent = (content: string) =>
     content.split(/(\$[A-Z]+|@\w+)/g).map((part, i) => {
       if (part.startsWith("$")) {
@@ -68,7 +99,7 @@ function CommentNode({
         className={`flex gap-3 px-4 py-3 border-b border-border/40 hover:bg-muted/20 transition-colors ${
           replyingTo === comment.id ? "bg-primary/5" : ""
         }`}
-        style={{ paddingLeft: `${16 + Math.min(depth, 4) * 24}px` }}
+        style={{ paddingLeft: `${16 + Math.min(depth, 4) * 20}px` }}
       >
         <Avatar className="h-8 w-8 shrink-0 cursor-pointer" onClick={() => navigateTo(`/profile/${comment.user_id}`)}>
           <AvatarImage src={comment.author?.avatar_url || ""} />
@@ -82,17 +113,42 @@ function CommentNode({
             <Verified className="h-3 w-3 text-primary fill-primary" />
             <span className="text-[11px] text-muted-foreground">· {formatTimeAgo(comment.created_at)}</span>
           </div>
-          <p className="text-[13px] mt-0.5 leading-relaxed">{renderContent(comment.content)}</p>
-          <button
-            onClick={() => onReply(comment)}
-            className="mt-1.5 text-[11px] font-semibold text-muted-foreground hover:text-primary inline-flex items-center gap-1"
-            data-small-target
-          >
-            <MessageCircle className="h-3 w-3" /> Reply
-          </button>
+          <p className="text-[13px] mt-0.5 leading-relaxed break-words">{renderContent(comment.content)}</p>
+
+          {/* Action bar */}
+          <div className="flex items-center gap-4 mt-1.5 -ml-1.5">
+            <button onClick={(e) => { e.stopPropagation(); onReply(comment); }} className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-primary p-1 rounded-full" data-small-target>
+              <MessageCircle className="h-3.5 w-3.5" />
+              <span>Reply</span>
+            </button>
+            <button onClick={handleRepostReply} className={`flex items-center gap-1 text-[11px] p-1 rounded-full ${optimistic.is_reposted ? 'text-bull' : 'text-muted-foreground hover:text-bull'}`} data-small-target>
+              <Repeat2 className="h-3.5 w-3.5" />
+              {optimistic.reposts_count > 0 && <span>{optimistic.reposts_count}</span>}
+            </button>
+            <button onClick={handleLikeReply} className={`flex items-center gap-1 text-[11px] p-1 rounded-full ${optimistic.is_liked ? 'text-destructive' : 'text-muted-foreground hover:text-destructive'}`} data-small-target>
+              <Heart className={`h-3.5 w-3.5 ${optimistic.is_liked ? 'fill-current' : ''}`} />
+              {optimistic.likes_count > 0 && <span>{optimistic.likes_count}</span>}
+            </button>
+            <button onClick={(e) => { e.stopPropagation(); onQuote(comment); }} className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-primary p-1 rounded-full" data-small-target>
+              <Quote className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
+          {/* Show "View N replies" toggle (X-style) */}
+          {replyCount > 0 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setExpanded(v => !v); }}
+              className="mt-2 inline-flex items-center gap-1 text-[12px] font-semibold text-primary hover:underline"
+              data-small-target
+            >
+              <ChevronRight className={`h-3 w-3 transition-transform ${expanded ? 'rotate-90' : ''}`} />
+              {expanded ? `Hide ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}` : `View ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`}
+            </button>
+          )}
         </div>
       </div>
-      {comment.replies && comment.replies.length > 0 && (
+
+      {expanded && comment.replies && comment.replies.length > 0 && (
         <div>
           {comment.replies.map(reply => (
             <CommentNode
@@ -100,8 +156,10 @@ function CommentNode({
               comment={reply}
               depth={depth + 1}
               onReply={onReply}
+              onQuote={onQuote}
               replyingTo={replyingTo}
               navigateTo={navigateTo}
+              onRefresh={onRefresh}
             />
           ))}
         </div>
@@ -112,13 +170,13 @@ function CommentNode({
 
 export function XCommentSheet({
   open, onOpenChange, post, currentUserId, comments, loadingComments,
-  onAddComment, onLike, onRepost, onBookmark, onShare, onDelete,
+  onAddComment, onLike, onRepost, onBookmark, onShare, onDelete, onQuote, onCommentsRefresh,
 }: XCommentSheetProps) {
   const navigate = useNavigate();
   const [newComment, setNewComment] = useState("");
   const [sending, setSending] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
-  const [sortBy, setSortBy] = useState<"latest" | "relevant" | "liked">("relevant");
+  const [sortBy, setSortBy] = useState<"latest" | "relevant">("relevant");
 
   const navigateTo = (url: string) => { onOpenChange(false); navigate(url); };
 
@@ -129,6 +187,13 @@ export function XCommentSheet({
     setNewComment("");
     setReplyingTo(null);
     setSending(false);
+  };
+
+  const handleQuoteComment = (c: Comment) => {
+    if (post && onQuote) {
+      onOpenChange(false);
+      onQuote(post, c);
+    }
   };
 
   const totalCount = (() => {
@@ -146,15 +211,17 @@ export function XCommentSheet({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] p-0 gap-0 rounded-3xl overflow-hidden border-border/60 [&>button]:hidden">
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-border/60 bg-card">
+      <DialogContent className="max-w-full sm:max-w-2xl w-screen h-[100dvh] sm:h-[95vh] p-0 gap-0 sm:rounded-3xl rounded-none overflow-hidden border-0 sm:border border-border/60 [&>button]:hidden flex flex-col translate-x-0 translate-y-0 sm:translate-x-[-50%] sm:translate-y-[-50%] left-0 top-0 sm:left-1/2 sm:top-1/2">
+        {/* Header */}
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-border/60 bg-card sticky top-0 z-10 shrink-0">
           <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={() => onOpenChange(false)} data-small-target>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h2 className="font-bold text-base">Post</h2>
         </div>
 
-        <ScrollArea className="max-h-[60vh]">
+        {/* Scrollable area */}
+        <div className="flex-1 overflow-y-auto">
           <XPostCard
             post={post}
             currentUserId={currentUserId}
@@ -166,7 +233,7 @@ export function XCommentSheet({
             onDelete={onDelete}
           />
 
-          <div className="px-4 py-2.5 border-b border-border/60 flex items-center justify-between">
+          <div className="px-4 py-2.5 border-b border-border/60 flex items-center justify-between sticky top-0 bg-background/95 backdrop-blur z-[5]">
             <span className="text-sm font-bold text-muted-foreground">
               {totalCount > 0 ? `${totalCount} ${totalCount === 1 ? "Reply" : "Replies"}` : "Replies"}
             </span>
@@ -194,23 +261,26 @@ export function XCommentSheet({
               <p className="text-sm text-muted-foreground">No replies yet. Start the conversation!</p>
             </div>
           ) : (
-            <div>
+            <div className="pb-24">
               {sorted.map(c => (
                 <CommentNode
                   key={c.id}
                   comment={c}
                   depth={0}
                   onReply={setReplyingTo}
+                  onQuote={handleQuoteComment}
                   replyingTo={replyingTo?.id || null}
                   navigateTo={navigateTo}
+                  onRefresh={async () => { if (onCommentsRefresh) await onCommentsRefresh(); }}
                 />
               ))}
             </div>
           )}
-        </ScrollArea>
+        </div>
 
+        {/* Composer */}
         {currentUserId && (
-          <div className="border-t border-border/60 bg-card">
+          <div className="border-t border-border/60 bg-card shrink-0">
             {replyingTo && (
               <div className="flex items-center justify-between px-4 py-2 bg-muted/40 text-[12px]">
                 <span className="text-muted-foreground">
@@ -221,7 +291,7 @@ export function XCommentSheet({
                 </Button>
               </div>
             )}
-            <div className="flex items-center gap-2 p-3">
+            <div className="flex items-center gap-2 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
               <Input
                 placeholder={replyingTo ? `Reply to ${replyingTo.author?.full_name || "user"}` : "Post your reply"}
                 value={newComment}
