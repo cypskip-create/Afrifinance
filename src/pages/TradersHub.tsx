@@ -129,11 +129,20 @@ export default function TradersHub() {
   const handleSearch = (q: string) => { setSearchQuery(q); setSearchParams(q ? { search: q } : {}); };
   const clearSearch = () => { setSearchQuery(""); setSearchParams({}); };
 
-  const handlePost = async (content: string, imageUrl?: string) => {
-    const { error } = await createPost(content, imageUrl);
+  const handlePost = async (content: string, imageUrl?: string, quotedPostId?: string) => {
+    const { error } = await createPost(content, imageUrl, quotedPostId);
     if (error) { toast({ title: "Error", description: "Failed to post", variant: "destructive" }); return { error }; }
     toast({ title: "Posted!" });
+    setQuotedPost(null);
     return { error: null };
+  };
+
+  const handleOpenQuote = (post: Post, comment?: Comment) => {
+    setQuotedPost(post);
+    if (comment) {
+      setPrefillContent(`Replying to @${comment.author?.full_name?.toLowerCase().replace(/\s+/g,'') || 'user'}: "${comment.content.slice(0, 80)}${comment.content.length > 80 ? '...' : ''}" `);
+    }
+    setComposeOpen(true);
   };
 
   const handleLike = async (postId: string) => { if (!user) { navigate("/auth"); return; } await likePost(postId); };
