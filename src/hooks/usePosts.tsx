@@ -92,7 +92,20 @@ export function usePosts() {
       const myReposts = new Set(myRepostsRes.data?.map((r: any) => r.post_id));
       const myBookmarks = new Set(myBookmarksRes.data?.map((r: any) => r.post_id));
 
-      const enriched = postsData.map(post => ({
+      // Fetch quoted posts in bulk
+      const quotedIds = postsData.map((p: any) => p.quoted_post_id).filter(Boolean);
+      let quotedMap = new Map<string, any>();
+      if (quotedIds.length > 0) {
+        const { data: quotedPosts } = await supabase.from('posts').select('*').in('id', quotedIds);
+        if (quotedPosts) {
+          const qUserIds = [...new Set(quotedPosts.map((p: any) => p.user_id))];
+          const { data: qProfiles } = await supabase.from('profiles_public').select('id, user_id, full_name, avatar_url, bio').in('user_id', qUserIds);
+          const qProfileMap = new Map(qProfiles?.map((p: any) => [p.user_id, p]));
+          quotedPosts.forEach((qp: any) => quotedMap.set(qp.id, { ...qp, author: qProfileMap.get(qp.user_id) }));
+        }
+      }
+
+      const enriched = postsData.map((post: any) => ({
         ...post,
         author: profileMap.get(post.user_id),
         likes_count: likeCounts.get(post.id) || 0,
@@ -101,6 +114,7 @@ export function usePosts() {
         is_liked: myLikes.has(post.id),
         is_reposted: myReposts.has(post.id),
         is_bookmarked: myBookmarks.has(post.id),
+        quoted_post: post.quoted_post_id ? quotedMap.get(post.quoted_post_id) || null : null,
       }));
 
       setPosts(enriched as Post[]);
