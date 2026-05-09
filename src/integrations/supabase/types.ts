@@ -47,6 +47,48 @@ export type Database = {
         }
         Relationships: []
       }
+      comment_likes: {
+        Row: {
+          comment_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          comment_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          comment_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      comment_reposts: {
+        Row: {
+          comment_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          comment_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          comment_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       dividends: {
         Row: {
           amount: number
@@ -333,6 +375,8 @@ export type Database = {
           edited_at: string | null
           id: string
           image_url: string | null
+          quoted_comment_id: string | null
+          quoted_post_id: string | null
           stock_mentions: string[] | null
           updated_at: string
           user_id: string
@@ -343,6 +387,8 @@ export type Database = {
           edited_at?: string | null
           id?: string
           image_url?: string | null
+          quoted_comment_id?: string | null
+          quoted_post_id?: string | null
           stock_mentions?: string[] | null
           updated_at?: string
           user_id: string
@@ -353,6 +399,8 @@ export type Database = {
           edited_at?: string | null
           id?: string
           image_url?: string | null
+          quoted_comment_id?: string | null
+          quoted_post_id?: string | null
           stock_mentions?: string[] | null
           updated_at?: string
           user_id?: string
