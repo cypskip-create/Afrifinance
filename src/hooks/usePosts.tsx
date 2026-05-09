@@ -115,12 +115,12 @@ export function usePosts() {
 
   useEffect(() => { fetchPosts(); }, [fetchPosts]);
 
-  const createPost = async (content: string, imageUrl?: string) => {
+  const createPost = async (content: string, imageUrl?: string, quotedPostId?: string) => {
     if (!user) return { error: { message: 'Must be logged in' } };
     const stockMentions = content.match(/\$[A-Z]+/g)?.map(s => s.slice(1)) || [];
     const { data, error } = await supabase
       .from('posts')
-      .insert({ user_id: user.id, content, image_url: imageUrl || null, stock_mentions: stockMentions.length > 0 ? stockMentions : null })
+      .insert({ user_id: user.id, content, image_url: imageUrl || null, stock_mentions: stockMentions.length > 0 ? stockMentions : null, quoted_post_id: quotedPostId || null } as any)
       .select().single();
     if (!error) fetchPosts();
     return { data, error };
