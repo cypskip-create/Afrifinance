@@ -34,29 +34,36 @@ const premiumFeatures = [
 
 export default function Account() {
   const [editProfileOpen, setEditProfileOpen] = useState(false);
-  const [portfolioPublic, setPortfolioPublic] = useState(true);
   const { user, signOut } = useAuth();
   const { profile, loading, updateProfile } = useProfile();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [portfolioPublic, setPortfolioPublic] = useState(true);
+
+  // Sync from profile
+  useState(() => {
+    if (profile?.portfolio_public !== undefined) setPortfolioPublic(!!profile.portfolio_public);
+  });
 
   const handleSignOut = async () => {
     await signOut();
     navigate('/auth');
   };
 
+  const comingSoon = (label: string) => toast({ title: `${label}`, description: "Coming soon — we're working on this!" });
+
   const getInitials = (name: string) => name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
   const isPremium = profile?.subscription_plan === 'premium' || profile?.subscription_plan === 'premium+';
 
   const menuItems = [
-    { icon: CreditCard, label: "Payment Methods", description: "Manage your cards", action: () => {} },
-    { icon: Users, label: "Referrals & Rewards", description: "Invite friends, earn rewards", action: () => {} },
+    { icon: CreditCard, label: "Payment Methods", description: "Manage your cards", action: () => comingSoon("Payment Methods") },
+    { icon: Users, label: "Referrals & Rewards", description: "Invite friends, earn rewards", action: () => comingSoon("Referrals & Rewards") },
     { icon: Bell, label: "Notification Settings", description: "Manage alerts", action: () => navigate('/notifications') },
-    { icon: Shield, label: "Privacy & Security", description: "Account protection", action: () => {} },
-    { icon: Smartphone, label: "Connected Devices", description: "Manage sessions", action: () => {} },
-    { icon: Globe, label: "Language & Region", description: "English (Kenya)", action: () => {} },
-    { icon: HelpCircle, label: "Help & Support", description: "Get assistance", action: () => {} },
-    { icon: FileText, label: "Terms & Privacy", description: "Legal information", action: () => {} },
+    { icon: Shield, label: "Privacy & Security", description: "Account protection", action: () => comingSoon("Privacy & Security") },
+    { icon: Smartphone, label: "Connected Devices", description: "Manage sessions", action: () => comingSoon("Connected Devices") },
+    { icon: Globe, label: "Language & Region", description: "English (Kenya)", action: () => comingSoon("Language & Region") },
+    { icon: HelpCircle, label: "Help & Support", description: "Get assistance", action: () => comingSoon("Help & Support") },
+    { icon: FileText, label: "Terms & Privacy", description: "Legal information", action: () => comingSoon("Terms & Privacy") },
   ];
 
   return (
