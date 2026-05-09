@@ -18,12 +18,13 @@ interface XComposeModalProps {
   onOpenChange: (open: boolean) => void;
   user: { id: string; email?: string } | null;
   profile: { avatar_url?: string | null; full_name?: string | null } | null;
-  onPost: (content: string, imageUrl?: string) => Promise<{ error?: any }>;
+  onPost: (content: string, imageUrl?: string, quotedPostId?: string) => Promise<{ error?: any }>;
   portfolioSnapshot?: PortfolioSnapshot | null;
   prefillContent?: string;
+  quotedPost?: { id: string; content: string; author?: { full_name: string | null; avatar_url: string | null } | null; created_at: string } | null;
 }
 
-export function XComposeModal({ open, onOpenChange, user, profile, onPost, portfolioSnapshot, prefillContent }: XComposeModalProps) {
+export function XComposeModal({ open, onOpenChange, user, profile, onPost, portfolioSnapshot, prefillContent, quotedPost }: XComposeModalProps) {
   const navigate = useNavigate();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
