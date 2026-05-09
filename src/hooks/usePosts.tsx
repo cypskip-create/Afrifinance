@@ -26,6 +26,8 @@ export interface Post {
   is_liked: boolean;
   is_reposted: boolean;
   is_bookmarked: boolean;
+  quoted_post_id?: string | null;
+  quoted_post?: Post | null;
 }
 
 export interface Comment {
@@ -37,6 +39,10 @@ export interface Comment {
   parent_comment_id?: string | null;
   author?: PostAuthor;
   replies?: Comment[];
+  likes_count?: number;
+  reposts_count?: number;
+  is_liked?: boolean;
+  is_reposted?: boolean;
 }
 
 export function usePosts() {
@@ -86,7 +92,20 @@ export function usePosts() {
       const myReposts = new Set(myRepostsRes.data?.map((r: any) => r.post_id));
       const myBookmarks = new Set(myBookmarksRes.data?.map((r: any) => r.post_id));
 
-      const enriched = postsData.map(post => ({
+      // Fetch quoted posts in bulk
+      const quotedIds = postsData.map((p: any) => p.quoted_post_id).filter(Boolean);
+      let quotedMap = new Map<string, any>();
+      if (quotedIds.length > 0) {
+        const { data: quotedPosts } = await supabase.from('posts').select('*').in('id', quotedIds);
+        if (quotedPosts) {
+          const qUserIds = [...new Set(quotedPosts.map((p: any) => p.user_id))];
+          const { data: qProfiles } = await supabase.from('profiles_public').select('id, user_id, full_name, avatar_url, bio').in('user_id', qUserIds);
+          const qProfileMap = new Map(qProfiles?.map((p: any) => [p.user_id, p]));
+          quotedPosts.forEach((qp: any) => quotedMap.set(qp.id, { ...qp, author: qProfileMap.get(qp.user_id) }));
+        }
+      }
+
+      const enriched = postsData.map((post: any) => ({
         ...post,
         author: profileMap.get(post.user_id),
         likes_count: likeCounts.get(post.id) || 0,
@@ -95,6 +114,7 @@ export function usePosts() {
         is_liked: myLikes.has(post.id),
         is_reposted: myReposts.has(post.id),
         is_bookmarked: myBookmarks.has(post.id),
+        quoted_post: post.quoted_post_id ? quotedMap.get(post.quoted_post_id) || null : null,
       }));
 
       setPosts(enriched as Post[]);
@@ -109,12 +129,12 @@ export function usePosts() {
 
   useEffect(() => { fetchPosts(); }, [fetchPosts]);
 
-  const createPost = async (content: string, imageUrl?: string) => {
+  const createPost = async (content: string, imageUrl?: string, quotedPostId?: string) => {
     if (!user) return { error: { message: 'Must be logged in' } };
     const stockMentions = content.match(/\$[A-Z]+/g)?.map(s => s.slice(1)) || [];
     const { data, error } = await supabase
       .from('posts')
-      .insert({ user_id: user.id, content, image_url: imageUrl || null, stock_mentions: stockMentions.length > 0 ? stockMentions : null })
+      .insert({ user_id: user.id, content, image_url: imageUrl || null, stock_mentions: stockMentions.length > 0 ? stockMentions : null, quoted_post_id: quotedPostId || null } as any)
       .select().single();
     if (!error) fetchPosts();
     return { data, error };
@@ -175,14 +195,31 @@ export function usePosts() {
   const fetchComments = async (postId: string): Promise<Comment[]> => {
     const { data: comments } = await supabase
       .from('post_comments').select('*').eq('post_id', postId).order('created_at', { ascending: true });
-    if (!comments) return [];
+    if (!comments || comments.length === 0) return [];
     const userIds = [...new Set(comments.map((c: any) => c.user_id))];
-    const { data: profiles } = await supabase
-      .from('profiles_public').select('id, user_id, full_name, avatar_url, bio').in('user_id', userIds);
-    const profileMap = new Map(profiles?.map((p: any) => [p.user_id, p]));
+    const commentIds = comments.map((c: any) => c.id);
+    const [profilesRes, likesRes, repostsRes, myLikesRes, myRepostsRes] = await Promise.all([
+      supabase.from('profiles_public').select('id, user_id, full_name, avatar_url, bio').in('user_id', userIds),
+      supabase.from('comment_likes' as any).select('comment_id').in('comment_id', commentIds),
+      supabase.from('comment_reposts' as any).select('comment_id').in('comment_id', commentIds),
+      user ? supabase.from('comment_likes' as any).select('comment_id').eq('user_id', user.id).in('comment_id', commentIds) : Promise.resolve({ data: [] as any[] }),
+      user ? supabase.from('comment_reposts' as any).select('comment_id').eq('user_id', user.id).in('comment_id', commentIds) : Promise.resolve({ data: [] as any[] }),
+    ]);
+    const profileMap = new Map(profilesRes.data?.map((p: any) => [p.user_id, p]));
+    const likeCounts = new Map<string, number>();
+    likesRes.data?.forEach((r: any) => likeCounts.set(r.comment_id, (likeCounts.get(r.comment_id) || 0) + 1));
+    const repostCounts = new Map<string, number>();
+    repostsRes.data?.forEach((r: any) => repostCounts.set(r.comment_id, (repostCounts.get(r.comment_id) || 0) + 1));
+    const myLikes = new Set(myLikesRes.data?.map((r: any) => r.comment_id));
+    const myReposts = new Set(myRepostsRes.data?.map((r: any) => r.comment_id));
 
-    // Build tree
-    const all: Comment[] = comments.map((c: any) => ({ ...c, author: profileMap.get(c.user_id), replies: [] }));
+    const all: Comment[] = comments.map((c: any) => ({
+      ...c, author: profileMap.get(c.user_id), replies: [],
+      likes_count: likeCounts.get(c.id) || 0,
+      reposts_count: repostCounts.get(c.id) || 0,
+      is_liked: myLikes.has(c.id),
+      is_reposted: myReposts.has(c.id),
+    }));
     const byId = new Map(all.map(c => [c.id, c]));
     const roots: Comment[] = [];
     all.forEach(c => {
@@ -193,6 +230,22 @@ export function usePosts() {
       }
     });
     return roots;
+  };
+
+  const likeComment = async (commentId: string, currentlyLiked: boolean) => {
+    if (!user) return { error: { message: 'Must be logged in' } };
+    if (currentlyLiked) {
+      return await supabase.from('comment_likes' as any).delete().eq('comment_id', commentId).eq('user_id', user.id);
+    }
+    return await supabase.from('comment_likes' as any).insert({ comment_id: commentId, user_id: user.id });
+  };
+
+  const repostComment = async (commentId: string, currentlyReposted: boolean) => {
+    if (!user) return { error: { message: 'Must be logged in' } };
+    if (currentlyReposted) {
+      return await supabase.from('comment_reposts' as any).delete().eq('comment_id', commentId).eq('user_id', user.id);
+    }
+    return await supabase.from('comment_reposts' as any).insert({ comment_id: commentId, user_id: user.id });
   };
 
   const addComment = async (postId: string, content: string, parentCommentId?: string) => {
@@ -236,5 +289,6 @@ export function usePosts() {
     fetchPosts, createPost, deletePost, editPost,
     likePost, repostPost, bookmarkPost,
     fetchComments, addComment, getUserPosts,
+    likeComment, repostComment,
   };
 }

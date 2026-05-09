@@ -42,6 +42,7 @@ export default function TradersHub() {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
   const [prefillContent, setPrefillContent] = useState("");
+  const [quotedPost, setQuotedPost] = useState<Post | null>(null);
   const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
   const [disclaimerDone, setDisclaimerDone] = useState(() => {
     if (!user) return true;
@@ -128,11 +129,20 @@ export default function TradersHub() {
   const handleSearch = (q: string) => { setSearchQuery(q); setSearchParams(q ? { search: q } : {}); };
   const clearSearch = () => { setSearchQuery(""); setSearchParams({}); };
 
-  const handlePost = async (content: string, imageUrl?: string) => {
-    const { error } = await createPost(content, imageUrl);
+  const handlePost = async (content: string, imageUrl?: string, quotedPostId?: string) => {
+    const { error } = await createPost(content, imageUrl, quotedPostId);
     if (error) { toast({ title: "Error", description: "Failed to post", variant: "destructive" }); return { error }; }
     toast({ title: "Posted!" });
+    setQuotedPost(null);
     return { error: null };
+  };
+
+  const handleOpenQuote = (post: Post, comment?: Comment) => {
+    setQuotedPost(post);
+    if (comment) {
+      setPrefillContent(`Replying to @${comment.author?.full_name?.toLowerCase().replace(/\s+/g,'') || 'user'}: "${comment.content.slice(0, 80)}${comment.content.length > 80 ? '...' : ''}" `);
+    }
+    setComposeOpen(true);
   };
 
   const handleLike = async (postId: string) => { if (!user) { navigate("/auth"); return; } await likePost(postId); };
@@ -268,7 +278,7 @@ export default function TradersHub() {
             <div>
               {filteredPosts.map(post => (
                 <div key={post.id} id={`post-${post.id}`} className={`transition-colors ${highlightedPostId === post.id ? 'bg-primary/5 ring-1 ring-primary/20 rounded-xl' : ''}`}>
-                  <XPostCard post={post} currentUserId={user?.id} onLike={handleLike} onComment={openComments} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handleShare} onDelete={handleDelete} onEdit={handleEdit} />
+                  <XPostCard post={post} currentUserId={user?.id} onLike={handleLike} onComment={openComments} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handleShare} onDelete={handleDelete} onEdit={handleEdit} onQuote={handleOpenQuote} />
                 </div>
               ))}
             </div>
@@ -290,8 +300,8 @@ export default function TradersHub() {
         </button>
       )}
 
-      <XComposeModal open={composeOpen} onOpenChange={(o) => { setComposeOpen(o); if (!o) setPrefillContent(""); }} user={user} profile={profile} onPost={handlePost} portfolioSnapshot={portfolioSnapshot} prefillContent={prefillContent} />
-      <XCommentSheet open={commentSheetOpen} onOpenChange={setCommentSheetOpen} post={selectedPost} currentUserId={user?.id} comments={comments} loadingComments={loadingComments} onAddComment={handleAddComment} onLike={handleLike} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handleShare} onDelete={handleDelete} />
+      <XComposeModal open={composeOpen} onOpenChange={(o) => { setComposeOpen(o); if (!o) { setPrefillContent(""); setQuotedPost(null); } }} user={user} profile={profile} onPost={handlePost} portfolioSnapshot={portfolioSnapshot} prefillContent={prefillContent} quotedPost={quotedPost as any} />
+      <XCommentSheet open={commentSheetOpen} onOpenChange={setCommentSheetOpen} post={selectedPost} currentUserId={user?.id} comments={comments} loadingComments={loadingComments} onAddComment={handleAddComment} onLike={handleLike} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handleShare} onDelete={handleDelete} onQuote={handleOpenQuote} />
     </div>
   );
 }

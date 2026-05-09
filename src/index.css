@@ -353,7 +353,7 @@
   .marquee-container { @apply flex overflow-hidden; }
   .marquee-content {
     @apply flex;
-    animation: marquee 30s linear infinite;
+    animation: marquee 90s linear infinite;
   }
   .marquee-container:hover .marquee-content { animation-play-state: paused; }
 

@@ -31,9 +31,11 @@ interface XPostCardProps {
   onShare: (post: Post) => void;
   onDelete?: (postId: string) => void;
   onEdit?: (postId: string, newContent: string) => void;
+  onQuote?: (post: Post) => void;
+  isQuoted?: boolean;
 }
 
-export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, onBookmark, onShare, onDelete, onEdit }: XPostCardProps) {
+export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, onBookmark, onShare, onDelete, onEdit, onQuote, isQuoted }: XPostCardProps) {
   const navigate = useNavigate();
   const [showRepostMenu, setShowRepostMenu] = useState(false);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
@@ -170,6 +172,22 @@ export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, on
               </div>
             )}
 
+            {/* Quoted post embed (X-style) */}
+            {post.quoted_post && (
+              <div
+                className="mt-3 rounded-2xl border border-border/60 p-3 hover:bg-muted/30 transition-colors"
+                onClick={(e) => { e.stopPropagation(); navigate(`/traders-hub?post=${post.quoted_post!.id}`); }}
+              >
+                <div className="flex items-center gap-1.5 text-[12px]">
+                  <Avatar className="h-5 w-5"><AvatarImage src={post.quoted_post.author?.avatar_url || ""} /><AvatarFallback className="text-[9px]">{getInitials(post.quoted_post.author?.full_name)}</AvatarFallback></Avatar>
+                  <span className="font-bold truncate">{post.quoted_post.author?.full_name || "User"}</span>
+                  <Verified className="h-3 w-3 text-primary fill-primary shrink-0" />
+                  <span className="text-muted-foreground">· {formatTimeAgo(post.quoted_post.created_at)}</span>
+                </div>
+                <p className="text-[13px] mt-1 line-clamp-4 whitespace-pre-wrap">{post.quoted_post.content}</p>
+              </div>
+            )}
+
             {/* Action bar */}
             <div className="flex items-center justify-between mt-3 -ml-2 max-w-[425px]">
               <button className="group flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors" onClick={(e) => { e.stopPropagation(); onComment(post); }} data-small-target>
@@ -186,7 +204,7 @@ export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, on
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-44 rounded-xl">
                   <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onRepost(post.id); setShowRepostMenu(false); }}><Repeat2 className="h-4 w-4 mr-2" />Repost</DropdownMenuItem>
-                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setShowRepostMenu(false); }}><Quote className="h-4 w-4 mr-2" />Quote</DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setShowRepostMenu(false); if (onQuote) onQuote(post); }}><Quote className="h-4 w-4 mr-2" />Quote</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
 

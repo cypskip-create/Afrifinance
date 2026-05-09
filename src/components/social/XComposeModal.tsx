@@ -18,12 +18,13 @@ interface XComposeModalProps {
   onOpenChange: (open: boolean) => void;
   user: { id: string; email?: string } | null;
   profile: { avatar_url?: string | null; full_name?: string | null } | null;
-  onPost: (content: string, imageUrl?: string) => Promise<{ error?: any }>;
+  onPost: (content: string, imageUrl?: string, quotedPostId?: string) => Promise<{ error?: any }>;
   portfolioSnapshot?: PortfolioSnapshot | null;
   prefillContent?: string;
+  quotedPost?: { id: string; content: string; author?: { full_name: string | null; avatar_url: string | null } | null; created_at: string } | null;
 }
 
-export function XComposeModal({ open, onOpenChange, user, profile, onPost, portfolioSnapshot, prefillContent }: XComposeModalProps) {
+export function XComposeModal({ open, onOpenChange, user, profile, onPost, portfolioSnapshot, prefillContent, quotedPost }: XComposeModalProps) {
   const navigate = useNavigate();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -77,7 +78,7 @@ export function XComposeModal({ open, onOpenChange, user, profile, onPost, portf
       finalContent += pText;
     }
 
-    const { error } = await onPost(finalContent, selectedImage || undefined);
+    const { error } = await onPost(finalContent, selectedImage || undefined, quotedPost?.id);
     if (!error) {
       setContent("");
       setSelectedImage(null);
@@ -182,6 +183,17 @@ export function XComposeModal({ open, onOpenChange, user, profile, onPost, portf
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Quoted post preview */}
+            {quotedPost && (
+              <div className="mt-3 p-3 rounded-2xl border border-border bg-muted/20">
+                <div className="flex items-center gap-1.5 text-[12px]">
+                  <Avatar className="h-5 w-5"><AvatarImage src={quotedPost.author?.avatar_url || ""} /><AvatarFallback className="text-[9px]">{getInitials(quotedPost.author?.full_name)}</AvatarFallback></Avatar>
+                  <span className="font-bold truncate">{quotedPost.author?.full_name || "User"}</span>
+                </div>
+                <p className="text-[13px] mt-1 line-clamp-4 whitespace-pre-wrap">{quotedPost.content}</p>
               </div>
             )}
           </div>
