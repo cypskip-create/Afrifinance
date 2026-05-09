@@ -26,6 +26,8 @@ export interface Post {
   is_liked: boolean;
   is_reposted: boolean;
   is_bookmarked: boolean;
+  quoted_post_id?: string | null;
+  quoted_post?: Post | null;
 }
 
 export interface Comment {
@@ -37,6 +39,10 @@ export interface Comment {
   parent_comment_id?: string | null;
   author?: PostAuthor;
   replies?: Comment[];
+  likes_count?: number;
+  reposts_count?: number;
+  is_liked?: boolean;
+  is_reposted?: boolean;
 }
 
 export function usePosts() {
