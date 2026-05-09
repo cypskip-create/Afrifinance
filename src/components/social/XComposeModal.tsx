@@ -78,7 +78,7 @@ export function XComposeModal({ open, onOpenChange, user, profile, onPost, portf
       finalContent += pText;
     }
 
-    const { error } = await onPost(finalContent, selectedImage || undefined);
+    const { error } = await onPost(finalContent, selectedImage || undefined, quotedPost?.id);
     if (!error) {
       setContent("");
       setSelectedImage(null);
