@@ -211,7 +211,7 @@ export function XCommentSheet({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-full sm:max-w-2xl w-screen h-[100dvh] sm:h-[95vh] p-0 gap-0 sm:rounded-3xl rounded-none overflow-hidden border-0 sm:border border-border/60 [&>button]:hidden flex flex-col translate-x-0 translate-y-0 sm:translate-x-[-50%] sm:translate-y-[-50%] left-0 top-0 sm:left-1/2 sm:top-1/2">
+      <DialogContent className="max-w-2xl w-screen sm:w-[95vw] h-[100dvh] sm:h-[95dvh] p-0 gap-0 sm:rounded-2xl rounded-none overflow-hidden border-0 sm:border border-border/60 [&>button]:hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-border/60 bg-card sticky top-0 z-10 shrink-0">
           <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={() => onOpenChange(false)} data-small-target>
