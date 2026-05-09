@@ -41,9 +41,10 @@ export default function Account() {
   const [portfolioPublic, setPortfolioPublic] = useState(true);
 
   // Sync from profile
-  useState(() => {
-    if (profile?.portfolio_public !== undefined) setPortfolioPublic(!!profile.portfolio_public);
-  });
+  useEffect(() => {
+    const pp = (profile as any)?.portfolio_public;
+    if (pp !== undefined && pp !== null) setPortfolioPublic(!!pp);
+  }, [profile]);
 
   const handleSignOut = async () => {
     await signOut();
