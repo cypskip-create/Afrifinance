@@ -42,6 +42,7 @@ export default function TradersHub() {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
   const [prefillContent, setPrefillContent] = useState("");
+  const [quotedPost, setQuotedPost] = useState<Post | null>(null);
   const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
   const [disclaimerDone, setDisclaimerDone] = useState(() => {
     if (!user) return true;
