@@ -185,6 +185,17 @@ export function XComposeModal({ open, onOpenChange, user, profile, onPost, portf
                 </div>
               </div>
             )}
+
+            {/* Quoted post preview */}
+            {quotedPost && (
+              <div className="mt-3 p-3 rounded-2xl border border-border bg-muted/20">
+                <div className="flex items-center gap-1.5 text-[12px]">
+                  <Avatar className="h-5 w-5"><AvatarImage src={quotedPost.author?.avatar_url || ""} /><AvatarFallback className="text-[9px]">{getInitials(quotedPost.author?.full_name)}</AvatarFallback></Avatar>
+                  <span className="font-bold truncate">{quotedPost.author?.full_name || "User"}</span>
+                </div>
+                <p className="text-[13px] mt-1 line-clamp-4 whitespace-pre-wrap">{quotedPost.content}</p>
+              </div>
+            )}
           </div>
         </div>
 
