@@ -31,9 +31,11 @@ interface XPostCardProps {
   onShare: (post: Post) => void;
   onDelete?: (postId: string) => void;
   onEdit?: (postId: string, newContent: string) => void;
+  onQuote?: (post: Post) => void;
+  isQuoted?: boolean;
 }
 
-export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, onBookmark, onShare, onDelete, onEdit }: XPostCardProps) {
+export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, onBookmark, onShare, onDelete, onEdit, onQuote, isQuoted }: XPostCardProps) {
   const navigate = useNavigate();
   const [showRepostMenu, setShowRepostMenu] = useState(false);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
