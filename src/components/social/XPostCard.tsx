@@ -188,7 +188,7 @@ export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, on
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-44 rounded-xl">
                   <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onRepost(post.id); setShowRepostMenu(false); }}><Repeat2 className="h-4 w-4 mr-2" />Repost</DropdownMenuItem>
-                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setShowRepostMenu(false); }}><Quote className="h-4 w-4 mr-2" />Quote</DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setShowRepostMenu(false); if (onQuote) onQuote(post); }}><Quote className="h-4 w-4 mr-2" />Quote</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
 
