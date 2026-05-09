@@ -275,5 +275,6 @@ export function usePosts() {
     fetchPosts, createPost, deletePost, editPost,
     likePost, repostPost, bookmarkPost,
     fetchComments, addComment, getUserPosts,
+    likeComment, repostComment,
   };
 }
