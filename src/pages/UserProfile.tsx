@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Calendar, UserPlus, MessageCircle, MoreHorizontal, Lock, Verified, Heart, Repeat2, FileText, Camera, Loader2, Share, TrendingUp, TrendingDown, Award, Target, PieChart, ChevronRight, Image as ImageIcon, MapPin, Pin } from "lucide-react";
+import { ArrowLeft, Calendar, UserPlus, MessageCircle, MoreHorizontal, Lock, Verified, Heart, Repeat2, FileText, Camera, Loader2, Share, TrendingUp, TrendingDown, Award, Target, PieChart, ChevronRight, Image as ImageIcon, MapPin, Pin, Settings, Bookmark } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,6 +17,7 @@ import { SparklineChart } from "@/components/shared/SparklineChart";
 import { XPostCard } from "@/components/social/XPostCard";
 import { usePosts, Post, Comment } from "@/hooks/usePosts";
 import { XCommentSheet } from "@/components/social/XCommentSheet";
+import { ProfileSettingsDialog } from "@/components/profile/ProfileSettingsDialog";
 
 interface UserProfileData {
   id: string; user_id: string; full_name: string | null; avatar_url: string | null;
@@ -55,6 +56,8 @@ export default function UserProfile() {
   const [userPosts, setUserPosts] = useState<UserPost[]>([]);
   const [likedPosts, setLikedPosts] = useState<UserPost[]>([]);
   const [repostedPosts, setRepostedPosts] = useState<UserPost[]>([]);
+  const [bookmarkedPosts, setBookmarkedPosts] = useState<UserPost[]>([]);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [publicPortfolio, setPublicPortfolio] = useState<PortfolioHolding[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadingBanner, setUploadingBanner] = useState(false);
@@ -76,8 +79,31 @@ export default function UserProfile() {
     if (userId) {
       fetchProfile(); fetchUserPosts(); fetchUserLikes(); fetchUserReposts();
       loadFollowCounts(); fetchPublicPortfolio();
+      if (user?.id === userId) fetchBookmarks();
     }
   }, [userId, user]);
+
+  const fetchBookmarks = async () => {
+    if (!user) return;
+    const { data: bd } = await supabase.from("post_bookmarks").select("post_id").eq("user_id", user.id).order("created_at", { ascending: false });
+    if (!bd || bd.length === 0) { setBookmarkedPosts([]); return; }
+    const pids = bd.map(b => b.post_id);
+    const { data: pd } = await supabase.from("posts").select("*").in("id", pids);
+    if (!pd) return;
+    const uids = [...new Set(pd.map(p => p.user_id))];
+    const { data: profs } = await supabase.from("profiles_public").select("user_id, full_name, avatar_url").in("user_id", uids);
+    const pm = new Map(profs?.map(p => [p.user_id, p]));
+    const enriched = await Promise.all(pd.map(async (post) => {
+      const [l, c, r] = await Promise.all([
+        supabase.from("post_likes").select("id", { count: "exact", head: true }).eq("post_id", post.id),
+        supabase.from("post_comments").select("id", { count: "exact", head: true }).eq("post_id", post.id),
+        supabase.from("post_reposts").select("id", { count: "exact", head: true }).eq("post_id", post.id),
+      ]);
+      const a = pm.get(post.user_id);
+      return { ...post, likes_count: l.count || 0, comments_count: c.count || 0, reposts_count: r.count || 0, is_liked: false, is_reposted: false, is_bookmarked: true, author: a ? { full_name: a.full_name, avatar_url: a.avatar_url } : undefined };
+    }));
+    setBookmarkedPosts(enriched);
+  };
 
   const fetchProfile = async () => {
     if (!userId) return;
@@ -284,14 +310,22 @@ export default function UserProfile() {
               <p className="text-xs text-muted-foreground">{userPosts.length} posts</p>
             </div>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full"><MoreHorizontal className="h-5 w-5" /></Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleShare}><Share className="h-4 w-4 mr-2" />Share Profile</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-1">
+            {isOwnProfile && (
+              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={() => setSettingsOpen(true)} title="TradersHub Settings">
+                <Settings className="h-5 w-5" />
+              </Button>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full"><MoreHorizontal className="h-5 w-5" /></Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleShare}><Share className="h-4 w-4 mr-2" />Share Profile</DropdownMenuItem>
+                {isOwnProfile && <DropdownMenuItem onClick={() => setSettingsOpen(true)}><Settings className="h-4 w-4 mr-2" />Settings</DropdownMenuItem>}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </header>
 
@@ -377,18 +411,19 @@ export default function UserProfile() {
 
       {/* Tabs */}
       <Tabs defaultValue="posts" className="mt-4">
-        <TabsList className="w-full grid bg-transparent border-b border-border rounded-none h-11 p-0" style={{ gridTemplateColumns: isOwnProfile ? 'repeat(5, 1fr)' : 'repeat(4, 1fr)' }}>
+        <TabsList className="w-full flex bg-transparent border-b border-border rounded-none h-11 p-0 overflow-x-auto">
           {[
             { value: "posts", label: "Posts" },
             { value: "replies", label: "Replies" },
             { value: "media", label: "Media" },
             ...(isOwnProfile ? [{ value: "likes", label: "Likes" }] : []),
+            ...(isOwnProfile ? [{ value: "bookmarks", label: "Bookmarks" }] : []),
             { value: "portfolio", label: "Portfolio" },
           ].map(tab => (
             <TabsTrigger
               key={tab.value}
               value={tab.value}
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none h-full text-xs sm:text-sm font-semibold"
+              className="flex-1 min-w-[80px] rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none h-full text-xs sm:text-sm font-semibold"
             >
               {tab.label}
             </TabsTrigger>
@@ -460,6 +495,22 @@ export default function UserProfile() {
           ) : (
             <div className="divide-y divide-border">
               {likedPosts.map(post => <XPostCard key={post.id} post={castToPost(post)} currentUserId={user?.id} onLike={handleLike} onComment={openComments} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handlePostShare} />)}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Bookmarks tab — owner only */}
+        <TabsContent value="bookmarks" className="mt-0">
+          {!isOwnProfile ? (
+            <div className="p-12 text-center text-muted-foreground">
+              <Lock className="h-10 w-10 mx-auto mb-3 opacity-40" />
+              <p className="text-sm font-medium">Bookmarks are private</p>
+            </div>
+          ) : bookmarkedPosts.length === 0 ? (
+            <div className="p-12 text-center text-muted-foreground"><Bookmark className="h-10 w-10 mx-auto mb-3 opacity-40" /><p className="text-sm">No bookmarks yet</p><p className="text-xs mt-1">Save posts to read them later</p></div>
+          ) : (
+            <div className="divide-y divide-border">
+              {bookmarkedPosts.map(post => <XPostCard key={post.id} post={castToPost(post)} currentUserId={user?.id} onLike={handleLike} onComment={openComments} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handlePostShare} />)}
             </div>
           )}
         </TabsContent>
@@ -547,6 +598,7 @@ export default function UserProfile() {
       <XCommentSheet open={commentSheetOpen} onOpenChange={setCommentSheetOpen} post={selectedPost} currentUserId={user?.id} comments={comments} loadingComments={loadingComments} onAddComment={handleAddComment} onLike={handleLike} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handlePostShare} onDelete={isOwnProfile ? handleDelete : undefined} />
       {userId && <FollowersDialog open={followersDialogOpen} onOpenChange={setFollowersDialogOpen} userId={userId} initialTab={dialogTab} />}
       <EditProfileDialog open={editProfileOpen} onOpenChange={(open) => { setEditProfileOpen(open); if (!open) fetchProfile(); }} />
+      <ProfileSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} currentHandle={profileData.handle} portfolioPublic={profileData.portfolio_public} onSaved={fetchProfile} />
     </div>
   );
 }
