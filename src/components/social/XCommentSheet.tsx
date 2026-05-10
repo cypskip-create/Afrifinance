@@ -3,7 +3,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Verified, Send, ArrowLeft, SlidersHorizontal, ChevronDown, MessageCircle, X, Heart, Repeat2, Quote, MoreHorizontal, ChevronRight } from "lucide-react";
+import { Verified, Send, ArrowLeft, SlidersHorizontal, ChevronDown, MessageCircle, X, Heart, Repeat2, Quote, MoreHorizontal, ChevronRight, Pencil } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Post, Comment, usePosts } from "@/hooks/usePosts";
 import { XPostCard } from "./XPostCard";
@@ -121,16 +121,25 @@ function CommentNode({
               <MessageCircle className="h-3.5 w-3.5" />
               <span>Reply</span>
             </button>
-            <button onClick={handleRepostReply} className={`flex items-center gap-1 text-[11px] p-1 rounded-full ${optimistic.is_reposted ? 'text-bull' : 'text-muted-foreground hover:text-bull'}`} data-small-target>
-              <Repeat2 className="h-3.5 w-3.5" />
-              {optimistic.reposts_count > 0 && <span>{optimistic.reposts_count}</span>}
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <button className={`flex items-center gap-1 text-[11px] p-1 rounded-full ${optimistic.is_reposted ? 'text-bull' : 'text-muted-foreground hover:text-bull'}`} data-small-target>
+                  <Repeat2 className="h-3.5 w-3.5" />
+                  {optimistic.reposts_count > 0 && <span>{optimistic.reposts_count}</span>}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-40 rounded-xl">
+                <DropdownMenuItem onClick={handleRepostReply}>
+                  <Repeat2 className="h-4 w-4 mr-2" />{optimistic.is_reposted ? "Undo repost" : "Repost"}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onQuote(comment); }}>
+                  <Pencil className="h-4 w-4 mr-2" />Quote
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <button onClick={handleLikeReply} className={`flex items-center gap-1 text-[11px] p-1 rounded-full ${optimistic.is_liked ? 'text-destructive' : 'text-muted-foreground hover:text-destructive'}`} data-small-target>
               <Heart className={`h-3.5 w-3.5 ${optimistic.is_liked ? 'fill-current' : ''}`} />
               {optimistic.likes_count > 0 && <span>{optimistic.likes_count}</span>}
-            </button>
-            <button onClick={(e) => { e.stopPropagation(); onQuote(comment); }} className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-primary p-1 rounded-full" data-small-target>
-              <Quote className="h-3.5 w-3.5" />
             </button>
           </div>
 
