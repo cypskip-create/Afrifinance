@@ -499,6 +499,22 @@ export default function UserProfile() {
           )}
         </TabsContent>
 
+        {/* Bookmarks tab — owner only */}
+        <TabsContent value="bookmarks" className="mt-0">
+          {!isOwnProfile ? (
+            <div className="p-12 text-center text-muted-foreground">
+              <Lock className="h-10 w-10 mx-auto mb-3 opacity-40" />
+              <p className="text-sm font-medium">Bookmarks are private</p>
+            </div>
+          ) : bookmarkedPosts.length === 0 ? (
+            <div className="p-12 text-center text-muted-foreground"><Bookmark className="h-10 w-10 mx-auto mb-3 opacity-40" /><p className="text-sm">No bookmarks yet</p><p className="text-xs mt-1">Save posts to read them later</p></div>
+          ) : (
+            <div className="divide-y divide-border">
+              {bookmarkedPosts.map(post => <XPostCard key={post.id} post={castToPost(post)} currentUserId={user?.id} onLike={handleLike} onComment={openComments} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handlePostShare} />)}
+            </div>
+          )}
+        </TabsContent>
+
         {/* Portfolio tab — enhanced */}
         <TabsContent value="portfolio" className="mt-0">
           {!profileData.portfolio_public && !isOwnProfile ? (
@@ -582,6 +598,7 @@ export default function UserProfile() {
       <XCommentSheet open={commentSheetOpen} onOpenChange={setCommentSheetOpen} post={selectedPost} currentUserId={user?.id} comments={comments} loadingComments={loadingComments} onAddComment={handleAddComment} onLike={handleLike} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handlePostShare} onDelete={isOwnProfile ? handleDelete : undefined} />
       {userId && <FollowersDialog open={followersDialogOpen} onOpenChange={setFollowersDialogOpen} userId={userId} initialTab={dialogTab} />}
       <EditProfileDialog open={editProfileOpen} onOpenChange={(open) => { setEditProfileOpen(open); if (!open) fetchProfile(); }} />
+      <ProfileSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} currentHandle={profileData.handle} portfolioPublic={profileData.portfolio_public} onSaved={fetchProfile} />
     </div>
   );
 }
