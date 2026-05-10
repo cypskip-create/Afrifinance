@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Calendar, UserPlus, MessageCircle, MoreHorizontal, Lock, Verified, Heart, Repeat2, FileText, Camera, Loader2, Share, TrendingUp, TrendingDown, Award, Target, PieChart, ChevronRight, Image as ImageIcon, MapPin, Pin } from "lucide-react";
+import { ArrowLeft, Calendar, UserPlus, MessageCircle, MoreHorizontal, Lock, Verified, Heart, Repeat2, FileText, Camera, Loader2, Share, TrendingUp, TrendingDown, Award, Target, PieChart, ChevronRight, Image as ImageIcon, MapPin, Pin, Settings, Bookmark } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,6 +17,7 @@ import { SparklineChart } from "@/components/shared/SparklineChart";
 import { XPostCard } from "@/components/social/XPostCard";
 import { usePosts, Post, Comment } from "@/hooks/usePosts";
 import { XCommentSheet } from "@/components/social/XCommentSheet";
+import { ProfileSettingsDialog } from "@/components/profile/ProfileSettingsDialog";
 
 interface UserProfileData {
   id: string; user_id: string; full_name: string | null; avatar_url: string | null;
@@ -55,6 +56,8 @@ export default function UserProfile() {
   const [userPosts, setUserPosts] = useState<UserPost[]>([]);
   const [likedPosts, setLikedPosts] = useState<UserPost[]>([]);
   const [repostedPosts, setRepostedPosts] = useState<UserPost[]>([]);
+  const [bookmarkedPosts, setBookmarkedPosts] = useState<UserPost[]>([]);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [publicPortfolio, setPublicPortfolio] = useState<PortfolioHolding[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadingBanner, setUploadingBanner] = useState(false);
@@ -76,8 +79,31 @@ export default function UserProfile() {
     if (userId) {
       fetchProfile(); fetchUserPosts(); fetchUserLikes(); fetchUserReposts();
       loadFollowCounts(); fetchPublicPortfolio();
+      if (user?.id === userId) fetchBookmarks();
     }
   }, [userId, user]);
+
+  const fetchBookmarks = async () => {
+    if (!user) return;
+    const { data: bd } = await supabase.from("post_bookmarks").select("post_id").eq("user_id", user.id).order("created_at", { ascending: false });
+    if (!bd || bd.length === 0) { setBookmarkedPosts([]); return; }
+    const pids = bd.map(b => b.post_id);
+    const { data: pd } = await supabase.from("posts").select("*").in("id", pids);
+    if (!pd) return;
+    const uids = [...new Set(pd.map(p => p.user_id))];
+    const { data: profs } = await supabase.from("profiles_public").select("user_id, full_name, avatar_url").in("user_id", uids);
+    const pm = new Map(profs?.map(p => [p.user_id, p]));
+    const enriched = await Promise.all(pd.map(async (post) => {
+      const [l, c, r] = await Promise.all([
+        supabase.from("post_likes").select("id", { count: "exact", head: true }).eq("post_id", post.id),
+        supabase.from("post_comments").select("id", { count: "exact", head: true }).eq("post_id", post.id),
+        supabase.from("post_reposts").select("id", { count: "exact", head: true }).eq("post_id", post.id),
+      ]);
+      const a = pm.get(post.user_id);
+      return { ...post, likes_count: l.count || 0, comments_count: c.count || 0, reposts_count: r.count || 0, is_liked: false, is_reposted: false, is_bookmarked: true, author: a ? { full_name: a.full_name, avatar_url: a.avatar_url } : undefined };
+    }));
+    setBookmarkedPosts(enriched);
+  };
 
   const fetchProfile = async () => {
     if (!userId) return;
