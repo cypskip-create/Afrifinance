@@ -322,7 +322,7 @@ export default function UserProfile() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={handleShare}><Share className="h-4 w-4 mr-2" />Share Profile</DropdownMenuItem>
-                {isOwnProfile && <DropdownMenuItem onClick={() => setSettingsOpen(true)}><Settings className="h-4 w-4 mr-2" />Settings</DropdownMenuItem>}
+                {isOwnProfile && <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setTimeout(() => setSettingsOpen(true), 50); }}><Settings className="h-4 w-4 mr-2" />Settings</DropdownMenuItem>}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
