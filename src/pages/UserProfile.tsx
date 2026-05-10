@@ -310,14 +310,22 @@ export default function UserProfile() {
               <p className="text-xs text-muted-foreground">{userPosts.length} posts</p>
             </div>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full"><MoreHorizontal className="h-5 w-5" /></Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleShare}><Share className="h-4 w-4 mr-2" />Share Profile</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-1">
+            {isOwnProfile && (
+              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={() => setSettingsOpen(true)} title="TradersHub Settings">
+                <Settings className="h-5 w-5" />
+              </Button>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full"><MoreHorizontal className="h-5 w-5" /></Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleShare}><Share className="h-4 w-4 mr-2" />Share Profile</DropdownMenuItem>
+                {isOwnProfile && <DropdownMenuItem onClick={() => setSettingsOpen(true)}><Settings className="h-4 w-4 mr-2" />Settings</DropdownMenuItem>}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </header>
 
@@ -403,18 +411,19 @@ export default function UserProfile() {
 
       {/* Tabs */}
       <Tabs defaultValue="posts" className="mt-4">
-        <TabsList className="w-full grid bg-transparent border-b border-border rounded-none h-11 p-0" style={{ gridTemplateColumns: isOwnProfile ? 'repeat(5, 1fr)' : 'repeat(4, 1fr)' }}>
+        <TabsList className="w-full flex bg-transparent border-b border-border rounded-none h-11 p-0 overflow-x-auto">
           {[
             { value: "posts", label: "Posts" },
             { value: "replies", label: "Replies" },
             { value: "media", label: "Media" },
             ...(isOwnProfile ? [{ value: "likes", label: "Likes" }] : []),
+            ...(isOwnProfile ? [{ value: "bookmarks", label: "Bookmarks" }] : []),
             { value: "portfolio", label: "Portfolio" },
           ].map(tab => (
             <TabsTrigger
               key={tab.value}
               value={tab.value}
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none h-full text-xs sm:text-sm font-semibold"
+              className="flex-1 min-w-[80px] rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none h-full text-xs sm:text-sm font-semibold"
             >
               {tab.label}
             </TabsTrigger>
