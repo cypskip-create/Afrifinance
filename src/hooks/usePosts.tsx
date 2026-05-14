@@ -124,6 +124,8 @@ export function usePosts() {
       }));
 
       setPosts(enriched as Post[]);
+      __postsCache = enriched as Post[];
+      __postsCacheKey = cacheKey;
       setError(null);
     } catch (err) {
       console.error('Error fetching posts:', err);
@@ -131,7 +133,7 @@ export function usePosts() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, cacheKey]);
 
   useEffect(() => { fetchPosts(); }, [fetchPosts]);
 
