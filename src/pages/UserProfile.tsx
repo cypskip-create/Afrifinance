@@ -59,6 +59,7 @@ export default function UserProfile() {
   const [repostedPosts, setRepostedPosts] = useState<UserPost[]>([]);
   const [bookmarkedPosts, setBookmarkedPosts] = useState<UserPost[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [portfolioPrivacyOpen, setPortfolioPrivacyOpen] = useState(false);
   const [publicPortfolio, setPublicPortfolio] = useState<PortfolioHolding[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadingBanner, setUploadingBanner] = useState(false);
@@ -518,6 +519,16 @@ export default function UserProfile() {
 
         {/* Portfolio tab — enhanced */}
         <TabsContent value="portfolio" className="mt-0">
+          {isOwnProfile && (
+            <div className="flex items-center justify-between px-4 pt-3">
+              <div className="text-xs text-muted-foreground">
+                {profileData.portfolio_public ? "Visible to everyone" : "Only visible to you"}
+              </div>
+              <Button variant="ghost" size="sm" className="h-8 rounded-full text-xs gap-1.5" onClick={() => setPortfolioPrivacyOpen(true)}>
+                <Settings className="h-3.5 w-3.5" />Privacy
+              </Button>
+            </div>
+          )}
           {!profileData.portfolio_public && !isOwnProfile ? (
             <div className="p-12 text-center">
               <Lock className="h-12 w-12 mx-auto mb-4 text-muted-foreground/40" />
@@ -600,6 +611,7 @@ export default function UserProfile() {
       {userId && <FollowersDialog open={followersDialogOpen} onOpenChange={setFollowersDialogOpen} userId={userId} initialTab={dialogTab} />}
       <EditProfileDialog open={editProfileOpen} onOpenChange={(open) => { setEditProfileOpen(open); if (!open) fetchProfile(); }} />
       <ProfileSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} currentHandle={profileData.handle} portfolioPublic={profileData.portfolio_public} onSaved={fetchProfile} />
+      <PortfolioPrivacyDialog open={portfolioPrivacyOpen} onOpenChange={setPortfolioPrivacyOpen} portfolioPublic={profileData.portfolio_public} onSaved={fetchProfile} />
     </div>
   );
 }
