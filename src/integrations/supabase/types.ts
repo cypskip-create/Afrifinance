@@ -47,6 +47,27 @@ export type Database = {
         }
         Relationships: []
       }
+      blocked_users: {
+        Row: {
+          blocked_id: string
+          blocker_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          blocked_id: string
+          blocker_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          blocked_id?: string
+          blocker_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: []
+      }
       comment_likes: {
         Row: {
           comment_id: string
@@ -119,6 +140,48 @@ export type Database = {
           payment_date?: string
           symbol?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      muted_keywords: {
+        Row: {
+          created_at: string
+          id: string
+          keyword: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          keyword: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          keyword?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      muted_users: {
+        Row: {
+          created_at: string
+          id: string
+          muted_id: string
+          muter_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          muted_id: string
+          muter_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          muted_id?: string
+          muter_id?: string
         }
         Relationships: []
       }
@@ -494,6 +557,124 @@ export type Database = {
         }
         Relationships: []
       }
+      room_members: {
+        Row: {
+          id: string
+          joined_at: string
+          role: string | null
+          room_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          joined_at?: string
+          role?: string | null
+          room_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          joined_at?: string
+          role?: string | null
+          room_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_members_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      room_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          room_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          room_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          room_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_messages_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rooms: {
+        Row: {
+          category: string | null
+          cover_url: string | null
+          created_at: string
+          creator_id: string
+          description: string | null
+          id: string
+          is_live: boolean | null
+          is_private: boolean | null
+          member_count: number | null
+          name: string
+          online_count: number | null
+          room_type: string
+          scheduled_at: string | null
+          topic: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          cover_url?: string | null
+          created_at?: string
+          creator_id: string
+          description?: string | null
+          id?: string
+          is_live?: boolean | null
+          is_private?: boolean | null
+          member_count?: number | null
+          name: string
+          online_count?: number | null
+          room_type?: string
+          scheduled_at?: string | null
+          topic?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          cover_url?: string | null
+          created_at?: string
+          creator_id?: string
+          description?: string | null
+          id?: string
+          is_live?: boolean | null
+          is_private?: boolean | null
+          member_count?: number | null
+          name?: string
+          online_count?: number | null
+          room_type?: string
+          scheduled_at?: string | null
+          topic?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_follows: {
         Row: {
           created_at: string
@@ -512,6 +693,102 @@ export type Database = {
           follower_id?: string
           following_id?: string
           id?: string
+        }
+        Relationships: []
+      }
+      user_preferences: {
+        Row: {
+          allow_dms_from: string | null
+          allow_tagging: string | null
+          autoplay_videos: string | null
+          created_at: string
+          data_saver: boolean | null
+          discoverable_by_email: boolean | null
+          discoverable_by_phone: boolean | null
+          email_digest: string | null
+          font_size: string | null
+          hide_likes: boolean | null
+          high_contrast: boolean | null
+          id: string
+          language: string | null
+          notif_comments: boolean | null
+          notif_dms: boolean | null
+          notif_follows: boolean | null
+          notif_likes: boolean | null
+          notif_mentions: boolean | null
+          notif_quality: string | null
+          notif_reposts: boolean | null
+          personalized_feed: boolean | null
+          protected_account: boolean | null
+          reduce_motion: boolean | null
+          show_activity_status: boolean | null
+          show_sensitive_content: boolean | null
+          theme: string | null
+          timezone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          allow_dms_from?: string | null
+          allow_tagging?: string | null
+          autoplay_videos?: string | null
+          created_at?: string
+          data_saver?: boolean | null
+          discoverable_by_email?: boolean | null
+          discoverable_by_phone?: boolean | null
+          email_digest?: string | null
+          font_size?: string | null
+          hide_likes?: boolean | null
+          high_contrast?: boolean | null
+          id?: string
+          language?: string | null
+          notif_comments?: boolean | null
+          notif_dms?: boolean | null
+          notif_follows?: boolean | null
+          notif_likes?: boolean | null
+          notif_mentions?: boolean | null
+          notif_quality?: string | null
+          notif_reposts?: boolean | null
+          personalized_feed?: boolean | null
+          protected_account?: boolean | null
+          reduce_motion?: boolean | null
+          show_activity_status?: boolean | null
+          show_sensitive_content?: boolean | null
+          theme?: string | null
+          timezone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          allow_dms_from?: string | null
+          allow_tagging?: string | null
+          autoplay_videos?: string | null
+          created_at?: string
+          data_saver?: boolean | null
+          discoverable_by_email?: boolean | null
+          discoverable_by_phone?: boolean | null
+          email_digest?: string | null
+          font_size?: string | null
+          hide_likes?: boolean | null
+          high_contrast?: boolean | null
+          id?: string
+          language?: string | null
+          notif_comments?: boolean | null
+          notif_dms?: boolean | null
+          notif_follows?: boolean | null
+          notif_likes?: boolean | null
+          notif_mentions?: boolean | null
+          notif_quality?: string | null
+          notif_reposts?: boolean | null
+          personalized_feed?: boolean | null
+          protected_account?: boolean | null
+          reduce_motion?: boolean | null
+          show_activity_status?: boolean | null
+          show_sensitive_content?: boolean | null
+          theme?: string | null
+          timezone?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
