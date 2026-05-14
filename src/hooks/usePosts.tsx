@@ -45,14 +45,20 @@ export interface Comment {
   is_reposted?: boolean;
 }
 
+// Module-level cache so re-entering TradersHub is instant
+let __postsCache: Post[] | null = null;
+let __postsCacheKey: string | null = null;
+
 export function usePosts() {
   const { user } = useAuth();
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = user?.id || 'anon';
+  const initial = __postsCache && __postsCacheKey === cacheKey ? __postsCache : [];
+  const [posts, setPosts] = useState<Post[]>(initial);
+  const [loading, setLoading] = useState(initial.length === 0);
   const [error, setError] = useState<string | null>(null);
 
   const fetchPosts = useCallback(async () => {
-    setLoading(true);
+    if (!__postsCache || __postsCacheKey !== cacheKey) setLoading(true);
     try {
       const { data: postsData, error: postsError } = await supabase
         .from('posts')
