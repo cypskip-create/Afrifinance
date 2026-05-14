@@ -45,14 +45,20 @@ export interface Comment {
   is_reposted?: boolean;
 }
 
+// Module-level cache so re-entering TradersHub is instant
+let __postsCache: Post[] | null = null;
+let __postsCacheKey: string | null = null;
+
 export function usePosts() {
   const { user } = useAuth();
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = user?.id || 'anon';
+  const initial = __postsCache && __postsCacheKey === cacheKey ? __postsCache : [];
+  const [posts, setPosts] = useState<Post[]>(initial);
+  const [loading, setLoading] = useState(initial.length === 0);
   const [error, setError] = useState<string | null>(null);
 
   const fetchPosts = useCallback(async () => {
-    setLoading(true);
+    if (!__postsCache || __postsCacheKey !== cacheKey) setLoading(true);
     try {
       const { data: postsData, error: postsError } = await supabase
         .from('posts')
@@ -118,6 +124,8 @@ export function usePosts() {
       }));
 
       setPosts(enriched as Post[]);
+      __postsCache = enriched as Post[];
+      __postsCacheKey = cacheKey;
       setError(null);
     } catch (err) {
       console.error('Error fetching posts:', err);
@@ -125,9 +133,10 @@ export function usePosts() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, cacheKey]);
 
   useEffect(() => { fetchPosts(); }, [fetchPosts]);
+  useEffect(() => { if (posts.length > 0) { __postsCache = posts; __postsCacheKey = cacheKey; } }, [posts, cacheKey]);
 
   const createPost = async (content: string, imageUrl?: string, quotedPostId?: string) => {
     if (!user) return { error: { message: 'Must be logged in' } };
