@@ -15,6 +15,7 @@ import { XComposeModal } from "@/components/social/XComposeModal";
 import { XCommentSheet } from "@/components/social/XCommentSheet";
 import { TrendingSidebar } from "@/components/social/TrendingSidebar";
 import { TradersHubDisclaimer } from "@/components/social/TradersHubDisclaimer";
+import { PostSkeletonList } from "@/components/social/PostSkeleton";
 import { supabase } from "@/integrations/supabase/client";
 
 const MOCK_PRICES: Record<string, number> = {
@@ -243,9 +244,7 @@ export default function TradersHub() {
       <div className="max-w-[1200px] mx-auto flex">
         <div className="flex-1 max-w-[600px] min-w-0">
           {loading || !disclaimerDone ? (
-            <div className="flex justify-center py-16">
-              <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary/30 border-t-primary" />
-            </div>
+            <PostSkeletonList count={6} />
           ) : filteredPosts.length === 0 ? (
             <div className="p-12 text-center">
               {activeTab === "following" ? (
