@@ -136,6 +136,7 @@ export function usePosts() {
   }, [user, cacheKey]);
 
   useEffect(() => { fetchPosts(); }, [fetchPosts]);
+  useEffect(() => { if (posts.length > 0) { __postsCache = posts; __postsCacheKey = cacheKey; } }, [posts, cacheKey]);
 
   const createPost = async (content: string, imageUrl?: string, quotedPostId?: string) => {
     if (!user) return { error: { message: 'Must be logged in' } };
