@@ -1,13 +1,13 @@
-import { Home, TrendingUp, Compass, Newspaper, User } from "lucide-react";
+import { Home, TrendingUp, Users, Wallet, User } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { id: "home", label: "Home", icon: Home, path: "/" },
   { id: "markets", label: "Markets", icon: TrendingUp, path: "/markets" },
-  { id: "news", label: "News", icon: Newspaper, path: "/news" },
-  { id: "discover", label: "Discover", icon: Compass, path: "/discover" },
-  { id: "account", label: "Account", icon: User, path: "/account" },
+  { id: "traders", label: "TradersHub", icon: Users, path: "/traders-hub" },
+  { id: "portfolio", label: "Portfolio", icon: Wallet, path: "/track-investments" },
+  { id: "account", label: "Profile", icon: User, path: "/account" },
 ];
 
 export function BottomNavigation() {
