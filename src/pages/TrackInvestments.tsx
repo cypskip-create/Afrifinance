@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { AddInvestmentDialog } from "@/components/portfolio/AddInvestmentDialog";
 import { RobinhoodPerformanceChart } from "@/components/portfolio/RobinhoodPerformanceChart";
+import { PortfolioSnowflake } from "@/components/portfolio/PortfolioSnowflake";
 import {
   Trash2, TrendingUp, ArrowLeft, ArrowUpRight, ArrowDownRight,
   Eye, EyeOff, MoreHorizontal, Plus, RefreshCw, ChevronDown, ChevronUp,
@@ -193,6 +194,14 @@ export default function TrackInvestments() {
             </div>
           </CardContent>
         </Card>
+
+        {/* ── PORTFOLIO HEALTH (Snowflake + IRR) ── */}
+        <PortfolioSnowflake
+          holdings={holdings}
+          totalValue={stats.totalValue}
+          totalCost={stats.totalCost}
+          gainPct={stats.gainPct}
+        />
 
         {/* ── PERFORMANCE CHART ── */}
         <div>
