@@ -6,6 +6,7 @@ import { usePortfolio } from "@/hooks/usePortfolio";
 import { AddInvestmentDialog } from "@/components/portfolio/AddInvestmentDialog";
 import { RobinhoodPerformanceChart } from "@/components/portfolio/RobinhoodPerformanceChart";
 import { PortfolioSnowflake } from "@/components/portfolio/PortfolioSnowflake";
+import { PortfolioInsights } from "@/components/portfolio/PortfolioInsights";
 import {
   Trash2, TrendingUp, ArrowLeft, ArrowUpRight, ArrowDownRight,
   Eye, EyeOff, MoreHorizontal, Plus, RefreshCw, ChevronDown, ChevronUp,
@@ -202,6 +203,9 @@ export default function TrackInvestments() {
           totalCost={stats.totalCost}
           gainPct={stats.gainPct}
         />
+
+        <PortfolioInsights holdings={portfolio} prices={PRICES} />
+
 
         {/* ── PERFORMANCE CHART ── */}
         <div>

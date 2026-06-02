@@ -5,6 +5,7 @@ import { TopMoversLosers } from "@/components/home/TopMoversLosers";
 import { TrendingStocks } from "@/components/home/TrendingStocks";
 import { QuickTradeWidget } from "@/components/home/QuickTradeWidget";
 import { RealtimeWatchlistWidget } from "@/components/home/RealtimeWatchlistWidget";
+import { CommandCenterSections } from "@/components/home/CommandCenterSections";
 
 import { WidgetManager, WidgetConfig, defaultWidgets } from "@/components/home/WidgetManager";
 import { TopBar } from "@/components/shared/TopBar";
