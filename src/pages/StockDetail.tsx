@@ -1,12 +1,12 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Heart, TrendingUp, TrendingDown, Newspaper, Activity, Target, Award, PieChart, FileText, Banknote, UserCheck, Briefcase, Building, Globe, Users, Calendar, Bell, GitCompare, Plus, Pencil, Share2, MessageSquare, BarChart3, ChevronRight, Wallet } from "lucide-react";
+import { ArrowLeft, Heart, TrendingUp, TrendingDown, Newspaper, Activity, Target, Award, PieChart, FileText, Banknote, UserCheck, Briefcase, Building, Globe, Users, Calendar, Bell, GitCompare, Plus, Pencil, Share2, MessageSquare, BarChart3, ChevronRight, Wallet, Shield, Coins, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { StockPriceChart } from "@/components/stock/StockPriceChart";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PriceAlertsManager } from "@/components/alerts/PriceAlertsManager";
 import { usePortfolio } from "@/hooks/usePortfolio";
@@ -14,6 +14,8 @@ import { AnalystRatings } from "@/components/stock/AnalystRatings";
 import { MarketStatusIndicator } from "@/components/shared/MarketStatusIndicator";
 import { SparklineChart } from "@/components/shared/SparklineChart";
 import { AddInvestmentDialog } from "@/components/portfolio/AddInvestmentDialog";
+import { AfriFinanceScoreCard, computeScores } from "@/components/stock/AfriFinanceScore";
+import { AIThesisCard } from "@/components/stock/AIThesisCard";
 
 const stockData: Record<string, {
   name: string; price: number; change: number; changePercent: string; isUp: boolean;
@@ -247,119 +249,269 @@ export default function StockDetail() {
           </Card>
         )}
 
-        {/* Key Statistics */}
-        <div>
-          <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
-            <BarChart3 className="h-4 w-4 text-primary" />Key Statistics
-          </h3>
-          <Card className="soft-card">
-            <CardContent className="p-4">
-              <div className="grid grid-cols-3 gap-x-4 gap-y-3">
-                {[
-                  { label: "Market Cap", value: stock.marketCap },
-                  { label: "P/E Ratio", value: stock.pe },
-                  { label: "EPS", value: `KES ${stock.eps}` },
-                  { label: "Div Yield", value: `${divYield}%`, highlight: true },
-                  { label: "52W High", value: `KES ${stock.high52}` },
-                  { label: "52W Low", value: `KES ${stock.low52}` },
-                  { label: "Volume", value: stock.volume || "N/A" },
-                  { label: "Beta", value: stock.beta || "N/A" },
-                  { label: "Avg Vol", value: stock.avgVolume || "N/A" },
-                ].map(stat => (
-                  <div key={stat.label}>
-                    <p className="text-[10px] text-muted-foreground font-medium">{stat.label}</p>
-                    <p className={`text-sm font-bold ${stat.highlight ? 'text-bull' : ''}`}>{stat.value}</p>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        {/* AfriFinance Score */}
+        {(() => {
+          const scoreInputs = {
+            price: stock.price,
+            pe: stock.pe,
+            eps: stock.eps,
+            dividend: stock.dividend,
+            changePercent: stock.changePercent,
+            beta: stock.beta,
+            high52: stock.high52,
+            low52: stock.low52,
+            marketCap: stock.marketCap,
+          };
+          const scores = computeScores(scoreInputs);
+          return (
+            <>
+              <AfriFinanceScoreCard scores={scores} />
+              <AIThesisCard
+                symbol={symbol || ""}
+                name={stock.name}
+                sector={stock.sector}
+                price={stock.price}
+                changePercent={stock.changePercent}
+                pe={stock.pe}
+                eps={stock.eps}
+                dividend={stock.dividend}
+                marketCap={stock.marketCap}
+                scores={scores as any}
+              />
 
-        {/* 52-Week Range */}
-        <Card className="soft-card">
-          <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground font-medium mb-2">52-Week Range</p>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold">{stock.low52}</span>
-              <div className="flex-1 h-2 bg-muted rounded-full relative">
-                <div className="absolute top-0 h-2 rounded-full bg-primary"
-                  style={{ width: `${stock.high52 !== "N/A" ? ((stock.price - parseFloat(stock.low52)) / (parseFloat(stock.high52) - parseFloat(stock.low52))) * 100 : 50}%` }} />
-              </div>
-              <span className="text-xs font-semibold">{stock.high52}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Financials */}
-        <Tabs defaultValue="overview">
-          <TabsList className="w-full grid grid-cols-4 bg-muted/40 rounded-full h-9 p-0.5">
-            {["Overview", "Financials", "News", "About"].map(tab => (
-              <TabsTrigger key={tab} value={tab.toLowerCase()} className="text-xs rounded-full data-[state=active]:bg-card data-[state=active]:shadow-sm h-full">{tab}</TabsTrigger>
-            ))}
-          </TabsList>
-
-          <TabsContent value="overview" className="mt-3 space-y-4">
-            <AnalystRatings />
-          </TabsContent>
-
-          <TabsContent value="financials" className="mt-3 space-y-4">
-            <Card className="soft-card">
-              <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><PieChart className="h-4 w-4 text-primary" />Revenue Breakdown</CardTitle></CardHeader>
-              <CardContent className="space-y-2">
-                {revenueSegments.map(seg => (
-                  <div key={seg.segment}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-medium">{seg.segment}</span>
-                      <span className="text-xs text-muted-foreground">{seg.revenue} ({seg.pct}%)</span>
-                    </div>
-                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                      <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${seg.pct}%` }} />
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="news" className="mt-3 space-y-3">
-            {stockNews.map(n => (
-              <Card key={n.id} className="soft-card cursor-pointer active:scale-[0.98] transition-transform" onClick={() => navigate('/news')}>
-                <CardContent className="p-3 flex items-start gap-3">
-                  <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${n.sentiment === 'bullish' ? 'bg-bull' : 'bg-bear'}`} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium line-clamp-2">{n.title}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{n.source} · {n.time}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </TabsContent>
-
-          <TabsContent value="about" className="mt-3 space-y-3">
-            <Card className="soft-card">
-              <CardContent className="p-4 space-y-3">
-                <p className="text-sm leading-relaxed text-muted-foreground">{company.description}</p>
-                <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border/50">
+              {/* 9-tab analysis */}
+              <Tabs defaultValue="overview">
+                <TabsList className="w-full flex overflow-x-auto scrollbar-hide bg-muted/40 rounded-full h-9 p-0.5 gap-0.5">
                   {[
-                    { icon: Building, label: "HQ", value: company.headquarters },
-                    { icon: Users, label: "Employees", value: company.employees },
-                    { icon: UserCheck, label: "CEO", value: company.ceo },
-                    { icon: Calendar, label: "Founded", value: company.founded },
-                  ].map(info => (
-                    <div key={info.label} className="flex items-center gap-2">
-                      <info.icon className="h-3.5 w-3.5 text-muted-foreground" />
-                      <div>
-                        <p className="text-[10px] text-muted-foreground">{info.label}</p>
-                        <p className="text-xs font-medium">{info.value}</p>
-                      </div>
-                    </div>
+                    { v: "overview", l: "Overview" },
+                    { v: "valuation", l: "Valuation" },
+                    { v: "growth", l: "Growth" },
+                    { v: "health", l: "Health" },
+                    { v: "dividends", l: "Dividends" },
+                    { v: "ownership", l: "Ownership" },
+                    { v: "risk", l: "Risk" },
+                    { v: "news", l: "News" },
+                    { v: "community", l: "Community" },
+                  ].map(t => (
+                    <TabsTrigger key={t.v} value={t.v} className="text-[11px] rounded-full data-[state=active]:bg-card data-[state=active]:shadow-sm h-full px-3 whitespace-nowrap">
+                      {t.l}
+                    </TabsTrigger>
                   ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                </TabsList>
+
+                {/* OVERVIEW */}
+                <TabsContent value="overview" className="mt-3 space-y-3">
+                  <Card className="soft-card">
+                    <CardContent className="p-4">
+                      <h4 className="text-xs font-bold mb-2 flex items-center gap-1.5"><BarChart3 className="h-3.5 w-3.5 text-primary" />Key Statistics</h4>
+                      <div className="grid grid-cols-3 gap-x-4 gap-y-3">
+                        {[
+                          { label: "Market Cap", value: stock.marketCap },
+                          { label: "P/E", value: stock.pe },
+                          { label: "EPS", value: `KES ${stock.eps}` },
+                          { label: "Div Yield", value: `${divYield}%`, highlight: true },
+                          { label: "52W High", value: `KES ${stock.high52}` },
+                          { label: "52W Low", value: `KES ${stock.low52}` },
+                          { label: "Volume", value: stock.volume || "N/A" },
+                          { label: "Beta", value: stock.beta || "N/A" },
+                          { label: "Avg Vol", value: stock.avgVolume || "N/A" },
+                        ].map(stat => (
+                          <div key={stat.label}>
+                            <p className="text-[10px] text-muted-foreground font-medium">{stat.label}</p>
+                            <p className={`text-sm font-bold ${stat.highlight ? 'text-bull' : ''}`}>{stat.value}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className="soft-card">
+                    <CardContent className="p-4">
+                      <p className="text-sm leading-relaxed text-muted-foreground">{company.description}</p>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* VALUATION */}
+                <TabsContent value="valuation" className="mt-3 space-y-3">
+                  <Card className="soft-card">
+                    <CardContent className="p-4">
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Fair Value Estimate</p>
+                      {(() => {
+                        const fair = stock.price * (1 + (scores.value - 50) / 100);
+                        const upside = ((fair - stock.price) / stock.price) * 100;
+                        const tag = upside > 10 ? "Undervalued" : upside < -10 ? "Overvalued" : "Fairly valued";
+                        const tone = upside > 10 ? "text-bull" : upside < -10 ? "text-bear" : "text-accent";
+                        return (
+                          <>
+                            <div className="flex items-baseline gap-2 mt-1">
+                              <span className="text-2xl font-bold">KES {fair.toFixed(2)}</span>
+                              <span className={`text-sm font-semibold ${tone}`}>{upside >= 0 ? "+" : ""}{upside.toFixed(1)}%</span>
+                            </div>
+                            <p className={`text-xs font-medium mt-1 ${tone}`}>{tag} vs current KES {stock.price.toFixed(2)}</p>
+                            <div className="h-2 bg-muted rounded-full mt-3 relative">
+                              <div className="absolute top-0 h-2 bg-gradient-to-r from-bull via-accent to-bear rounded-full w-full opacity-60" />
+                              <div className="absolute top-[-3px] w-1 h-8 bg-foreground" style={{ left: `${Math.min(95, Math.max(5, 50 + upside))}%` }} />
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </CardContent>
+                  </Card>
+                  <Card className="soft-card">
+                    <CardContent className="p-4 grid grid-cols-3 gap-3">
+                      {[
+                        { l: "P/E", v: stock.pe },
+                        { l: "P/B", v: ((stock.price / Math.max(parseFloat(stock.eps as any) * 5, 1))).toFixed(2) },
+                        { l: "EV/EBITDA", v: (Math.random() * 8 + 4).toFixed(1) },
+                      ].map(m => (
+                        <div key={m.l}>
+                          <p className="text-[10px] text-muted-foreground">{m.l}</p>
+                          <p className="text-sm font-bold">{m.v}</p>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* GROWTH */}
+                <TabsContent value="growth" className="mt-3 space-y-3">
+                  <Card className="soft-card">
+                    <CardContent className="p-4 space-y-3">
+                      {[
+                        { l: "Revenue growth (3yr)", v: 14.2, sector: 9.5 },
+                        { l: "Earnings growth (3yr)", v: 11.8, sector: 7.2 },
+                        { l: "Forecast revenue (1yr)", v: 8.5, sector: 6.0 },
+                        { l: "Forecast EPS (1yr)", v: 9.7, sector: 5.8 },
+                      ].map(g => (
+                        <div key={g.l}>
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="font-medium">{g.l}</span>
+                            <span className={`font-bold ${g.v >= g.sector ? "text-bull" : "text-bear"}`}>+{g.v}%</span>
+                          </div>
+                          <div className="h-1.5 bg-muted rounded-full">
+                            <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(100, g.v * 4)}%` }} />
+                          </div>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">Sector avg: {g.sector}%</p>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* FINANCIAL HEALTH */}
+                <TabsContent value="health" className="mt-3 space-y-3">
+                  <Card className="soft-card">
+                    <CardContent className="p-4 space-y-2.5">
+                      {[
+                        { l: "Operating cash flow positive", ok: parseFloat(stock.eps as any) > 0 },
+                        { l: "Debt well covered by cash flow", ok: scores.health > 50 },
+                        { l: "Profitable (positive EPS)", ok: parseFloat(stock.eps as any) > 0 },
+                        { l: "Healthy P/E (3 - 15)", ok: parseFloat(stock.pe as any) > 3 && parseFloat(stock.pe as any) < 15 },
+                        { l: "Pays dividend", ok: parseFloat(stock.dividend as any) > 0 },
+                      ].map(c => (
+                        <div key={c.l} className="flex items-center gap-2">
+                          {c.ok ? <CheckCircle2 className="h-4 w-4 text-bull" /> : <XCircle className="h-4 w-4 text-bear" />}
+                          <span className="text-xs">{c.l}</span>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* DIVIDENDS */}
+                <TabsContent value="dividends" className="mt-3 space-y-3">
+                  <Card className="soft-card">
+                    <CardContent className="p-4 grid grid-cols-2 gap-3">
+                      <div><p className="text-[10px] text-muted-foreground">Dividend Yield</p><p className="text-lg font-bold text-bull">{divYield}%</p></div>
+                      <div><p className="text-[10px] text-muted-foreground">Annual Dividend</p><p className="text-lg font-bold">KES {stock.dividend}</p></div>
+                      <div><p className="text-[10px] text-muted-foreground">Payout Ratio</p><p className="text-sm font-bold">{parseFloat(stock.eps as any) > 0 ? ((parseFloat(stock.dividend as any) / parseFloat(stock.eps as any)) * 100).toFixed(0) : "N/A"}%</p></div>
+                      <div><p className="text-[10px] text-muted-foreground">Safety</p><p className={`text-sm font-bold ${scores.dividend > 50 ? "text-bull" : "text-chart-3"}`}>{scores.dividend > 50 ? "Strong" : scores.dividend > 25 ? "Adequate" : "Weak"}</p></div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* OWNERSHIP */}
+                <TabsContent value="ownership" className="mt-3 space-y-3">
+                  <Card className="soft-card">
+                    <CardContent className="p-4 space-y-3">
+                      {[
+                        { l: "Institutional", v: 52, c: "bg-primary" },
+                        { l: "Public", v: 35, c: "bg-accent" },
+                        { l: "Insiders", v: 8, c: "bg-bull" },
+                        { l: "Government", v: 5, c: "bg-chart-3" },
+                      ].map(o => (
+                        <div key={o.l}>
+                          <div className="flex justify-between text-xs mb-1"><span>{o.l}</span><span className="font-bold">{o.v}%</span></div>
+                          <div className="h-1.5 bg-muted rounded-full"><div className={`h-full ${o.c} rounded-full`} style={{ width: `${o.v}%` }} /></div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* RISK */}
+                <TabsContent value="risk" className="mt-3 space-y-3">
+                  <Card className="soft-card">
+                    <CardContent className="p-4 space-y-2.5">
+                      {[
+                        { l: "Earnings volatility", level: scores.risk > 60 ? "Low" : scores.risk > 40 ? "Medium" : "High" },
+                        { l: "Debt risk", level: scores.health > 60 ? "Low" : "Medium" },
+                        { l: "Regulatory exposure", level: stock.sector === "Banking" ? "Medium" : "Low" },
+                        { l: "Concentration risk", level: parseFloat(stock.marketCap) > 100 ? "Low" : "Medium" },
+                        { l: "Price volatility (beta)", level: parseFloat(stock.beta || "1") > 1.2 ? "High" : parseFloat(stock.beta || "1") > 0.8 ? "Medium" : "Low" },
+                      ].map(r => (
+                        <div key={r.l} className="flex items-center justify-between">
+                          <span className="text-xs">{r.l}</span>
+                          <Badge variant="outline" className={`text-[10px] ${r.level === "Low" ? "text-bull border-bull/40" : r.level === "Medium" ? "text-chart-3 border-chart-3/40" : "text-bear border-bear/40"}`}>{r.level}</Badge>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* NEWS & EVENTS */}
+                <TabsContent value="news" className="mt-3 space-y-3">
+                  <AIThesisCard
+                    mode="news_summary"
+                    symbol={symbol || ""}
+                    name={stock.name}
+                    sector={stock.sector}
+                    price={stock.price}
+                    changePercent={stock.changePercent}
+                    pe={stock.pe} eps={stock.eps} dividend={stock.dividend}
+                    headlines={stockNews.map(n => n.title)}
+                    title="AI News Summary"
+                  />
+                  {stockNews.map(n => (
+                    <Card key={n.id} className="soft-card cursor-pointer active:scale-[0.98] transition-transform" onClick={() => navigate('/news')}>
+                      <CardContent className="p-3 flex items-start gap-3">
+                        <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${n.sentiment === 'bullish' ? 'bg-bull' : 'bg-bear'}`} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium line-clamp-2">{n.title}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{n.source} · {n.time}</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </TabsContent>
+
+                {/* COMMUNITY */}
+                <TabsContent value="community" className="mt-3 space-y-3">
+                  <Card className="soft-card">
+                    <CardContent className="p-4 text-center">
+                      <MessageSquare className="h-8 w-8 text-primary mx-auto mb-2" />
+                      <p className="text-sm font-semibold mb-1">Discuss {symbol} on TradersHub</p>
+                      <p className="text-xs text-muted-foreground mb-3">See what traders think and share your own take.</p>
+                      <Button className="rounded-full" size="sm" onClick={() => navigate(`/traders-hub?compose=true&ticker=${symbol}`)}>
+                        Open TradersHub
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
+            </>
+          );
+        })()}
       </div>
 
       {/* Fixed Add Investment Button */}

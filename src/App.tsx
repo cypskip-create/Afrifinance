@@ -51,6 +51,7 @@ const App = () => (
                 <Route path="sector/:sector" element={<SectorDetail />} />
                 <Route path="learn" element={<Learn />} />
                 <Route path="notifications" element={<Notifications />} />
+                <Route path="alerts" element={<Notifications />} />
                 <Route path="market-brief" element={<MarketBrief />} />
                 <Route path="track-investments" element={<TrackInvestments />} />
                 <Route path="traders-hub" element={<TradersHub />} />
