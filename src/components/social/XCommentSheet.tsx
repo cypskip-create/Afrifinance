@@ -93,15 +93,27 @@ function CommentNode({
       return part;
     });
 
+  const indent = Math.min(depth, 6);
+  const indentPx = indent * 20;
+
   return (
-    <div>
+    <div className="relative">
+      {/* Thread line(s) for each ancestor level */}
+      {Array.from({ length: indent }).map((_, i) => (
+        <div
+          key={i}
+          className="absolute top-0 bottom-0 w-px bg-border/60 pointer-events-none"
+          style={{ left: `${28 + i * 20}px` }}
+        />
+      ))}
+
       <div
-        className={`flex gap-3 px-4 py-3 border-b border-border/40 hover:bg-muted/20 transition-colors ${
+        className={`relative flex gap-3 px-4 py-3 border-b border-border/40 hover:bg-muted/20 transition-colors ${
           replyingTo === comment.id ? "bg-primary/5" : ""
         }`}
-        style={{ paddingLeft: `${16 + Math.min(depth, 4) * 20}px` }}
+        style={{ paddingLeft: `${16 + indentPx}px` }}
       >
-        <Avatar className="h-8 w-8 shrink-0 cursor-pointer" onClick={() => navigateTo(`/profile/${comment.user_id}`)}>
+        <Avatar className="h-8 w-8 shrink-0 cursor-pointer relative z-10 bg-background" onClick={() => navigateTo(`/profile/${comment.user_id}`)}>
           <AvatarImage src={comment.author?.avatar_url || ""} />
           <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
             {getInitials(comment.author?.full_name)}
@@ -143,7 +155,6 @@ function CommentNode({
             </button>
           </div>
 
-          {/* Show "View N replies" toggle (X-style) */}
           {replyCount > 0 && (
             <button
               onClick={(e) => { e.stopPropagation(); setExpanded(v => !v); }}
