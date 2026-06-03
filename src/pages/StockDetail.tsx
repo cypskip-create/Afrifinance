@@ -16,6 +16,15 @@ import { SparklineChart } from "@/components/shared/SparklineChart";
 import { AddInvestmentDialog } from "@/components/portfolio/AddInvestmentDialog";
 import { AfriFinanceScoreCard, computeScores } from "@/components/stock/AfriFinanceScore";
 import { AIThesisCard } from "@/components/stock/AIThesisCard";
+import { getFundamentals } from "@/data/stockFundamentals";
+import { ValuationTab } from "@/components/stock/tabs/ValuationTab";
+import { GrowthTab } from "@/components/stock/tabs/GrowthTab";
+import { HealthTab } from "@/components/stock/tabs/HealthTab";
+import { DividendsTab } from "@/components/stock/tabs/DividendsTab";
+import { OwnershipTab } from "@/components/stock/tabs/OwnershipTab";
+import { RiskTab } from "@/components/stock/tabs/RiskTab";
+import { NewsEventsTab } from "@/components/stock/tabs/NewsEventsTab";
+import { CommunityTab } from "@/components/stock/tabs/CommunityTab";
 
 const stockData: Record<string, {
   name: string; price: number; change: number; changePercent: string; isUp: boolean;
