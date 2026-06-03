@@ -16,6 +16,15 @@ import { SparklineChart } from "@/components/shared/SparklineChart";
 import { AddInvestmentDialog } from "@/components/portfolio/AddInvestmentDialog";
 import { AfriFinanceScoreCard, computeScores } from "@/components/stock/AfriFinanceScore";
 import { AIThesisCard } from "@/components/stock/AIThesisCard";
+import { getFundamentals } from "@/data/stockFundamentals";
+import { ValuationTab } from "@/components/stock/tabs/ValuationTab";
+import { GrowthTab } from "@/components/stock/tabs/GrowthTab";
+import { HealthTab } from "@/components/stock/tabs/HealthTab";
+import { DividendsTab } from "@/components/stock/tabs/DividendsTab";
+import { OwnershipTab } from "@/components/stock/tabs/OwnershipTab";
+import { RiskTab } from "@/components/stock/tabs/RiskTab";
+import { NewsEventsTab } from "@/components/stock/tabs/NewsEventsTab";
+import { CommunityTab } from "@/components/stock/tabs/CommunityTab";
 
 const stockData: Record<string, {
   name: string; price: number; change: number; changePercent: string; isUp: boolean;
@@ -332,182 +341,54 @@ export default function StockDetail() {
                 </TabsContent>
 
                 {/* VALUATION */}
-                <TabsContent value="valuation" className="mt-3 space-y-3">
-                  <Card className="soft-card">
-                    <CardContent className="p-4">
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Fair Value Estimate</p>
-                      {(() => {
-                        const fair = stock.price * (1 + (scores.value - 50) / 100);
-                        const upside = ((fair - stock.price) / stock.price) * 100;
-                        const tag = upside > 10 ? "Undervalued" : upside < -10 ? "Overvalued" : "Fairly valued";
-                        const tone = upside > 10 ? "text-bull" : upside < -10 ? "text-bear" : "text-accent";
-                        return (
-                          <>
-                            <div className="flex items-baseline gap-2 mt-1">
-                              <span className="text-2xl font-bold">KES {fair.toFixed(2)}</span>
-                              <span className={`text-sm font-semibold ${tone}`}>{upside >= 0 ? "+" : ""}{upside.toFixed(1)}%</span>
-                            </div>
-                            <p className={`text-xs font-medium mt-1 ${tone}`}>{tag} vs current KES {stock.price.toFixed(2)}</p>
-                            <div className="h-2 bg-muted rounded-full mt-3 relative">
-                              <div className="absolute top-0 h-2 bg-gradient-to-r from-bull via-accent to-bear rounded-full w-full opacity-60" />
-                              <div className="absolute top-[-3px] w-1 h-8 bg-foreground" style={{ left: `${Math.min(95, Math.max(5, 50 + upside))}%` }} />
-                            </div>
-                          </>
-                        );
-                      })()}
-                    </CardContent>
-                  </Card>
-                  <Card className="soft-card">
-                    <CardContent className="p-4 grid grid-cols-3 gap-3">
-                      {[
-                        { l: "P/E", v: stock.pe },
-                        { l: "P/B", v: ((stock.price / Math.max(parseFloat(stock.eps as any) * 5, 1))).toFixed(2) },
-                        { l: "EV/EBITDA", v: (Math.random() * 8 + 4).toFixed(1) },
-                      ].map(m => (
-                        <div key={m.l}>
-                          <p className="text-[10px] text-muted-foreground">{m.l}</p>
-                          <p className="text-sm font-bold">{m.v}</p>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
+                <TabsContent value="valuation" className="mt-3">
+                  <ValuationTab price={stock.price} pe={stock.pe} fundamentals={getFundamentals(symbol || "", stock.price)} />
                 </TabsContent>
 
                 {/* GROWTH */}
-                <TabsContent value="growth" className="mt-3 space-y-3">
-                  <Card className="soft-card">
-                    <CardContent className="p-4 space-y-3">
-                      {[
-                        { l: "Revenue growth (3yr)", v: 14.2, sector: 9.5 },
-                        { l: "Earnings growth (3yr)", v: 11.8, sector: 7.2 },
-                        { l: "Forecast revenue (1yr)", v: 8.5, sector: 6.0 },
-                        { l: "Forecast EPS (1yr)", v: 9.7, sector: 5.8 },
-                      ].map(g => (
-                        <div key={g.l}>
-                          <div className="flex justify-between text-xs mb-1">
-                            <span className="font-medium">{g.l}</span>
-                            <span className={`font-bold ${g.v >= g.sector ? "text-bull" : "text-bear"}`}>+{g.v}%</span>
-                          </div>
-                          <div className="h-1.5 bg-muted rounded-full">
-                            <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(100, g.v * 4)}%` }} />
-                          </div>
-                          <p className="text-[10px] text-muted-foreground mt-0.5">Sector avg: {g.sector}%</p>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
+                <TabsContent value="growth" className="mt-3">
+                  <GrowthTab fundamentals={getFundamentals(symbol || "", stock.price)} />
                 </TabsContent>
 
                 {/* FINANCIAL HEALTH */}
-                <TabsContent value="health" className="mt-3 space-y-3">
-                  <Card className="soft-card">
-                    <CardContent className="p-4 space-y-2.5">
-                      {[
-                        { l: "Operating cash flow positive", ok: parseFloat(stock.eps as any) > 0 },
-                        { l: "Debt well covered by cash flow", ok: scores.health > 50 },
-                        { l: "Profitable (positive EPS)", ok: parseFloat(stock.eps as any) > 0 },
-                        { l: "Healthy P/E (3 - 15)", ok: parseFloat(stock.pe as any) > 3 && parseFloat(stock.pe as any) < 15 },
-                        { l: "Pays dividend", ok: parseFloat(stock.dividend as any) > 0 },
-                      ].map(c => (
-                        <div key={c.l} className="flex items-center gap-2">
-                          {c.ok ? <CheckCircle2 className="h-4 w-4 text-bull" /> : <XCircle className="h-4 w-4 text-bear" />}
-                          <span className="text-xs">{c.l}</span>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
+                <TabsContent value="health" className="mt-3">
+                  <HealthTab fundamentals={getFundamentals(symbol || "", stock.price)} />
                 </TabsContent>
 
                 {/* DIVIDENDS */}
-                <TabsContent value="dividends" className="mt-3 space-y-3">
-                  <Card className="soft-card">
-                    <CardContent className="p-4 grid grid-cols-2 gap-3">
-                      <div><p className="text-[10px] text-muted-foreground">Dividend Yield</p><p className="text-lg font-bold text-bull">{divYield}%</p></div>
-                      <div><p className="text-[10px] text-muted-foreground">Annual Dividend</p><p className="text-lg font-bold">KES {stock.dividend}</p></div>
-                      <div><p className="text-[10px] text-muted-foreground">Payout Ratio</p><p className="text-sm font-bold">{parseFloat(stock.eps as any) > 0 ? ((parseFloat(stock.dividend as any) / parseFloat(stock.eps as any)) * 100).toFixed(0) : "N/A"}%</p></div>
-                      <div><p className="text-[10px] text-muted-foreground">Safety</p><p className={`text-sm font-bold ${scores.dividend > 50 ? "text-bull" : "text-chart-3"}`}>{scores.dividend > 50 ? "Strong" : scores.dividend > 25 ? "Adequate" : "Weak"}</p></div>
-                    </CardContent>
-                  </Card>
+                <TabsContent value="dividends" className="mt-3">
+                  <DividendsTab divYield={divYield} annualDividend={stock.dividend} fundamentals={getFundamentals(symbol || "", stock.price)} />
                 </TabsContent>
 
                 {/* OWNERSHIP */}
-                <TabsContent value="ownership" className="mt-3 space-y-3">
-                  <Card className="soft-card">
-                    <CardContent className="p-4 space-y-3">
-                      {[
-                        { l: "Institutional", v: 52, c: "bg-primary" },
-                        { l: "Public", v: 35, c: "bg-accent" },
-                        { l: "Insiders", v: 8, c: "bg-bull" },
-                        { l: "Government", v: 5, c: "bg-chart-3" },
-                      ].map(o => (
-                        <div key={o.l}>
-                          <div className="flex justify-between text-xs mb-1"><span>{o.l}</span><span className="font-bold">{o.v}%</span></div>
-                          <div className="h-1.5 bg-muted rounded-full"><div className={`h-full ${o.c} rounded-full`} style={{ width: `${o.v}%` }} /></div>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
+                <TabsContent value="ownership" className="mt-3">
+                  <OwnershipTab fundamentals={getFundamentals(symbol || "", stock.price)} />
                 </TabsContent>
 
                 {/* RISK */}
-                <TabsContent value="risk" className="mt-3 space-y-3">
-                  <Card className="soft-card">
-                    <CardContent className="p-4 space-y-2.5">
-                      {[
-                        { l: "Earnings volatility", level: scores.risk > 60 ? "Low" : scores.risk > 40 ? "Medium" : "High" },
-                        { l: "Debt risk", level: scores.health > 60 ? "Low" : "Medium" },
-                        { l: "Regulatory exposure", level: stock.sector === "Banking" ? "Medium" : "Low" },
-                        { l: "Concentration risk", level: parseFloat(stock.marketCap) > 100 ? "Low" : "Medium" },
-                        { l: "Price volatility (beta)", level: parseFloat(stock.beta || "1") > 1.2 ? "High" : parseFloat(stock.beta || "1") > 0.8 ? "Medium" : "Low" },
-                      ].map(r => (
-                        <div key={r.l} className="flex items-center justify-between">
-                          <span className="text-xs">{r.l}</span>
-                          <Badge variant="outline" className={`text-[10px] ${r.level === "Low" ? "text-bull border-bull/40" : r.level === "Medium" ? "text-chart-3 border-chart-3/40" : "text-bear border-bear/40"}`}>{r.level}</Badge>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
+                <TabsContent value="risk" className="mt-3">
+                  <RiskTab fundamentals={getFundamentals(symbol || "", stock.price)} />
                 </TabsContent>
 
                 {/* NEWS & EVENTS */}
-                <TabsContent value="news" className="mt-3 space-y-3">
-                  <AIThesisCard
-                    mode="news_summary"
+                <TabsContent value="news" className="mt-3">
+                  <NewsEventsTab
                     symbol={symbol || ""}
                     name={stock.name}
                     sector={stock.sector}
                     price={stock.price}
                     changePercent={stock.changePercent}
                     pe={stock.pe} eps={stock.eps} dividend={stock.dividend}
-                    headlines={stockNews.map(n => n.title)}
-                    title="AI News Summary"
+                    news={stockNews}
+                    fundamentals={getFundamentals(symbol || "", stock.price)}
                   />
-                  {stockNews.map(n => (
-                    <Card key={n.id} className="soft-card cursor-pointer active:scale-[0.98] transition-transform" onClick={() => navigate('/news')}>
-                      <CardContent className="p-3 flex items-start gap-3">
-                        <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${n.sentiment === 'bullish' ? 'bg-bull' : 'bg-bear'}`} />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium line-clamp-2">{n.title}</p>
-                          <p className="text-xs text-muted-foreground mt-1">{n.source} · {n.time}</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
                 </TabsContent>
 
                 {/* COMMUNITY */}
-                <TabsContent value="community" className="mt-3 space-y-3">
-                  <Card className="soft-card">
-                    <CardContent className="p-4 text-center">
-                      <MessageSquare className="h-8 w-8 text-primary mx-auto mb-2" />
-                      <p className="text-sm font-semibold mb-1">Discuss {symbol} on TradersHub</p>
-                      <p className="text-xs text-muted-foreground mb-3">See what traders think and share your own take.</p>
-                      <Button className="rounded-full" size="sm" onClick={() => navigate(`/traders-hub?compose=true&ticker=${symbol}`)}>
-                        Open TradersHub
-                      </Button>
-                    </CardContent>
-                  </Card>
+                <TabsContent value="community" className="mt-3">
+                  <CommunityTab symbol={symbol || ""} />
                 </TabsContent>
+
               </Tabs>
             </>
           );
