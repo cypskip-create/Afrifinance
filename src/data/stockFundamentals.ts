@@ -1,5 +1,5 @@
 // Mock fundamentals for AfriFinance — keyed by symbol.
-// All values are illustrative and should be replaced with a real data feed.
+// Deterministic per-symbol data driving every interactive analysis tool.
 
 export interface Fundamentals {
   fairValue: number;
@@ -7,7 +7,7 @@ export interface Fundamentals {
   pbSector: number;
   evEbitda: number;
   evEbitdaSector: number;
-  revenueHistory: { year: string; revenue: number; earnings: number; forecast?: boolean }[];
+  revenueHistory: { year: string; revenue: number; earnings: number; eps: number; forecast?: boolean }[];
   growthMetrics: { label: string; value: number; sector: number }[];
   cashVsDebt: { year: string; cash: number; debt: number }[];
   operatingCashFlow: { year: string; cf: number }[];
@@ -19,6 +19,13 @@ export interface Fundamentals {
   topShareholders: { name: string; type: string; pct: number }[];
   riskFactors: { label: string; level: "Low" | "Medium" | "High"; note: string }[];
   events: { date: string; title: string; type: "earnings" | "dividend" | "agm" | "other" }[];
+
+  // ▼ NEW interactive datasets
+  pastReturns: { period: "1M" | "3M" | "6M" | "1Y" | "3Y" | "5Y"; company: number; sector: number; nse: number }[];
+  analystTargets: { low: number; avg: number; high: number; count: number; buy: number; hold: number; sell: number };
+  earningsSurprises: { quarter: string; estimate: number; actual: number }[];
+  insiderTrades: { date: string; insider: string; role: string; type: "Buy" | "Sell"; shares: number; value: number }[];
+  marginsHistory: { year: string; gross: number; operating: number; net: number }[];
 }
 
 const COLORS = {
@@ -34,6 +41,23 @@ function build(seed: number): Fundamentals {
   const r = (min: number, max: number, offset = 0) =>
     +(min + ((Math.sin(seed + offset) + 1) / 2) * (max - min)).toFixed(2);
   const baseRev = r(20, 120) * 1e9;
+  const baseShares = r(2, 8, 60) * 1e9;
+
+  const revHist = [
+    { year: "2018", revenue: baseRev * 0.62 },
+    { year: "2019", revenue: baseRev * 0.69 },
+    { year: "2020", revenue: baseRev * 0.72 },
+    { year: "2021", revenue: baseRev * 0.78 },
+    { year: "2022", revenue: baseRev * 0.86 },
+    { year: "2023", revenue: baseRev * 0.94 },
+    { year: "2024", revenue: baseRev },
+    { year: "2025E", revenue: baseRev * 1.09, forecast: true },
+    { year: "2026E", revenue: baseRev * 1.18, forecast: true },
+    { year: "2027E", revenue: baseRev * 1.27, forecast: true },
+  ].map(x => {
+    const earnings = x.revenue * r(0.16, 0.24, x.year.charCodeAt(2));
+    return { ...x, earnings, eps: +(earnings / baseShares).toFixed(2) };
+  });
 
   return {
     fairValue: 0,
@@ -41,34 +65,22 @@ function build(seed: number): Fundamentals {
     pbSector: r(1, 3, 1),
     evEbitda: r(5, 12, 2),
     evEbitdaSector: r(7, 11, 3),
-    revenueHistory: [
-      { year: "2021", revenue: baseRev * 0.78, earnings: baseRev * 0.78 * 0.18 },
-      { year: "2022", revenue: baseRev * 0.86, earnings: baseRev * 0.86 * 0.19 },
-      { year: "2023", revenue: baseRev * 0.94, earnings: baseRev * 0.94 * 0.21 },
-      { year: "2024", revenue: baseRev, earnings: baseRev * 0.22 },
-      { year: "2025E", revenue: baseRev * 1.09, earnings: baseRev * 1.09 * 0.23, forecast: true },
-      { year: "2026E", revenue: baseRev * 1.18, earnings: baseRev * 1.18 * 0.24, forecast: true },
-      { year: "2027E", revenue: baseRev * 1.27, earnings: baseRev * 1.27 * 0.25, forecast: true },
-    ],
+    revenueHistory: revHist,
     growthMetrics: [
       { label: "Revenue (3yr CAGR)", value: r(8, 22, 4), sector: r(6, 11, 5) },
       { label: "Earnings (3yr CAGR)", value: r(6, 18, 6), sector: r(5, 10, 7) },
       { label: "Forecast revenue (1yr)", value: r(4, 14, 8), sector: r(4, 8, 9) },
       { label: "Forecast EPS (1yr)", value: r(5, 16, 10), sector: r(3, 9, 11) },
     ],
-    cashVsDebt: [
-      { year: "2021", cash: r(10, 40, 12) * 1e9, debt: r(20, 60, 13) * 1e9 },
-      { year: "2022", cash: r(15, 45, 14) * 1e9, debt: r(18, 55, 15) * 1e9 },
-      { year: "2023", cash: r(20, 50, 16) * 1e9, debt: r(15, 50, 17) * 1e9 },
-      { year: "2024", cash: r(25, 60, 18) * 1e9, debt: r(12, 45, 19) * 1e9 },
-    ],
-    operatingCashFlow: [
-      { year: "2020", cf: r(8, 25, 20) * 1e9 },
-      { year: "2021", cf: r(10, 28, 21) * 1e9 },
-      { year: "2022", cf: r(12, 32, 22) * 1e9 },
-      { year: "2023", cf: r(14, 36, 23) * 1e9 },
-      { year: "2024", cf: r(16, 40, 24) * 1e9 },
-    ],
+    cashVsDebt: Array.from({ length: 10 }, (_, i) => ({
+      year: `${2015 + i}`,
+      cash: r(10, 60, 12 + i) * 1e9,
+      debt: r(12, 55, 30 + i) * 1e9,
+    })),
+    operatingCashFlow: Array.from({ length: 10 }, (_, i) => ({
+      year: `${2015 + i}`,
+      cf: r(6, 40, 20 + i) * 1e9,
+    })),
     healthChecks: [
       { label: "Short-term assets cover short-term liabilities", ok: true },
       { label: "Debt-to-equity below sector average", ok: r(0, 1, 25) > 0.4 },
@@ -113,6 +125,48 @@ function build(seed: number): Fundamentals {
       { date: "Jan 18", title: "Annual General Meeting", type: "agm" },
       { date: "Feb 02", title: "FY results presentation", type: "earnings" },
     ],
+    pastReturns: [
+      { period: "1M", company: r(-8, 12, 70), sector: r(-5, 8, 71), nse: r(-4, 6, 72) },
+      { period: "3M", company: r(-12, 20, 73), sector: r(-8, 14, 74), nse: r(-6, 10, 75) },
+      { period: "6M", company: r(-15, 28, 76), sector: r(-10, 18, 77), nse: r(-8, 14, 78) },
+      { period: "1Y", company: r(-20, 45, 79), sector: r(-12, 25, 80), nse: r(-10, 18, 81) },
+      { period: "3Y", company: r(-25, 90, 82), sector: r(-15, 55, 83), nse: r(-12, 40, 84) },
+      { period: "5Y", company: r(-30, 150, 85), sector: r(-20, 90, 86), nse: r(-15, 60, 87) },
+    ],
+    analystTargets: (() => {
+      const avg = r(0.85, 1.25, 90);
+      return {
+        low: +(avg * 0.78).toFixed(2),
+        avg: +avg.toFixed(2),
+        high: +(avg * 1.28).toFixed(2),
+        count: Math.floor(r(6, 18, 91)),
+        buy: Math.floor(r(4, 12, 92)),
+        hold: Math.floor(r(1, 5, 93)),
+        sell: Math.floor(r(0, 3, 94)),
+      };
+    })(),
+    earningsSurprises: Array.from({ length: 8 }, (_, i) => {
+      const est = r(0.4, 2.5, 100 + i);
+      const beat = r(-0.15, 0.18, 110 + i);
+      return {
+        quarter: `Q${(i % 4) + 1} ${2023 + Math.floor(i / 4)}`,
+        estimate: +est.toFixed(2),
+        actual: +(est * (1 + beat)).toFixed(2),
+      };
+    }),
+    insiderTrades: [
+      { date: "2025-09-12", insider: "James Mwangi", role: "CEO", type: "Buy", shares: 50000, value: r(2, 10, 120) * 1e6 },
+      { date: "2025-08-04", insider: "Mary Wamae", role: "CFO", type: "Sell", shares: 18000, value: r(1, 5, 121) * 1e6 },
+      { date: "2025-06-21", insider: "Peter Ndegwa", role: "Director", type: "Buy", shares: 22000, value: r(1, 6, 122) * 1e6 },
+      { date: "2025-05-09", insider: "Polycarp Igathe", role: "Director", type: "Buy", shares: 8000, value: r(0.3, 2, 123) * 1e6 },
+      { date: "2025-03-15", insider: "Susan Mudhune", role: "Chair", type: "Sell", shares: 12000, value: r(0.5, 3, 124) * 1e6 },
+    ],
+    marginsHistory: Array.from({ length: 6 }, (_, i) => ({
+      year: `${2019 + i}`,
+      gross: r(35, 55, 130 + i),
+      operating: r(18, 32, 140 + i),
+      net: r(8, 22, 150 + i),
+    })),
   };
 }
 
@@ -128,6 +182,13 @@ export function getFundamentals(symbol: string, price: number): Fundamentals {
   for (let i = 0; i < key.length; i++) seed += key.charCodeAt(i) * (i + 1);
   const f = build(seed);
   f.fairValue = price * (1 + ((f.peSector - f.evEbitda) / 30));
+  // scale analyst targets around live price
+  f.analystTargets = {
+    ...f.analystTargets,
+    low: +(price * 0.82).toFixed(2),
+    avg: +(price * f.analystTargets.avg).toFixed(2),
+    high: +(price * 1.25).toFixed(2),
+  };
   cache.set(key, f);
   return f;
 }
