@@ -25,6 +25,7 @@ import { OwnershipTab } from "@/components/stock/tabs/OwnershipTab";
 import { RiskTab } from "@/components/stock/tabs/RiskTab";
 import { NewsEventsTab } from "@/components/stock/tabs/NewsEventsTab";
 import { CommunityTab } from "@/components/stock/tabs/CommunityTab";
+import { PerformanceTab } from "@/components/stock/tabs/PerformanceTab";
 
 const stockData: Record<string, {
   name: string; price: number; change: number; changePercent: string; isUp: boolean;
@@ -294,6 +295,7 @@ export default function StockDetail() {
                   {[
                     { v: "overview", l: "Overview" },
                     { v: "valuation", l: "Valuation" },
+                    { v: "performance", l: "Performance" },
                     { v: "growth", l: "Growth" },
                     { v: "health", l: "Health" },
                     { v: "dividends", l: "Dividends" },
@@ -343,6 +345,11 @@ export default function StockDetail() {
                 {/* VALUATION */}
                 <TabsContent value="valuation" className="mt-3">
                   <ValuationTab price={stock.price} pe={stock.pe} fundamentals={getFundamentals(symbol || "", stock.price)} />
+                </TabsContent>
+
+                {/* PERFORMANCE */}
+                <TabsContent value="performance" className="mt-3">
+                  <PerformanceTab symbol={symbol || ""} price={stock.price} fundamentals={getFundamentals(symbol || "", stock.price)} />
                 </TabsContent>
 
                 {/* GROWTH */}
