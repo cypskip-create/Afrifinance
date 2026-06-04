@@ -53,7 +53,7 @@ function CommentNode({
 }) {
   const { likeComment, repostComment } = usePosts();
   const { toast } = useToast();
-  const [expanded, setExpanded] = useState(depth < 1); // Auto-expand top-level only
+  const [expanded, setExpanded] = useState(false);
   const [optimistic, setOptimistic] = useState({
     is_liked: !!comment.is_liked,
     likes_count: comment.likes_count || 0,
@@ -61,6 +61,7 @@ function CommentNode({
     reposts_count: comment.reposts_count || 0,
   });
 
+  const hasReplies = !!comment.replies && comment.replies.length > 0;
   const replyCount = comment.replies?.length || 0;
 
   const handleLikeReply = async (e: React.MouseEvent) => {
@@ -93,32 +94,26 @@ function CommentNode({
       return part;
     });
 
-  const indent = Math.min(depth, 6);
-  const indentPx = indent * 20;
-
   return (
     <div className="relative">
-      {/* Thread line(s) for each ancestor level */}
-      {Array.from({ length: indent }).map((_, i) => (
-        <div
-          key={i}
-          className="absolute top-0 bottom-0 w-px bg-border/60 pointer-events-none"
-          style={{ left: `${28 + i * 20}px` }}
-        />
-      ))}
-
       <div
-        className={`relative flex gap-3 px-4 py-3 border-b border-border/40 hover:bg-muted/20 transition-colors ${
+        className={`relative flex gap-3 px-4 py-3 hover:bg-muted/20 transition-colors ${
           replyingTo === comment.id ? "bg-primary/5" : ""
         }`}
-        style={{ paddingLeft: `${16 + indentPx}px` }}
       >
-        <Avatar className="h-8 w-8 shrink-0 cursor-pointer relative z-10 bg-background" onClick={() => navigateTo(`/profile/${comment.user_id}`)}>
-          <AvatarImage src={comment.author?.avatar_url || ""} />
-          <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
-            {getInitials(comment.author?.full_name)}
-          </AvatarFallback>
-        </Avatar>
+        {/* Avatar + thread spine */}
+        <div className="relative shrink-0 flex flex-col items-center">
+          <Avatar className="h-8 w-8 cursor-pointer relative z-10 bg-background" onClick={() => navigateTo(`/profile/${comment.user_id}`)}>
+            <AvatarImage src={comment.author?.avatar_url || ""} />
+            <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
+              {getInitials(comment.author?.full_name)}
+            </AvatarFallback>
+          </Avatar>
+          {hasReplies && expanded && (
+            <div className="flex-1 w-px bg-border/70 mt-1" />
+          )}
+        </div>
+
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1 flex-wrap">
             <span className="font-bold text-[13px]">{comment.author?.full_name || "User"}</span>
@@ -127,7 +122,6 @@ function CommentNode({
           </div>
           <p className="text-[13px] mt-0.5 leading-relaxed break-words">{renderContent(comment.content)}</p>
 
-          {/* Action bar */}
           <div className="flex items-center gap-4 mt-1.5 -ml-1.5">
             <button onClick={(e) => { e.stopPropagation(); onReply(comment); }} className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-primary p-1 rounded-full" data-small-target>
               <MessageCircle className="h-3.5 w-3.5" />
@@ -155,22 +149,30 @@ function CommentNode({
             </button>
           </div>
 
-          {replyCount > 0 && (
+          {/* View / hide replies — YouTube/X-style curved connector when collapsed */}
+          {hasReplies && (
             <button
               onClick={(e) => { e.stopPropagation(); setExpanded(v => !v); }}
-              className="mt-2 inline-flex items-center gap-1 text-[12px] font-semibold text-primary hover:underline"
+              className="relative mt-3 inline-flex items-center gap-1.5 text-[12px] font-bold text-primary hover:underline"
               data-small-target
             >
-              <ChevronRight className={`h-3 w-3 transition-transform ${expanded ? 'rotate-90' : ''}`} />
-              {expanded ? `Hide ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}` : `View ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`}
+              {!expanded && (
+                <span
+                  aria-hidden
+                  className="absolute pointer-events-none border-l border-b border-border/70 rounded-bl-[10px]"
+                  style={{ left: -28, top: -18, width: 22, height: 24 }}
+                />
+              )}
+              <ChevronRight className={`h-3.5 w-3.5 transition-transform ${expanded ? 'rotate-90' : ''}`} />
+              {expanded ? `Hide ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}` : `${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`}
             </button>
           )}
         </div>
       </div>
 
-      {expanded && comment.replies && comment.replies.length > 0 && (
-        <div>
-          {comment.replies.map(reply => (
+      {expanded && hasReplies && (
+        <div className="pl-[28px] border-b-0">
+          {comment.replies!.map(reply => (
             <CommentNode
               key={reply.id}
               comment={reply}
@@ -184,6 +186,9 @@ function CommentNode({
           ))}
         </div>
       )}
+
+      {/* Divider only at top-level between root comments */}
+      {depth === 0 && <div className="border-b border-border/40" />}
     </div>
   );
 }

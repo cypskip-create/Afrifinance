@@ -1,41 +1,76 @@
+import { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell, Legend } from "recharts";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, Cell, Legend,
+} from "recharts";
 import { Fundamentals } from "@/data/stockFundamentals";
 
 interface Props {
   fundamentals: Fundamentals;
 }
 
-const fmtB = (n: number) => `${(n / 1e9).toFixed(1)}B`;
+type Metric = "revenue" | "earnings" | "eps";
+type Range = "5Y" | "10Y" | "ALL";
 
 export function GrowthTab({ fundamentals }: Props) {
-  const data = fundamentals.revenueHistory.map(r => ({
-    year: r.year,
-    Revenue: +(r.revenue / 1e9).toFixed(2),
-    Earnings: +(r.earnings / 1e9).toFixed(2),
-    forecast: r.forecast,
-  }));
+  const [metric, setMetric] = useState<Metric>("revenue");
+  const [range, setRange] = useState<Range>("10Y");
+
+  const data = useMemo(() => {
+    const all = fundamentals.revenueHistory.map(r => ({
+      year: r.year,
+      Revenue: +(r.revenue / 1e9).toFixed(2),
+      Earnings: +(r.earnings / 1e9).toFixed(2),
+      EPS: r.eps,
+      forecast: r.forecast,
+    }));
+    if (range === "5Y") return all.slice(-7); // 5 history + 2 forecast
+    if (range === "10Y") return all;
+    return all;
+  }, [fundamentals, range]);
+
+  const metricKey = metric === "revenue" ? "Revenue" : metric === "earnings" ? "Earnings" : "EPS";
+  const yFmt = (v: number) => metric === "eps" ? v.toFixed(1) : `${v}B`;
+  const tipFmt = (v: any) => metric === "eps" ? `KES ${v}` : `KES ${v}B`;
 
   return (
     <div className="space-y-3">
       <Card className="soft-card">
         <CardContent className="p-4">
-          <h4 className="text-xs font-bold mb-1">Revenue & Earnings (KES Billions)</h4>
-          <p className="text-[10px] text-muted-foreground mb-2">Solid bars = historical · Lighter = forecast</p>
-          <div className="h-52">
+          <div className="flex items-center justify-between mb-2 gap-2">
+            <h4 className="text-xs font-bold">Growth History & Forecast</h4>
+            <ToggleGroup type="single" size="sm" value={range} onValueChange={(v) => v && setRange(v as Range)}>
+              <ToggleGroupItem value="5Y" className="h-6 text-[10px] px-2">5Y</ToggleGroupItem>
+              <ToggleGroupItem value="10Y" className="h-6 text-[10px] px-2">10Y</ToggleGroupItem>
+            </ToggleGroup>
+          </div>
+          <ToggleGroup
+            type="single"
+            size="sm"
+            value={metric}
+            onValueChange={(v) => v && setMetric(v as Metric)}
+            className="justify-start mb-2"
+          >
+            <ToggleGroupItem value="revenue" className="h-6 text-[10px] px-2.5">Revenue</ToggleGroupItem>
+            <ToggleGroupItem value="earnings" className="h-6 text-[10px] px-2.5">Earnings</ToggleGroupItem>
+            <ToggleGroupItem value="eps" className="h-6 text-[10px] px-2.5">EPS</ToggleGroupItem>
+          </ToggleGroup>
+          <p className="text-[10px] text-muted-foreground mb-1.5">Solid = historical · Lighter = forecast</p>
+          <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data} margin={{ top: 10, right: 8, bottom: 0, left: -10 }}>
+              <ComposedChart data={data} margin={{ top: 10, right: 8, bottom: 0, left: -10 }}>
                 <XAxis dataKey="year" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}B`} />
-                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 11 }} formatter={(v: any) => `KES ${v}B`} />
+                <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} tickFormatter={yFmt} />
+                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 11 }} formatter={tipFmt} />
                 <Legend wrapperStyle={{ fontSize: 10 }} />
-                <Bar dataKey="Revenue" radius={[6, 6, 0, 0]}>
-                  {data.map((d, i) => <Cell key={i} fill="hsl(var(--primary))" fillOpacity={d.forecast ? 0.4 : 1} />)}
+                <Bar dataKey={metricKey} radius={[6, 6, 0, 0]}>
+                  {data.map((d, i) => (
+                    <Cell key={i} fill={metric === "revenue" ? "hsl(var(--primary))" : metric === "earnings" ? "hsl(var(--bull))" : "hsl(var(--accent))"} fillOpacity={d.forecast ? 0.4 : 1} />
+                  ))}
                 </Bar>
-                <Bar dataKey="Earnings" radius={[6, 6, 0, 0]}>
-                  {data.map((d, i) => <Cell key={i} fill="hsl(var(--bull))" fillOpacity={d.forecast ? 0.4 : 1} />)}
-                </Bar>
-              </BarChart>
+                <Line type="monotone" dataKey={metricKey} stroke="hsl(var(--foreground))" strokeWidth={1.5} strokeOpacity={0.4} dot={false} />
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
         </CardContent>
