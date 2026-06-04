@@ -8,6 +8,12 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    allowedHosts: true,
+    cors: true,
+    hmr: {
+      clientPort: 443,
+      protocol: "wss",
+    },
   },
   plugins: [
     react(),
