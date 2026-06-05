@@ -211,7 +211,36 @@ export default function Markets() {
       </div>
 
       <div className="px-4 pt-4 space-y-5 animate-fade-in">
-        {/* ─── OVERVIEW TAB ─── */}
+        {/* ── INTERACTIVE ANALYSIS TOOLS ── shown on every Markets tab */}
+        <div>
+          <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+            <Filter className="h-4 w-4 text-primary" />
+            Analysis Tools
+          </h3>
+          <div className="grid grid-cols-2 gap-2.5">
+            <Card className="soft-card p-3 cursor-pointer active:scale-[0.97] transition-transform" onClick={() => navigate('/screener')}>
+              <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-2"><Filter className="h-4 w-4" /></div>
+              <p className="text-sm font-bold">Stock Screener</p>
+              <p className="text-[10px] text-muted-foreground">Filter by P/E, yield, sector</p>
+            </Card>
+            <Card className="soft-card p-3 cursor-pointer active:scale-[0.97] transition-transform" onClick={() => navigate('/compare')}>
+              <div className="w-9 h-9 rounded-xl bg-accent/10 text-accent flex items-center justify-center mb-2"><BarChart2 className="h-4 w-4" /></div>
+              <p className="text-sm font-bold">Compare Stocks</p>
+              <p className="text-[10px] text-muted-foreground">Side-by-side metrics</p>
+            </Card>
+            <Card className="soft-card p-3 cursor-pointer active:scale-[0.97] transition-transform" onClick={() => navigate('/market-brief')}>
+              <div className="w-9 h-9 rounded-xl bg-bull/10 text-bull flex items-center justify-center mb-2"><Activity className="h-4 w-4" /></div>
+              <p className="text-sm font-bold">Sector Heatmap</p>
+              <p className="text-[10px] text-muted-foreground">See what's hot today</p>
+            </Card>
+            <Card className="soft-card p-3 cursor-pointer active:scale-[0.97] transition-transform" onClick={() => navigate('/watchlist')}>
+              <div className="w-9 h-9 rounded-xl bg-chart-3/10 text-chart-3 flex items-center justify-center mb-2"><Star className="h-4 w-4" /></div>
+              <p className="text-sm font-bold">My Watchlist</p>
+              <p className="text-[10px] text-muted-foreground">Track favourite stocks</p>
+            </Card>
+          </div>
+        </div>
+
         {activeTab === "Overview" && (
           <>
             {/* Market Status */}
