@@ -157,7 +157,15 @@ export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, on
                       <DropdownMenuSeparator />
                     </>
                   )}
-                  <DropdownMenuItem onClick={() => onShare(post)}><Share className="h-4 w-4 mr-2" />Copy link</DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCopyLink(); }}><Link2 className="h-4 w-4 mr-2" />Copy link</DropdownMenuItem>
+                  {currentUserId !== post.user_id && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMute(); }}><VolumeX className="h-4 w-4 mr-2" />Mute @{(post.author as any)?.handle || "user"}</DropdownMenuItem>
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleBlock(); }}><UserX className="h-4 w-4 mr-2" />Block @{(post.author as any)?.handle || "user"}</DropdownMenuItem>
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleReport(); }} className="text-destructive"><Flag className="h-4 w-4 mr-2" />Report post</DropdownMenuItem>
+                    </>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
