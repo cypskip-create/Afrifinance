@@ -24,6 +24,7 @@ import { usePosts } from "@/hooks/usePosts";
 import { getTimeBasedGreeting } from "@/utils/timeGreeting";
 import { SparklineChart } from "@/components/shared/SparklineChart";
 import { MarketStatusIndicator } from "@/components/shared/MarketStatusIndicator";
+import { computePortfolioStats } from "@/lib/stockPrices";
 
 export default function Home() {
   const { user } = useAuth();
@@ -48,8 +49,6 @@ export default function Home() {
   };
 
   // Use centralized prices so the home snapshot matches the Portfolio page exactly.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { computePortfolioStats } = require("@/lib/stockPrices");
   const { totalValue: portfolioValue, totalGain: portfolioGain, gainPct: portfolioGainPct } = computePortfolioStats(portfolio);
 
   const nseIndices = [
