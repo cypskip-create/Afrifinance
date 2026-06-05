@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Heart, MessageCircle, Repeat2, Share, Bookmark, BookmarkCheck, Trash2, MoreHorizontal, Verified, Eye, Quote, Pencil } from "lucide-react";
+import { Heart, MessageCircle, Repeat2, Share, Bookmark, BookmarkCheck, Trash2, MoreHorizontal, Verified, Eye, Quote, Pencil, VolumeX, Flag, UserX, Link2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,9 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
 import { Post } from "@/hooks/usePosts";
 import { ImageViewer } from "./ImageViewer";
+import { formatTimestamp } from "@/lib/formatTimestamp";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 
 const NSE_PRICES: Record<string, { price: number; change: number }> = {
@@ -51,17 +54,7 @@ export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, on
     return num > 0 ? num.toString() : "";
   };
 
-  const formatTimeAgo = (date: string) => {
-    const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
-    if (seconds < 60) return "now";
-    const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `${minutes}m`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h`;
-    const days = Math.floor(hours / 24);
-    if (days < 7) return `${days}d`;
-    return new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  };
+  const formatTimeAgo = formatTimestamp;
 
   const getInitials = (name: string | null) => {
     if (!name) return "U";

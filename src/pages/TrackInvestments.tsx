@@ -19,10 +19,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
-const PRICES: Record<string, number> = {
-  SAFCOM: 17.85, EQTY: 48.50, SCBK: 215.75, BAMB: 38.95, KCB: 38.20,
-  COOP: 16.45, EABL: 165.50, ABSA: 17.10, NCBA: 49.85, BRIT: 5.42, KPLC: 4.18,
-};
+import { getPrice as getSharedPrice } from "@/lib/stockPrices";
 
 type SortKey = "value" | "gain" | "name";
 
@@ -37,7 +34,7 @@ export default function TrackInvestments() {
   const [chartPeriod, setChartPeriod] = useState("1M");
   const [chartMode, setChartMode] = useState<"value" | "performance">("value");
 
-  const getPrice = (symbol: string) => PRICES[symbol] || 50;
+  const getPrice = (symbol: string) => getSharedPrice(symbol);
 
   const stats = useMemo(() => {
     let totalValue = 0, totalCost = 0;
