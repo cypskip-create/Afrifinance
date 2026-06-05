@@ -201,7 +201,7 @@ export default function TrackInvestments() {
           gainPct={stats.gainPct}
         />
 
-        <PortfolioInsights holdings={portfolio} prices={PRICES} />
+        <PortfolioInsights holdings={portfolio} prices={Object.fromEntries(portfolio.map(h => [h.symbol, getPrice(h.symbol)]))} />
 
 
         {/* ── PERFORMANCE CHART ── */}
