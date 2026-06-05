@@ -375,24 +375,6 @@ export default function UserProfile() {
 
           {profileData.bio && <p className="mt-2 text-[14px] leading-snug">{profileData.bio}</p>}
 
-          {/* Compact Performance Badges */}
-          <div className="flex flex-wrap gap-1.5 mt-2">
-            <div className="flex items-center gap-1 bg-bull/10 border border-bull/20 rounded-full px-2 py-0.5">
-              <Target className="h-3 w-3 text-bull" />
-              <span className="text-[11px] font-bold text-bull">{performanceStats.winRate}%</span>
-              <span className="text-[10px] text-bull/70">Win</span>
-            </div>
-            <div className="flex items-center gap-1 bg-primary/10 border border-primary/20 rounded-full px-2 py-0.5">
-              <TrendingUp className="h-3 w-3 text-primary" />
-              <span className="text-[11px] font-bold text-primary">+{performanceStats.avgReturn}%</span>
-              <span className="text-[10px] text-primary/70">Avg</span>
-            </div>
-            <div className="flex items-center gap-1 bg-accent/10 border border-accent/20 rounded-full px-2 py-0.5">
-              <Award className="h-3 w-3 text-accent" />
-              <span className="text-[11px] font-bold text-accent">{performanceStats.streak}🔥</span>
-            </div>
-          </div>
-
           {/* Location + join date — X-sized */}
           <div className="flex items-center gap-3 mt-2 text-[13px] text-muted-foreground flex-wrap">
             <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />Kenya</span>
