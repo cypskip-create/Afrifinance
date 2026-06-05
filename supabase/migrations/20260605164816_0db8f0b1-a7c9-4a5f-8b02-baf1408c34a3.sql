@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS tradershub_onboarded boolean NOT NULL DEFAULT false;

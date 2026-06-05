@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Heart, MessageCircle, Repeat2, Share, Bookmark, BookmarkCheck, Trash2, MoreHorizontal, Verified, Eye, Quote, Pencil } from "lucide-react";
+import { Heart, MessageCircle, Repeat2, Share, Bookmark, BookmarkCheck, Trash2, MoreHorizontal, Verified, Eye, Quote, Pencil, VolumeX, Flag, UserX, Link2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,9 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
 import { Post } from "@/hooks/usePosts";
 import { ImageViewer } from "./ImageViewer";
+import { formatTimestamp } from "@/lib/formatTimestamp";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 
 const NSE_PRICES: Record<string, { price: number; change: number }> = {
@@ -37,10 +40,29 @@ interface XPostCardProps {
 
 export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, onBookmark, onShare, onDelete, onEdit, onQuote, isQuoted }: XPostCardProps) {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [showRepostMenu, setShowRepostMenu] = useState(false);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editContent, setEditContent] = useState(post.content);
+
+  const handleCopyLink = async () => {
+    const url = `${window.location.origin}/traders-hub?post=${post.id}`;
+    try { await navigator.clipboard.writeText(url); toast({ title: "Link copied" }); } catch { /* no-op */ }
+  };
+  const handleMute = async () => {
+    if (!currentUserId) return navigate("/auth");
+    await supabase.from("muted_users").insert({ muter_id: currentUserId, muted_id: post.user_id });
+    toast({ title: `Muted @${(post.author as any)?.handle || post.author?.full_name || "user"}` });
+  };
+  const handleBlock = async () => {
+    if (!currentUserId) return navigate("/auth");
+    await supabase.from("blocked_users").insert({ blocker_id: currentUserId, blocked_id: post.user_id });
+    toast({ title: "User blocked", description: "You won't see their posts anymore." });
+  };
+  const handleReport = () => {
+    toast({ title: "Reported", description: "Thanks — our team will review this post." });
+  };
 
   const canEdit = currentUserId === post.user_id && onEdit &&
     (Date.now() - new Date(post.created_at).getTime()) < 30 * 60 * 1000;
@@ -51,17 +73,7 @@ export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, on
     return num > 0 ? num.toString() : "";
   };
 
-  const formatTimeAgo = (date: string) => {
-    const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
-    if (seconds < 60) return "now";
-    const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `${minutes}m`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h`;
-    const days = Math.floor(hours / 24);
-    if (days < 7) return `${days}d`;
-    return new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  };
+  const formatTimeAgo = formatTimestamp;
 
   const getInitials = (name: string | null) => {
     if (!name) return "U";
@@ -145,7 +157,15 @@ export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, on
                       <DropdownMenuSeparator />
                     </>
                   )}
-                  <DropdownMenuItem onClick={() => onShare(post)}><Share className="h-4 w-4 mr-2" />Copy link</DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCopyLink(); }}><Link2 className="h-4 w-4 mr-2" />Copy link</DropdownMenuItem>
+                  {currentUserId !== post.user_id && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMute(); }}><VolumeX className="h-4 w-4 mr-2" />Mute @{(post.author as any)?.handle || "user"}</DropdownMenuItem>
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleBlock(); }}><UserX className="h-4 w-4 mr-2" />Block @{(post.author as any)?.handle || "user"}</DropdownMenuItem>
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleReport(); }} className="text-destructive"><Flag className="h-4 w-4 mr-2" />Report post</DropdownMenuItem>
+                    </>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>

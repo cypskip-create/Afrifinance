@@ -24,6 +24,7 @@ import { usePosts } from "@/hooks/usePosts";
 import { getTimeBasedGreeting } from "@/utils/timeGreeting";
 import { SparklineChart } from "@/components/shared/SparklineChart";
 import { MarketStatusIndicator } from "@/components/shared/MarketStatusIndicator";
+import { computePortfolioStats } from "@/lib/stockPrices";
 
 export default function Home() {
   const { user } = useAuth();
@@ -47,11 +48,8 @@ export default function Home() {
     localStorage.setItem('home-widgets', JSON.stringify(newWidgets));
   };
 
-  const prices: Record<string, number> = { SAFCOM: 12.85, EQTY: 62.50, KCB: 45.30, COOP: 15.20, SCBK: 185.00, BAMB: 89.75 };
-  const portfolioValue = portfolio.reduce((s, h) => s + (prices[h.symbol] || h.avg_cost) * h.shares, 0);
-  const portfolioCost = portfolio.reduce((s, h) => s + h.avg_cost * h.shares, 0);
-  const portfolioGain = portfolioValue - portfolioCost;
-  const portfolioGainPct = portfolioCost > 0 ? (portfolioGain / portfolioCost) * 100 : 0;
+  // Use centralized prices so the home snapshot matches the Portfolio page exactly.
+  const { totalValue: portfolioValue, totalGain: portfolioGain, gainPct: portfolioGainPct } = computePortfolioStats(portfolio);
 
   const nseIndices = [
     { name: "NSE 20", value: "1,847", change: 1.2, isUp: true },

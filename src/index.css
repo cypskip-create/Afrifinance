@@ -150,7 +150,7 @@
   body {
     @apply bg-background text-foreground;
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-    font-size: 12.5px;
+    font-size: calc(12.5px * var(--app-font-scale, 1));
     line-height: 1.55;
     overscroll-behavior-y: contain;
     -webkit-overflow-scrolling: touch;
@@ -353,7 +353,7 @@
   .marquee-container { @apply flex overflow-hidden; }
   .marquee-content {
     @apply flex;
-    animation: marquee 90s linear infinite;
+    animation: marquee 140s linear infinite;
   }
   .marquee-container:hover .marquee-content { animation-play-state: paused; }
 

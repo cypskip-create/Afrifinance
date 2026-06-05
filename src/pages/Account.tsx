@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { User, Settings, CreditCard, Users, Bell, Shield, Crown, Zap, LogOut, ChevronRight, Smartphone, Globe, HelpCircle, FileText, Star, Eye, EyeOff, Check } from "lucide-react";
+import { User, Settings, CreditCard, Users, Bell, Shield, Crown, Zap, LogOut, ChevronRight, Smartphone, Globe, HelpCircle, FileText, Star, Eye, EyeOff, Check, Type } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +39,12 @@ export default function Account() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [portfolioPublic, setPortfolioPublic] = useState(true);
+  const [fontScale, setFontScale] = useState<string>(() => localStorage.getItem("app_font_scale") || "1");
+
+  useEffect(() => {
+    document.documentElement.style.setProperty("--app-font-scale", fontScale);
+    localStorage.setItem("app_font_scale", fontScale);
+  }, [fontScale]);
 
   // Sync from profile
   useEffect(() => {
@@ -225,6 +231,37 @@ export default function Account() {
                 </div>
               </div>
               <Switch defaultChecked />
+            </div>
+            <Separator />
+            <div className="py-2">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="h-9 w-9 rounded-lg bg-muted/50 flex items-center justify-center"><Type className="h-4 w-4" /></div>
+                <div className="flex-1">
+                  <div className="font-medium text-sm">Font Size</div>
+                  <div className="text-xs text-muted-foreground">Adjust the app's text size</div>
+                </div>
+              </div>
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { label: "S", val: "0.9" },
+                  { label: "M", val: "1" },
+                  { label: "L", val: "1.1" },
+                  { label: "XL", val: "1.2" },
+                ].map(opt => (
+                  <button
+                    key={opt.val}
+                    onClick={() => setFontScale(opt.val)}
+                    className={`h-10 rounded-xl border font-bold transition-all ${
+                      fontScale === opt.val
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-muted/30 border-border hover:bg-muted/60"
+                    }`}
+                    style={{ fontSize: `${parseFloat(opt.val) * 14}px` }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </CardContent>
         </Card>

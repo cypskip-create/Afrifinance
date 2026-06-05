@@ -520,6 +520,7 @@ export type Database = {
           id: string
           portfolio_public: boolean | null
           subscription_plan: string | null
+          tradershub_onboarded: boolean
           updated_at: string
           user_id: string
         }
@@ -536,6 +537,7 @@ export type Database = {
           id?: string
           portfolio_public?: boolean | null
           subscription_plan?: string | null
+          tradershub_onboarded?: boolean
           updated_at?: string
           user_id: string
         }
@@ -552,6 +554,7 @@ export type Database = {
           id?: string
           portfolio_public?: boolean | null
           subscription_plan?: string | null
+          tradershub_onboarded?: boolean
           updated_at?: string
           user_id?: string
         }
