@@ -1,58 +1,81 @@
+## Scope
 
-# AfriFinance Restructure — Simply Wall St Inspired
+This batch of changes spans 5 areas of the app. I'll address each from the notes (ignoring the crossed-out items about rooms and Discover top-traders replacement).
 
-Much of the skeleton is already in place (6-tab nav with Alerts, 9-tab stock page, AfriFinance Score, contextual news, threaded replies). This plan focuses on the gaps: **interactive analysis tools inside every stock tab**, a sharper home command center, and removing the News tab from navigation.
+---
 
-## 1. Bottom Navigation
-- Remove `Learn`, `Rooms`, `News` from `/news`, `/learn`, `/rooms` route exposure in `BottomNavigation.tsx` (already done — verify) and keep: Home, Markets, Portfolio, TradersHub, Alerts, Profile.
-- Hide the standalone `/news` route from menus everywhere it still appears (TopBar, Discover sidebar, etc.).
+### 1. TradersHub polish
+- **Handle (@username) sync**: Show the user's actual handle consistently across compose, post card header, profile header, and comment sheet (currently sometimes lags / falls back).
+- **Loading delays**: Add skeleton-first render + memoize feed query so posts appear immediately.
+- **The `:` (more) menu**: Replace placeholder kebab menu with real actions — Copy link, Mute user, Block, Report, and (own post) Edit/Delete.
+- **Profile page cleanup**: Remove Win Rate, Avg Gain, and Streak stat tiles; keep Posts / Followers / Following / Portfolio P&L.
+- **Timestamp format**: 
+  - `< 1m` → "now"
+  - `< 60m` → "Xm"
+  - `< 24h` → "Xh" (e.g. 1h, 2h, 10h, 22h)
+  - `< 7d` → "Xd"
+  - else → "MMM D" (or "MMM D, YYYY" if not current year)
+  - Apply on post cards, comments, notifications.
+- **Disclaimer trigger**: Show TradersHub disclaimer ONLY on first-ever visit after signup (persist `tradershub_onboarded` flag on profile). Remove it from every-session gate.
+- **Editable banner + profile picture**: Add banner_url + raise avatar overlap (X-style: avatar sits below banner, half-overlapping, with edit pencil). Hook into `EditProfileDialog` with image upload to storage.
+- **TradersHub onboarding flow**: First-time TradersHub click → modal wizard (handle → display name → bio → avatar → banner → disclaimer accept) → creates social profile.
 
-## 2. Stock Analysis Page — Interactive Tools
-Replace text-only tab content in `src/pages/StockDetail.tsx` with real interactive widgets. Create one component per tab under `src/components/stock/tabs/`:
+### 2. Account page
+- Add **Font Size** setting (Small / Default / Large / X-Large) — applied via CSS variable `--app-font-scale` on `<html>`, persisted in localStorage.
 
-- **OverviewTab** — price/sector cards + AI thesis (existing) + mini sparkline of 1Y.
-- **ValuationTab** — Fair Value vs Price **gauge** (semi-circle SVG), P/E / P/B / EV-EBITDA comparison **bar chart** vs sector avg, discount % pill.
-- **GrowthTab** — Revenue + Earnings **bar chart** (5Y history + 3Y forecast) using Recharts, growth-rate vs sector **horizontal bars**.
-- **FinancialHealthTab** — Cash vs Debt **stacked bar**, checklist (5 health checks with ✓/✗/⚠ icons), operating cash flow **area chart**.
-- **DividendsTab** — Yield gauge, dividend-per-share **line chart** (10Y), payout-ratio progress bar, sustainability checklist.
-- **OwnershipTab** — Ownership breakdown **pie chart** (Insider / Institutional / Public / Other), top-shareholders **table**.
-- **RiskTab** — Risk radar (reuse Snowflake style) + plain-language risk **list** with severity badges.
-- **NewsEventsTab** — recent headlines list, earnings/dividend calendar, AI-summary card (uses existing stock-thesis edge function `mode: news_summary`).
-- **CommunityTab** — TradersHub posts filtered by `$SYMBOL` + bullish/bearish sentiment bar.
+### 3. Global font sizing
+- Normalize base font to match TradersHub feel (~15px on mobile, 14px previously). Wire `--app-font-scale` so the Account setting scales everything.
 
-All widgets are **mobile-first**, use Recharts (already in deps) and existing design tokens. Mock data lives in a single `src/data/stockFundamentals.ts` keyed by symbol so it stays consistent.
+### 4. Markets page — add interactive tools
+Add a tools strip above the stock list:
+- **Stock Screener** (already exists at `/screener` — surface a prominent entry card + inline mini-screener with sector / market cap / P/E / dividend yield filters).
+- **Compare Stocks** (existing `/compare` — surface).
+- **Sector Heatmap** (new, inline) — clickable tiles colored by % change, size by market cap.
+- **Top Gainers / Losers / Most Active** tabs.
+- **Market Movers carousel** with sparklines.
+- **Economic Calendar** mini widget (reuse existing component).
+- **Currency Converter** (reuse existing).
+- All interactive (filters, sort, click-through to stock pages).
 
-## 3. Home Command Center
-Extend `CommandCenterSections.tsx` to match the requested order:
-1. Greeting + market sentiment + NSE 20 movement + day summary (top hero strip).
-2. My Portfolio card (compact value + chart).
-3. Watchlist Movers.
-4. Undervalued / High-Growth / Dividends (already there).
-5. Upcoming Earnings / Dividends (already there).
-6. Major Market Events (new compact card).
-7. Trending TradersHub Topics (new — pull top hashtags from posts).
-8. AI Insight of the Day (already there).
+### 5. Home page ↔ Portfolio sync
+- The "Portfolio Snapshot" widget on Home reads from same `usePortfolio` source as `/portfolio` — fix it to use the canonical total value (cost basis + unrealised P&L computed identically), so both pages show the same number.
 
-## 4. Contextual News
-- Confirm `/news` is not linked anywhere user-facing (remove links from TopBar, Discover, Home if present).
-- Stock page already surfaces news inside the News & Events tab (improved in step 2).
-- Add a small "Latest on your holdings" news strip on Home and inside `TrackInvestments` (pulls from the same mock news source keyed by user's portfolio symbols).
+### 6. Stock chart — TradingView-style line chart
+Replace `StockPriceChart` / `EnhancedStockChart` default view with a clean TradingView-style line:
+- Thin (1.5px) crisp line, subtle vertical gridlines only, no area fill on default mode.
+- Right-side price axis with floating last-price tag (colored pill at current price).
+- Horizontal crosshair with date+price labels on both axes when hovering/scrubbing.
+- Smooth pan/zoom via wheel + drag.
+- Timeframe pills: 1D · 5D · 1M · 3M · 6M · YTD · 1Y · 5Y · ALL.
+- "Advanced" toggle reveals candlestick + indicators (existing).
+- Built with Recharts + lightweight overlays to mimic TradingView aesthetic.
 
-## 5. Alerts Page Polish
-Group `Notifications.tsx` items into Simply Wall St-style sections: Earnings, Dividends, Valuation, Price, Analyst, Portfolio, Watchlist. Keep existing notification backend.
+---
 
-## 6. TradersHub Replies
-Already nested with thread lines + collapse via `XCommentSheet.tsx`. No structural change needed; verify $TICKER tags render in replies.
+## Technical notes
 
-## Technical Notes
-- No DB migrations required — all new widgets are presentational using mock fundamentals (clearly marked) so they ship immediately and can be wired to a real data source later.
-- Recharts is already installed.
-- Files created: `src/data/stockFundamentals.ts` + 9 files under `src/components/stock/tabs/`.
-- Files edited: `src/pages/StockDetail.tsx`, `src/components/home/CommandCenterSections.tsx`, `src/pages/Home.tsx`, `src/pages/Notifications.tsx`, `src/components/shared/TopBar.tsx` (remove News links), `src/components/layout/BottomNavigation.tsx` (verify).
+- **Storage**: Need a `profile-media` Supabase storage bucket (public read) for avatars + banners if not present.
+- **DB**: Add `banner_url`, `handle`, `tradershub_onboarded` columns on `profiles` if missing. Migration required.
+- **Font scaling**: `html { font-size: calc(15px * var(--app-font-scale, 1)); }` then rem-based throughout.
+- **Timestamp**: Centralize in `src/lib/formatTimestamp.ts` and use everywhere.
+- **Chart**: New `TradingViewLineChart.tsx` using Recharts `LineChart` with custom `<Tooltip>`, `<ReferenceLine>` for last price, custom axis tick.
+- **Markets tools**: New `src/components/markets/MarketTools.tsx` aggregator + `SectorHeatmapInline.tsx`.
+- **Portfolio sync**: Audit `usePortfolio` hook, ensure Home's snapshot widget calls the same selector (`totalValue`, `totalPnL`).
 
-## Scope Out (for follow-up)
-- Real fundamentals API integration (currently mock).
-- Per-stock AI news summaries beyond what stock-thesis already supports.
-- Drag-and-drop home widget reordering (already exists via WidgetManager).
+---
 
-Shall I proceed with the full build?
+## Execution order
+
+1. DB migration (profile fields + storage bucket)
+2. Timestamp utility + apply across post/comment/notification
+3. TradersHub disclaimer gating → first-time only
+4. TradersHub onboarding wizard
+5. Profile page: remove stats, add editable banner + raised avatar
+6. Post `:` menu actions
+7. Handle sync fix
+8. Account: font-size setting + global CSS scale
+9. Portfolio sync fix
+10. TradingView-style chart
+11. Markets page tools
+
+This is large — I'll work through it in sequence and verify the build after each major section.
