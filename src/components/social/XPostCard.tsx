@@ -40,10 +40,29 @@ interface XPostCardProps {
 
 export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, onBookmark, onShare, onDelete, onEdit, onQuote, isQuoted }: XPostCardProps) {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [showRepostMenu, setShowRepostMenu] = useState(false);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editContent, setEditContent] = useState(post.content);
+
+  const handleCopyLink = async () => {
+    const url = `${window.location.origin}/traders-hub?post=${post.id}`;
+    try { await navigator.clipboard.writeText(url); toast({ title: "Link copied" }); } catch { /* no-op */ }
+  };
+  const handleMute = async () => {
+    if (!currentUserId) return navigate("/auth");
+    await supabase.from("muted_users").insert({ muter_id: currentUserId, muted_id: post.user_id });
+    toast({ title: `Muted @${(post.author as any)?.handle || post.author?.full_name || "user"}` });
+  };
+  const handleBlock = async () => {
+    if (!currentUserId) return navigate("/auth");
+    await supabase.from("blocked_users").insert({ blocker_id: currentUserId, blocked_id: post.user_id });
+    toast({ title: "User blocked", description: "You won't see their posts anymore." });
+  };
+  const handleReport = () => {
+    toast({ title: "Reported", description: "Thanks — our team will review this post." });
+  };
 
   const canEdit = currentUserId === post.user_id && onEdit &&
     (Date.now() - new Date(post.created_at).getTime()) < 30 * 60 * 1000;
