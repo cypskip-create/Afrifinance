@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { User, Settings, CreditCard, Users, Bell, Shield, Crown, Zap, LogOut, ChevronRight, Smartphone, Globe, HelpCircle, FileText, Star, Eye, EyeOff, Check } from "lucide-react";
+import { User, Settings, CreditCard, Users, Bell, Shield, Crown, Zap, LogOut, ChevronRight, Smartphone, Globe, HelpCircle, FileText, Star, Eye, EyeOff, Check, Type } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +39,12 @@ export default function Account() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [portfolioPublic, setPortfolioPublic] = useState(true);
+  const [fontScale, setFontScale] = useState<string>(() => localStorage.getItem("app_font_scale") || "1");
+
+  useEffect(() => {
+    document.documentElement.style.setProperty("--app-font-scale", fontScale);
+    localStorage.setItem("app_font_scale", fontScale);
+  }, [fontScale]);
 
   // Sync from profile
   useEffect(() => {
