@@ -98,18 +98,10 @@ export function XComposeModal({ open, onOpenChange, user, profile, onPost, portf
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg p-0 gap-0 rounded-2xl overflow-hidden border-border">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+        {/* Header — single close button on the right */}
+        <div className="flex items-center justify-end px-4 py-3 border-b border-border">
           <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => onOpenChange(false)} data-small-target>
             <X className="h-5 w-5" />
-          </Button>
-          <Button
-            size="sm"
-            className="rounded-full px-5 h-9 font-bold bg-primary text-primary-foreground hover:bg-primary/90"
-            disabled={(!content.trim() && !selectedImage && !attachedPL && !attachedPortfolio) || isPosting || charCount > maxChars}
-            onClick={handlePost}
-          >
-            {isPosting ? <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" /> : "Post"}
           </Button>
         </div>
 

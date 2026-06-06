@@ -192,24 +192,24 @@ export default function StockDetail() {
             ))}
           </div>
           <Card className="soft-card overflow-hidden">
-            <CardContent className="p-3">
-              <div className="h-56">
+            <CardContent className="p-2">
+              <div className="h-72">
                 <StockPriceChart symbol={symbol} timeframe={selectedTimeframe} onHoverPrice={handleChartHover} />
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Quick Actions */}
+        {/* Quick Actions — compact pill row */}
         <div className="grid grid-cols-3 gap-2">
           {[
             { icon: Bell, label: "Alert", action: () => setShowAlertsDialog(true), color: "bg-accent/10 text-accent" },
             { icon: GitCompare, label: "Compare", action: () => navigate(`/compare?stock=${symbol}`), color: "bg-chart-3/10 text-chart-3" },
             { icon: MessageSquare, label: "Discuss", action: () => navigate(`/traders-hub?compose=true&ticker=${symbol}`), color: "bg-chart-4/10 text-chart-4" },
           ].map(btn => (
-            <Button key={btn.label} variant="ghost" className={`h-14 flex-col gap-1 rounded-2xl ${btn.color} tap-scale`} onClick={btn.action}>
-              <btn.icon className="h-5 w-5" />
-              <span className="text-[10px] font-semibold">{btn.label}</span>
+            <Button key={btn.label} variant="ghost" className={`h-9 flex-row gap-1.5 rounded-full ${btn.color} tap-scale`} onClick={btn.action}>
+              <btn.icon className="h-3.5 w-3.5" />
+              <span className="text-[11px] font-semibold">{btn.label}</span>
             </Button>
           ))}
         </div>
