@@ -14,7 +14,6 @@ interface StockPriceChartProps {
 }
 
 const generateMockData = (timeframe: string, symbol: string = "STK") => {
-  // Seeded for stable per-symbol curves
   let seed = 0;
   for (let i = 0; i < symbol.length; i++) seed += symbol.charCodeAt(i);
   const rand = (() => { let s = seed; return () => { s = (s * 9301 + 49297) % 233280; return s / 233280; }; })();
@@ -74,7 +73,6 @@ const generateMockData = (timeframe: string, symbol: string = "STK") => {
   return dataPoints;
 };
 
-// TradingView-style floating tooltip: black pill with price + date
 const TVTooltip = ({ active, payload }: any) => {
   if (active && payload?.length) {
     const d = payload[0].payload;
@@ -88,29 +86,12 @@ const TVTooltip = ({ active, payload }: any) => {
   return null;
 };
 
-// Custom right-side last-price pill, rendered via Recharts label.
-const LastPriceLabel = ({ viewBox, value, color }: any) => {
-  if (!viewBox) return null;
-  const { x, y } = viewBox;
-  const text = value.toFixed(2);
-  const w = Math.max(46, text.length * 8 + 12);
-  return (
-    <g transform={`translate(${x - w}, ${y - 9})`}>
-      <rect width={w} height={18} rx={3} fill={color} />
-      <text x={w / 2} y={13} textAnchor="middle" fontSize={11} fontWeight={700} fill="#fff" className="tabular-nums">
-        {text}
-      </text>
-    </g>
-  );
-};
-
 export const StockPriceChart = ({ symbol = "STK", timeframe, onHoverPrice }: StockPriceChartProps) => {
   const [advanced, setAdvanced] = useState(false);
   const [showVolume, setShowVolume] = useState(false);
   const [showSMA20, setShowSMA20] = useState(false);
   const [showSMA50, setShowSMA50] = useState(false);
   const [showBB, setShowBB] = useState(false);
-  const [showGrid, setShowGrid] = useState(true);
 
   const data = useMemo(() => generateMockData(timeframe, symbol), [timeframe, symbol]);
   const firstPrice = data[0]?.price || 0;
@@ -126,166 +107,124 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, onHoverPrice }: Sto
   }, [onHoverPrice]);
   const handleMouseLeave = useCallback(() => { if (onHoverPrice) onHoverPrice(null, null); }, [onHoverPrice]);
 
-  // ── TradingView-style simple line ──
+  // ── Simple (TradingView-style) line ──
   if (!advanced) {
     return (
-      <div className="space-y-2">
-        <div className="flex items-center justify-end gap-1.5">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-[10px] rounded-full font-semibold gap-1 text-muted-foreground"
-            onClick={() => setShowGrid(!showGrid)}
-          >
-            Grid
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 text-[10px] rounded-full font-semibold gap-1"
-            onClick={() => setAdvanced(true)}
-          >
-            <Activity className="h-3 w-3" />Advanced
-          </Button>
-        </div>
+      <div className="relative h-full w-full">
+        {/* Small Advanced toggle pinned top-left over chart */}
+        <Button
+          variant="outline"
+          size="sm"
+          className="absolute top-1 left-1 z-10 h-6 px-2 text-[10px] rounded-full font-semibold gap-1 bg-background/80 backdrop-blur-sm"
+          onClick={() => setAdvanced(true)}
+        >
+          <Activity className="h-2.5 w-2.5" />Advanced
+        </Button>
 
-        <div className="h-full w-full" style={{ minHeight: 240 }}>
-          <ResponsiveContainer width="100%" height={240}>
-            <LineChart
-              data={data}
-              margin={{ top: 10, right: 56, left: 0, bottom: 18 }}
-              onMouseMove={handleMouseMove}
-              onMouseLeave={handleMouseLeave}
-            >
-              {showGrid && (
-                <CartesianGrid
-                  stroke="hsl(var(--border))"
-                  strokeOpacity={0.35}
-                  strokeDasharray="0"
-                  vertical={true}
-                  horizontal={true}
-                />
-              )}
-              <XAxis
-                dataKey="date"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                minTickGap={48}
-              />
-              <YAxis
-                orientation="right"
-                domain={[minPrice - padding, maxPrice + padding]}
-                axisLine={false}
-                tickLine={false}
-                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                width={50}
-                tickFormatter={(v) => v.toFixed(2)}
-              />
-              <Tooltip
-                content={<TVTooltip />}
-                cursor={{
-                  stroke: "hsl(var(--foreground))",
-                  strokeWidth: 1,
-                  strokeDasharray: "3 3",
-                  strokeOpacity: 0.5,
-                }}
-              />
-              <ReferenceLine
-                y={lastPrice}
-                stroke={lineColor}
-                strokeWidth={1}
-                strokeDasharray="2 4"
-                label={<LastPriceLabel value={lastPrice} color={lineColor} />}
-              />
-              <Line
-                type="linear"
-                dataKey="price"
-                stroke={lineColor}
-                strokeWidth={1.6}
-                dot={false}
-                activeDot={{ r: 4, fill: lineColor, stroke: "hsl(var(--background))", strokeWidth: 2 }}
-                isAnimationActive={false}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart
+            data={data}
+            margin={{ top: 8, right: 4, left: 0, bottom: 4 }}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+          >
+            <CartesianGrid stroke="hsl(var(--border))" strokeOpacity={0.3} vertical horizontal />
+            <XAxis
+              dataKey="date"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+              minTickGap={48}
+            />
+            <YAxis
+              orientation="right"
+              domain={[minPrice - padding, maxPrice + padding]}
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+              width={44}
+              tickFormatter={(v) => v.toFixed(2)}
+              mirror={false}
+            />
+            <Tooltip
+              content={<TVTooltip />}
+              cursor={{
+                stroke: "hsl(var(--foreground))",
+                strokeWidth: 1,
+                strokeDasharray: "3 3",
+                strokeOpacity: 0.5,
+              }}
+            />
+            <ReferenceLine
+              y={lastPrice}
+              stroke={lineColor}
+              strokeWidth={1}
+              strokeDasharray="2 4"
+            />
+            <Line
+              type="linear"
+              dataKey="price"
+              stroke={lineColor}
+              strokeWidth={1.6}
+              dot={false}
+              activeDot={{ r: 4, fill: lineColor, stroke: "hsl(var(--background))", strokeWidth: 2 }}
+              isAnimationActive={false}
+            />
+          </LineChart>
+        </ResponsiveContainer>
       </div>
     );
   }
 
-  // ── Advanced mode (indicators) ──
+  // ── Advanced ──
   const gradientId = `colorPrice-${symbol}-${timeframe}-adv`;
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between flex-wrap gap-1.5">
+    <div className="relative h-full w-full">
+      <div className="absolute top-1 left-1 right-1 z-10 flex items-center justify-between gap-1">
         <div className="flex items-center gap-1 flex-wrap">
-          <Badge variant={showVolume ? "default" : "outline"} className="text-[10px] cursor-pointer h-5" onClick={() => setShowVolume(!showVolume)}>Vol</Badge>
-          <Badge variant={showSMA20 ? "default" : "outline"} className="text-[10px] cursor-pointer h-5" onClick={() => setShowSMA20(!showSMA20)}>SMA20</Badge>
-          <Badge variant={showSMA50 ? "default" : "outline"} className="text-[10px] cursor-pointer h-5" onClick={() => setShowSMA50(!showSMA50)}>SMA50</Badge>
-          <Badge variant={showBB ? "default" : "outline"} className="text-[10px] cursor-pointer h-5" onClick={() => setShowBB(!showBB)}>BB</Badge>
+          <Badge variant={showVolume ? "default" : "outline"} className="text-[9px] cursor-pointer h-5 bg-background/80 backdrop-blur-sm" onClick={() => setShowVolume(!showVolume)}>Vol</Badge>
+          <Badge variant={showSMA20 ? "default" : "outline"} className="text-[9px] cursor-pointer h-5 bg-background/80 backdrop-blur-sm" onClick={() => setShowSMA20(!showSMA20)}>SMA20</Badge>
+          <Badge variant={showSMA50 ? "default" : "outline"} className="text-[9px] cursor-pointer h-5 bg-background/80 backdrop-blur-sm" onClick={() => setShowSMA50(!showSMA50)}>SMA50</Badge>
+          <Badge variant={showBB ? "default" : "outline"} className="text-[9px] cursor-pointer h-5 bg-background/80 backdrop-blur-sm" onClick={() => setShowBB(!showBB)}>BB</Badge>
         </div>
-        <Button variant="default" size="sm" className="h-7 text-[10px] rounded-full font-semibold gap-1" onClick={() => setAdvanced(false)}>Simple</Button>
+        <Button variant="default" size="sm" className="h-6 px-2 text-[10px] rounded-full font-semibold" onClick={() => setAdvanced(false)}>Simple</Button>
       </div>
 
-      <div style={{ minHeight: 240 }}>
-        <ResponsiveContainer width="100%" height={240}>
-          <ComposedChart
-            data={data}
-            margin={{ top: 10, right: 56, left: 0, bottom: 18 }}
-            onMouseMove={handleMouseMove}
-            onMouseLeave={handleMouseLeave}
-          >
-            <defs>
-              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={lineColor} stopOpacity={0.18} />
-                <stop offset="100%" stopColor={lineColor} stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid stroke="hsl(var(--border))" strokeOpacity={0.35} />
-            <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} minTickGap={48} />
-            <YAxis yAxisId="price" orientation="right" domain={[minPrice - padding, maxPrice + padding]} axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} width={50} tickFormatter={(v) => v.toFixed(2)} />
-            <YAxis yAxisId="volume" hide orientation="left" />
-            <Tooltip content={<TVTooltip />} cursor={{ stroke: "hsl(var(--foreground))", strokeWidth: 1, strokeDasharray: "3 3", strokeOpacity: 0.5 }} />
+      <ResponsiveContainer width="100%" height="100%">
+        <ComposedChart
+          data={data}
+          margin={{ top: 28, right: 4, left: 0, bottom: 4 }}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
+        >
+          <defs>
+            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={lineColor} stopOpacity={0.18} />
+              <stop offset="100%" stopColor={lineColor} stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid stroke="hsl(var(--border))" strokeOpacity={0.3} />
+          <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} minTickGap={48} />
+          <YAxis yAxisId="price" orientation="right" domain={[minPrice - padding, maxPrice + padding]} axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} width={44} tickFormatter={(v) => v.toFixed(2)} />
+          <YAxis yAxisId="volume" hide orientation="left" />
+          <Tooltip content={<TVTooltip />} cursor={{ stroke: "hsl(var(--foreground))", strokeWidth: 1, strokeDasharray: "3 3", strokeOpacity: 0.5 }} />
 
-            {showVolume && <Bar dataKey="volume" yAxisId="volume" fill="hsl(var(--muted))" opacity={0.35} barSize={2} />}
-            {showBB && (
-              <>
-                <Line type="monotone" dataKey="bb_upper" yAxisId="price" stroke="hsl(var(--muted-foreground))" strokeWidth={1} strokeDasharray="3 3" dot={false} />
-                <Line type="monotone" dataKey="bb_lower" yAxisId="price" stroke="hsl(var(--muted-foreground))" strokeWidth={1} strokeDasharray="3 3" dot={false} />
-              </>
-            )}
+          {showVolume && <Bar dataKey="volume" yAxisId="volume" fill="hsl(var(--muted))" opacity={0.35} barSize={2} />}
+          {showBB && (
+            <>
+              <Line type="monotone" dataKey="bb_upper" yAxisId="price" stroke="hsl(var(--muted-foreground))" strokeWidth={1} strokeDasharray="3 3" dot={false} />
+              <Line type="monotone" dataKey="bb_lower" yAxisId="price" stroke="hsl(var(--muted-foreground))" strokeWidth={1} strokeDasharray="3 3" dot={false} />
+            </>
+          )}
 
-            <Area type="linear" dataKey="price" yAxisId="price" stroke={lineColor} strokeWidth={1.6} fill={`url(#${gradientId})`} dot={false} isAnimationActive={false} />
+          <Area type="linear" dataKey="price" yAxisId="price" stroke={lineColor} strokeWidth={1.6} fill={`url(#${gradientId})`} dot={false} isAnimationActive={false} />
 
-            {showSMA20 && <Line type="monotone" dataKey="sma20" yAxisId="price" stroke="#3b82f6" strokeWidth={1.2} dot={false} />}
-            {showSMA50 && <Line type="monotone" dataKey="sma50" yAxisId="price" stroke="#f97316" strokeWidth={1.2} dot={false} />}
+          {showSMA20 && <Line type="monotone" dataKey="sma20" yAxisId="price" stroke="#3b82f6" strokeWidth={1.2} dot={false} />}
+          {showSMA50 && <Line type="monotone" dataKey="sma50" yAxisId="price" stroke="#f97316" strokeWidth={1.2} dot={false} />}
 
-            <ReferenceLine y={lastPrice} yAxisId="price" stroke={lineColor} strokeWidth={1} strokeDasharray="2 4" label={<LastPriceLabel value={lastPrice} color={lineColor} />} />
-          </ComposedChart>
-        </ResponsiveContainer>
-      </div>
-
-      <div className="grid grid-cols-4 gap-2 pt-2 border-t border-border/50">
-        <div className="text-center">
-          <p className="text-[10px] text-muted-foreground">Open</p>
-          <p className="text-xs font-medium">KES {firstPrice.toFixed(2)}</p>
-        </div>
-        <div className="text-center">
-          <p className="text-[10px] text-muted-foreground">High</p>
-          <p className="text-xs font-medium">KES {maxPrice.toFixed(2)}</p>
-        </div>
-        <div className="text-center">
-          <p className="text-[10px] text-muted-foreground">Low</p>
-          <p className="text-xs font-medium">KES {minPrice.toFixed(2)}</p>
-        </div>
-        <div className="text-center">
-          <p className="text-[10px] text-muted-foreground">Signal</p>
-          <Badge variant={isPositive ? "default" : "destructive"} className="text-[10px] px-1">
-            {isPositive ? "Buy" : "Sell"}
-          </Badge>
-        </div>
-      </div>
+          <ReferenceLine y={lastPrice} yAxisId="price" stroke={lineColor} strokeWidth={1} strokeDasharray="2 4" />
+        </ComposedChart>
+      </ResponsiveContainer>
     </div>
   );
 };
