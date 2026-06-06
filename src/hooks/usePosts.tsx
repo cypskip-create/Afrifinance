@@ -76,7 +76,7 @@ export function usePosts() {
 
       // Bulk fetch — eliminate N+1
       const [profilesRes, likesRes, repostsRes, commentsRes, myLikesRes, myRepostsRes, myBookmarksRes] = await Promise.all([
-        supabase.from('profiles_public').select('id, user_id, full_name, avatar_url, bio').in('user_id', userIds),
+       supabase.from('profiles_public').select('id, user_id, full_name, handle, avatar_url, bio').in('user_id', userIds),
         supabase.from('post_likes').select('post_id').in('post_id', postIds),
         supabase.from('post_reposts').select('post_id').in('post_id', postIds),
         supabase.from('post_comments').select('post_id').in('post_id', postIds),
@@ -105,7 +105,7 @@ export function usePosts() {
         const { data: quotedPosts } = await supabase.from('posts').select('*').in('id', quotedIds);
         if (quotedPosts) {
           const qUserIds = [...new Set(quotedPosts.map((p: any) => p.user_id))];
-          const { data: qProfiles } = await supabase.from('profiles_public').select('id, user_id, full_name, avatar_url, bio').in('user_id', qUserIds);
+          const { data: qProfiles } = await supabase.from('profiles_public').select('id, user_id, full_name, handle, avatar_url, bio').in('user_id', qUserIds);
           const qProfileMap = new Map(qProfiles?.map((p: any) => [p.user_id, p]));
           quotedPosts.forEach((qp: any) => quotedMap.set(qp.id, { ...qp, author: qProfileMap.get(qp.user_id) }));
         }
@@ -208,7 +208,7 @@ export function usePosts() {
     const userIds = [...new Set(comments.map((c: any) => c.user_id))];
     const commentIds = comments.map((c: any) => c.id);
     const [profilesRes, likesRes, repostsRes, myLikesRes, myRepostsRes] = await Promise.all([
-      supabase.from('profiles_public').select('id, user_id, full_name, avatar_url, bio').in('user_id', userIds),
+      supabase.from('profiles_public').select('id, user_id, full_name, handle, avatar_url, bio').in('user_id', userIds),
       supabase.from('comment_likes' as any).select('comment_id').in('comment_id', commentIds),
       supabase.from('comment_reposts' as any).select('comment_id').in('comment_id', commentIds),
       user ? supabase.from('comment_likes' as any).select('comment_id').eq('user_id', user.id).in('comment_id', commentIds) : Promise.resolve({ data: [] as any[] }),
