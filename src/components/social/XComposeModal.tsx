@@ -234,9 +234,9 @@ export function XComposeModal({ open, onOpenChange, user, profile, onPost, portf
             )}
           </div>
 
-          {/* Character counter */}
-          {charCount > 0 && (
-            <div className="flex items-center gap-3">
+          {/* Right side: counter + Post button */}
+          <div className="flex items-center gap-2">
+            {charCount > 0 && (
               <div className="relative h-5 w-5">
                 <svg className="h-5 w-5 -rotate-90" viewBox="0 0 20 20">
                   <circle cx="10" cy="10" r="9" fill="none" strokeWidth="2" stroke="hsl(var(--border))" />
@@ -252,8 +252,16 @@ export function XComposeModal({ open, onOpenChange, user, profile, onPost, portf
                   </span>
                 )}
               </div>
-            </div>
-          )}
+            )}
+            <Button
+              size="sm"
+              className="rounded-full px-5 h-9 font-bold bg-primary text-primary-foreground hover:bg-primary/90"
+              disabled={(!content.trim() && !selectedImage && !attachedPL && !attachedPortfolio) || isPosting || charCount > maxChars}
+              onClick={handlePost}
+            >
+              {isPosting ? <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" /> : "Post"}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

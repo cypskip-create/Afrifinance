@@ -20,16 +20,21 @@ export function MainLayout() {
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (!pulling || refreshing) return;
     const diff = e.touches[0].clientY - startY.current;
-    if (diff > 0 && scrollRef.current && scrollRef.current.scrollTop <= 0) {
-      setPullDistance(Math.min(diff * 0.4, 80));
+    // Require a meaningful pull before showing indicator, then apply heavy resistance.
+    if (diff > 20 && scrollRef.current && scrollRef.current.scrollTop <= 0) {
+      // Dampened curve: feels like rubber band — slower as it stretches further.
+      const stretched = (diff - 20) * 0.22;
+      setPullDistance(Math.min(stretched, 90));
+    } else if (diff <= 20) {
+      setPullDistance(0);
     }
   }, [pulling, refreshing]);
 
   const handleTouchEnd = useCallback(() => {
-    if (pullDistance > 60 && !refreshing) {
+    // Higher commit threshold so casual scrolls don't trigger refresh.
+    if (pullDistance > 75 && !refreshing) {
       setRefreshing(true);
       setPullDistance(50);
-      // Trigger page refresh
       setTimeout(() => {
         window.location.reload();
       }, 600);
