@@ -36,7 +36,7 @@ export function ProfileSettingsDialog({ open, onOpenChange, currentHandle, portf
   const [prefs, setPrefs] = useState<any>({
     protected_account: false, allow_dms_from: "everyone", allow_tagging: "everyone",
     show_activity_status: true, hide_likes: false,
-    show_sensitive_content: false, autoplay_videos: "wifi", data_saver: false,
+    autoplay_videos: "wifi", data_saver: false,
     theme: "system", font_size: "default", reduce_motion: false, high_contrast: false,
     language: "en", timezone: "Africa/Nairobi",
     notif_likes: true, notif_comments: true, notif_reposts: true, notif_follows: true,
@@ -162,7 +162,7 @@ export function ProfileSettingsDialog({ open, onOpenChange, currentHandle, portf
     { id: "account", label: "Your account", icon: AtSign, desc: "Username, email, password" },
     { id: "privacy", label: "Privacy & safety", icon: Shield, desc: "Audience, tagging, blocked & muted" },
     { id: "notifications", label: "Notifications", icon: Bell, desc: "What alerts you receive" },
-    { id: "content", label: "Content preferences", icon: Eye, desc: "Sensitive content, autoplay, data" },
+    { id: "content", label: "Content preferences", icon: Eye, desc: "Autoplay, data saver" },
     { id: "display", label: "Display", icon: Palette, desc: "Theme, font size" },
     { id: "language", label: "Languages", icon: Languages, desc: "Display language, timezone" },
     { id: "accessibility", label: "Accessibility", icon: Accessibility, desc: "Motion, contrast" },
@@ -279,7 +279,7 @@ export function ProfileSettingsDialog({ open, onOpenChange, currentHandle, portf
           {section === "content" && (
             <div className="space-y-3 pb-4">
               <Header title="Content preferences" />
-              <Row icon={<AlertCircle className="h-4 w-4" />} title="Show sensitive content" desc="Display media that may be sensitive" checked={prefs.show_sensitive_content} onChange={(v) => togglePref("show_sensitive_content", v)} />
+              
               <SelectRow label="Autoplay videos" value={prefs.autoplay_videos} options={[["always","Always"],["wifi","Wi-Fi only"],["never","Never"]]} onChange={(v) => togglePref("autoplay_videos", v)} />
               <Row icon={<Database className="h-4 w-4" />} title="Data saver" desc="Lower image quality to save data" checked={prefs.data_saver} onChange={(v) => togglePref("data_saver", v)} />
             </div>
