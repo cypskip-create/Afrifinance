@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Logo } from "./Logo";
+import { useNotifications } from "@/hooks/useNotifications";
 
 interface TopBarProps {
   title: string;
@@ -24,6 +25,7 @@ export function TopBar({
   const location = useLocation();
   const [searchOpen, setSearchOpen] = useState(!!initialSearchQuery);
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
+  const { unreadCount } = useNotifications();
 
   const handleSearchSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -76,7 +78,11 @@ export function TopBar({
           {showNotifications && (
             <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full relative" onClick={() => navigate('/notifications')}>
               <Bell className="h-[18px] w-[18px]" />
-              <span className="absolute top-2 right-2.5 w-2 h-2 bg-accent rounded-full" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1.5 min-w-[16px] h-[16px] px-1 bg-primary text-primary-foreground text-[9px] font-bold rounded-full flex items-center justify-center">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
             </Button>
           )}
         </div>

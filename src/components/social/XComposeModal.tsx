@@ -18,11 +18,13 @@ interface XComposeModalProps {
   onOpenChange: (open: boolean) => void;
   user: { id: string; email?: string } | null;
   profile: { avatar_url?: string | null; full_name?: string | null } | null;
-  onPost: (content: string, imageUrl?: string) => Promise<{ error?: any }>;
+  onPost: (content: string, imageUrl?: string, quotedPostId?: string) => Promise<{ error?: any }>;
   portfolioSnapshot?: PortfolioSnapshot | null;
+  prefillContent?: string;
+  quotedPost?: { id: string; content: string; author?: { full_name: string | null; avatar_url: string | null } | null; created_at: string } | null;
 }
 
-export function XComposeModal({ open, onOpenChange, user, profile, onPost, portfolioSnapshot }: XComposeModalProps) {
+export function XComposeModal({ open, onOpenChange, user, profile, onPost, portfolioSnapshot, prefillContent, quotedPost }: XComposeModalProps) {
   const navigate = useNavigate();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -33,10 +35,17 @@ export function XComposeModal({ open, onOpenChange, user, profile, onPost, portf
   const [isPosting, setIsPosting] = useState(false);
 
   useEffect(() => {
-    if (open && textareaRef.current) {
+    if (open) {
+      if (prefillContent && !content) {
+        setContent(prefillContent);
+      }
       setTimeout(() => textareaRef.current?.focus(), 100);
     }
-  }, [open]);
+  }, [open, prefillContent]);
+
+  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setContent(e.target.value);
+  };
 
   const getInitials = (name: string | null | undefined) => {
     if (!name) return "U";
@@ -69,7 +78,7 @@ export function XComposeModal({ open, onOpenChange, user, profile, onPost, portf
       finalContent += pText;
     }
 
-    const { error } = await onPost(finalContent, selectedImage || undefined);
+    const { error } = await onPost(finalContent, selectedImage || undefined, quotedPost?.id);
     if (!error) {
       setContent("");
       setSelectedImage(null);
@@ -89,18 +98,10 @@ export function XComposeModal({ open, onOpenChange, user, profile, onPost, portf
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg p-0 gap-0 rounded-2xl overflow-hidden border-border">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+        {/* Header — single close button on the right */}
+        <div className="flex items-center justify-end px-4 py-3 border-b border-border">
           <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => onOpenChange(false)} data-small-target>
             <X className="h-5 w-5" />
-          </Button>
-          <Button
-            size="sm"
-            className="rounded-full px-5 h-9 font-bold bg-primary text-primary-foreground hover:bg-primary/90"
-            disabled={(!content.trim() && !selectedImage && !attachedPL && !attachedPortfolio) || isPosting || charCount > maxChars}
-            onClick={handlePost}
-          >
-            {isPosting ? <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" /> : "Post"}
           </Button>
         </div>
 
@@ -113,14 +114,16 @@ export function XComposeModal({ open, onOpenChange, user, profile, onPost, portf
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <textarea
-              ref={textareaRef}
-              placeholder="What's happening in the markets?"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className="w-full bg-transparent border-0 outline-none resize-none text-[17px] leading-[1.4] placeholder:text-muted-foreground/50 min-h-[120px]"
-              maxLength={maxChars + 50}
-            />
+            <div className="relative">
+              <textarea
+                ref={textareaRef}
+                placeholder="What's happening in the markets?"
+                value={content}
+                onChange={handleContentChange}
+                className="w-full bg-transparent border-0 outline-none resize-none text-[17px] leading-[1.4] placeholder:text-muted-foreground/50 min-h-[120px]"
+                maxLength={maxChars + 50}
+              />
+            </div>
 
             {/* Preview image */}
             {selectedImage && (
@@ -174,6 +177,17 @@ export function XComposeModal({ open, onOpenChange, user, profile, onPost, portf
                 </div>
               </div>
             )}
+
+            {/* Quoted post preview */}
+            {quotedPost && (
+              <div className="mt-3 p-3 rounded-2xl border border-border bg-muted/20">
+                <div className="flex items-center gap-1.5 text-[12px]">
+                  <Avatar className="h-5 w-5"><AvatarImage src={quotedPost.author?.avatar_url || ""} /><AvatarFallback className="text-[9px]">{getInitials(quotedPost.author?.full_name)}</AvatarFallback></Avatar>
+                  <span className="font-bold truncate">{quotedPost.author?.full_name || "User"}</span>
+                </div>
+                <p className="text-[13px] mt-1 line-clamp-4 whitespace-pre-wrap">{quotedPost.content}</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -220,9 +234,9 @@ export function XComposeModal({ open, onOpenChange, user, profile, onPost, portf
             )}
           </div>
 
-          {/* Character counter */}
-          {charCount > 0 && (
-            <div className="flex items-center gap-3">
+          {/* Right side: counter + Post button */}
+          <div className="flex items-center gap-2">
+            {charCount > 0 && (
               <div className="relative h-5 w-5">
                 <svg className="h-5 w-5 -rotate-90" viewBox="0 0 20 20">
                   <circle cx="10" cy="10" r="9" fill="none" strokeWidth="2" stroke="hsl(var(--border))" />
@@ -238,8 +252,16 @@ export function XComposeModal({ open, onOpenChange, user, profile, onPost, portf
                   </span>
                 )}
               </div>
-            </div>
-          )}
+            )}
+            <Button
+              size="sm"
+              className="rounded-full px-5 h-9 font-bold bg-primary text-primary-foreground hover:bg-primary/90"
+              disabled={(!content.trim() && !selectedImage && !attachedPL && !attachedPortfolio) || isPosting || charCount > maxChars}
+              onClick={handlePost}
+            >
+              {isPosting ? <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" /> : "Post"}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

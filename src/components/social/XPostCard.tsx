@@ -1,12 +1,17 @@
 import { useState } from "react";
-import { Heart, MessageCircle, Repeat2, Share, Bookmark, BookmarkCheck, Trash2, MoreHorizontal, Verified, Eye, Quote } from "lucide-react";
+import { Heart, MessageCircle, Repeat2, Share, Bookmark, BookmarkCheck, Trash2, MoreHorizontal, Verified, Eye, Quote, Pencil, VolumeX, Flag, UserX, Link2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
 import { Post } from "@/hooks/usePosts";
 import { ImageViewer } from "./ImageViewer";
+import { formatTimestamp } from "@/lib/formatTimestamp";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+
 
 const NSE_PRICES: Record<string, { price: number; change: number }> = {
   SCOM: { price: 12.85, change: 2.4 }, SAFCOM: { price: 12.85, change: 2.4 },
@@ -28,12 +33,39 @@ interface XPostCardProps {
   onBookmark: (postId: string) => void;
   onShare: (post: Post) => void;
   onDelete?: (postId: string) => void;
+  onEdit?: (postId: string, newContent: string) => void;
+  onQuote?: (post: Post) => void;
+  isQuoted?: boolean;
 }
 
-export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, onBookmark, onShare, onDelete }: XPostCardProps) {
+export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, onBookmark, onShare, onDelete, onEdit, onQuote, isQuoted }: XPostCardProps) {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [showRepostMenu, setShowRepostMenu] = useState(false);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editContent, setEditContent] = useState(post.content);
+
+  const handleCopyLink = async () => {
+    const url = `${window.location.origin}/traders-hub?post=${post.id}`;
+    try { await navigator.clipboard.writeText(url); toast({ title: "Link copied" }); } catch { /* no-op */ }
+  };
+  const handleMute = async () => {
+    if (!currentUserId) return navigate("/auth");
+    await supabase.from("muted_users").insert({ muter_id: currentUserId, muted_id: post.user_id });
+    toast({ title: `Muted @${(post.author as any)?.handle || post.author?.full_name || "user"}` });
+  };
+  const handleBlock = async () => {
+    if (!currentUserId) return navigate("/auth");
+    await supabase.from("blocked_users").insert({ blocker_id: currentUserId, blocked_id: post.user_id });
+    toast({ title: "User blocked", description: "You won't see their posts anymore." });
+  };
+  const handleReport = () => {
+    toast({ title: "Reported", description: "Thanks — our team will review this post." });
+  };
+
+  const canEdit = currentUserId === post.user_id && onEdit &&
+    (Date.now() - new Date(post.created_at).getTime()) < 30 * 60 * 1000;
 
   const formatNumber = (num: number) => {
     if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
@@ -41,28 +73,18 @@ export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, on
     return num > 0 ? num.toString() : "";
   };
 
-  const formatTimeAgo = (date: string) => {
-    const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
-    if (seconds < 60) return "now";
-    const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `${minutes}m`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h`;
-    const days = Math.floor(hours / 24);
-    if (days < 7) return `${days}d`;
-    return new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  };
+  const formatTimeAgo = formatTimestamp;
 
   const getInitials = (name: string | null) => {
     if (!name) return "U";
     return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
   };
 
-  const handle = post.author?.full_name?.toLowerCase().replace(/\s+/g, "") || "user";
+  const handle = (post.author as any)?.handle || post.author?.full_name?.toLowerCase().replace(/\s+/g, "") || "user";
   const viewCount = Math.floor(Math.random() * 5000) + 100;
 
   const renderContent = (content: string) => {
-    return content.split(/(\$[A-Z]+|#\w+|@\w+)/g).map((part, i) => {
+    return content.split(/(\$[A-Z]+|#\w+)/g).map((part, i) => {
       if (part.startsWith("$")) {
         const symbol = part.slice(1);
         const priceData = NSE_PRICES[symbol];
@@ -81,9 +103,15 @@ export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, on
         );
       }
       if (part.startsWith("#")) return <span key={i} className="text-primary cursor-pointer hover:underline" onClick={(e) => { e.stopPropagation(); navigate(`/traders-hub?search=${encodeURIComponent(part)}`); }}>{part}</span>;
-      if (part.startsWith("@")) return <span key={i} className="text-primary cursor-pointer hover:underline">{part}</span>;
       return part;
     });
+  };
+
+  const handleSaveEdit = () => {
+    if (onEdit && editContent.trim()) {
+      onEdit(post.id, editContent);
+      setEditOpen(false);
+    }
   };
 
   return (
@@ -103,6 +131,9 @@ export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, on
                 <span className="text-muted-foreground text-sm">@{handle}</span>
                 <span className="text-muted-foreground text-sm">·</span>
                 <span className="text-muted-foreground text-sm shrink-0">{formatTimeAgo(post.created_at)}</span>
+                {(post as any).edited_at && (
+                  <span className="text-muted-foreground text-[11px] italic ml-0.5">(edited)</span>
+                )}
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -111,13 +142,30 @@ export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, on
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48 rounded-xl">
-                  {currentUserId === post.user_id && onDelete && (
+                  {currentUserId === post.user_id && (
                     <>
-                      <DropdownMenuItem onClick={() => onDelete(post.id)} className="text-destructive"><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
+                      {canEdit && (
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setEditContent(post.content); setEditOpen(true); }}>
+                          <Pencil className="h-4 w-4 mr-2" />Edit
+                        </DropdownMenuItem>
+                      )}
+                      {onDelete && (
+                        <DropdownMenuItem onClick={() => onDelete(post.id)} className="text-destructive">
+                          <Trash2 className="h-4 w-4 mr-2" />Delete
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuSeparator />
                     </>
                   )}
-                  <DropdownMenuItem onClick={() => onShare(post)}><Share className="h-4 w-4 mr-2" />Copy link</DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCopyLink(); }}><Link2 className="h-4 w-4 mr-2" />Copy link</DropdownMenuItem>
+                  {currentUserId !== post.user_id && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMute(); }}><VolumeX className="h-4 w-4 mr-2" />Mute @{(post.author as any)?.handle || "user"}</DropdownMenuItem>
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleBlock(); }}><UserX className="h-4 w-4 mr-2" />Block @{(post.author as any)?.handle || "user"}</DropdownMenuItem>
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleReport(); }} className="text-destructive"><Flag className="h-4 w-4 mr-2" />Report post</DropdownMenuItem>
+                    </>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -144,6 +192,22 @@ export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, on
               </div>
             )}
 
+            {/* Quoted post embed (X-style) */}
+            {post.quoted_post && (
+              <div
+                className="mt-3 rounded-2xl border border-border/60 p-3 hover:bg-muted/30 transition-colors"
+                onClick={(e) => { e.stopPropagation(); navigate(`/traders-hub?post=${post.quoted_post!.id}`); }}
+              >
+                <div className="flex items-center gap-1.5 text-[12px]">
+                  <Avatar className="h-5 w-5"><AvatarImage src={post.quoted_post.author?.avatar_url || ""} /><AvatarFallback className="text-[9px]">{getInitials(post.quoted_post.author?.full_name)}</AvatarFallback></Avatar>
+                  <span className="font-bold truncate">{post.quoted_post.author?.full_name || "User"}</span>
+                  <Verified className="h-3 w-3 text-primary fill-primary shrink-0" />
+                  <span className="text-muted-foreground">· {formatTimeAgo(post.quoted_post.created_at)}</span>
+                </div>
+                <p className="text-[13px] mt-1 line-clamp-4 whitespace-pre-wrap">{post.quoted_post.content}</p>
+              </div>
+            )}
+
             {/* Action bar */}
             <div className="flex items-center justify-between mt-3 -ml-2 max-w-[425px]">
               <button className="group flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors" onClick={(e) => { e.stopPropagation(); onComment(post); }} data-small-target>
@@ -160,7 +224,7 @@ export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, on
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-44 rounded-xl">
                   <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onRepost(post.id); setShowRepostMenu(false); }}><Repeat2 className="h-4 w-4 mr-2" />Repost</DropdownMenuItem>
-                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setShowRepostMenu(false); }}><Quote className="h-4 w-4 mr-2" />Quote</DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setShowRepostMenu(false); if (onQuote) onQuote(post); }}><Quote className="h-4 w-4 mr-2" />Quote</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
 
@@ -191,6 +255,25 @@ export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, on
       {post.image_url && (
         <ImageViewer open={imageViewerOpen} onOpenChange={setImageViewerOpen} images={[post.image_url]} />
       )}
+
+      {/* Edit dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-md rounded-2xl p-0 gap-0">
+          <div className="p-4 border-b border-border flex items-center justify-between">
+            <h3 className="font-bold">Edit Post</h3>
+            <Button size="sm" className="rounded-full px-5 font-bold" onClick={handleSaveEdit} disabled={!editContent.trim()}>Save</Button>
+          </div>
+          <div className="p-4">
+            <textarea
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              className="w-full bg-transparent border-0 outline-none resize-none text-[15px] leading-[1.5] min-h-[120px]"
+              maxLength={500}
+            />
+            <p className="text-xs text-muted-foreground mt-2">You can edit posts within 30 minutes of posting.</p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

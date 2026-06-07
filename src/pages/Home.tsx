@@ -1,30 +1,36 @@
 import { useState } from "react";
+import { Crown, MessageCircle, ChevronRight } from "lucide-react";
 import { MorningBrief } from "@/components/home/MorningBrief";
 import { TopMoversLosers } from "@/components/home/TopMoversLosers";
 import { TrendingStocks } from "@/components/home/TrendingStocks";
 import { QuickTradeWidget } from "@/components/home/QuickTradeWidget";
 import { RealtimeWatchlistWidget } from "@/components/home/RealtimeWatchlistWidget";
-import { FearGreedIndex } from "@/components/home/FearGreedIndex";
+import { CommandCenterSections } from "@/components/home/CommandCenterSections";
+
 import { WidgetManager, WidgetConfig, defaultWidgets } from "@/components/home/WidgetManager";
 import { TopBar } from "@/components/shared/TopBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  Search, TrendingUp, LogIn, ChevronRight, ArrowUpRight, ArrowDownRight,
+  Search, TrendingUp, LogIn, ArrowUpRight, ArrowDownRight,
   Wallet, Eye, EyeOff, BarChart3
 } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { usePortfolio } from "@/hooks/usePortfolio";
+import { usePosts } from "@/hooks/usePosts";
 import { getTimeBasedGreeting } from "@/utils/timeGreeting";
 import { SparklineChart } from "@/components/shared/SparklineChart";
 import { MarketStatusIndicator } from "@/components/shared/MarketStatusIndicator";
+import { computePortfolioStats } from "@/lib/stockPrices";
 
 export default function Home() {
   const { user } = useAuth();
   const { profile } = useProfile();
   const { portfolio } = usePortfolio();
+  const { posts } = usePosts();
   const navigate = useNavigate();
   const { greeting } = getTimeBasedGreeting();
   const [widgetManagerOpen, setWidgetManagerOpen] = useState(false);
@@ -42,11 +48,8 @@ export default function Home() {
     localStorage.setItem('home-widgets', JSON.stringify(newWidgets));
   };
 
-  const prices: Record<string, number> = { SAFCOM: 12.85, EQTY: 62.50, KCB: 45.30, COOP: 15.20, SCBK: 185.00, BAMB: 89.75 };
-  const portfolioValue = portfolio.reduce((s, h) => s + (prices[h.symbol] || h.avg_cost) * h.shares, 0);
-  const portfolioCost = portfolio.reduce((s, h) => s + h.avg_cost * h.shares, 0);
-  const portfolioGain = portfolioValue - portfolioCost;
-  const portfolioGainPct = portfolioCost > 0 ? (portfolioGain / portfolioCost) * 100 : 0;
+  // Use centralized prices so the home snapshot matches the Portfolio page exactly.
+  const { totalValue: portfolioValue, totalGain: portfolioGain, gainPct: portfolioGainPct } = computePortfolioStats(portfolio);
 
   const nseIndices = [
     { name: "NSE 20", value: "1,847", change: 1.2, isUp: true },
@@ -160,60 +163,70 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Watchlist */}
-        <div>
-          <div className="flex items-center justify-between mb-2.5">
-            <h3 className="text-sm font-bold flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-primary" />
-              Quick Watch
-            </h3>
-            <Button variant="ghost" size="sm" className="h-7 text-xs text-primary rounded-full px-3" onClick={() => navigate('/watchlist')}>
-              All <ChevronRight className="h-3 w-3 ml-0.5" />
-            </Button>
+        {/* Quick Watch (auto-scrolling) */}
+        {user && <QuickTradeWidget />}
+
+        {/* Upgrade Banner for free users */}
+        {user && profile?.subscription_plan !== 'premium' && (
+          <div className="upgrade-banner" onClick={() => navigate('/account')}>
+            <div className="flex items-center gap-2">
+              <Crown className="h-4 w-4 text-primary" />
+              <div>
+                <p className="text-xs font-semibold">Unlock Premium</p>
+                <p className="text-[10px] text-muted-foreground">Advanced charts, AI insights & more</p>
+              </div>
+            </div>
+            <span className="text-xs font-bold text-primary">KES 999/mo →</span>
           </div>
-          <div className="flex gap-2.5 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-1">
-            {watchlistStocks.map(stock => (
-              <Card key={stock.symbol} className="soft-card min-w-[120px] flex-shrink-0 p-2.5 cursor-pointer active:scale-[0.97] transition-transform" onClick={() => navigate(`/stock/${stock.symbol}`)}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
-                    {stock.symbol.slice(0, 2)}
-                  </div>
-                  <SparklineChart isPositive={stock.change >= 0} width={36} height={16} />
-                </div>
-                <p className="text-xs font-bold">${stock.symbol}</p>
-                <div className="flex items-center justify-between mt-0.5">
-                  <span className="text-[10px] text-muted-foreground">{stock.price}</span>
-                  <span className={`text-[10px] font-semibold ${stock.change >= 0 ? 'text-bull' : 'text-bear'}`}>
-                    {stock.change >= 0 ? '+' : ''}{stock.change}%
-                  </span>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
+        )}
 
         {/* Widgets */}
-        <FearGreedIndex />
-        {user && <QuickTradeWidget />}
         {user && <RealtimeWatchlistWidget />}
         <TrendingStocks />
         <TopMoversLosers />
 
-        {/* Upgrade Banner for Free Users */}
-        {user && (!profile?.subscription_plan || profile.subscription_plan === 'free') && (
-          <Card className="soft-card bg-gradient-to-r from-primary/10 via-accent/5 to-primary/10 border-primary/20 cursor-pointer active:scale-[0.99] transition-transform" onClick={() => navigate('/account')}>
-            <CardContent className="p-3 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-accent/20 flex items-center justify-center shrink-0">
-                <TrendingUp className="h-4 w-4 text-accent" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold">Upgrade to Premium</p>
-                <p className="text-[10px] text-muted-foreground">Advanced charts, AI insights & more — KES 999/mo</p>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-            </CardContent>
-          </Card>
+        {/* Latest from TradersHub */}
+        {posts.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-2.5">
+              <h3 className="text-sm font-bold flex items-center gap-2">
+                <MessageCircle className="h-4 w-4 text-primary" />
+                TradersHub
+              </h3>
+              <Button variant="ghost" size="sm" className="h-7 text-xs text-primary rounded-full px-3" onClick={() => navigate('/traders-hub')}>
+                All <ChevronRight className="h-3 w-3 ml-0.5" />
+              </Button>
+            </div>
+            <div className="space-y-2">
+              {posts.slice(0, 3).map(post => (
+                <Card key={post.id} className="soft-card cursor-pointer active:scale-[0.99] transition-transform" onClick={() => navigate(`/traders-hub?post=${post.id}`)}>
+                  <CardContent className="p-3">
+                    <div className="flex items-start gap-2.5">
+                      <Avatar className="h-8 w-8 shrink-0">
+                        <AvatarImage src={post.author?.avatar_url || ""} />
+                        <AvatarFallback className="bg-primary text-primary-foreground text-[10px]">
+                          {post.author?.full_name?.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) || "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-semibold truncate">{post.author?.full_name || "User"}</span>
+                          <span className="text-[10px] text-muted-foreground shrink-0">
+                            · {Math.floor((Date.now() - new Date(post.created_at).getTime()) / 3600000)}h
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{post.content}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
         )}
+
+        {/* Command Center sections */}
+        <CommandCenterSections />
 
         {/* Quick Actions */}
         <div className="grid grid-cols-2 gap-3">

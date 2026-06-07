@@ -1,397 +1,236 @@
-import { useState } from "react";
-import { 
-  Bell, TrendingUp, TrendingDown, AlertCircle, CheckCircle, Trash2, 
-  Settings, ChevronRight, ArrowLeft, Newspaper, DollarSign, Users, 
-  Zap, Eye, Target
+import { useState, useMemo } from "react";
+import {
+  Bell, Heart, MessageCircle, Repeat2, UserPlus, TrendingUp, TrendingDown,
+  CheckCircle, Trash2, Settings, ChevronRight, ArrowLeft, Newspaper,
+  DollarSign, Users, Zap, Eye, Target
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { useNotifications, AppNotification } from "@/hooks/useNotifications";
+import { useAuth } from "@/hooks/useAuth";
 
-interface Notification {
-  id: number;
-  type: "price-alert" | "news" | "portfolio" | "social" | "system";
-  icon: React.ElementType;
-  title: string;
-  message: string;
-  time: string;
-  read: boolean;
-  color: string;
-  actionUrl?: string;
-  actionLabel?: string;
-}
+const featureMeta: Record<string, { label: string; icon: any; color: string }> = {
+  tradershub: { label: "TradersHub", icon: MessageCircle, color: "text-primary" },
+  social:     { label: "Social",     icon: Users,         color: "text-accent" },
+  alerts:     { label: "Price Alerts", icon: Target,      color: "text-bull" },
+  news:       { label: "News",       icon: Newspaper,     color: "text-primary" },
+  portfolio:  { label: "Portfolio",  icon: DollarSign,    color: "text-bull" },
+  system:     { label: "System",     icon: Zap,           color: "text-accent" },
+};
 
-const notificationCategories = [
-  { id: "all", label: "All", icon: Bell },
-  { id: "price-alert", label: "Alerts", icon: Target },
-  { id: "news", label: "News", icon: Newspaper },
-  { id: "portfolio", label: "Portfolio", icon: DollarSign },
-  { id: "social", label: "Social", icon: Users },
+const typeIcon: Record<string, any> = {
+  like: Heart, comment: MessageCircle, reply: MessageCircle, repost: Repeat2,
+  follow: UserPlus, mention: MessageCircle, alert: Target, news: Newspaper, system: Zap,
+};
+
+const filters = [
+  { id: "all", label: "All" },
+  { id: "tradershub", label: "TradersHub" },
+  { id: "social", label: "Social" },
+  { id: "alerts", label: "Alerts" },
+  { id: "portfolio", label: "Portfolio" },
+  { id: "news", label: "News" },
 ];
+
+function formatTime(date: string) {
+  const s = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
+  if (s < 60) return "now";
+  if (s < 3600) return `${Math.floor(s / 60)}m`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h`;
+  return `${Math.floor(s / 86400)}d`;
+}
 
 export default function Notifications() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { notifications, loading, unreadCount, markAsRead, markAllAsRead, remove, clearAll } = useNotifications();
+  const [activeFilter, setActiveFilter] = useState("all");
   const [showSettings, setShowSettings] = useState(false);
-
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: 1,
-      type: "price-alert",
-      icon: TrendingUp,
-      title: "Price Alert Triggered",
-      message: "EQTY reached your target price of KES 62.50",
-      time: "2 minutes ago",
-      read: false,
-      color: "text-bull",
-      actionUrl: "/stock/EQTY",
-      actionLabel: "View Stock"
-    },
-    {
-      id: 2,
-      type: "price-alert",
-      icon: TrendingDown,
-      title: "Price Alert Triggered",
-      message: "SAFCOM dropped below KES 13.00",
-      time: "1 hour ago",
-      read: false,
-      color: "text-bear",
-      actionUrl: "/stock/SAFCOM",
-      actionLabel: "View Stock"
-    },
-    {
-      id: 3,
-      type: "news",
-      icon: Newspaper,
-      title: "Breaking News",
-      message: "NSE 20 Index hits new monthly high as banking stocks surge",
-      time: "3 hours ago",
-      read: true,
-      color: "text-primary",
-      actionUrl: "/news",
-      actionLabel: "Read More"
-    },
-    {
-      id: 4,
-      type: "portfolio",
-      icon: DollarSign,
-      title: "Dividend Received",
-      message: "You received KES 2,450 dividend from Safaricom",
-      time: "5 hours ago",
-      read: true,
-      color: "text-bull",
-      actionUrl: "/track-investments",
-      actionLabel: "View Portfolio"
-    },
-    {
-      id: 5,
-      type: "portfolio",
-      icon: CheckCircle,
-      title: "Trade Executed",
-      message: "Your buy order for 100 shares of KCB has been executed",
-      time: "1 day ago",
-      read: true,
-      color: "text-primary",
-      actionUrl: "/track-investments",
-      actionLabel: "View Trade"
-    },
-    {
-      id: 6,
-      type: "social",
-      icon: Users,
-      title: "New Follower",
-      message: "TraderKE_Pro started following you",
-      time: "1 day ago",
-      read: true,
-      color: "text-accent",
-      actionUrl: "/traders-hub",
-      actionLabel: "View Profile"
-    },
-    {
-      id: 7,
-      type: "system",
-      icon: Zap,
-      title: "Feature Update",
-      message: "New stock screener filters are now available",
-      time: "2 days ago",
-      read: true,
-      color: "text-accent",
-      actionUrl: "/screener",
-      actionLabel: "Try Now"
-    }
-  ]);
-
-  const [notificationSettings, setNotificationSettings] = useState({
-    priceAlerts: true,
-    newsAlerts: true,
-    portfolioAlerts: true,
-    socialAlerts: true,
-    marketOpen: true,
-    marketClose: false,
-    weeklyDigest: true
+  const [settings, setSettings] = useState({
+    tradershub: true, social: true, alerts: true, news: true, portfolio: true, push: false,
   });
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const filtered = useMemo(() => {
+    if (activeFilter === "all") return notifications;
+    return notifications.filter(n => n.feature === activeFilter);
+  }, [notifications, activeFilter]);
 
-  const markAsRead = (id: number) => {
-    setNotifications(prev => prev.map(n => 
-      n.id === id ? { ...n, read: true } : n
-    ));
+  const grouped = useMemo(() => {
+    const map = new Map<string, AppNotification[]>();
+    filtered.forEach(n => {
+      const key = n.feature || "system";
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(n);
+    });
+    return Array.from(map.entries());
+  }, [filtered]);
+
+  const handleClick = (n: AppNotification) => {
+    if (!n.read) markAsRead(n.id);
+    if (n.action_url) navigate(n.action_url);
   };
 
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    toast({ title: "All notifications marked as read" });
-  };
-
-  const deleteNotification = (id: number) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-    toast({ title: "Notification deleted" });
-  };
-
-  const clearAll = () => {
-    setNotifications([]);
-    toast({ title: "All notifications cleared" });
-  };
-
-  const getNotificationsByType = (type: string) => {
-    if (type === "all") return notifications;
-    return notifications.filter(n => n.type === type);
-  };
-
-  const NotificationCard = ({ notification }: { notification: Notification }) => {
-    const Icon = notification.icon;
+  if (!user) {
     return (
-      <Card 
-        className={`transition-all duration-200 ${!notification.read ? 'bg-primary/5 border-primary/20' : 'card-gradient'}`}
-      >
-        <CardContent className="p-4">
-          <div className="flex items-start gap-3">
-            <div className={`p-2.5 rounded-xl bg-muted/50 ${notification.color}`}>
-              <Icon className="h-5 w-5" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-2 mb-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-sm">{notification.title}</h3>
-                  {!notification.read && (
-                    <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
-                  )}
-                </div>
-                <div className="flex items-center gap-1">
-                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                    {notification.time}
-                  </span>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-6 w-6"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteNotification(notification.id);
-                    }}
-                  >
-                    <Trash2 className="h-3 w-3 text-muted-foreground" />
-                  </Button>
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">{notification.message}</p>
-              
-              {notification.actionUrl && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-7 mt-2 text-xs text-primary p-0"
-                  onClick={() => {
-                    markAsRead(notification.id);
-                    navigate(notification.actionUrl!);
-                  }}
-                >
-                  {notification.actionLabel} <ChevronRight className="h-3 w-3 ml-1" />
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="min-h-screen bg-background pb-20 flex items-center justify-center px-6 text-center">
+        <div>
+          <Bell className="h-12 w-12 mx-auto mb-3 text-muted-foreground/40" />
+          <h2 className="font-bold mb-1">Sign in to view notifications</h2>
+          <Button className="mt-4 btn-primary" onClick={() => navigate('/auth')}>Sign in</Button>
+        </div>
+      </div>
     );
-  };
+  }
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-card/95 backdrop-blur-sm border-b border-border">
-        <div className="flex items-center justify-between p-4">
+      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border/50">
+        <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate(-1)}
-              className="h-9 w-9"
-            >
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="h-9 w-9 rounded-full">
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div>
-              <h1 className="text-lg font-bold flex items-center gap-2">
-                <Bell className="h-5 w-5 text-primary" />
-                Notifications
-                {unreadCount > 0 && (
-                  <Badge className="h-5 min-w-5 text-[10px] bg-primary">
-                    {unreadCount}
-                  </Badge>
-                )}
-              </h1>
-              <p className="text-xs text-muted-foreground">Stay updated with alerts</p>
-            </div>
+            <h1 className="text-base font-bold flex items-center gap-2">
+              Notifications
+              {unreadCount > 0 && <Badge className="h-5 min-w-5 text-[10px] bg-primary rounded-full">{unreadCount}</Badge>}
+            </h1>
           </div>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowSettings(!showSettings)}
-              className="h-9 w-9"
+          <Button variant="ghost" size="icon" onClick={() => setShowSettings(s => !s)} className="h-9 w-9 rounded-full">
+            <Settings className={`h-4 w-4 transition-transform ${showSettings ? 'rotate-90' : ''}`} />
+          </Button>
+        </div>
+
+        <div className="flex overflow-x-auto scrollbar-hide px-4 gap-1.5 pb-3">
+          {filters.map(f => (
+            <button
+              key={f.id}
+              onClick={() => setActiveFilter(f.id)}
+              data-small-target
+              className={`py-1.5 px-3.5 text-xs font-semibold whitespace-nowrap rounded-full transition-all ${
+                activeFilter === f.id ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+              }`}
             >
-              <Settings className={`h-5 w-5 transition-transform ${showSettings ? 'rotate-90' : ''}`} />
-            </Button>
-          </div>
+              {f.label}
+            </button>
+          ))}
         </div>
       </header>
 
-      <div className="p-4 space-y-4">
-        {/* Settings Panel */}
+      <div className="p-4 space-y-3">
         {showSettings && (
           <Card className="card-gradient animate-fade-in">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Settings className="h-4 w-4 text-primary" />
-                Notification Settings
-              </CardTitle>
-            </CardHeader>
+            <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Settings className="h-4 w-4 text-primary" />Notification Settings</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               {[
-                { key: "priceAlerts", label: "Price Alerts", desc: "Get notified when stocks hit your targets" },
-                { key: "newsAlerts", label: "News Alerts", desc: "Breaking news and market updates" },
-                { key: "portfolioAlerts", label: "Portfolio Alerts", desc: "Trade executions and dividends" },
-                { key: "socialAlerts", label: "Social Alerts", desc: "Followers and mentions" },
-                { key: "marketOpen", label: "Market Open", desc: "Daily market opening notification" },
-                { key: "weeklyDigest", label: "Weekly Digest", desc: "Weekly portfolio summary" },
-              ].map((setting) => (
-                <div key={setting.key} className="flex items-center justify-between py-1">
+                { key: "tradershub", label: "TradersHub", desc: "Likes, comments, replies, reposts" },
+                { key: "social", label: "Social", desc: "Followers & mentions" },
+                { key: "alerts", label: "Price Alerts", desc: "Target price triggers" },
+                { key: "news", label: "News", desc: "Breaking news & headlines" },
+                { key: "portfolio", label: "Portfolio", desc: "Trades & dividends" },
+                { key: "push", label: "Push Notifications", desc: "Real-time mobile alerts" },
+              ].map(s => (
+                <div key={s.key} className="flex items-center justify-between py-1">
                   <div>
-                    <div className="text-sm font-medium">{setting.label}</div>
-                    <div className="text-xs text-muted-foreground">{setting.desc}</div>
+                    <div className="text-sm font-medium">{s.label}</div>
+                    <div className="text-[11px] text-muted-foreground">{s.desc}</div>
                   </div>
-                  <Switch 
-                    checked={notificationSettings[setting.key as keyof typeof notificationSettings]}
-                    onCheckedChange={(checked) => 
-                      setNotificationSettings(prev => ({ ...prev, [setting.key]: checked }))
-                    }
-                  />
+                  <Switch checked={(settings as any)[s.key]} onCheckedChange={c => setSettings(p => ({ ...p, [s.key]: c }))} />
                 </div>
               ))}
             </CardContent>
           </Card>
         )}
 
-        {/* Quick Actions */}
         {notifications.length > 0 && (
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-xs">
-                {notifications.length} total
-              </Badge>
-              {unreadCount > 0 && (
-                <Badge className="text-xs bg-primary/20 text-primary">
-                  {unreadCount} unread
-                </Badge>
-              )}
-            </div>
+            <span className="text-xs text-muted-foreground">{filtered.length} notifications</span>
             <div className="flex gap-2">
               {unreadCount > 0 && (
-                <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={markAllAsRead}>
-                  <Eye className="h-3 w-3 mr-1" />
-                  Mark all read
+                <Button variant="ghost" size="sm" className="h-7 text-[11px] rounded-full gap-1" onClick={() => { markAllAsRead(); toast({ title: "All marked as read" }); }}>
+                  <Eye className="h-3 w-3" />Mark all read
                 </Button>
               )}
-              <Button variant="ghost" size="sm" className="h-8 text-xs text-destructive" onClick={clearAll}>
-                <Trash2 className="h-3 w-3 mr-1" />
-                Clear all
+              <Button variant="ghost" size="sm" className="h-7 text-[11px] text-destructive rounded-full gap-1" onClick={() => { clearAll(); toast({ title: "Cleared" }); }}>
+                <Trash2 className="h-3 w-3" />Clear
               </Button>
             </div>
           </div>
         )}
 
-        {/* Tabbed Notifications with Icons */}
-        <Tabs defaultValue="all" className="w-full">
-          <TabsList className="w-full grid grid-cols-5 h-12">
-            {notificationCategories.map((cat) => (
-              <TabsTrigger 
-                key={cat.id} 
-                value={cat.id} 
-                className="flex flex-col items-center gap-0.5 py-1.5 px-1 data-[state=active]:bg-primary/10"
-              >
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <cat.icon className="h-4 w-4" />
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    <p>{cat.label}</p>
-                  </TooltipContent>
-                </Tooltip>
-                <span className="text-[9px]">{cat.label}</span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
-
-          {notificationCategories.map((cat) => (
-            <TabsContent key={cat.id} value={cat.id} className="mt-4 space-y-3">
-              {getNotificationsByType(cat.id).length === 0 ? (
-                <Card className="card-gradient">
-                  <CardContent className="p-8 text-center">
-                    <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
-                      <Bell className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                    <h3 className="font-semibold mb-2">No notifications</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {cat.id === "all" 
-                        ? "You're all caught up!" 
-                        : `No ${cat.label.toLowerCase()} notifications yet`}
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : (
-                getNotificationsByType(cat.id).map((notification) => (
-                  <NotificationCard key={notification.id} notification={notification} />
-                ))
-              )}
-            </TabsContent>
-          ))}
-        </Tabs>
-
-        {/* Enable Push Notifications CTA */}
-        <Card className="card-gradient border-primary/20">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-primary/10">
-                <Bell className="h-6 w-6 text-primary" />
+        {loading ? (
+          <div className="flex justify-center py-16">
+            <div className="animate-spin rounded-full h-7 w-7 border-2 border-primary/30 border-t-primary" />
+          </div>
+        ) : filtered.length === 0 ? (
+          <Card className="card-gradient">
+            <CardContent className="p-10 text-center">
+              <div className="w-14 h-14 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
+                <Bell className="h-7 w-7 text-muted-foreground/50" />
               </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-sm">Enable Push Notifications</h3>
-                <p className="text-xs text-muted-foreground">
-                  Get real-time alerts for price movements and news
-                </p>
-              </div>
-              <Button size="sm" className="btn-primary h-8">
-                Enable
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+              <h3 className="font-semibold text-sm mb-1">All caught up!</h3>
+              <p className="text-xs text-muted-foreground">No notifications here</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-5">
+            {grouped.map(([feature, items]) => {
+              const meta = featureMeta[feature] || featureMeta.system;
+              const FeatureIcon = meta.icon;
+              return (
+                <div key={feature}>
+                  <div className="flex items-center gap-2 mb-2 px-1">
+                    <FeatureIcon className={`h-3.5 w-3.5 ${meta.color}`} />
+                    <h3 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{meta.label}</h3>
+                    <span className="text-[10px] text-muted-foreground">· {items.length}</span>
+                  </div>
+                  <div className="space-y-2">
+                    {items.map(n => {
+                      const Icon = typeIcon[n.type] || Bell;
+                      return (
+                        <div
+                          key={n.id}
+                          onClick={() => handleClick(n)}
+                          className={`flex items-start gap-3 p-3 rounded-2xl transition-all cursor-pointer active:scale-[0.99] ${
+                            !n.read ? 'bg-primary/5 border border-primary/15' : 'bg-card border border-border/40'
+                          }`}
+                        >
+                          <div className={`p-2 rounded-xl bg-muted/50 ${meta.color} shrink-0`}>
+                            <Icon className="h-4 w-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <h4 className="font-semibold text-[13px] truncate">{n.title}</h4>
+                                {!n.read && <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />}
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <span className="text-[10px] text-muted-foreground">{formatTime(n.created_at)}</span>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 opacity-60 hover:opacity-100" onClick={e => { e.stopPropagation(); remove(n.id); }}>
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                            <p className="text-[12px] text-muted-foreground leading-snug mt-0.5">{n.message}</p>
+                            {n.action_url && (
+                              <span className="text-[11px] text-primary font-medium mt-1 inline-flex items-center gap-0.5">
+                                View <ChevronRight className="h-3 w-3" />
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

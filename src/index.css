@@ -150,8 +150,8 @@
   body {
     @apply bg-background text-foreground;
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-    font-size: 14px;
-    line-height: 1.6;
+    font-size: calc(12.5px * var(--app-font-scale, 1));
+    line-height: 1.55;
     overscroll-behavior-y: contain;
     -webkit-overflow-scrolling: touch;
   }
@@ -353,13 +353,30 @@
   .marquee-container { @apply flex overflow-hidden; }
   .marquee-content {
     @apply flex;
-    animation: marquee 30s linear infinite;
+    animation: marquee 140s linear infinite;
   }
   .marquee-container:hover .marquee-content { animation-play-state: paused; }
 
   @keyframes marquee {
     0% { transform: translateX(0); }
     100% { transform: translateX(-50%); }
+  }
+
+  /* Auto-scrolling ticker */
+  .animate-ticker {
+    animation: ticker 20s linear infinite;
+  }
+  .animate-ticker:hover {
+    animation-play-state: paused;
+  }
+  @keyframes ticker {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  @keyframes reaction-float {
+    0%   { transform: translateY(0) scale(0.7); opacity: 0; }
+    15%  { opacity: 1; transform: translateY(-20px) scale(1.1); }
+    100% { transform: translateY(-220px) scale(0.9); opacity: 0; }
   }
 
   /* Premium pill buttons */
@@ -380,6 +397,13 @@
   .soft-card:hover {
     box-shadow: var(--shadow-lg);
     transform: translateY(-1px);
+  }
+
+  /* Upgrade banner */
+  .upgrade-banner {
+    @apply rounded-2xl p-3 flex items-center justify-between cursor-pointer;
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.1), hsl(var(--accent) / 0.1));
+    border: 1px solid hsl(var(--primary) / 0.2);
   }
 }
 

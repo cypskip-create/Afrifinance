@@ -1,12 +1,11 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Calendar, Settings, UserPlus, UserMinus, MessageCircle, MoreHorizontal, Lock, Verified, Heart, Repeat2, FileText, Bookmark, Camera, Loader2, Share, TrendingUp, TrendingDown, Award, Target, PieChart, ChevronRight, Image as ImageIcon, MapPin, ExternalLink } from "lucide-react";
+import { ArrowLeft, Calendar, UserPlus, MessageCircle, MoreHorizontal, Lock, Verified, Heart, Repeat2, FileText, Camera, Loader2, Share, TrendingUp, TrendingDown, Award, Target, PieChart, ChevronRight, Image as ImageIcon, MapPin, Pin, Settings, Bookmark } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -18,11 +17,14 @@ import { SparklineChart } from "@/components/shared/SparklineChart";
 import { XPostCard } from "@/components/social/XPostCard";
 import { usePosts, Post, Comment } from "@/hooks/usePosts";
 import { XCommentSheet } from "@/components/social/XCommentSheet";
+import { ProfileSettingsDialog } from "@/components/profile/ProfileSettingsDialog";
+import { PortfolioPrivacyDialog } from "@/components/profile/PortfolioPrivacyDialog";
 
 interface UserProfileData {
   id: string; user_id: string; full_name: string | null; avatar_url: string | null;
   banner_url: string | null; bio: string | null; portfolio_public: boolean;
   followers_count: number; following_count: number; created_at: string;
+  handle?: string | null;
 }
 
 interface UserPost {
@@ -55,6 +57,9 @@ export default function UserProfile() {
   const [userPosts, setUserPosts] = useState<UserPost[]>([]);
   const [likedPosts, setLikedPosts] = useState<UserPost[]>([]);
   const [repostedPosts, setRepostedPosts] = useState<UserPost[]>([]);
+  const [bookmarkedPosts, setBookmarkedPosts] = useState<UserPost[]>([]);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [portfolioPrivacyOpen, setPortfolioPrivacyOpen] = useState(false);
   const [publicPortfolio, setPublicPortfolio] = useState<PortfolioHolding[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadingBanner, setUploadingBanner] = useState(false);
@@ -63,8 +68,6 @@ export default function UserProfile() {
   const [followersDialogOpen, setFollowersDialogOpen] = useState(false);
   const [dialogTab, setDialogTab] = useState<"followers" | "following">("followers");
   const [editProfileOpen, setEditProfileOpen] = useState(false);
-
-  // Comment sheet
   const [commentSheetOpen, setCommentSheetOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -72,28 +75,46 @@ export default function UserProfile() {
 
   const isOwnProfile = user?.id === userId;
   const userIsFollowing = userId ? isFollowing(userId) : false;
-
   const performanceStats = { winRate: 73, avgReturn: 12.4, streak: 5 };
 
   useEffect(() => {
     if (userId) {
-      fetchProfile();
-      fetchUserPosts();
-      fetchUserLikes();
-      fetchUserReposts();
-      loadFollowCounts();
-      fetchPublicPortfolio();
+      fetchProfile(); fetchUserPosts(); fetchUserLikes(); fetchUserReposts();
+      loadFollowCounts(); fetchPublicPortfolio();
+      if (user?.id === userId) fetchBookmarks();
     }
   }, [userId, user]);
+
+  const fetchBookmarks = async () => {
+    if (!user) return;
+    const { data: bd } = await supabase.from("post_bookmarks").select("post_id").eq("user_id", user.id).order("created_at", { ascending: false });
+    if (!bd || bd.length === 0) { setBookmarkedPosts([]); return; }
+    const pids = bd.map(b => b.post_id);
+    const { data: pd } = await supabase.from("posts").select("*").in("id", pids);
+    if (!pd) return;
+    const uids = [...new Set(pd.map(p => p.user_id))];
+    const { data: profs } = await supabase.from("profiles_public").select("user_id, full_name, avatar_url").in("user_id", uids);
+    const pm = new Map(profs?.map(p => [p.user_id, p]));
+    const enriched = await Promise.all(pd.map(async (post) => {
+      const [l, c, r] = await Promise.all([
+        supabase.from("post_likes").select("id", { count: "exact", head: true }).eq("post_id", post.id),
+        supabase.from("post_comments").select("id", { count: "exact", head: true }).eq("post_id", post.id),
+        supabase.from("post_reposts").select("id", { count: "exact", head: true }).eq("post_id", post.id),
+      ]);
+      const a = pm.get(post.user_id);
+      return { ...post, likes_count: l.count || 0, comments_count: c.count || 0, reposts_count: r.count || 0, is_liked: false, is_reposted: false, is_bookmarked: true, author: a ? { full_name: a.full_name, avatar_url: a.avatar_url } : undefined };
+    }));
+    setBookmarkedPosts(enriched);
+  };
 
   const fetchProfile = async () => {
     if (!userId) return;
     setLoading(true);
     try {
-      const { data } = await supabase.from("profiles_public").select("id, user_id, full_name, avatar_url, banner_url, bio, portfolio_public, followers_count, following_count, created_at").eq("user_id", userId).maybeSingle();
-      if (data) { setProfileData(data as UserProfileData); }
+      const { data } = await supabase.from("profiles_public").select("id, user_id, full_name, avatar_url, banner_url, bio, portfolio_public, followers_count, following_count, created_at, handle").eq("user_id", userId).maybeSingle();
+      if (data) setProfileData(data as UserProfileData);
       else {
-        const { data: fb } = await supabase.from("profiles").select("id, user_id, full_name, avatar_url, banner_url, bio, portfolio_public, followers_count, following_count, created_at").eq("user_id", userId).maybeSingle();
+        const { data: fb } = await supabase.from("profiles").select("id, user_id, full_name, avatar_url, banner_url, bio, portfolio_public, followers_count, following_count, created_at, handle").eq("user_id", userId).maybeSingle();
         if (fb) setProfileData(fb as UserProfileData);
       }
     } catch (err) { console.error(err); }
@@ -103,8 +124,7 @@ export default function UserProfile() {
   const loadFollowCounts = async () => {
     if (!userId) return;
     const [f1, f2] = await Promise.all([fetchFollowers(userId), fetchFollowing(userId)]);
-    setFollowersCount(f1.length);
-    setFollowingCount(f2.length);
+    setFollowersCount(f1.length); setFollowingCount(f2.length);
   };
 
   const fetchPublicPortfolio = async () => {
@@ -210,7 +230,6 @@ export default function UserProfile() {
     else { await navigator.clipboard.writeText(window.location.href); toast({ title: "Profile link copied!" }); }
   };
 
-  // Post interactions
   const handleLike = async (postId: string) => { if (!user) { navigate("/auth"); return; } await likePost(postId); };
   const handleRepost = async (postId: string) => { if (!user) { navigate("/auth"); return; } await repostPost(postId); };
   const handleBookmark = async (postId: string) => { if (!user) { navigate("/auth"); return; } await bookmarkPost(postId); };
@@ -218,12 +237,9 @@ export default function UserProfile() {
   const handleDelete = async (postId: string) => { await deletePost(postId); fetchUserPosts(); };
 
   const openComments = async (post: Post) => {
-    setSelectedPost(post);
-    setCommentSheetOpen(true);
-    setLoadingComments(true);
+    setSelectedPost(post); setCommentSheetOpen(true); setLoadingComments(true);
     const fetched = await fetchComments(post.id);
-    setComments(fetched);
-    setLoadingComments(false);
+    setComments(fetched); setLoadingComments(false);
   };
 
   const handleAddComment = async (content: string) => {
@@ -234,7 +250,7 @@ export default function UserProfile() {
 
   const getInitials = (name: string | null) => name ? name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) : "U";
   const formatDate = (date: string) => new Date(date).toLocaleDateString("en-US", { month: "long", year: "numeric" });
-  const handle = profileData?.full_name?.toLowerCase().replace(/\s+/g, "") || "user";
+  const handle = profileData?.handle || profileData?.full_name?.toLowerCase().replace(/\s+/g, "") || "user";
 
   const portfolioSummary = useMemo(() => {
     if (!publicPortfolio.length) return null;
@@ -249,9 +265,9 @@ export default function UserProfile() {
   }, [publicPortfolio]);
 
   const castToPost = (p: UserPost): Post => ({
-    ...p,
-    updated_at: p.created_at,
-    author: p.author ? { id: p.author.id || "", user_id: p.author.user_id || p.user_id, full_name: p.author.full_name, avatar_url: p.author.avatar_url, bio: p.author.bio || null } : { id: "", user_id: p.user_id, full_name: profileData?.full_name || null, avatar_url: profileData?.avatar_url || null, bio: null },
+    ...p, updated_at: p.created_at,
+    author: p.author ? { id: p.author.id || "", user_id: p.author.user_id || p.user_id, full_name: p.author.full_name, avatar_url: p.author.avatar_url, bio: p.author.bio || null }
+      : { id: "", user_id: p.user_id, full_name: profileData?.full_name || null, avatar_url: profileData?.avatar_url || null, bio: null },
   });
 
   if (loading) {
@@ -275,6 +291,10 @@ export default function UserProfile() {
     );
   }
 
+  // Find first post to "pin" (most liked)
+  const pinnedPost = userPosts.length > 0 ? [...userPosts].sort((a, b) => b.likes_count - a.likes_count)[0] : null;
+  const regularPosts = userPosts.filter(p => p.id !== pinnedPost?.id);
+
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
@@ -292,44 +312,52 @@ export default function UserProfile() {
               <p className="text-xs text-muted-foreground">{userPosts.length} posts</p>
             </div>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full"><MoreHorizontal className="h-5 w-5" /></Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleShare}><Share className="h-4 w-4 mr-2" />Share Profile</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-1">
+            {isOwnProfile && (
+              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={() => setSettingsOpen(true)} title="TradersHub Settings">
+                <Settings className="h-5 w-5" />
+              </Button>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full"><MoreHorizontal className="h-5 w-5" /></Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleShare}><Share className="h-4 w-4 mr-2" />Share Profile</DropdownMenuItem>
+                {isOwnProfile && <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setTimeout(() => setSettingsOpen(true), 50); }}><Settings className="h-4 w-4 mr-2" />Settings</DropdownMenuItem>}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </header>
 
-      {/* Banner */}
-      <div className="relative h-32 sm:h-40 bg-gradient-to-r from-primary/20 to-accent/20 overflow-hidden">
+      {/* Banner — X-style compact */}
+      <div className="relative h-28 sm:h-32 bg-gradient-to-br from-primary/30 via-accent/20 to-primary/10 overflow-hidden">
         {profileData.banner_url && <img src={profileData.banner_url} alt="Banner" className="w-full h-full object-cover" />}
         {isOwnProfile && (
           <>
             <input type="file" ref={bannerInputRef} className="hidden" accept="image/*" onChange={handleBannerUpload} />
-            <Button size="icon" variant="secondary" className="absolute bottom-3 right-3 h-8 w-8 rounded-full bg-background/70 hover:bg-background/90 backdrop-blur-sm" onClick={() => bannerInputRef.current?.click()} disabled={uploadingBanner}>
-              {uploadingBanner ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+            <Button size="icon" variant="secondary" className="absolute bottom-2 right-2 h-7 w-7 rounded-full bg-background/70 hover:bg-background/90 backdrop-blur-sm" onClick={() => bannerInputRef.current?.click()} disabled={uploadingBanner}>
+              {uploadingBanner ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
             </Button>
           </>
         )}
       </div>
 
-      {/* Avatar + actions */}
-      <div className="px-4 -mt-16">
+      {/* Avatar + actions — X-style */}
+      <div className="px-4 -mt-10">
         <div className="flex justify-between items-end">
-          <Avatar className="h-28 w-28 sm:h-32 sm:w-32 ring-4 ring-background">
+          <Avatar className="h-20 w-20 sm:h-24 sm:w-24 ring-4 ring-background shadow-md">
             <AvatarImage src={profileData.avatar_url || ""} className="object-cover" />
-            <AvatarFallback className="bg-primary text-primary-foreground text-3xl font-bold">{getInitials(profileData.full_name)}</AvatarFallback>
+            <AvatarFallback className="bg-primary text-primary-foreground text-xl font-bold">{getInitials(profileData.full_name)}</AvatarFallback>
           </Avatar>
-          <div className="flex gap-2 mb-2">
+          <div className="flex gap-1.5 mb-1.5">
             {isOwnProfile ? (
-              <Button variant="outline" size="sm" className="h-9 rounded-full font-bold text-sm" onClick={() => setEditProfileOpen(true)}>Edit profile</Button>
+              <Button variant="outline" size="sm" className="h-8 rounded-full font-semibold text-[13px] px-4" onClick={() => setEditProfileOpen(true)}>Edit profile</Button>
             ) : (
               <>
-                <Button variant="outline" size="icon" className="h-9 w-9 rounded-full"><MessageCircle className="h-4 w-4" /></Button>
-                <Button variant={userIsFollowing ? "outline" : "default"} size="sm" onClick={handleFollow} className="h-9 rounded-full font-bold text-sm px-5">
+                <Button variant="outline" size="icon" className="h-8 w-8 rounded-full"><MessageCircle className="h-3.5 w-3.5" /></Button>
+                <Button variant={userIsFollowing ? "outline" : "default"} size="sm" onClick={handleFollow} className="h-8 rounded-full font-semibold text-[13px] px-4">
                   {userIsFollowing ? "Following" : "Follow"}
                 </Button>
               </>
@@ -337,41 +365,28 @@ export default function UserProfile() {
           </div>
         </div>
 
-        {/* Name + bio */}
-        <div className="mt-3">
-          <h2 className="text-xl font-extrabold flex items-center gap-1">
+        {/* Name + bio — X-sized */}
+        <div className="mt-2">
+          <h2 className="text-[17px] font-extrabold leading-tight flex items-center gap-1">
             {profileData.full_name || "User"}
             <Verified className="h-4 w-4 text-primary fill-primary" />
           </h2>
-          <p className="text-sm text-muted-foreground">@{handle}</p>
+          <p className="text-[13px] text-muted-foreground leading-tight">@{handle}</p>
 
-          {profileData.bio && <p className="mt-2 text-[15px] leading-relaxed">{profileData.bio}</p>}
+          {profileData.bio && <p className="mt-2 text-[14px] leading-snug">{profileData.bio}</p>}
 
-          {/* Performance badges */}
-          <div className="flex flex-wrap gap-1.5 mt-3">
-            <Badge variant="outline" className="text-[11px] gap-1 bg-bull/5 text-bull border-bull/20 rounded-full px-2.5">
-              <Target className="h-3 w-3" />{performanceStats.winRate}% Win Rate
-            </Badge>
-            <Badge variant="outline" className="text-[11px] gap-1 bg-primary/5 text-primary border-primary/20 rounded-full px-2.5">
-              <TrendingUp className="h-3 w-3" />+{performanceStats.avgReturn}% Avg
-            </Badge>
-            <Badge variant="outline" className="text-[11px] gap-1 bg-accent/5 text-accent border-accent/20 rounded-full px-2.5">
-              <Award className="h-3 w-3" />{performanceStats.streak} Streak
-            </Badge>
-          </div>
-
-          {/* Location + join date */}
-          <div className="flex items-center gap-3 mt-3 text-sm text-muted-foreground flex-wrap">
-            <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />Kenya</span>
-            <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" />Joined {formatDate(profileData.created_at)}</span>
+          {/* Location + join date — X-sized */}
+          <div className="flex items-center gap-3 mt-2 text-[13px] text-muted-foreground flex-wrap">
+            <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />Kenya</span>
+            <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />Joined {formatDate(profileData.created_at)}</span>
           </div>
 
           {/* Following/Followers */}
           <div className="flex gap-4 mt-2">
-            <button className="hover:underline text-sm" onClick={() => { setDialogTab("following"); setFollowersDialogOpen(true); }}>
+            <button className="hover:underline text-[13px]" onClick={() => { setDialogTab("following"); setFollowersDialogOpen(true); }}>
               <span className="font-bold">{followingCount}</span> <span className="text-muted-foreground">Following</span>
             </button>
-            <button className="hover:underline text-sm" onClick={() => { setDialogTab("followers"); setFollowersDialogOpen(true); }}>
+            <button className="hover:underline text-[13px]" onClick={() => { setDialogTab("followers"); setFollowersDialogOpen(true); }}>
               <span className="font-bold">{followersCount}</span> <span className="text-muted-foreground">Followers</span>
             </button>
           </div>
@@ -380,38 +395,49 @@ export default function UserProfile() {
 
       {/* Tabs */}
       <Tabs defaultValue="posts" className="mt-4">
-        <TabsList className="w-full grid grid-cols-5 bg-transparent border-b border-border rounded-none h-11 p-0">
+        <TabsList className="w-full flex bg-transparent border-b border-border rounded-none h-11 p-0 overflow-x-auto">
           {[
             { value: "posts", label: "Posts" },
             { value: "replies", label: "Replies" },
             { value: "media", label: "Media" },
-            { value: "likes", label: "Likes" },
+            ...(isOwnProfile ? [{ value: "likes", label: "Likes" }] : []),
+            ...(isOwnProfile ? [{ value: "bookmarks", label: "Bookmarks" }] : []),
             { value: "portfolio", label: "Portfolio" },
           ].map(tab => (
             <TabsTrigger
               key={tab.value}
               value={tab.value}
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none h-full text-xs sm:text-sm font-semibold"
+              className="flex-1 min-w-[80px] rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none h-full text-xs sm:text-sm font-semibold"
             >
               {tab.label}
             </TabsTrigger>
           ))}
         </TabsList>
 
-        {/* Posts tab */}
+        {/* Posts tab with pinned post */}
         <TabsContent value="posts" className="mt-0">
           {userPosts.length === 0 ? (
             <div className="p-12 text-center text-muted-foreground"><FileText className="h-10 w-10 mx-auto mb-3 opacity-40" /><p className="text-sm">No posts yet</p></div>
           ) : (
             <div className="divide-y divide-border">
-              {userPosts.map(post => (
+              {/* Pinned Post */}
+              {pinnedPost && (
+                <div>
+                  <div className="flex items-center gap-1.5 px-4 pt-2 text-xs text-muted-foreground">
+                    <Pin className="h-3 w-3" />
+                    <span className="font-medium">Pinned</span>
+                  </div>
+                  <XPostCard post={castToPost(pinnedPost)} currentUserId={user?.id} onLike={handleLike} onComment={openComments} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handlePostShare} onDelete={isOwnProfile ? handleDelete : undefined} />
+                </div>
+              )}
+              {regularPosts.map(post => (
                 <XPostCard key={post.id} post={castToPost(post)} currentUserId={user?.id} onLike={handleLike} onComment={openComments} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handlePostShare} onDelete={isOwnProfile ? handleDelete : undefined} />
               ))}
             </div>
           )}
         </TabsContent>
 
-        {/* Replies tab - show reposts for now */}
+        {/* Replies tab */}
         <TabsContent value="replies" className="mt-0">
           {repostedPosts.length === 0 ? (
             <div className="p-12 text-center text-muted-foreground"><MessageCircle className="h-10 w-10 mx-auto mb-3 opacity-40" /><p className="text-sm">No replies yet</p></div>
@@ -440,9 +466,15 @@ export default function UserProfile() {
           })()}
         </TabsContent>
 
-        {/* Likes tab */}
+        {/* Likes tab — private to owner */}
         <TabsContent value="likes" className="mt-0">
-          {likedPosts.length === 0 ? (
+          {!isOwnProfile ? (
+            <div className="p-12 text-center text-muted-foreground">
+              <Lock className="h-10 w-10 mx-auto mb-3 opacity-40" />
+              <p className="text-sm font-medium">Likes are private</p>
+              <p className="text-xs text-muted-foreground mt-1">Only visible to the account owner</p>
+            </div>
+          ) : likedPosts.length === 0 ? (
             <div className="p-12 text-center text-muted-foreground"><Heart className="h-10 w-10 mx-auto mb-3 opacity-40" /><p className="text-sm">No likes yet</p></div>
           ) : (
             <div className="divide-y divide-border">
@@ -451,8 +483,34 @@ export default function UserProfile() {
           )}
         </TabsContent>
 
-        {/* Portfolio tab */}
+        {/* Bookmarks tab — owner only */}
+        <TabsContent value="bookmarks" className="mt-0">
+          {!isOwnProfile ? (
+            <div className="p-12 text-center text-muted-foreground">
+              <Lock className="h-10 w-10 mx-auto mb-3 opacity-40" />
+              <p className="text-sm font-medium">Bookmarks are private</p>
+            </div>
+          ) : bookmarkedPosts.length === 0 ? (
+            <div className="p-12 text-center text-muted-foreground"><Bookmark className="h-10 w-10 mx-auto mb-3 opacity-40" /><p className="text-sm">No bookmarks yet</p><p className="text-xs mt-1">Save posts to read them later</p></div>
+          ) : (
+            <div className="divide-y divide-border">
+              {bookmarkedPosts.map(post => <XPostCard key={post.id} post={castToPost(post)} currentUserId={user?.id} onLike={handleLike} onComment={openComments} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handlePostShare} />)}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Portfolio tab — enhanced */}
         <TabsContent value="portfolio" className="mt-0">
+          {isOwnProfile && (
+            <div className="flex items-center justify-between px-4 pt-3">
+              <div className="text-xs text-muted-foreground">
+                {profileData.portfolio_public ? "Visible to everyone" : "Only visible to you"}
+              </div>
+              <Button variant="ghost" size="sm" className="h-8 rounded-full text-xs gap-1.5" onClick={() => setPortfolioPrivacyOpen(true)}>
+                <Settings className="h-3.5 w-3.5" />Privacy
+              </Button>
+            </div>
+          )}
           {!profileData.portfolio_public && !isOwnProfile ? (
             <div className="p-12 text-center">
               <Lock className="h-12 w-12 mx-auto mb-4 text-muted-foreground/40" />
@@ -467,23 +525,29 @@ export default function UserProfile() {
               {isOwnProfile && <Button className="mt-4 rounded-full" onClick={() => navigate("/track-investments")}>Add Trade</Button>}
             </div>
           ) : (
-            <div className="p-4">
-              {/* Portfolio summary header */}
+            <div className="p-4 space-y-4">
+              {/* Portfolio Summary Card */}
               {portfolioSummary && (
-                <Card className="mb-4 border-border overflow-hidden">
+                <Card className="soft-card overflow-hidden">
                   <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-sm font-semibold text-muted-foreground">Portfolio Value</span>
-                      {isOwnProfile && (
-                        <Button variant="outline" size="sm" className="h-7 rounded-full text-xs" onClick={() => navigate("/track-investments")}>
-                          Manage <ChevronRight className="h-3 w-3 ml-1" />
-                        </Button>
-                      )}
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-muted-foreground font-medium">Portfolio Value</span>
+                      <Button variant="ghost" size="sm" className="h-7 rounded-full text-xs text-primary" onClick={() => navigate("/track-investments")}>
+                        View Full Portfolio <ChevronRight className="h-3 w-3 ml-0.5" />
+                      </Button>
                     </div>
                     <div className="text-2xl font-extrabold">KES {portfolioSummary.totalValue.toLocaleString()}</div>
                     <div className={`text-sm font-semibold mt-1 flex items-center gap-1 ${portfolioSummary.totalGain >= 0 ? "text-bull" : "text-bear"}`}>
                       {portfolioSummary.totalGain >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-                      {portfolioSummary.totalGain >= 0 ? "+" : ""}KES {portfolioSummary.totalGain.toLocaleString()} ({portfolioSummary.gainPercent.toFixed(1)}%)
+                      {portfolioSummary.totalGain >= 0 ? "+" : ""}KES {Math.abs(portfolioSummary.totalGain).toLocaleString()} ({portfolioSummary.gainPercent.toFixed(1)}%)
+                    </div>
+                    
+                    {/* Mini performance chart placeholder */}
+                    <div className="mt-3 h-16 flex items-end gap-0.5">
+                      {Array.from({ length: 20 }).map((_, i) => {
+                        const h = 20 + Math.random() * 80;
+                        return <div key={i} className="flex-1 bg-primary/20 rounded-t" style={{ height: `${h}%` }} />;
+                      })}
                     </div>
                   </CardContent>
                 </Card>
@@ -492,9 +556,9 @@ export default function UserProfile() {
               {/* Holdings list */}
               <div className="space-y-1">
                 {portfolioSummary?.holdings.map(h => (
-                  <div key={h.symbol} className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => navigate(`/stock/${h.symbol}`)}>
+                  <div key={h.symbol} className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/30 transition-colors cursor-pointer tap-scale" onClick={() => navigate(`/stock/${h.symbol}`)}>
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-muted/50 flex items-center justify-center text-xs font-bold text-primary">{h.symbol.slice(0, 2)}</div>
+                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">{h.symbol.slice(0, 2)}</div>
                       <div>
                         <div className="font-semibold text-sm">${h.symbol}</div>
                         <div className="text-xs text-muted-foreground">{h.shares} shares · KES {h.avg_cost.toFixed(2)} avg</div>
@@ -515,7 +579,7 @@ export default function UserProfile() {
 
               {/* Share portfolio button */}
               {isOwnProfile && (
-                <Button className="w-full mt-4 rounded-full h-11 font-bold" onClick={() => toast({ title: "Portfolio shared to compose!" })}>
+                <Button className="w-full rounded-full h-11 font-bold btn-primary" onClick={() => toast({ title: "Portfolio shared to compose!" })}>
                   <Share className="h-4 w-4 mr-2" />Share Portfolio
                 </Button>
               )}
@@ -525,23 +589,11 @@ export default function UserProfile() {
       </Tabs>
 
       {/* Comment sheet */}
-      <XCommentSheet
-        open={commentSheetOpen}
-        onOpenChange={setCommentSheetOpen}
-        post={selectedPost}
-        currentUserId={user?.id}
-        comments={comments}
-        loadingComments={loadingComments}
-        onAddComment={handleAddComment}
-        onLike={handleLike}
-        onRepost={handleRepost}
-        onBookmark={handleBookmark}
-        onShare={handlePostShare}
-        onDelete={isOwnProfile ? handleDelete : undefined}
-      />
-
+      <XCommentSheet open={commentSheetOpen} onOpenChange={setCommentSheetOpen} post={selectedPost} currentUserId={user?.id} comments={comments} loadingComments={loadingComments} onAddComment={handleAddComment} onLike={handleLike} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handlePostShare} onDelete={isOwnProfile ? handleDelete : undefined} />
       {userId && <FollowersDialog open={followersDialogOpen} onOpenChange={setFollowersDialogOpen} userId={userId} initialTab={dialogTab} />}
       <EditProfileDialog open={editProfileOpen} onOpenChange={(open) => { setEditProfileOpen(open); if (!open) fetchProfile(); }} />
+      <ProfileSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} currentHandle={profileData.handle} portfolioPublic={profileData.portfolio_public} onSaved={fetchProfile} />
+      <PortfolioPrivacyDialog open={portfolioPrivacyOpen} onOpenChange={setPortfolioPrivacyOpen} portfolioPublic={profileData.portfolio_public} onSaved={fetchProfile} />
     </div>
   );
 }
