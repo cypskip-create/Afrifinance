@@ -1,4 +1,5 @@
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceLine, ComposedChart, Bar } from "recharts";
+// @ts-ignore: Ignore missing React type declarations in the local environment
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
