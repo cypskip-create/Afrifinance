@@ -16,7 +16,7 @@ import {
   Lightbulb, Volume2, BarChart2
 } from "lucide-react";
 
-const tabs = ["Overview", "NSE", "IPOs", "Dividends"] as const;
+const tabs = ["Overview", "Discover", "Calendars", "Heatmap", "All Stocks"] as const;
 type Tab = typeof tabs[number];
 
 const indices = [
@@ -183,27 +183,18 @@ export default function Markets() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <TopBar title="Markets" subtitle="Explore & discover" showSearch showNotifications />
+      <TopBar title="Markets" subtitle="Discover opportunities" showSearch showNotifications />
 
-      {/* Premium Tab Navigation */}
-      <div className="sticky top-[57px] z-30 bg-background/95 backdrop-blur-xl border-b border-border/50">
-        <div className="flex overflow-x-auto scrollbar-hide px-3 gap-1 py-2">
-          {[
-            { tab: "Overview" as Tab, icon: BarChart3 },
-            { tab: "NSE" as Tab, icon: Landmark },
-            { tab: "IPOs" as Tab, icon: Flame },
-            { tab: "Dividends" as Tab, icon: DollarSign },
-          ].map(({ tab, icon: Icon }) => (
+      {/* Sticky editorial sub-nav */}
+      <div className="sub-nav">
+        <div className="flex overflow-x-auto scrollbar-hide px-4 gap-1 py-2">
+          {tabs.map(tab => (
             <button
               key={tab}
+              data-small-target
               onClick={() => setActiveTab(tab)}
-              className={`flex items-center gap-2 py-2 px-4 text-sm font-semibold whitespace-nowrap rounded-full transition-all duration-200 ${
-                activeTab === tab
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
-              }`}
+              className={`pill-tab whitespace-nowrap ${activeTab === tab ? 'active' : ''}`}
             >
-              <Icon className="h-4 w-4" />
               {tab}
             </button>
           ))}
