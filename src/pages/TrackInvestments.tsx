@@ -127,73 +127,100 @@ export default function TrackInvestments() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-gradient-to-b from-card to-card/95 backdrop-blur-xl border-b border-border/30">
+      {/* Header — thin, editorial */}
+      <header className="sticky top-0 z-40 bg-background/85 backdrop-blur-xl border-b border-border/60">
         <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-full h-9 w-9 hover:bg-muted/50">
-              <ArrowLeft className="h-5 w-5" />
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-full h-9 w-9" data-small-target>
+              <ArrowLeft className="h-[18px] w-[18px]" />
             </Button>
-            <div>
-              <h1 className="text-lg font-bold">My Portfolio</h1>
-              <p className="text-[10px] text-muted-foreground">{holdings.length} holdings · Last updated now</p>
-            </div>
+            <h1 className="text-base font-semibold">Portfolio</h1>
           </div>
-          <div className="flex items-center gap-1.5">
-            <Button variant="ghost" size="icon" className={`rounded-full h-9 w-9 ${isRefreshing ? 'animate-spin' : ''}`} onClick={handleRefresh}>
-              <RefreshCw className="h-4 w-4" />
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className={`rounded-full h-9 w-9 ${isRefreshing ? 'animate-spin' : ''}`} onClick={handleRefresh} data-small-target>
+              <RefreshCw className="h-4 w-4 text-muted-foreground" />
             </Button>
-            <AddInvestmentDialog size="sm" />
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={() => setShowBalance(!showBalance)} data-small-target>
+              {showBalance ? <Eye className="h-4 w-4 text-muted-foreground" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
+            </Button>
           </div>
         </div>
       </header>
 
-      <div className="px-4 pt-4 space-y-5">
-        {/* ── HERO ── */}
-        <Card className="border-0 bg-gradient-to-br from-primary/10 via-card to-accent/5 overflow-hidden rounded-3xl shadow-lg">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Total Portfolio Value</span>
-              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-background/50" onClick={() => setShowBalance(!showBalance)}>
-                {showBalance ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-              </Button>
+      <div className="px-4 pt-6 space-y-8">
+        {/* ── HERO — canvas, no card ── */}
+        <div>
+          <p className="section-eyebrow">Total Value</p>
+          <h2 className="mt-1 text-[40px] leading-none font-semibold tabular tracking-tight">
+            {showBalance
+              ? `KES ${stats.totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+              : '••••••'}
+          </h2>
+          <div className="mt-2 flex items-center gap-2 text-sm tabular">
+            <span className={`inline-flex items-center gap-0.5 font-semibold ${stats.totalGain >= 0 ? 'text-bull' : 'text-bear'}`}>
+              {stats.totalGain >= 0 ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
+              {showBalance ? `${stats.totalGain >= 0 ? '+' : '−'}KES ${Math.abs(stats.totalGain).toFixed(2)}` : '••••'}
+              <span className="opacity-80 ml-1">({stats.gainPct >= 0 ? '+' : ''}{stats.gainPct.toFixed(2)}%)</span>
+            </span>
+            <span className="text-muted-foreground text-xs">All time</span>
+          </div>
+          <div className="mt-4 grid grid-cols-3 gap-4 hairline-t pt-4">
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Today</p>
+              <p className={`mt-0.5 text-sm font-semibold tabular ${stats.todayGain >= 0 ? 'text-bull' : 'text-bear'}`}>
+                {showBalance ? `${stats.todayGain >= 0 ? '+' : '−'}${Math.abs(stats.todayGain).toFixed(0)}` : '••'}
+              </p>
+              <p className={`text-[10px] tabular ${stats.todayPct >= 0 ? 'text-bull' : 'text-bear'}`}>{stats.todayPct >= 0 ? '+' : ''}{stats.todayPct.toFixed(2)}%</p>
             </div>
-
-            <h2 className="text-[22px] font-bold tracking-tight leading-none">
-              {showBalance ? `KES ${stats.totalValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '••••••'}
-            </h2>
-
-            <div className="flex items-center gap-2 mt-2">
-              <span className={`flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full ${stats.totalGain >= 0 ? 'bg-bull/15 text-bull' : 'bg-bear/15 text-bear'}`}>
-                {stats.totalGain >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                {showBalance ? `${stats.totalGain >= 0 ? '+' : ''}KES ${Math.abs(stats.totalGain).toFixed(2)}` : '••••'}
-                <span className="text-[9px] ml-0.5 opacity-80">({stats.gainPct >= 0 ? '+' : ''}{stats.gainPct.toFixed(1)}%)</span>
-              </span>
-              <Badge variant="secondary" className="text-[9px] rounded-full bg-primary/10 text-primary border-0 font-semibold">All time</Badge>
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Invested</p>
+              <p className="mt-0.5 text-sm font-semibold tabular">{showBalance ? `KES ${stats.totalCost.toFixed(0)}` : '••'}</p>
+              <p className="text-[10px] text-muted-foreground">{holdings.length} stocks</p>
             </div>
-
-            <div className="grid grid-cols-2 gap-2.5 mt-4">
-              <div className="bg-background/70 backdrop-blur-sm rounded-2xl p-3 border border-border/20">
-                <p className="text-[9px] text-muted-foreground font-medium mb-0.5">Today's P/L</p>
-                <p className={`text-xs font-semibold ${stats.todayGain >= 0 ? 'text-bull' : 'text-bear'}`}>
-                  {showBalance ? `${stats.todayGain >= 0 ? '+' : ''}KES ${Math.abs(stats.todayGain).toFixed(2)}` : '••••'}
-                </p>
-                <p className={`text-[9px] font-medium ${stats.todayPct >= 0 ? 'text-bull' : 'text-bear'}`}>
-                  {stats.todayPct >= 0 ? '+' : ''}{stats.todayPct.toFixed(1)}%
-                </p>
-              </div>
-              <div className="bg-background/70 backdrop-blur-sm rounded-2xl p-3 border border-border/20">
-                <p className="text-[9px] text-muted-foreground font-medium mb-0.5">Total Invested</p>
-                <p className="text-xs font-semibold">
-                  {showBalance ? `KES ${stats.totalCost.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '••••'}
-                </p>
-                <p className="text-[9px] text-muted-foreground font-medium">{holdings.length} stocks</p>
-              </div>
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Diversif.</p>
+              <p className="mt-0.5 text-sm font-semibold tabular">{diversificationScore}/10</p>
+              <p className="text-[10px] text-muted-foreground">{sectorAlloc.length} sectors</p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        {/* ── PORTFOLIO HEALTH (Snowflake + IRR) ── */}
+        {/* ── PERFORMANCE CHART — Robinhood-clean, no side prices ── */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-1 bg-muted/50 rounded-full p-0.5">
+              <button
+                data-small-target
+                className={`text-[10px] rounded-full h-6 px-3 font-semibold transition-colors ${chartMode === 'value' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'}`}
+                onClick={() => setChartMode('value')}
+              >Value</button>
+              <button
+                data-small-target
+                className={`text-[10px] rounded-full h-6 px-3 font-semibold transition-colors ${chartMode === 'performance' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'}`}
+                onClick={() => setChartMode('performance')}
+              >Performance</button>
+            </div>
+          </div>
+          <div className="-mx-4">
+            <RobinhoodPerformanceChart
+              currentValue={chartMode === 'value' ? stats.totalValue : stats.gainPct}
+              initialValue={chartMode === 'value' ? stats.totalCost : 0}
+              mode={chartMode}
+            />
+          </div>
+          <div className="flex items-center justify-between gap-1 mt-3 pt-3 hairline-t">
+            {["1D", "1W", "1M", "3M", "YTD", "1Y", "ALL"].map(p => (
+              <button
+                key={p}
+                data-small-target
+                className={`text-[10px] rounded-full h-7 px-3 font-semibold transition-colors ${chartPeriod === p ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
+                onClick={() => setChartPeriod(p)}
+              >{p}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── PORTFOLIO HEALTH ── */}
         <PortfolioSnowflake
           holdings={holdings}
           totalValue={stats.totalValue}
@@ -202,56 +229,6 @@ export default function TrackInvestments() {
         />
 
         <PortfolioInsights holdings={portfolio} prices={Object.fromEntries(portfolio.map(h => [h.symbol, getPrice(h.symbol)]))} />
-
-
-        {/* ── PERFORMANCE CHART ── */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold flex items-center gap-2">
-              <Activity className="h-4 w-4 text-primary" />
-              Performance
-            </h3>
-            {/* Value / Performance toggle */}
-            <div className="flex items-center bg-muted/40 rounded-full p-0.5">
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`text-[10px] rounded-full h-6 px-3 font-semibold ${chartMode === 'value' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground'}`}
-                onClick={() => setChartMode('value')}
-              >
-                Value
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`text-[10px] rounded-full h-6 px-3 font-semibold ${chartMode === 'performance' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground'}`}
-                onClick={() => setChartMode('performance')}
-              >
-                Performance
-              </Button>
-            </div>
-          </div>
-          <div className="flex items-center gap-1 mb-3 bg-muted/30 p-1 rounded-full">
-            {["1D", "5D", "1M", "3M", "6M", "1Y", "All"].map(p => (
-              <Button
-                key={p}
-                variant="ghost"
-                size="sm"
-                className={`text-xs rounded-full h-7 px-3 flex-1 ${chartPeriod === p ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-                onClick={() => setChartPeriod(p)}
-              >
-                {p}
-              </Button>
-            ))}
-          </div>
-          <Card className="border-0 rounded-2xl overflow-hidden shadow-sm">
-            <RobinhoodPerformanceChart
-              currentValue={chartMode === 'value' ? stats.totalValue : stats.gainPct}
-              initialValue={chartMode === 'value' ? stats.totalCost : 0}
-              mode={chartMode}
-            />
-          </Card>
-        </div>
 
         {/* ── ALLOCATION ── */}
         {sectorAlloc.length > 0 && (

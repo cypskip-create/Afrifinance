@@ -16,7 +16,7 @@ import {
   Lightbulb, Volume2, BarChart2
 } from "lucide-react";
 
-const tabs = ["Overview", "NSE", "IPOs", "Dividends"] as const;
+const tabs = ["Overview", "Discover", "Calendars", "Heatmap", "All Stocks"] as const;
 type Tab = typeof tabs[number];
 
 const indices = [
@@ -183,27 +183,18 @@ export default function Markets() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <TopBar title="Markets" subtitle="Explore & discover" showSearch showNotifications />
+      <TopBar title="Markets" subtitle="Discover opportunities" showSearch showNotifications />
 
-      {/* Premium Tab Navigation */}
-      <div className="sticky top-[57px] z-30 bg-background/95 backdrop-blur-xl border-b border-border/50">
-        <div className="flex overflow-x-auto scrollbar-hide px-3 gap-1 py-2">
-          {[
-            { tab: "Overview" as Tab, icon: BarChart3 },
-            { tab: "NSE" as Tab, icon: Landmark },
-            { tab: "IPOs" as Tab, icon: Flame },
-            { tab: "Dividends" as Tab, icon: DollarSign },
-          ].map(({ tab, icon: Icon }) => (
+      {/* Sticky editorial sub-nav */}
+      <div className="sub-nav">
+        <div className="flex overflow-x-auto scrollbar-hide px-4 gap-1 py-2">
+          {tabs.map(tab => (
             <button
               key={tab}
+              data-small-target
               onClick={() => setActiveTab(tab)}
-              className={`flex items-center gap-2 py-2 px-4 text-sm font-semibold whitespace-nowrap rounded-full transition-all duration-200 ${
-                activeTab === tab
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
-              }`}
+              className={`pill-tab whitespace-nowrap ${activeTab === tab ? 'active' : ''}`}
             >
-              <Icon className="h-4 w-4" />
               {tab}
             </button>
           ))}
@@ -332,7 +323,7 @@ export default function Markets() {
               <h3 className="text-sm font-bold mb-3">Featured Lists</h3>
               <div className="grid grid-cols-2 gap-2.5">
                 {featuredLists.map(list => (
-                  <Card key={list.title} className="soft-card p-4 cursor-pointer active:scale-[0.97] transition-transform" onClick={() => setActiveTab("NSE")}>
+                  <Card key={list.title} className="soft-card p-4 cursor-pointer active:scale-[0.97] transition-transform" onClick={() => setActiveTab("All Stocks")}>
                     <div className={`w-10 h-10 rounded-2xl ${list.color} flex items-center justify-center mb-3`}>
                       <list.icon className="h-5 w-5" />
                     </div>
@@ -469,7 +460,7 @@ export default function Markets() {
               </h3>
               <div className="grid grid-cols-2 gap-2">
                 {sectors.map(s => (
-                  <Card key={s.name} className="soft-card p-3 cursor-pointer active:scale-[0.97] transition-transform" onClick={() => { setNseFilter(s.name === "Telecom" ? "Telecom" : s.name); setActiveTab("NSE"); }}>
+                  <Card key={s.name} className="soft-card p-3 cursor-pointer active:scale-[0.97] transition-transform" onClick={() => { setNseFilter(s.name === "Telecom" ? "Telecom" : s.name); setActiveTab("All Stocks"); }}>
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-semibold">{s.name}</p>
                       <p className={`text-xs font-bold px-2 py-0.5 rounded-full ${s.isUp ? 'bg-bull/10 text-bull' : 'bg-bear/10 text-bear'}`}>
@@ -488,7 +479,7 @@ export default function Markets() {
         )}
 
         {/* ─── NSE TAB ─── */}
-        {activeTab === "NSE" && (
+        {activeTab === "All Stocks" && (
           <>
             {/* Filters */}
             <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
@@ -589,7 +580,7 @@ export default function Markets() {
         {/* Global tab removed — focused on Kenyan market */}
 
         {/* ─── IPOs TAB ─── */}
-        {activeTab === "IPOs" && (
+        {activeTab === "Discover" && (
           <>
             <h3 className="text-sm font-bold flex items-center gap-2">
               <Flame className="h-4 w-4 text-accent" />
@@ -656,7 +647,7 @@ export default function Markets() {
         )}
 
         {/* ─── DIVIDENDS TAB ─── */}
-        {activeTab === "Dividends" && (
+        {activeTab === "Calendars" && (
           <>
             <h3 className="text-sm font-bold flex items-center gap-2">
               <Calendar className="h-4 w-4 text-primary" />

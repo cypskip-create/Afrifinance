@@ -73,13 +73,13 @@ const generateMockData = (timeframe: string, symbol: string = "STK") => {
   return dataPoints;
 };
 
-const TVTooltip = ({ active, payload }: any) => {
+const HoverTooltip = ({ active, payload }: any) => {
   if (active && payload?.length) {
     const d = payload[0].payload;
     return (
-      <div className="bg-foreground/95 text-background rounded-md px-2.5 py-1 shadow-lg text-center backdrop-blur-sm border border-foreground/10">
-        <p className="font-bold text-[13px] tabular-nums leading-tight">KES {d.price.toFixed(2)}</p>
-        <p className="text-[10px] opacity-80 leading-tight">{d.date}</p>
+      <div className="bg-foreground text-background rounded-md px-2 py-1 shadow-lg text-center">
+        <p className="font-bold text-[12px] tabular leading-tight">KES {d.price.toFixed(2)}</p>
+        <p className="text-[9px] opacity-80 leading-tight mt-0.5">{d.date}</p>
       </div>
     );
   }
@@ -107,76 +107,56 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, onHoverPrice }: Sto
   }, [onHoverPrice]);
   const handleMouseLeave = useCallback(() => { if (onHoverPrice) onHoverPrice(null, null); }, [onHoverPrice]);
 
-  // ── Simple (TradingView-style) line ──
+  // ── Simple (Robinhood-style) line — no side price axis ──
   if (!advanced) {
+    const gradientId = `gs-${symbol}-${timeframe}`;
     return (
       <div className="relative h-full w-full">
-        {/* Small Advanced toggle pinned top-left over chart */}
-        <Button
-          variant="outline"
-          size="sm"
-          className="absolute top-1 left-1 z-10 h-6 px-2 text-[10px] rounded-full font-semibold gap-1 bg-background/80 backdrop-blur-sm"
+        <button
+          data-small-target
+          className="absolute top-1 right-1 z-10 h-6 px-2 text-[9.5px] rounded-full font-semibold gap-1 inline-flex items-center bg-background/70 backdrop-blur border border-border/70 text-muted-foreground hover:text-foreground transition-colors"
           onClick={() => setAdvanced(true)}
         >
           <Activity className="h-2.5 w-2.5" />Advanced
-        </Button>
+        </button>
 
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart
+          <AreaChart
             data={data}
-            margin={{ top: 8, right: 4, left: 0, bottom: 4 }}
+            margin={{ top: 12, right: 4, left: 4, bottom: 0 }}
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
           >
-            <CartesianGrid stroke="hsl(var(--border))" strokeOpacity={0.3} vertical horizontal />
-            <XAxis
-              dataKey="date"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-              minTickGap={48}
-            />
-            <YAxis
-              orientation="right"
-              domain={[minPrice - padding, maxPrice + padding]}
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-              width={44}
-              tickFormatter={(v) => v.toFixed(2)}
-              mirror={false}
-            />
+            <defs>
+              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={lineColor} stopOpacity={0.14} />
+                <stop offset="100%" stopColor={lineColor} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <XAxis dataKey="date" hide />
+            <YAxis hide domain={[minPrice - padding, maxPrice + padding]} />
             <Tooltip
-              content={<TVTooltip />}
-              cursor={{
-                stroke: "hsl(var(--foreground))",
-                strokeWidth: 1,
-                strokeDasharray: "3 3",
-                strokeOpacity: 0.5,
-              }}
+              content={<HoverTooltip />}
+              cursor={{ stroke: "hsl(var(--foreground))", strokeWidth: 1, strokeOpacity: 0.35 }}
             />
-            <ReferenceLine
-              y={lastPrice}
-              stroke={lineColor}
-              strokeWidth={1}
-              strokeDasharray="2 4"
-            />
-            <Line
-              type="linear"
+            <ReferenceLine y={firstPrice} stroke="hsl(var(--muted-foreground))" strokeWidth={1} strokeDasharray="2 4" strokeOpacity={0.4} />
+            <Area
+              type="monotone"
               dataKey="price"
               stroke={lineColor}
               strokeWidth={1.6}
+              fill={`url(#${gradientId})`}
               dot={false}
-              activeDot={{ r: 4, fill: lineColor, stroke: "hsl(var(--background))", strokeWidth: 2 }}
+              activeDot={{ r: 3.5, fill: lineColor, stroke: "hsl(var(--background))", strokeWidth: 2 }}
               isAnimationActive={false}
             />
-          </LineChart>
+          </AreaChart>
         </ResponsiveContainer>
       </div>
     );
   }
 
-  // ── Advanced ──
+  // ── Advanced (keeps the axes for serious analysis) ──
   const gradientId = `colorPrice-${symbol}-${timeframe}-adv`;
   return (
     <div className="relative h-full w-full">
@@ -187,7 +167,7 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, onHoverPrice }: Sto
           <Badge variant={showSMA50 ? "default" : "outline"} className="text-[9px] cursor-pointer h-5 bg-background/80 backdrop-blur-sm" onClick={() => setShowSMA50(!showSMA50)}>SMA50</Badge>
           <Badge variant={showBB ? "default" : "outline"} className="text-[9px] cursor-pointer h-5 bg-background/80 backdrop-blur-sm" onClick={() => setShowBB(!showBB)}>BB</Badge>
         </div>
-        <Button variant="default" size="sm" className="h-6 px-2 text-[10px] rounded-full font-semibold" onClick={() => setAdvanced(false)}>Simple</Button>
+        <Button variant="ghost" size="sm" className="h-6 px-2 text-[9.5px] rounded-full font-semibold bg-background/70 border border-border/70" onClick={() => setAdvanced(false)}>Simple</Button>
       </div>
 
       <ResponsiveContainer width="100%" height="100%">
@@ -207,7 +187,7 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, onHoverPrice }: Sto
           <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} minTickGap={48} />
           <YAxis yAxisId="price" orientation="right" domain={[minPrice - padding, maxPrice + padding]} axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} width={44} tickFormatter={(v) => v.toFixed(2)} />
           <YAxis yAxisId="volume" hide orientation="left" />
-          <Tooltip content={<TVTooltip />} cursor={{ stroke: "hsl(var(--foreground))", strokeWidth: 1, strokeDasharray: "3 3", strokeOpacity: 0.5 }} />
+          <Tooltip content={<HoverTooltip />} cursor={{ stroke: "hsl(var(--foreground))", strokeWidth: 1, strokeDasharray: "3 3", strokeOpacity: 0.5 }} />
 
           {showVolume && <Bar dataKey="volume" yAxisId="volume" fill="hsl(var(--muted))" opacity={0.35} barSize={2} />}
           {showBB && (

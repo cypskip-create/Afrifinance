@@ -1,81 +1,150 @@
-## Scope
+# AfriFinance — Full Redesign Plan
 
-This batch of changes spans 5 areas of the app. I'll address each from the notes (ignoring the crossed-out items about rooms and Discover top-traders replacement).
+Scope: a top-to-bottom visual + structural redesign of every primary surface. No new backend features — only UI restructuring, chart rewrites, information architecture, theming, and one small subscription section. Everything you asked for is included; anything I flag as "phase 2" is called out at the end so we agree before I ship.
 
----
+## 1. Design language (foundation — done first, everything else inherits)
 
-### 1. TradersHub polish
-- **Handle (@username) sync**: Show the user's actual handle consistently across compose, post card header, profile header, and comment sheet (currently sometimes lags / falls back).
-- **Loading delays**: Add skeleton-first render + memoize feed query so posts appear immediately.
-- **The `:` (more) menu**: Replace placeholder kebab menu with real actions — Copy link, Mute user, Block, Report, and (own post) Edit/Delete.
-- **Profile page cleanup**: Remove Win Rate, Avg Gain, and Streak stat tiles; keep Posts / Followers / Following / Portfolio P&L.
-- **Timestamp format**: 
-  - `< 1m` → "now"
-  - `< 60m` → "Xm"
-  - `< 24h` → "Xh" (e.g. 1h, 2h, 10h, 22h)
-  - `< 7d` → "Xd"
-  - else → "MMM D" (or "MMM D, YYYY" if not current year)
-  - Apply on post cards, comments, notifications.
-- **Disclaimer trigger**: Show TradersHub disclaimer ONLY on first-ever visit after signup (persist `tradershub_onboarded` flag on profile). Remove it from every-session gate.
-- **Editable banner + profile picture**: Add banner_url + raise avatar overlap (X-style: avatar sits below banner, half-overlapping, with edit pencil). Hook into `EditProfileDialog` with image upload to storage.
-- **TradersHub onboarding flow**: First-time TradersHub click → modal wizard (handle → display name → bio → avatar → banner → disclaimer accept) → creates social profile.
+Move from "cards on a dashboard" to a **canvas**. The page is the container.
 
-### 2. Account page
-- Add **Font Size** setting (Small / Default / Large / X-Large) — applied via CSS variable `--app-font-scale` on `<html>`, persisted in localStorage.
+Tokens rewritten in `src/index.css` + `tailwind.config.ts`:
+- Typography: **Söhne / Inter Tight** display + **Inter** body (Google-hosted). Tight tracking on numerals, tabular-nums everywhere prices appear.
+- Spacing: 4/8/12/20/32/56 scale. No more `p-4` cards inside `p-4` cards.
+- Dividers: 1px `border-border/40` hairlines replace card walls.
+- Radii: `--radius: 10px` (down from 16). Cards only when grouping is non-obvious (holdings row, post, alert).
+- Color: neutral greys carry the app; green/red only for P&L; single accent for CTAs. No purples, no gradients-on-white.
+- Motion: 180ms ease-out for state, 320ms for route/tab. No bouncy springs.
 
-### 3. Global font sizing
-- Normalize base font to match TradersHub feel (~15px on mobile, 14px previously). Wire `--app-font-scale` so the Account setting scales everything.
+Three themes, each hand-tuned (not inversions):
+- **Light** — warm off-white `#FAFAF7`, ink `#0E0F13`, hairlines `#E7E5E0` (Fidelity/Robinhood).
+- **Dark** — `#0E1013` bg, `#15181D` surface, `#E6E8EC` text (TradingView/X).
+- **AMOLED** — true `#000`, `#0A0A0A` surface, dimmer accents.
 
-### 4. Markets page — add interactive tools
-Add a tools strip above the stock list:
-- **Stock Screener** (already exists at `/screener` — surface a prominent entry card + inline mini-screener with sector / market cap / P/E / dividend yield filters).
-- **Compare Stocks** (existing `/compare` — surface).
-- **Sector Heatmap** (new, inline) — clickable tiles colored by % change, size by market cap.
-- **Top Gainers / Losers / Most Active** tabs.
-- **Market Movers carousel** with sparklines.
-- **Economic Calendar** mini widget (reuse existing component).
-- **Currency Converter** (reuse existing).
-- All interactive (filters, sort, click-through to stock pages).
+Theme picker added to Account → Appearance alongside font size.
 
-### 5. Home page ↔ Portfolio sync
-- The "Portfolio Snapshot" widget on Home reads from same `usePortfolio` source as `/portfolio` — fix it to use the canonical total value (cost basis + unrealised P&L computed identically), so both pages show the same number.
+## 2. Bottom navigation
 
-### 6. Stock chart — TradingView-style line chart
-Replace `StockPriceChart` / `EnhancedStockChart` default view with a clean TradingView-style line:
-- Thin (1.5px) crisp line, subtle vertical gridlines only, no area fill on default mode.
-- Right-side price axis with floating last-price tag (colored pill at current price).
-- Horizontal crosshair with date+price labels on both axes when hovering/scrubbing.
-- Smooth pan/zoom via wheel + drag.
-- Timeframe pills: 1D · 5D · 1M · 3M · 6M · YTD · 1Y · 5Y · ALL.
-- "Advanced" toggle reveals candlestick + indicators (existing).
-- Built with Recharts + lightweight overlays to mimic TradingView aesthetic.
+5 tabs (Alerts removed): Home · Markets · Portfolio · TradersHub · Profile.
+- Profile tab uses the user's avatar, not a generic icon.
+- Thin 1px top divider, smaller 10px labels, hairline active indicator, subtle scale-in on tap.
+- Alerts bell moves to the top-right of every page's header (global `TopBar`).
 
----
+## 3. Home — daily command center
 
-## Technical notes
+Kill the widget-tile grid in `Home.tsx`. New structure, canvas-first, section headers as small uppercase labels with a hairline:
 
-- **Storage**: Need a `profile-media` Supabase storage bucket (public read) for avatars + banners if not present.
-- **DB**: Add `banner_url`, `handle`, `tradershub_onboarded` columns on `profiles` if missing. Migration required.
-- **Font scaling**: `html { font-size: calc(15px * var(--app-font-scale, 1)); }` then rem-based throughout.
-- **Timestamp**: Centralize in `src/lib/formatTimestamp.ts` and use everywhere.
-- **Chart**: New `TradingViewLineChart.tsx` using Recharts `LineChart` with custom `<Tooltip>`, `<ReferenceLine>` for last price, custom axis tick.
-- **Markets tools**: New `src/components/markets/MarketTools.tsx` aggregator + `SectorHeatmapInline.tsx`.
-- **Portfolio sync**: Audit `usePortfolio` hook, ensure Home's snapshot widget calls the same selector (`totalValue`, `totalPnL`).
+1. Greeting + date + NSE market status inline
+2. **Market snapshot** — NSE 20, NSE 25, NASI as inline stat row (no cards)
+3. **Market sentiment** — slim Fear & Greed bar (rebuilt, no gauge card)
+4. **Portfolio summary** — big value, delta, tiny sparkline; tap → Portfolio
+5. **Watchlist movers** — plain table, symbol · price · %chg
+6. **Opportunities** — 4 pills: Undervalued · High Growth · Dividends · Financial Health (tap → filtered Markets/Discover)
+7. **Upcoming** — earnings + dividends merged into a single dated list
+8. **Economic events** — inline list
+9. **Trending on TradersHub** — 3 rows, title + engagement
+10. **AI insight of the day** — editorial block, no card
+11. **Continue research** — recently viewed stocks strip
+12. **Personalized alerts** — last 3 triggered alerts
 
----
+## 4. Markets — discovery center with sticky sub-nav
 
-## Execution order
+Sticky sub-nav: **Overview · Discover · Calendars · Heatmap · All Stocks**.
 
-1. DB migration (profile fields + storage bucket)
-2. Timestamp utility + apply across post/comment/notification
-3. TradersHub disclaimer gating → first-time only
-4. TradersHub onboarding wizard
-5. Profile page: remove stats, add editable banner + raised avatar
-6. Post `:` menu actions
-7. Handle sync fix
-8. Account: font-size setting + global CSS scale
-9. Portfolio sync fix
-10. TradingView-style chart
-11. Markets page tools
+- Overview: indices, breadth, gainers/losers/most active as ranked lists, sector performance strip
+- Discover: High Growth · Undervalued · Strong Dividends · Momentum · High Quality · Banking · Telecom · Industrial · Small Caps (each an inline section)
+- Calendars: Earnings · Dividends · Economic (segmented control)
+- Heatmap: rebuilt as a proper treemap by market cap, colored by %chg
+- All Stocks: existing screener refined, hairline table
 
-This is large — I'll work through it in sequence and verify the build after each major section.
+## 5. Portfolio — Robinhood/Fidelity feel
+
+- Huge value at top, delta below, no card
+- **New institutional line chart** (see §7): 1D/1W/1M/3M/YTD/1Y/ALL, green/red by period, crosshair, no right-side price axis (per your instruction)
+- Holdings as a hairline table (symbol, shares, value, %chg, tiny sparkline)
+- Insights section: Diversification · Risk · Sector · Country · Largest · Best · Worst · Income Forecast · Benchmark · Historical · Allocation · AI Insights — as editorial rows with small inline visuals, not tiles
+- Public/Private toggle kept; visible near header
+
+## 6. Stock page — the heart of the app
+
+Header: Company name (display font), ticker · exchange (muted), big price, delta.
+
+**New chart** (see §7). Sticky sub-nav: **Overview · Research · Financials · News · Community · More**.
+
+- Overview: key stats table, AI thesis (editorial), Investment Health Score row, news highlights, upcoming events
+- Research: Valuation / Growth / Financial Health / Dividends / Ownership / Risk — each an editorial section with ✓/⚠ indicators and inline mini-visuals, no giant cards
+- Financials: Income / Balance / Cash Flow / Margins / Historical / Quarterly / Annual / Peers — hairline tables + small line charts
+- News: stock-specific feed with AI "why it matters" summaries
+- Community: TradersHub posts mentioning ticker, bull/bear sentiment bar, top discussions, nested threaded replies with connecting lines, $TICKER tags routable
+- More: Profile · Management · Corporate Actions · Documents · Watchlist · Compare · Export · Alerts (grouped list)
+
+## 7. Charts — full rewrite
+
+Rewrite `StockPriceChart.tsx` + create `PortfolioValueChart.tsx`:
+- **No right-side price axis** (per your instruction) — Robinhood style
+- Thin 1.5px line, dynamic green/red vs period-open
+- Faint gradient fill (8% opacity)
+- Crosshair on touch/hover; floating value + date pill above the finger
+- Timeframe pills below chart (1D/1W/1M/3M/YTD/1Y/ALL)
+- Candlestick + Compare + Fullscreen accessible from a single small "chart tools" button top-right of chart area (not the current toolbar clutter)
+- Same primitive reused everywhere (Home sparkline, Portfolio, Stock, Compare)
+
+## 8. News page
+
+Delete `/news` route and nav entry. Redistribute:
+- Company news → Stock page › News tab
+- Portfolio news → Portfolio (new inline strip)
+- Market news → Home + Markets › Overview
+Add AI "why it matters" one-liner to each item.
+
+## 9. TradersHub
+
+Refine, don't rebuild:
+- Post cards flattened to hairline separators between posts (X-style)
+- Nested replies with left thread lines per depth, collapse/expand (already partially there — polish)
+- Like / Repost / Comment / Bookmark / Follow row cleaned up
+- $TICKER + #hashtag stay routable
+- Compose sheet spacing tightened
+
+## 10. Alerts
+
+- Global bell in TopBar → sheet/drawer
+- Categories: Earnings · Dividends · Price · Valuation · Insider · Watchlist · Portfolio · Market news
+- `/notifications` route kept as the full-page view
+
+## 11. Account — Subscriptions
+
+Short, single-screen section. Two tiers, based on research of Simply Wall St / Moomoo / Robinhood Gold / Seeking Alpha pricing benchmarked to Kenyan market:
+
+- **Free** — Watchlists, basic charts, TradersHub, delayed prices, 3 AI theses/mo
+- **Premium — KES 1,200/mo or KES 12,000/yr** — Unlimited AI theses, Investment Health Score, advanced screener, real-time prices, portfolio insights, no ads, priority alerts
+
+One clean comparison, single CTA. No congestion.
+
+## Files touched (high-level)
+
+Rewrites: `src/index.css`, `tailwind.config.ts`, `ThemeProvider.tsx`, `BottomNavigation.tsx`, `TopBar.tsx`, `MainLayout.tsx`, `Home.tsx`, `Markets.tsx`, `TrackInvestments.tsx`, `StockDetail.tsx`, `StockPriceChart.tsx`, `TradersHub.tsx`, `Account.tsx`, `App.tsx` (route removal).
+
+New: `PortfolioValueChart.tsx`, `AlertsSheet.tsx`, `MarketsSubNav.tsx`, `StockSubNav.tsx`, `SectionHeader.tsx`, `HairlineTable.tsx`, `SubscriptionSection.tsx`, `ThemePicker.tsx`.
+
+Retired: `News.tsx` route, most `home/*` widget cards, Alerts bottom-nav item.
+
+## Order of execution
+
+1. Design tokens + themes + typography (foundation)
+2. Bottom nav + TopBar + AlertsSheet
+3. Chart primitive rewrite
+4. Home
+5. Markets + sticky sub-nav + heatmap
+6. Portfolio
+7. Stock page + sticky sub-nav + tabs
+8. TradersHub polish
+9. News removal + redistribution
+10. Account + Subscriptions
+11. QA pass with Playwright screenshots across all 3 themes on mobile viewport
+
+## Deferred to phase 2 (flagging so we agree)
+
+- Real candlestick + compare + fullscreen chart modes — I'll wire the entry points and ship line + basic candlestick; full compare/fullscreen after you approve the new chart primitive.
+- Treemap heatmap library choice (custom SVG vs a lib) — I'll build custom SVG for zero deps unless you'd rather I add `visx`.
+- Real-time price wiring for Premium tier — UI only this pass; backend gating later.
+
+Reply "go" and I'll execute in the order above. If any of the deferred items should be in-scope now, say which.
