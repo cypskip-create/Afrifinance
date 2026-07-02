@@ -60,7 +60,7 @@ export function AIThesisCard(props: Props) {
   }, [props.symbol, props.mode]);
 
   return (
-    <Card className="soft-card border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5">
+    <Card className="grouped-card border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5">
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-1.5">

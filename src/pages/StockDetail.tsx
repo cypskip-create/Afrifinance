@@ -1,18 +1,14 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Heart, TrendingUp, TrendingDown, Newspaper, Activity, Target, Award, PieChart, FileText, Banknote, UserCheck, Briefcase, Building, Globe, Users, Calendar, Bell, GitCompare, Plus, Pencil, Share2, MessageSquare, BarChart3, ChevronRight, Wallet, Shield, Coins, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
+import { ArrowLeft, Heart, TrendingUp, TrendingDown, Share2, Bell, GitCompare, MessageSquare, Plus, Pencil, Maximize2, CandlestickChart, ChevronRight, FileText, Users2, Briefcase, Download, Building2, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { StockPriceChart } from "@/components/stock/StockPriceChart";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useCallback, useMemo } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { PriceAlertsManager } from "@/components/alerts/PriceAlertsManager";
 import { usePortfolio } from "@/hooks/usePortfolio";
-import { AnalystRatings } from "@/components/stock/AnalystRatings";
 import { MarketStatusIndicator } from "@/components/shared/MarketStatusIndicator";
-import { SparklineChart } from "@/components/shared/SparklineChart";
 import { AddInvestmentDialog } from "@/components/portfolio/AddInvestmentDialog";
 import { AfriFinanceScoreCard, computeScores } from "@/components/stock/AfriFinanceScore";
 import { AIThesisCard } from "@/components/stock/AIThesisCard";
@@ -48,19 +44,14 @@ const stockData: Record<string, {
   KPLC: { name: "Kenya Power & Lighting Co.", price: 2.85, change: 0.05, changePercent: "1.79", isUp: true, marketCap: "5.5B", pe: "N/A", eps: "-1.25", dividend: "0.00", high52: "3.50", low52: "2.00", exchange: "NSE", sector: "Energy & Petroleum", volume: "15.2M", beta: "1.45", avgVolume: "8.5M" },
   KEGN: { name: "KenGen PLC", price: 4.25, change: 0.10, changePercent: "2.41", isUp: true, marketCap: "28.0B", pe: "5.2", eps: "0.82", dividend: "0.30", high52: "5.00", low52: "3.50", exchange: "NSE", sector: "Energy & Petroleum", volume: "2.1M", beta: "1.15", avgVolume: "1.6M" },
   TOTL: { name: "TotalEnergies Marketing Kenya", price: 28.50, change: 0.50, changePercent: "1.79", isUp: true, marketCap: "5.1B", pe: "12.5", eps: "2.28", dividend: "1.50", high52: "32.00", low52: "24.00", exchange: "NSE", sector: "Energy & Petroleum", volume: "95K", beta: "0.65", avgVolume: "78K" },
-  SASN: { name: "Sasini PLC", price: 18.50, change: -0.25, changePercent: "-1.33", isUp: false, marketCap: "4.2B", pe: "8.5", eps: "2.18", dividend: "0.50", high52: "22.00", low52: "16.00", exchange: "NSE", sector: "Agricultural", volume: "180K", beta: "0.72", avgVolume: "140K" },
-  KTBL: { name: "Kenya Tea Development Agency", price: 85.00, change: 1.50, changePercent: "1.80", isUp: true, marketCap: "16.8B", pe: "7.2", eps: "11.81", dividend: "4.00", high52: "95.00", low52: "75.00", exchange: "NSE", sector: "Agricultural", volume: "65K", beta: "0.58", avgVolume: "52K" },
   BAMB: { name: "Bamburi Cement PLC", price: 32.75, change: 0.75, changePercent: "2.34", isUp: true, marketCap: "11.9B", pe: "15.2", eps: "2.15", dividend: "0.00", high52: "38.00", low52: "28.00", exchange: "NSE", sector: "Construction & Allied", volume: "340K", beta: "0.92", avgVolume: "280K" },
-  CTUM: { name: "Centum Investment Company", price: 12.50, change: 0.20, changePercent: "1.63", isUp: true, marketCap: "8.3B", pe: "4.5", eps: "2.78", dividend: "0.55", high52: "15.00", low52: "10.00", exchange: "NSE", sector: "Investment", volume: "320K", beta: "1.08", avgVolume: "250K" },
-  NMG: { name: "Nation Media Group PLC", price: 16.80, change: 0.30, changePercent: "1.82", isUp: true, marketCap: "3.1B", pe: "8.2", eps: "2.05", dividend: "1.00", high52: "20.00", low52: "14.00", exchange: "NSE", sector: "Commercial & Services", volume: "210K", beta: "0.82", avgVolume: "165K" },
-  TPS: { name: "TPS Eastern Africa (Serena)", price: 22.50, change: 0.50, changePercent: "2.27", isUp: true, marketCap: "4.1B", pe: "12.5", eps: "1.80", dividend: "0.75", high52: "26.00", low52: "18.00", exchange: "NSE", sector: "Commercial & Services", volume: "95K", beta: "0.68", avgVolume: "72K" },
 };
 
-const companyInfo: Record<string, { description: string; sector: string; headquarters: string; ceo: string; employees: string; founded: string }> = {
-  SAFCOM: { description: "Safaricom PLC is a leading mobile network operator in Kenya providing mobile telephony, mobile money transfer (M-Pesa), and wireless data services.", sector: "Telecommunications", headquarters: "Nairobi, Kenya", ceo: "Peter Ndegwa", employees: "6,500+", founded: "1997" },
-  EQTY: { description: "Equity Group Holdings PLC is a leading financial services group in East and Central Africa, providing banking, insurance, and investment services.", sector: "Banking & Financial Services", headquarters: "Nairobi, Kenya", ceo: "James Mwangi", employees: "15,000+", founded: "1984" },
-  KCB: { description: "KCB Group PLC is the largest commercial bank in Kenya and East Africa by assets.", sector: "Banking & Financial Services", headquarters: "Nairobi, Kenya", ceo: "Paul Russo", employees: "10,000+", founded: "1896" },
-  EABL: { description: "East African Breweries Limited is the largest brewer in East Africa, producing Tusker, Guinness, and Bell lager.", sector: "Manufacturing & Allied", headquarters: "Nairobi, Kenya", ceo: "Jane Karuku", employees: "4,000+", founded: "1922" },
+const companyInfo: Record<string, { description: string; headquarters: string; ceo: string; employees: string; founded: string }> = {
+  SAFCOM: { description: "Safaricom PLC is Kenya's largest mobile network operator, best known for M-Pesa mobile money, voice, data and fibre.", headquarters: "Nairobi, Kenya", ceo: "Peter Ndegwa", employees: "6,500+", founded: "1997" },
+  EQTY:   { description: "Equity Group Holdings is a leading pan-African financial services group offering banking, insurance and investment products across seven markets.", headquarters: "Nairobi, Kenya", ceo: "James Mwangi", employees: "15,000+", founded: "1984" },
+  KCB:    { description: "KCB Group is the largest commercial bank in East Africa by assets, serving retail, corporate and government clients across the region.", headquarters: "Nairobi, Kenya", ceo: "Paul Russo", employees: "10,000+", founded: "1896" },
+  EABL:   { description: "East African Breweries produces and distributes beer and spirits including Tusker, Guinness and Bell across East Africa.", headquarters: "Nairobi, Kenya", ceo: "Jane Karuku", employees: "4,000+", founded: "1922" },
 };
 
 const stockNews = [
@@ -70,6 +61,17 @@ const stockNews = [
   { id: 4, title: "Board announces share buyback program", source: "NSE Filings", time: "1d ago", sentiment: "bullish" as const },
 ];
 
+type SubSection = "overview" | "research" | "financials" | "news" | "community" | "more";
+
+const SUB_NAV: { id: SubSection; label: string }[] = [
+  { id: "overview", label: "Overview" },
+  { id: "research", label: "Research" },
+  { id: "financials", label: "Financials" },
+  { id: "news", label: "News" },
+  { id: "community", label: "Community" },
+  { id: "more", label: "More" },
+];
+
 export default function StockDetail() {
   const navigate = useNavigate();
   const { symbol } = useParams();
@@ -77,6 +79,8 @@ export default function StockDetail() {
   const [showAlertsDialog, setShowAlertsDialog] = useState(false);
   const [hoverPrice, setHoverPrice] = useState<number | null>(null);
   const [hoverDate, setHoverDate] = useState<string | null>(null);
+  const [section, setSection] = useState<SubSection>("overview");
+  const [researchGroup, setResearchGroup] = useState<"valuation" | "growth" | "health" | "dividends" | "ownership" | "risk">("valuation");
   const { addToWatchlist, removeFromWatchlist, isInWatchlist } = useWatchlist();
   const { portfolio } = usePortfolio();
   const { toast } = useToast();
@@ -90,20 +94,18 @@ export default function StockDetail() {
   };
 
   const company = companyInfo[symbol as keyof typeof companyInfo] || {
-    description: `${stock.name} is a company listed on the Nairobi Securities Exchange in the ${stock.sector} sector.`,
-    sector: stock.sector, headquarters: "Nairobi, Kenya", ceo: "N/A", employees: "N/A", founded: "N/A"
+    description: `${stock.name} is listed on the Nairobi Securities Exchange in the ${stock.sector} sector.`,
+    headquarters: "Nairobi, Kenya", ceo: "N/A", employees: "N/A", founded: "N/A"
   };
 
   const handleWatchlistToggle = async () => {
     if (!symbol) return;
     if (isInWatchlist(symbol)) {
-      const result = await removeFromWatchlist(symbol);
-      if (result?.error) toast({ title: "Error", variant: "destructive" });
-      else toast({ title: "Removed from watchlist" });
+      await removeFromWatchlist(symbol);
+      toast({ title: "Removed from watchlist" });
     } else {
-      const result = await addToWatchlist(symbol, stock.name);
-      if (result?.error) toast({ title: "Error", description: result.error.message, variant: "destructive" });
-      else toast({ title: "Added to watchlist" });
+      await addToWatchlist(symbol, stock.name);
+      toast({ title: "Added to watchlist" });
     }
   };
 
@@ -112,7 +114,7 @@ export default function StockDetail() {
     setHoverDate(date);
   }, []);
 
-  const timeframes = ["1D", "5D", "1M", "3M", "6M", "1Y", "ALL"];
+  const timeframes = ["1D", "1W", "1M", "3M", "YTD", "1Y", "ALL"];
   const divYield = stock.pe !== "N/A" ? ((parseFloat(stock.dividend) / stock.price) * 100).toFixed(1) : "0.0";
 
   const displayPrice = hoverPrice ?? stock.price;
@@ -122,296 +124,310 @@ export default function StockDetail() {
     : stock.changePercent;
   const displayIsUp = hoverPrice ? hoverPrice >= stock.price : stock.isUp;
 
-  const revenueSegments = [
-    { segment: "M-Pesa", revenue: "KES 125.8B", pct: 38 },
-    { segment: "Voice", revenue: "KES 72.4B", pct: 22 },
-    { segment: "Data", revenue: "KES 65.8B", pct: 20 },
-    { segment: "SMS", revenue: "KES 32.9B", pct: 10 },
-    { segment: "Other", revenue: "KES 31.6B", pct: 10 },
-  ];
+  const scoreInputs = {
+    price: stock.price, pe: stock.pe, eps: stock.eps, dividend: stock.dividend,
+    changePercent: stock.changePercent, beta: stock.beta,
+    high52: stock.high52, low52: stock.low52, marketCap: stock.marketCap,
+  };
+  const scores = computeScores(scoreInputs);
+  const fundamentals = getFundamentals(symbol || "", stock.price);
+
+  // Section refs — sticky sub-nav scrolls to them
+  const refs = {
+    overview: useRef<HTMLDivElement>(null),
+    research: useRef<HTMLDivElement>(null),
+    financials: useRef<HTMLDivElement>(null),
+    news: useRef<HTMLDivElement>(null),
+    community: useRef<HTMLDivElement>(null),
+    more: useRef<HTMLDivElement>(null),
+  };
+  const scrollTo = (id: SubSection) => {
+    setSection(id);
+    refs[id].current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  // Scroll spy
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter(e => e.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        if (visible[0]) {
+          const id = (visible[0].target as HTMLElement).dataset.section as SubSection;
+          if (id) setSection(id);
+        }
+      },
+      { rootMargin: "-140px 0px -60% 0px", threshold: [0, 0.25, 0.5, 1] }
+    );
+    Object.values(refs).forEach(r => r.current && observer.observe(r.current));
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const Eyebrow = ({ children }: { children: React.ReactNode }) => (
+    <p className="section-eyebrow mb-2">{children}</p>
+  );
 
   return (
-    <div className="min-h-screen bg-background pb-24">
-      {/* Sticky Header */}
+    <div className="min-h-screen bg-background pb-28">
+      {/* Slim sticky header */}
       <header className="sticky top-0 z-40 bg-background/90 backdrop-blur-xl border-b border-border/50">
-        <div className="flex items-center justify-between p-3">
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="tap-scale h-9 w-9">
+        <div className="flex items-center justify-between px-3 py-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="tap-scale h-9 w-9 shrink-0">
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="font-bold text-base">{symbol}</span>
+                <span className="font-semibold text-sm tracking-tight">{symbol}</span>
+                <span className="text-[10px] text-muted-foreground">{stock.exchange}</span>
                 <MarketStatusIndicator />
               </div>
-              <p className="text-xs text-muted-foreground line-clamp-1">{stock.name}</p>
+              <p className="text-[11px] text-muted-foreground truncate">{stock.name}</p>
             </div>
           </div>
-          <div className="flex items-center gap-1.5">
-            <Button variant="ghost" size="icon" onClick={handleWatchlistToggle} className="h-9 w-9 rounded-full bg-primary/10 tap-scale">
-              <Heart className={`h-4 w-4 transition-all ${isInWatchlist(symbol || '') ? 'fill-primary text-primary scale-110' : 'text-primary'}`} />
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" onClick={handleWatchlistToggle} className="h-9 w-9 tap-scale">
+              <Heart className={`h-4 w-4 ${isInWatchlist(symbol || '') ? 'fill-primary text-primary' : 'text-muted-foreground'}`} />
             </Button>
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-accent/10 tap-scale" onClick={() => navigate(`/news?stock=${symbol}`)}>
-              <Newspaper className="h-4 w-4 text-accent" />
+            <Button variant="ghost" size="icon" className="h-9 w-9 tap-scale" onClick={() => setShowAlertsDialog(true)}>
+              <Bell className="h-4 w-4 text-muted-foreground" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-muted tap-scale">
-              <Share2 className="h-4 w-4" />
+            <Button variant="ghost" size="icon" className="h-9 w-9 tap-scale">
+              <Share2 className="h-4 w-4 text-muted-foreground" />
             </Button>
           </div>
         </div>
       </header>
 
-      <div className="p-4 space-y-4">
-        {/* Hero Price — updates on chart drag */}
-        <div className="animate-fade-in">
-          <div className="flex items-center gap-2 mb-1">
-            <Badge variant="secondary" className="text-[10px] py-0">{stock.exchange}</Badge>
-            <Badge variant="outline" className="text-[10px] py-0">{stock.sector}</Badge>
-          </div>
-          <div className="text-3xl font-bold tracking-tight transition-all">
-            KES {displayPrice.toFixed(2)}
-          </div>
-          <div className={`text-sm font-semibold flex items-center gap-1 mt-0.5 ${displayIsUp ? 'text-bull' : 'text-bear'}`}>
-            {displayIsUp ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-            <span>{priceChange >= 0 ? '+' : ''}KES {Math.abs(priceChange).toFixed(2)} ({priceChangePercent}%)</span>
-            <span className="text-muted-foreground text-xs ml-1">
-              {hoverDate || "Today"}
-            </span>
-          </div>
+      {/* HERO — company · price · delta. No card. */}
+      <div className="px-4 pt-4 pb-2 animate-fade-in">
+        <h1 className="text-[15px] font-medium text-muted-foreground tracking-tight leading-tight">{stock.name}</h1>
+        <div className="mt-1 flex items-baseline gap-2">
+          <span className="text-4xl font-bold tabular tracking-tight">KES {displayPrice.toFixed(2)}</span>
         </div>
-
-        {/* Chart */}
-        <div>
-          <div className="flex gap-1 mb-3">
-            {timeframes.map((tf) => (
-              <Button key={tf} variant="ghost" size="sm"
-                className={`h-8 px-3 text-xs flex-1 rounded-full font-semibold transition-all ${tf === selectedTimeframe ? 'bg-primary/10 text-primary' : 'text-muted-foreground'}`}
-                onClick={() => setSelectedTimeframe(tf)}>
-                {tf}
-              </Button>
-            ))}
-          </div>
-          <Card className="soft-card overflow-hidden">
-            <CardContent className="p-2">
-              <div className="h-72">
-                <StockPriceChart symbol={symbol} timeframe={selectedTimeframe} onHoverPrice={handleChartHover} />
-              </div>
-            </CardContent>
-          </Card>
+        <div className={`text-sm font-semibold flex items-center gap-1 mt-1 tabular ${displayIsUp ? 'text-bull' : 'text-bear'}`}>
+          {displayIsUp ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+          <span>{priceChange >= 0 ? '+' : ''}KES {Math.abs(priceChange).toFixed(2)} · {priceChange >= 0 ? '+' : ''}{priceChangePercent}%</span>
+          <span className="text-muted-foreground font-normal text-xs ml-1">{hoverDate || "Today"}</span>
         </div>
-
-        {/* Quick Actions — compact pill row */}
-        <div className="grid grid-cols-3 gap-2">
-          {[
-            { icon: Bell, label: "Alert", action: () => setShowAlertsDialog(true), color: "bg-accent/10 text-accent" },
-            { icon: GitCompare, label: "Compare", action: () => navigate(`/compare?stock=${symbol}`), color: "bg-chart-3/10 text-chart-3" },
-            { icon: MessageSquare, label: "Discuss", action: () => navigate(`/traders-hub?compose=true&ticker=${symbol}`), color: "bg-chart-4/10 text-chart-4" },
-          ].map(btn => (
-            <Button key={btn.label} variant="ghost" className={`h-9 flex-row gap-1.5 rounded-full ${btn.color} tap-scale`} onClick={btn.action}>
-              <btn.icon className="h-3.5 w-3.5" />
-              <span className="text-[11px] font-semibold">{btn.label}</span>
-            </Button>
-          ))}
-        </div>
-
-        {/* My Holdings card — visible only when the user owns this stock */}
-        {myHolding && (
-          <Card className="soft-card border-primary/20">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <Wallet className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Your Position</p>
-                    <p className="text-sm font-bold">{myHolding.shares} shares</p>
-                  </div>
-                </div>
-                <AddInvestmentDialog
-                  lockedSymbol={symbol}
-                  lockedName={stock.name}
-                  lockedSector={stock.sector}
-                  trigger={
-                    <Button size="sm" variant="outline" className="h-8 rounded-full text-xs font-semibold">
-                      <Pencil className="h-3 w-3 mr-1.5" /> Edit
-                    </Button>
-                  }
-                />
-              </div>
-              <div className="grid grid-cols-3 gap-2 pt-3 border-t border-border/50">
-                <div>
-                  <p className="text-[10px] text-muted-foreground">Avg Price</p>
-                  <p className="text-sm font-bold">KES {myHolding.avg_cost.toFixed(2)}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-muted-foreground">Market Value</p>
-                  <p className="text-sm font-bold">KES {(myHolding.shares * stock.price).toFixed(2)}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-muted-foreground">P/L</p>
-                  <p className={`text-sm font-bold ${(stock.price - myHolding.avg_cost) >= 0 ? 'text-bull' : 'text-bear'}`}>
-                    {(stock.price - myHolding.avg_cost) >= 0 ? '+' : ''}{(((stock.price - myHolding.avg_cost) / myHolding.avg_cost) * 100).toFixed(1)}%
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* AfriFinance Score */}
-        {(() => {
-          const scoreInputs = {
-            price: stock.price,
-            pe: stock.pe,
-            eps: stock.eps,
-            dividend: stock.dividend,
-            changePercent: stock.changePercent,
-            beta: stock.beta,
-            high52: stock.high52,
-            low52: stock.low52,
-            marketCap: stock.marketCap,
-          };
-          const scores = computeScores(scoreInputs);
-          return (
-            <>
-              <AfriFinanceScoreCard scores={scores} />
-              <AIThesisCard
-                symbol={symbol || ""}
-                name={stock.name}
-                sector={stock.sector}
-                price={stock.price}
-                changePercent={stock.changePercent}
-                pe={stock.pe}
-                eps={stock.eps}
-                dividend={stock.dividend}
-                marketCap={stock.marketCap}
-                scores={scores as any}
-              />
-
-              {/* 9-tab analysis */}
-              <Tabs defaultValue="overview">
-                <TabsList className="w-full flex overflow-x-auto scrollbar-hide bg-muted/40 rounded-full h-9 p-0.5 gap-0.5">
-                  {[
-                    { v: "overview", l: "Overview" },
-                    { v: "valuation", l: "Valuation" },
-                    { v: "performance", l: "Performance" },
-                    { v: "growth", l: "Growth" },
-                    { v: "health", l: "Health" },
-                    { v: "dividends", l: "Dividends" },
-                    { v: "ownership", l: "Ownership" },
-                    { v: "risk", l: "Risk" },
-                    { v: "news", l: "News" },
-                    { v: "community", l: "Community" },
-                  ].map(t => (
-                    <TabsTrigger key={t.v} value={t.v} className="text-[11px] rounded-full data-[state=active]:bg-card data-[state=active]:shadow-sm h-full px-3 whitespace-nowrap">
-                      {t.l}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-
-                {/* OVERVIEW */}
-                <TabsContent value="overview" className="mt-3 space-y-3">
-                  <Card className="soft-card">
-                    <CardContent className="p-4">
-                      <h4 className="text-xs font-bold mb-2 flex items-center gap-1.5"><BarChart3 className="h-3.5 w-3.5 text-primary" />Key Statistics</h4>
-                      <div className="grid grid-cols-3 gap-x-4 gap-y-3">
-                        {[
-                          { label: "Market Cap", value: stock.marketCap },
-                          { label: "P/E", value: stock.pe },
-                          { label: "EPS", value: `KES ${stock.eps}` },
-                          { label: "Div Yield", value: `${divYield}%`, highlight: true },
-                          { label: "52W High", value: `KES ${stock.high52}` },
-                          { label: "52W Low", value: `KES ${stock.low52}` },
-                          { label: "Volume", value: stock.volume || "N/A" },
-                          { label: "Beta", value: stock.beta || "N/A" },
-                          { label: "Avg Vol", value: stock.avgVolume || "N/A" },
-                        ].map(stat => (
-                          <div key={stat.label}>
-                            <p className="text-[10px] text-muted-foreground font-medium">{stat.label}</p>
-                            <p className={`text-sm font-bold ${stat.highlight ? 'text-bull' : ''}`}>{stat.value}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card className="soft-card">
-                    <CardContent className="p-4">
-                      <p className="text-sm leading-relaxed text-muted-foreground">{company.description}</p>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                {/* VALUATION */}
-                <TabsContent value="valuation" className="mt-3">
-                  <ValuationTab price={stock.price} pe={stock.pe} fundamentals={getFundamentals(symbol || "", stock.price)} />
-                </TabsContent>
-
-                {/* PERFORMANCE */}
-                <TabsContent value="performance" className="mt-3">
-                  <PerformanceTab symbol={symbol || ""} price={stock.price} fundamentals={getFundamentals(symbol || "", stock.price)} />
-                </TabsContent>
-
-                {/* GROWTH */}
-                <TabsContent value="growth" className="mt-3">
-                  <GrowthTab fundamentals={getFundamentals(symbol || "", stock.price)} />
-                </TabsContent>
-
-                {/* FINANCIAL HEALTH */}
-                <TabsContent value="health" className="mt-3">
-                  <HealthTab fundamentals={getFundamentals(symbol || "", stock.price)} />
-                </TabsContent>
-
-                {/* DIVIDENDS */}
-                <TabsContent value="dividends" className="mt-3">
-                  <DividendsTab divYield={divYield} annualDividend={stock.dividend} fundamentals={getFundamentals(symbol || "", stock.price)} />
-                </TabsContent>
-
-                {/* OWNERSHIP */}
-                <TabsContent value="ownership" className="mt-3">
-                  <OwnershipTab fundamentals={getFundamentals(symbol || "", stock.price)} />
-                </TabsContent>
-
-                {/* RISK */}
-                <TabsContent value="risk" className="mt-3">
-                  <RiskTab fundamentals={getFundamentals(symbol || "", stock.price)} />
-                </TabsContent>
-
-                {/* NEWS & EVENTS */}
-                <TabsContent value="news" className="mt-3">
-                  <NewsEventsTab
-                    symbol={symbol || ""}
-                    name={stock.name}
-                    sector={stock.sector}
-                    price={stock.price}
-                    changePercent={stock.changePercent}
-                    pe={stock.pe} eps={stock.eps} dividend={stock.dividend}
-                    news={stockNews}
-                    fundamentals={getFundamentals(symbol || "", stock.price)}
-                  />
-                </TabsContent>
-
-                {/* COMMUNITY */}
-                <TabsContent value="community" className="mt-3">
-                  <CommunityTab symbol={symbol || ""} />
-                </TabsContent>
-
-              </Tabs>
-            </>
-          );
-        })()}
       </div>
 
-      {/* Fixed Add Investment Button */}
-      <div className="fixed bottom-24 left-4 right-4 z-30">
+      {/* CHART — embedded, no card wrapper */}
+      <div className="relative">
+        <div className="h-[280px] px-1">
+          <StockPriceChart symbol={symbol} timeframe={selectedTimeframe} onHoverPrice={handleChartHover} />
+        </div>
+        {/* Chart tool row */}
+        <div className="absolute top-2 right-3 z-10 flex items-center gap-1">
+          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-muted-foreground" onClick={() => toast({ title: "Candlestick view coming next" })}>
+            <CandlestickChart className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-muted-foreground" onClick={() => navigate(`/compare?stock=${symbol}`)}>
+            <GitCompare className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-muted-foreground" onClick={() => toast({ title: "Fullscreen coming next" })}>
+            <Maximize2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Timeframe pills */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-border/50">
+        {timeframes.map(tf => (
+          <button
+            key={tf}
+            data-small-target
+            onClick={() => setSelectedTimeframe(tf)}
+            className={`px-2 py-1 text-[11px] font-semibold rounded-md tabular transition-colors ${tf === selectedTimeframe ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            {tf}
+          </button>
+        ))}
+      </div>
+
+      {/* STICKY SUB-NAV */}
+      <div className="sticky top-[53px] z-30 bg-background/92 backdrop-blur-xl border-b border-border/60">
+        <div className="flex items-center gap-1 px-3 py-2 overflow-x-auto scrollbar-hide">
+          {SUB_NAV.map(s => (
+            <button
+              key={s.id}
+              data-small-target
+              onClick={() => scrollTo(s.id)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-full whitespace-nowrap transition-colors ${section === s.id ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* SECTIONS — canvas-first, hairline separated */}
+      <div className="px-4 pt-5 pb-6 space-y-10">
+        {/* OVERVIEW */}
+        <section ref={refs.overview} data-section="overview" className="space-y-5 scroll-mt-32">
+          {myHolding && (
+            <div>
+              <Eyebrow>Your Position</Eyebrow>
+              <div className="flex items-center justify-between border-t border-border/60 pt-3">
+                <div className="grid grid-cols-3 gap-6 flex-1">
+                  <div><p className="text-[10px] text-muted-foreground">Shares</p><p className="text-sm font-semibold tabular">{myHolding.shares}</p></div>
+                  <div><p className="text-[10px] text-muted-foreground">Avg cost</p><p className="text-sm font-semibold tabular">KES {myHolding.avg_cost.toFixed(2)}</p></div>
+                  <div><p className="text-[10px] text-muted-foreground">P/L</p>
+                    <p className={`text-sm font-semibold tabular ${(stock.price - myHolding.avg_cost) >= 0 ? 'text-bull' : 'text-bear'}`}>
+                      {(stock.price - myHolding.avg_cost) >= 0 ? '+' : ''}{(((stock.price - myHolding.avg_cost) / myHolding.avg_cost) * 100).toFixed(1)}%
+                    </p>
+                  </div>
+                </div>
+                <AddInvestmentDialog lockedSymbol={symbol} lockedName={stock.name} lockedSector={stock.sector}
+                  trigger={<Button size="sm" variant="ghost" className="h-8 text-xs text-primary"><Pencil className="h-3 w-3 mr-1" /> Edit</Button>} />
+              </div>
+            </div>
+          )}
+
+          <div>
+            <Eyebrow>Key Statistics</Eyebrow>
+            <div className="border-t border-border/60">
+              {[
+                ["Market Cap", stock.marketCap],
+                ["P/E Ratio", stock.pe],
+                ["EPS", `KES ${stock.eps}`],
+                ["Dividend Yield", `${divYield}%`],
+                ["52W High", `KES ${stock.high52}`],
+                ["52W Low", `KES ${stock.low52}`],
+                ["Volume", stock.volume || "—"],
+                ["Beta", stock.beta || "—"],
+              ].map(([k, v]) => (
+                <div key={k as string} className="flex items-center justify-between py-2.5 border-b border-border/40">
+                  <span className="text-xs text-muted-foreground">{k}</span>
+                  <span className="text-xs font-semibold tabular">{v}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <AIThesisCard
+            symbol={symbol || ""} name={stock.name} sector={stock.sector}
+            price={stock.price} changePercent={stock.changePercent}
+            pe={stock.pe} eps={stock.eps} dividend={stock.dividend}
+            marketCap={stock.marketCap} scores={scores as any}
+          />
+
+          <div>
+            <Eyebrow>Investment Health Score</Eyebrow>
+            <AfriFinanceScoreCard scores={scores} />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="section-eyebrow">Recent News</p>
+              <button data-small-target onClick={() => scrollTo("news")} className="text-[11px] text-primary font-semibold flex items-center">More <ChevronRight className="h-3 w-3" /></button>
+            </div>
+            <div className="border-t border-border/60">
+              {stockNews.slice(0, 3).map(n => (
+                <div key={n.id} className="flex items-start justify-between py-3 border-b border-border/40 gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium leading-snug">{n.title}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{n.source} · {n.time}</p>
+                  </div>
+                  <Badge variant="outline" className={`text-[9px] shrink-0 ${n.sentiment === 'bullish' ? 'text-bull border-bull/40' : 'text-bear border-bear/40'}`}>
+                    {n.sentiment}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* RESEARCH */}
+        <section ref={refs.research} data-section="research" className="space-y-4 scroll-mt-32">
+          <Eyebrow>Research</Eyebrow>
+          <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide -mx-1 px-1 pb-1">
+            {(["valuation", "growth", "health", "dividends", "ownership", "risk"] as const).map(g => (
+              <button
+                key={g}
+                data-small-target
+                onClick={() => setResearchGroup(g)}
+                className={`px-3 py-1 text-[11px] font-semibold rounded-full whitespace-nowrap capitalize transition-colors ${researchGroup === g ? 'bg-foreground text-background' : 'bg-muted/40 text-muted-foreground'}`}
+              >
+                {g}
+              </button>
+            ))}
+          </div>
+          {researchGroup === "valuation" && <ValuationTab price={stock.price} pe={stock.pe} fundamentals={fundamentals} />}
+          {researchGroup === "growth" && <GrowthTab fundamentals={fundamentals} />}
+          {researchGroup === "health" && <HealthTab fundamentals={fundamentals} />}
+          {researchGroup === "dividends" && <DividendsTab divYield={divYield} annualDividend={stock.dividend} fundamentals={fundamentals} />}
+          {researchGroup === "ownership" && <OwnershipTab fundamentals={fundamentals} />}
+          {researchGroup === "risk" && <RiskTab fundamentals={fundamentals} />}
+        </section>
+
+        {/* FINANCIALS */}
+        <section ref={refs.financials} data-section="financials" className="space-y-4 scroll-mt-32">
+          <Eyebrow>Financials</Eyebrow>
+          <PerformanceTab symbol={symbol || ""} price={stock.price} fundamentals={fundamentals} />
+        </section>
+
+        {/* NEWS */}
+        <section ref={refs.news} data-section="news" className="space-y-4 scroll-mt-32">
+          <Eyebrow>News about {symbol}</Eyebrow>
+          <NewsEventsTab
+            symbol={symbol || ""} name={stock.name} sector={stock.sector}
+            price={stock.price} changePercent={stock.changePercent}
+            pe={stock.pe} eps={stock.eps} dividend={stock.dividend}
+            news={stockNews} fundamentals={fundamentals}
+          />
+        </section>
+
+        {/* COMMUNITY */}
+        <section ref={refs.community} data-section="community" className="space-y-4 scroll-mt-32">
+          <Eyebrow>Community</Eyebrow>
+          <CommunityTab symbol={symbol || ""} />
+        </section>
+
+        {/* MORE */}
+        <section ref={refs.more} data-section="more" className="space-y-3 scroll-mt-32">
+          <Eyebrow>More</Eyebrow>
+          <div className="border-t border-border/60">
+            {[
+              { icon: Building2, label: "Company Profile", detail: company.description, action: () => {} },
+              { icon: Users2, label: "Management", detail: `CEO · ${company.ceo}`, action: () => {} },
+              { icon: Briefcase, label: "Corporate Actions", detail: "Dividends, splits, buybacks", action: () => {} },
+              { icon: FileText, label: "Documents", detail: "Annual reports & filings", action: () => {} },
+              { icon: Heart, label: "Watchlist", detail: isInWatchlist(symbol || "") ? "In your watchlist" : "Add to watchlist", action: handleWatchlistToggle },
+              { icon: GitCompare, label: "Compare", detail: "Benchmark against peers", action: () => navigate(`/compare?stock=${symbol}`) },
+              { icon: Download, label: "Export", detail: "Download data as CSV", action: () => toast({ title: "Export coming soon" }) },
+              { icon: Bell, label: "Alerts", detail: "Price & event alerts", action: () => setShowAlertsDialog(true) },
+              { icon: MessageSquare, label: "Discuss on TradersHub", detail: `Start a $${symbol} thread`, action: () => navigate(`/traders-hub?compose=true&ticker=${symbol}`) },
+              { icon: Eye, label: "Founded / HQ", detail: `${company.founded} · ${company.headquarters}`, action: () => {} },
+            ].map(row => (
+              <button
+                key={row.label}
+                data-small-target
+                onClick={row.action}
+                className="w-full flex items-center justify-between py-3 border-b border-border/40 text-left hover:bg-muted/30 -mx-4 px-4 transition-colors"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <row.icon className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold">{row.label}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{row.detail}</p>
+                  </div>
+                </div>
+                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              </button>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      {/* Fixed Add Investment CTA */}
+      <div className="fixed bottom-20 left-4 right-4 z-30">
         <AddInvestmentDialog
-          lockedSymbol={symbol}
-          lockedName={stock.name}
-          lockedSector={stock.sector}
+          lockedSymbol={symbol} lockedName={stock.name} lockedSector={stock.sector}
           trigger={
-            <Button className="w-full h-12 rounded-2xl bg-primary text-primary-foreground font-bold text-base shadow-xl hover:shadow-2xl">
+            <Button className="w-full h-12 rounded-full bg-foreground text-background font-semibold text-sm shadow-lg hover:shadow-xl">
               <Plus className="h-4 w-4 mr-2" />
-              {myHolding ? `Update ${symbol} Holding` : `Add ${symbol} to Portfolio`}
+              {myHolding ? `Update ${symbol} holding` : `Add ${symbol} to portfolio`}
             </Button>
           }
         />
