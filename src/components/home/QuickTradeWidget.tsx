@@ -31,23 +31,13 @@ export function QuickTradeWidget() {
   return (
     <Card className="card-gradient overflow-hidden">
       <div className="relative">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
-        <CardContent className="p-4 relative">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="p-2 rounded-lg bg-primary/20">
-              <Zap className="h-4 w-4 text-primary" />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold">Quick Watch</h3>
-              <p className="text-xs text-muted-foreground">Tap any stock to view & add</p>
-            </div>
-          </div>
-
-          <div className="marquee-container -mx-4 px-0">
-            <div className="marquee-content gap-2 px-4">
+        <CardContent className="p-0 relative">
+          <div className="marquee-container -mx-0">
+            <div className="marquee-content gap-2">
               {loop.map((stock, i) => (
                 <button
                   key={`${stock.symbol}-${i}`}
+
                   onClick={() => navigate(`/stock/${stock.symbol}`)}
                   className="shrink-0 w-[140px] p-3 rounded-xl bg-muted/50 hover:bg-muted text-left transition-all active:scale-[0.97] tap-scale"
                 >
