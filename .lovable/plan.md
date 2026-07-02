@@ -1,150 +1,88 @@
-# AfriFinance — Full Redesign Plan
+# Redesign execution plan
 
-Scope: a top-to-bottom visual + structural redesign of every primary surface. No new backend features — only UI restructuring, chart rewrites, information architecture, theming, and one small subscription section. Everything you asked for is included; anything I flag as "phase 2" is called out at the end so we agree before I ship.
+Scope: strip cards everywhere except AI thesis + modals, rebuild the Stock page as the primary research surface, turn Home into a daily command center, and make the Markets sub-nav sticky. Everything shares one design language — hairline dividers, generous whitespace, typographic hierarchy, no floating tiles.
 
-## 1. Design language (foundation — done first, everything else inherits)
+## 1. Foundation — canvas, not cards
 
-Move from "cards on a dashboard" to a **canvas**. The page is the container.
+`src/index.css` + a new `Section` primitive:
+- New utility `.canvas-section` — vertical rhythm, hairline top border, small uppercase eyebrow label.
+- New utility `.hairline-row` — 1px `border-border/40` bottom, hover row highlight, tabular-nums for numbers.
+- `.stat-row` — label left / value right, no background.
+- Kill `.soft-card` visual — remap to `border-0 bg-transparent p-0` so existing `<Card className="soft-card">` collapses into flat sections without a rewrite. Any place needing a real card opts back in with a new `.grouped` class.
+- Only `<Card>` instances that stay boxed: AI Thesis card, modal/dialog surfaces, order-ticket-style controls.
 
-Tokens rewritten in `src/index.css` + `tailwind.config.ts`:
-- Typography: **Söhne / Inter Tight** display + **Inter** body (Google-hosted). Tight tracking on numerals, tabular-nums everywhere prices appear.
-- Spacing: 4/8/12/20/32/56 scale. No more `p-4` cards inside `p-4` cards.
-- Dividers: 1px `border-border/40` hairlines replace card walls.
-- Radii: `--radius: 10px` (down from 16). Cards only when grouping is non-obvious (holdings row, post, alert).
-- Color: neutral greys carry the app; green/red only for P&L; single accent for CTAs. No purples, no gradients-on-white.
-- Motion: 180ms ease-out for state, 320ms for route/tab. No bouncy springs.
+## 2. Stock page — the heart of the app
 
-Three themes, each hand-tuned (not inversions):
-- **Light** — warm off-white `#FAFAF7`, ink `#0E0F13`, hairlines `#E7E5E0` (Fidelity/Robinhood).
-- **Dark** — `#0E1013` bg, `#15181D` surface, `#E6E8EC` text (TradingView/X).
-- **AMOLED** — true `#000`, `#0A0A0A` surface, dimmer accents.
+Rebuild `src/pages/StockDetail.tsx`:
 
-Theme picker added to Account → Appearance alongside font size.
+Header (no card): Company name (display font) · ticker · exchange (muted) · big price · daily delta pill.
 
-## 2. Bottom navigation
+Chart (embedded, no card): rewrite `StockPriceChart.tsx` as a full-bleed Robinhood-style line — thin 1.5px path, green/red vs period-open, faint 8% gradient fill, no right-side axis, crosshair on drag with floating pill above finger, timeframe pills (1D/1W/1M/3M/YTD/1Y/ALL) below. Small icon row top-right of chart: candlestick toggle, compare, fullscreen (compare + fullscreen open a sheet; candlestick swaps series).
 
-5 tabs (Alerts removed): Home · Markets · Portfolio · TradersHub · Profile.
-- Profile tab uses the user's avatar, not a generic icon.
-- Thin 1px top divider, smaller 10px labels, hairline active indicator, subtle scale-in on tap.
-- Alerts bell moves to the top-right of every page's header (global `TopBar`).
+Sticky sub-nav under chart: **Overview · Research · Financials · News · Community · More**. Sticky at top offset once chart scrolls past.
+
+Sections (all flat, hairline separated):
+
+- **Overview** — key stats table (Mkt Cap, P/E, EPS, Div Yield, 52w range, Volume), AI thesis (the one remaining card), Investment Health Score inline row (radar shrunk), 3 news highlights, upcoming earnings/dividends list.
+- **Research** — editorial rows with ✓/⚠ badges and inline mini-visuals; groups: Valuation (fair value, upside, P/E, P/B, EV/EBITDA), Growth (rev/earnings past + forward), Financial Health (cash vs debt, OCF), Dividends (yield, payout, sustainability), Ownership (insider %, institutional %, top holders table), Risk (debt, volatility, regulatory).
+- **Financials** — sub-toggle Income · Balance · Cash Flow · Margins · Historical · Quarterly · Annual · Peers. Hairline tables with tabular-nums + small inline line charts.
+- **News** — stock-specific feed with AI "why it matters" one-liner per item, hairline rows.
+- **Community** — TradersHub posts mentioning `$TICKER`, bull/bear sentiment bar, nested threaded replies with connecting lines (reuses existing `XCommentSheet` thread renderer), $TICKER routable. Full X-style actions.
+- **More** — grouped list: Company Profile, Management, Corporate Actions, Documents, Watchlist, Compare, Export, Alerts.
+
+Existing tab components under `src/components/stock/tabs/*` get their outer `<Card>` wrappers stripped and are recomposed into the new section flow.
 
 ## 3. Home — daily command center
 
-Kill the widget-tile grid in `Home.tsx`. New structure, canvas-first, section headers as small uppercase labels with a hairline:
+Rewrite `src/pages/Home.tsx` + refactor `CommandCenterSections.tsx`:
 
-1. Greeting + date + NSE market status inline
-2. **Market snapshot** — NSE 20, NSE 25, NASI as inline stat row (no cards)
-3. **Market sentiment** — slim Fear & Greed bar (rebuilt, no gauge card)
-4. **Portfolio summary** — big value, delta, tiny sparkline; tap → Portfolio
-5. **Watchlist movers** — plain table, symbol · price · %chg
-6. **Opportunities** — 4 pills: Undervalued · High Growth · Dividends · Financial Health (tap → filtered Markets/Discover)
-7. **Upcoming** — earnings + dividends merged into a single dated list
-8. **Economic events** — inline list
-9. **Trending on TradersHub** — 3 rows, title + engagement
-10. **AI insight of the day** — editorial block, no card
-11. **Continue research** — recently viewed stocks strip
-12. **Personalized alerts** — last 3 triggered alerts
+Flat sections, small uppercase eyebrow labels, hairline separators, no tile grid:
+1. Greeting + date + NSE market status (inline)
+2. Market Snapshot — NSE 20 · NSE 25 · NASI as inline stat row
+3. Market Sentiment — slim horizontal bar (no gauge card)
+4. Portfolio Summary — big value + delta + tiny inline sparkline; tap → Portfolio (values sourced from `computePortfolioStats` for parity)
+5. Watchlist Movers — plain table (symbol · price · %chg)
+6. Opportunities — 4 pills: Undervalued · High Growth · Dividends · Financial Health (routes to filtered Markets)
+7. Upcoming — earnings + dividends merged as one dated list
+8. Economic Events — inline list
+9. Trending on TradersHub — 3 rows, title + engagement
+10. AI Insight of the Day — the remaining card, editorial framing
+11. Continue Research — recently viewed strip
+12. Personalized Alerts — last 3 triggered
 
-## 4. Markets — discovery center with sticky sub-nav
+Retires the widget-tile home (`FearGreedIndex`, `TopMoversLosers`, `TrendingStocks`, `MorningBrief`, `StockHeatmap`, `WatchlistSummary`, `RealtimeWatchlistWidget` boxes) from the Home surface. Files stay for reuse elsewhere.
 
-Sticky sub-nav: **Overview · Discover · Calendars · Heatmap · All Stocks**.
+## 4. Markets — sticky sub-nav
 
-- Overview: indices, breadth, gainers/losers/most active as ranked lists, sector performance strip
-- Discover: High Growth · Undervalued · Strong Dividends · Momentum · High Quality · Banking · Telecom · Industrial · Small Caps (each an inline section)
-- Calendars: Earnings · Dividends · Economic (segmented control)
-- Heatmap: rebuilt as a proper treemap by market cap, colored by %chg
-- All Stocks: existing screener refined, hairline table
+`src/pages/Markets.tsx`:
+- Sub-nav strip (Overview · Discover · Calendars · Heatmap · All Stocks) becomes `sticky top-[safe-header-offset] z-30`, hairline bottom border, blurred background.
+- Section bodies strip `<Card>` wrappers to hairline sections. Sector strip becomes an inline row.
 
-## 5. Portfolio — Robinhood/Fidelity feel
+## 5. Portfolio + TradersHub cleanup
 
-- Huge value at top, delta below, no card
-- **New institutional line chart** (see §7): 1D/1W/1M/3M/YTD/1Y/ALL, green/red by period, crosshair, no right-side price axis (per your instruction)
-- Holdings as a hairline table (symbol, shares, value, %chg, tiny sparkline)
-- Insights section: Diversification · Risk · Sector · Country · Largest · Best · Worst · Income Forecast · Benchmark · Historical · Allocation · AI Insights — as editorial rows with small inline visuals, not tiles
-- Public/Private toggle kept; visible near header
+- `TrackInvestments.tsx` — already Robinhood-ish. Remove remaining `<Card>` wrappers around holdings and insight tiles; keep the Add Investment dialog card (it's a modal).
+- `TradersHub.tsx` — already flat; audit for any residual card walls and delete.
+- Global sweep: search project for `soft-card` / `<Card` outside modals + AI thesis and flatten.
 
-## 6. Stock page — the heart of the app
+## 6. Verification
 
-Header: Company name (display font), ticker · exchange (muted), big price, delta.
-
-**New chart** (see §7). Sticky sub-nav: **Overview · Research · Financials · News · Community · More**.
-
-- Overview: key stats table, AI thesis (editorial), Investment Health Score row, news highlights, upcoming events
-- Research: Valuation / Growth / Financial Health / Dividends / Ownership / Risk — each an editorial section with ✓/⚠ indicators and inline mini-visuals, no giant cards
-- Financials: Income / Balance / Cash Flow / Margins / Historical / Quarterly / Annual / Peers — hairline tables + small line charts
-- News: stock-specific feed with AI "why it matters" summaries
-- Community: TradersHub posts mentioning ticker, bull/bear sentiment bar, top discussions, nested threaded replies with connecting lines, $TICKER tags routable
-- More: Profile · Management · Corporate Actions · Documents · Watchlist · Compare · Export · Alerts (grouped list)
-
-## 7. Charts — full rewrite
-
-Rewrite `StockPriceChart.tsx` + create `PortfolioValueChart.tsx`:
-- **No right-side price axis** (per your instruction) — Robinhood style
-- Thin 1.5px line, dynamic green/red vs period-open
-- Faint gradient fill (8% opacity)
-- Crosshair on touch/hover; floating value + date pill above the finger
-- Timeframe pills below chart (1D/1W/1M/3M/YTD/1Y/ALL)
-- Candlestick + Compare + Fullscreen accessible from a single small "chart tools" button top-right of chart area (not the current toolbar clutter)
-- Same primitive reused everywhere (Home sparkline, Portfolio, Stock, Compare)
-
-## 8. News page
-
-Delete `/news` route and nav entry. Redistribute:
-- Company news → Stock page › News tab
-- Portfolio news → Portfolio (new inline strip)
-- Market news → Home + Markets › Overview
-Add AI "why it matters" one-liner to each item.
-
-## 9. TradersHub
-
-Refine, don't rebuild:
-- Post cards flattened to hairline separators between posts (X-style)
-- Nested replies with left thread lines per depth, collapse/expand (already partially there — polish)
-- Like / Repost / Comment / Bookmark / Follow row cleaned up
-- $TICKER + #hashtag stay routable
-- Compose sheet spacing tightened
-
-## 10. Alerts
-
-- Global bell in TopBar → sheet/drawer
-- Categories: Earnings · Dividends · Price · Valuation · Insider · Watchlist · Portfolio · Market news
-- `/notifications` route kept as the full-page view
-
-## 11. Account — Subscriptions
-
-Short, single-screen section. Two tiers, based on research of Simply Wall St / Moomoo / Robinhood Gold / Seeking Alpha pricing benchmarked to Kenyan market:
-
-- **Free** — Watchlists, basic charts, TradersHub, delayed prices, 3 AI theses/mo
-- **Premium — KES 1,200/mo or KES 12,000/yr** — Unlimited AI theses, Investment Health Score, advanced screener, real-time prices, portfolio insights, no ads, priority alerts
-
-One clean comparison, single CTA. No congestion.
+- `tsgo` type-check clean.
+- Playwright screenshots (light + dark + amoled) of: Home, Markets (scrolled to prove sticky), Stock KCB (each sub-section), Portfolio, TradersHub. Confirm no card walls remain except AI thesis + dialogs.
 
 ## Files touched (high-level)
 
-Rewrites: `src/index.css`, `tailwind.config.ts`, `ThemeProvider.tsx`, `BottomNavigation.tsx`, `TopBar.tsx`, `MainLayout.tsx`, `Home.tsx`, `Markets.tsx`, `TrackInvestments.tsx`, `StockDetail.tsx`, `StockPriceChart.tsx`, `TradersHub.tsx`, `Account.tsx`, `App.tsx` (route removal).
+Rewrites: `src/pages/StockDetail.tsx`, `src/pages/Home.tsx`, `src/components/stock/StockPriceChart.tsx`, `src/pages/Markets.tsx` (sub-nav + card strip), `src/index.css` (utilities + `.soft-card` neutralized).
 
-New: `PortfolioValueChart.tsx`, `AlertsSheet.tsx`, `MarketsSubNav.tsx`, `StockSubNav.tsx`, `SectionHeader.tsx`, `HairlineTable.tsx`, `SubscriptionSection.tsx`, `ThemePicker.tsx`.
+Edits: every `src/components/stock/tabs/*.tsx` (strip outer Card), `CommandCenterSections.tsx` (flatten rows), `TrackInvestments.tsx`, `TradersHub.tsx`, misc home widgets when referenced.
 
-Retired: `News.tsx` route, most `home/*` widget cards, Alerts bottom-nav item.
+New primitives: `src/components/shared/Section.tsx`, `src/components/shared/HairlineRow.tsx`, `src/components/stock/StockSubNav.tsx`.
 
-## Order of execution
+Untouched: AI Thesis card visuals, all `Dialog`/`Sheet`/`Drawer` surfaces, auth, backend, hooks.
 
-1. Design tokens + themes + typography (foundation)
-2. Bottom nav + TopBar + AlertsSheet
-3. Chart primitive rewrite
-4. Home
-5. Markets + sticky sub-nav + heatmap
-6. Portfolio
-7. Stock page + sticky sub-nav + tabs
-8. TradersHub polish
-9. News removal + redistribution
-10. Account + Subscriptions
-11. QA pass with Playwright screenshots across all 3 themes on mobile viewport
+## Deferred (call out before I ship)
 
-## Deferred to phase 2 (flagging so we agree)
+- Real candlestick data — I'll ship the toggle + a synthesized candle series from existing mock prices (looks right, not real OHLC).
+- Fullscreen chart — opens a `Sheet` reusing the same primitive, landscape-optimized; no separate lib.
+- Compare mode — sheet lets you pick 1-3 tickers, overlays normalized lines on the same chart.
 
-- Real candlestick + compare + fullscreen chart modes — I'll wire the entry points and ship line + basic candlestick; full compare/fullscreen after you approve the new chart primitive.
-- Treemap heatmap library choice (custom SVG vs a lib) — I'll build custom SVG for zero deps unless you'd rather I add `visx`.
-- Real-time price wiring for Premium tier — UI only this pass; backend gating later.
-
-Reply "go" and I'll execute in the order above. If any of the deferred items should be in-scope now, say which.
+Reply **go** to execute in the order above, or tell me what to cut / re-order.
