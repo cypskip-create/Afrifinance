@@ -233,13 +233,20 @@
   .hairline { @apply border-b border-border/60; }
   .hairline-t { @apply border-t border-border/60; }
 
-  /* Legacy cards kept for compatibility — flatter, less "AI cardy" */
+  /* Canvas-first: legacy cards visually flatten to transparent.
+     Only .grouped-card / dialogs / sheets keep the boxed treatment. */
   .card-gradient,
   .soft-card {
+    @apply bg-transparent border-0 shadow-none;
+    border-radius: 0;
+  }
+  /* Escape hatch — opt back into a real card (AI thesis, order tickets). */
+  .grouped-card {
     @apply bg-card border border-border/60;
     border-radius: var(--radius);
     box-shadow: var(--shadow-card);
   }
+
 
   .btn-primary {
     background: hsl(var(--primary));
