@@ -1,30 +1,29 @@
 import { useState } from "react";
-import { Crown, MessageCircle, ChevronRight } from "lucide-react";
-import { MorningBrief } from "@/components/home/MorningBrief";
-import { TopMoversLosers } from "@/components/home/TopMoversLosers";
-import { TrendingStocks } from "@/components/home/TrendingStocks";
+import { Crown, MessageCircle, ChevronRight, Wallet, Eye, EyeOff, ArrowUpRight, ArrowDownRight, LogIn, TrendingUp, Search, Sparkles, Coins, Shield, BarChart3, Bell } from "lucide-react";
 import { QuickTradeWidget } from "@/components/home/QuickTradeWidget";
-import { RealtimeWatchlistWidget } from "@/components/home/RealtimeWatchlistWidget";
 import { CommandCenterSections } from "@/components/home/CommandCenterSections";
-
-import { WidgetManager, WidgetConfig, defaultWidgets } from "@/components/home/WidgetManager";
 import { TopBar } from "@/components/shared/TopBar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Search, TrendingUp, LogIn, ArrowUpRight, ArrowDownRight,
-  Wallet, Eye, EyeOff, BarChart3
-} from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { usePosts } from "@/hooks/usePosts";
 import { getTimeBasedGreeting } from "@/utils/timeGreeting";
-import { SparklineChart } from "@/components/shared/SparklineChart";
 import { MarketStatusIndicator } from "@/components/shared/MarketStatusIndicator";
 import { computePortfolioStats } from "@/lib/stockPrices";
+
+const Eyebrow = ({ children, action, onAction }: { children: React.ReactNode; action?: string; onAction?: () => void }) => (
+  <div className="flex items-center justify-between mb-2">
+    <p className="section-eyebrow">{children}</p>
+    {action && (
+      <button data-small-target onClick={onAction} className="text-[11px] text-primary font-semibold flex items-center">
+        {action} <ChevronRight className="h-3 w-3" />
+      </button>
+    )}
+  </div>
+);
 
 export default function Home() {
   const { user } = useAuth();
@@ -33,37 +32,37 @@ export default function Home() {
   const { posts } = usePosts();
   const navigate = useNavigate();
   const { greeting } = getTimeBasedGreeting();
-  const [widgetManagerOpen, setWidgetManagerOpen] = useState(false);
   const [showBalance, setShowBalance] = useState(true);
-  const [widgets, setWidgets] = useState<WidgetConfig[]>(() => {
-    const saved = localStorage.getItem('home-widgets');
-    return saved ? JSON.parse(saved) : defaultWidgets;
-  });
 
   const firstName = profile?.full_name ? profile.full_name.split(' ')[0] : 'Investor';
   const hasPortfolio = user && portfolio.length > 0;
-
-  const handleSaveWidgets = (newWidgets: WidgetConfig[]) => {
-    setWidgets(newWidgets);
-    localStorage.setItem('home-widgets', JSON.stringify(newWidgets));
-  };
-
-  // Use centralized prices so the home snapshot matches the Portfolio page exactly.
   const { totalValue: portfolioValue, totalGain: portfolioGain, gainPct: portfolioGainPct } = computePortfolioStats(portfolio);
 
   const nseIndices = [
-    { name: "NSE 20", value: "1,847", change: 1.2, isUp: true },
-    { name: "NSE 25", value: "3,542", change: 0.8, isUp: true },
-    { name: "All Share", value: "112.4", change: -0.3, isUp: false },
-    { name: "FTSE Kenya", value: "1,234", change: 2.1, isUp: true },
+    { name: "NSE 20",  value: "1,847",  change: 1.2, isUp: true  },
+    { name: "NSE 25",  value: "3,542",  change: 0.8, isUp: true  },
+    { name: "NASI",    value: "112.4",  change: -0.3, isUp: false },
   ];
 
-  const watchlistStocks = [
-    { symbol: "SCOM", name: "Safaricom", price: 12.85, change: 2.4 },
-    { symbol: "EQTY", name: "Equity", price: 62.50, change: -1.2 },
-    { symbol: "KCB", name: "KCB", price: 45.30, change: 0.8 },
-    { symbol: "EABL", name: "EABL", price: 155.00, change: -2.1 },
-    { symbol: "BAMB", name: "Bamburi", price: 89.75, change: 3.2 },
+  const watchlistMovers = [
+    { symbol: "SCOM",  name: "Safaricom", price: 12.85, change: 2.4 },
+    { symbol: "EQTY",  name: "Equity",    price: 62.50, change: -1.2 },
+    { symbol: "KCB",   name: "KCB",       price: 45.30, change: 0.8 },
+    { symbol: "EABL",  name: "EABL",      price: 155.00, change: -2.1 },
+    { symbol: "BAMB",  name: "Bamburi",   price: 89.75, change: 3.2 },
+  ];
+
+  const opportunities = [
+    { label: "Undervalued",     icon: Coins,      route: "/screener?filter=undervalued" },
+    { label: "High Growth",     icon: TrendingUp, route: "/screener?filter=growth" },
+    { label: "Strong Dividends",icon: Coins,      route: "/screener?filter=dividends" },
+    { label: "Financial Health",icon: Shield,     route: "/screener?filter=health" },
+  ];
+
+  const economicEvents = [
+    { title: "CBK Rate Decision", when: "Tomorrow · 2:00 PM" },
+    { title: "Kenya CPI Inflation", when: "Thu · 9:00 AM" },
+    { title: "US FOMC Minutes", when: "Fri · 9:00 PM" },
   ];
 
   return (
@@ -72,171 +71,200 @@ export default function Home() {
         title="AfriFinance"
         subtitle={user ? `${greeting}, ${firstName}` : "Your smart companion"}
         showSearch
-        showWidgetSettings={!!user}
         showNotifications
-        onWidgetSettingsClick={() => setWidgetManagerOpen(true)}
       />
 
-      {user && (
-        <WidgetManager open={widgetManagerOpen} onOpenChange={setWidgetManagerOpen} widgets={widgets} onSave={handleSaveWidgets} />
-      )}
-
-      <div className="px-4 pt-3 space-y-4">
-        {/* Auth CTA */}
+      <div className="px-4 pt-3 space-y-6">
+        {/* Auth CTA — non-users */}
         {!user && (
-          <>
-            {/* Market Brief first for non-traders */}
-            <MorningBrief />
-            <Card className="soft-card bg-gradient-to-br from-primary/10 to-accent/5 border-primary/20">
-              <CardContent className="p-5 text-center">
-                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                  <LogIn className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="font-bold mb-1">Start Your Journey</h3>
-                <p className="text-xs text-muted-foreground mb-4">Track your portfolio & join the community.</p>
-                <Button className="btn-primary w-full h-11" onClick={() => navigate('/auth')}>Sign Up / Login</Button>
-              </CardContent>
-            </Card>
-          </>
-        )}
-
-        {/* For traders: Portfolio card → Market Brief → rest */}
-        {hasPortfolio && (
-          <>
-            {/* Compact Portfolio Card */}
-            <Card className="soft-card border-0 bg-gradient-to-r from-primary/8 to-accent/5 cursor-pointer active:scale-[0.99] transition-transform" onClick={() => navigate('/track-investments')}>
-              <CardContent className="p-3 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <Wallet className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-muted-foreground font-medium">Portfolio</p>
-                    <p className="text-base font-bold leading-tight">
-                      {showBalance ? `KES ${portfolioValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : '••••••'}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className={`flex items-center gap-0.5 text-xs font-semibold ${portfolioGain >= 0 ? 'text-bull' : 'text-bear'}`}>
-                    {portfolioGain >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                    {portfolioGainPct >= 0 ? '+' : ''}{portfolioGainPct.toFixed(1)}%
-                  </div>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={e => { e.stopPropagation(); setShowBalance(!showBalance); }}>
-                    {showBalance ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-                  </Button>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Market Brief right below portfolio */}
-            <MorningBrief />
-          </>
-        )}
-
-        {/* For logged-in users without portfolio, Market Brief first */}
-        {user && !hasPortfolio && <MorningBrief />}
-
-        {/* Market Indices */}
-        <div>
-          <div className="flex items-center justify-between mb-2.5">
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold">Live Indices</h3>
-              <MarketStatusIndicator />
+          <div className="border border-primary/25 bg-primary/5 rounded-2xl p-5 text-center">
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
+              <LogIn className="h-5 w-5 text-primary" />
             </div>
-            <Button variant="ghost" size="sm" className="h-7 text-xs text-primary rounded-full px-3" onClick={() => navigate('/markets')}>
-              All <ChevronRight className="h-3 w-3 ml-0.5" />
-            </Button>
+            <h3 className="font-semibold mb-1 text-sm">Start Your Journey</h3>
+            <p className="text-xs text-muted-foreground mb-4">Track your portfolio & join the community.</p>
+            <Button className="btn-primary w-full h-11" onClick={() => navigate('/auth')}>Sign Up / Login</Button>
           </div>
-          <div className="flex gap-2.5 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-1">
+        )}
+
+        {/* Greeting line + status */}
+        {user && (
+          <div className="flex items-center justify-between pb-1">
+            <p className="text-[11px] text-muted-foreground">
+              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            </p>
+            <MarketStatusIndicator />
+          </div>
+        )}
+
+        {/* PORTFOLIO SUMMARY — no card, big number */}
+        {hasPortfolio && (
+          <div className="cursor-pointer" onClick={() => navigate('/track-investments')}>
+            <Eyebrow action="Details" onAction={() => navigate('/track-investments')}>Portfolio</Eyebrow>
+            <div className="flex items-end justify-between">
+              <div>
+                <p className="text-3xl font-bold tabular tracking-tight">
+                  {showBalance ? `KES ${portfolioValue.toLocaleString('en-US', { maximumFractionDigits: 0 })}` : '••••••'}
+                </p>
+                <div className={`text-xs font-semibold flex items-center gap-1 mt-0.5 tabular ${portfolioGain >= 0 ? 'text-bull' : 'text-bear'}`}>
+                  {portfolioGain >= 0 ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
+                  {portfolioGain >= 0 ? '+' : ''}KES {Math.abs(portfolioGain).toLocaleString('en-US', { maximumFractionDigits: 0 })} · {portfolioGainPct >= 0 ? '+' : ''}{portfolioGainPct.toFixed(2)}%
+                </div>
+              </div>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={e => { e.stopPropagation(); setShowBalance(!showBalance); }}>
+                {showBalance ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* MARKET SNAPSHOT — inline stat row */}
+        <div>
+          <Eyebrow action="Markets" onAction={() => navigate('/markets')}>Market Snapshot</Eyebrow>
+          <div className="grid grid-cols-3 gap-3 border-t border-border/60 pt-3">
             {nseIndices.map(idx => (
-              <Card key={idx.name} className="soft-card min-w-[110px] flex-shrink-0 p-2.5 active:scale-[0.97] transition-transform cursor-pointer" onClick={() => navigate('/markets')}>
-                <p className="text-[10px] font-medium text-muted-foreground">{idx.name}</p>
-                <p className="text-sm font-bold mt-0.5">{idx.value}</p>
-                <p className={`text-[10px] font-semibold flex items-center gap-0.5 ${idx.isUp ? 'text-bull' : 'text-bear'}`}>
+              <div key={idx.name} className="cursor-pointer" onClick={() => navigate('/markets')}>
+                <p className="text-[10px] text-muted-foreground">{idx.name}</p>
+                <p className="text-sm font-semibold tabular mt-0.5">{idx.value}</p>
+                <p className={`text-[10px] font-semibold flex items-center gap-0.5 tabular ${idx.isUp ? 'text-bull' : 'text-bear'}`}>
                   {idx.isUp ? <ArrowUpRight className="h-2.5 w-2.5" /> : <ArrowDownRight className="h-2.5 w-2.5" />}
                   {idx.isUp ? '+' : ''}{idx.change}%
                 </p>
-              </Card>
+              </div>
             ))}
           </div>
         </div>
 
-        {/* Quick Watch (auto-scrolling) */}
-        {user && <QuickTradeWidget />}
-
-        {/* Upgrade Banner for free users */}
-        {user && profile?.subscription_plan !== 'premium' && (
-          <div className="upgrade-banner" onClick={() => navigate('/account')}>
-            <div className="flex items-center gap-2">
-              <Crown className="h-4 w-4 text-primary" />
-              <div>
-                <p className="text-xs font-semibold">Unlock Premium</p>
-                <p className="text-[10px] text-muted-foreground">Advanced charts, AI insights & more</p>
-              </div>
-            </div>
-            <span className="text-xs font-bold text-primary">KES 999/mo →</span>
+        {/* QUICK WATCH — marquee, no card */}
+        {user && (
+          <div>
+            <Eyebrow>Quick Watch</Eyebrow>
+            <QuickTradeWidget />
           </div>
         )}
 
-        {/* Widgets */}
-        {user && <RealtimeWatchlistWidget />}
-        <TrendingStocks />
-        <TopMoversLosers />
+        {/* OPPORTUNITIES — pill row */}
+        <div>
+          <Eyebrow>Opportunities</Eyebrow>
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-1">
+            {opportunities.map(o => (
+              <button
+                key={o.label}
+                data-small-target
+                onClick={() => navigate(o.route)}
+                className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-full border border-border/70 hover:border-primary/40 hover:bg-primary/5 text-xs font-medium transition-colors"
+              >
+                <o.icon className="h-3.5 w-3.5 text-primary" />
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
-        {/* Latest from TradersHub */}
-        {posts.length > 0 && (
+        {/* WATCHLIST MOVERS — plain hairline table */}
+        {user && (
           <div>
-            <div className="flex items-center justify-between mb-2.5">
-              <h3 className="text-sm font-bold flex items-center gap-2">
-                <MessageCircle className="h-4 w-4 text-primary" />
-                TradersHub
-              </h3>
-              <Button variant="ghost" size="sm" className="h-7 text-xs text-primary rounded-full px-3" onClick={() => navigate('/traders-hub')}>
-                All <ChevronRight className="h-3 w-3 ml-0.5" />
-              </Button>
-            </div>
-            <div className="space-y-2">
-              {posts.slice(0, 3).map(post => (
-                <Card key={post.id} className="soft-card cursor-pointer active:scale-[0.99] transition-transform" onClick={() => navigate(`/traders-hub?post=${post.id}`)}>
-                  <CardContent className="p-3">
-                    <div className="flex items-start gap-2.5">
-                      <Avatar className="h-8 w-8 shrink-0">
-                        <AvatarImage src={post.author?.avatar_url || ""} />
-                        <AvatarFallback className="bg-primary text-primary-foreground text-[10px]">
-                          {post.author?.full_name?.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) || "U"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-semibold truncate">{post.author?.full_name || "User"}</span>
-                          <span className="text-[10px] text-muted-foreground shrink-0">
-                            · {Math.floor((Date.now() - new Date(post.created_at).getTime()) / 3600000)}h
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{post.content}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+            <Eyebrow action="Watchlist" onAction={() => navigate('/watchlist')}>Watchlist Movers</Eyebrow>
+            <div className="border-t border-border/60">
+              {watchlistMovers.map(s => (
+                <button
+                  key={s.symbol}
+                  data-small-target
+                  onClick={() => navigate(`/stock/${s.symbol}`)}
+                  className="w-full flex items-center justify-between py-2.5 border-b border-border/40 hover:bg-muted/30 -mx-4 px-4 transition-colors"
+                >
+                  <div className="text-left">
+                    <p className="text-xs font-semibold">{s.symbol}</p>
+                    <p className="text-[10px] text-muted-foreground">{s.name}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-semibold tabular">KES {s.price.toFixed(2)}</p>
+                    <p className={`text-[10px] font-semibold tabular ${s.change >= 0 ? 'text-bull' : 'text-bear'}`}>
+                      {s.change >= 0 ? '+' : ''}{s.change}%
+                    </p>
+                  </div>
+                </button>
               ))}
             </div>
           </div>
         )}
 
-        {/* Command Center sections */}
+        {/* ECONOMIC EVENTS */}
+        <div>
+          <Eyebrow>Economic Events</Eyebrow>
+          <div className="border-t border-border/60">
+            {economicEvents.map(e => (
+              <div key={e.title} className="flex items-center justify-between py-2.5 border-b border-border/40">
+                <p className="text-xs font-medium">{e.title}</p>
+                <p className="text-[10px] text-muted-foreground tabular">{e.when}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* TRENDING TRADERSHUB */}
+        {posts.length > 0 && (
+          <div>
+            <Eyebrow action="All" onAction={() => navigate('/traders-hub')}>Trending on TradersHub</Eyebrow>
+            <div className="border-t border-border/60">
+              {posts.slice(0, 3).map(post => (
+                <button
+                  key={post.id}
+                  data-small-target
+                  onClick={() => navigate(`/traders-hub?post=${post.id}`)}
+                  className="w-full flex items-start gap-2.5 py-3 border-b border-border/40 text-left hover:bg-muted/30 -mx-4 px-4 transition-colors"
+                >
+                  <Avatar className="h-7 w-7 shrink-0">
+                    <AvatarImage src={post.author?.avatar_url || ""} />
+                    <AvatarFallback className="bg-muted text-foreground text-[10px]">
+                      {post.author?.full_name?.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-semibold truncate">{post.author?.full_name || "User"}</span>
+                      <span className="text-[10px] text-muted-foreground shrink-0">
+                        · {Math.floor((Date.now() - new Date(post.created_at).getTime()) / 3600000)}h
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{post.content}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* AI INSIGHT + opportunities + calendar (already flat) */}
         <CommandCenterSections />
 
+        {/* Upgrade banner (free) */}
+        {user && profile?.subscription_plan !== 'premium' && (
+          <button
+            data-small-target
+            className="w-full flex items-center justify-between py-3 border-t border-b border-primary/25 bg-primary/5 -mx-4 px-4"
+            onClick={() => navigate('/account')}
+          >
+            <div className="flex items-center gap-2">
+              <Crown className="h-4 w-4 text-primary" />
+              <div className="text-left">
+                <p className="text-xs font-semibold">Unlock Premium</p>
+                <p className="text-[10px] text-muted-foreground">Advanced insights & real-time prices</p>
+              </div>
+            </div>
+            <span className="text-xs font-bold text-primary">KES 1,200/mo →</span>
+          </button>
+        )}
+
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 pt-1">
           <NavLink to="/track-investments">
             <Button className="btn-primary h-11 w-full text-sm font-semibold gap-2">
               <TrendingUp className="h-4 w-4" /> Investments
             </Button>
           </NavLink>
           <NavLink to="/discover">
-            <Button variant="outline" className="h-11 w-full text-sm font-semibold gap-2 rounded-2xl">
+            <Button variant="outline" className="h-11 w-full text-sm font-semibold gap-2 rounded-full">
               <Search className="h-4 w-4" /> Discover
             </Button>
           </NavLink>
