@@ -366,7 +366,7 @@ export default function Markets() {
                 <Volume2 className="h-4 w-4 text-accent" />
                 Volume Leaders
               </h3>
-              <div className="soft-card overflow-hidden">
+              <Card className="soft-card overflow-hidden">
                 {volumeLeaders.map(v => (
                   <div key={v.symbol} onClick={() => navigate(`/stock/${v.symbol}`)} className="flex items-center justify-between py-3 px-4 border-b border-border/40 last:border-0 cursor-pointer active:bg-muted/30 transition-colors">
                     <div className="flex items-center gap-3">
