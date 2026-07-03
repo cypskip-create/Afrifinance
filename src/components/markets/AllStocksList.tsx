@@ -1,9 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, TrendingUp, TrendingDown, Filter, ChevronDown, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { SparklineChart } from "@/components/shared/SparklineChart";
@@ -76,9 +75,27 @@ export function AllStocksList() {
     });
   }, [searchQuery, selectedSector, sortBy]);
 
+  // Infinite scroll: reveal 20 more each time sentinel enters view
+  const PAGE = 20;
+  const [visible, setVisible] = useState(PAGE);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { setVisible(PAGE); }, [searchQuery, selectedSector, sortBy]);
+
+  useEffect(() => {
+    if (!sentinelRef.current) return;
+    const io = new IntersectionObserver(entries => {
+      if (entries[0]?.isIntersecting) {
+        setVisible(v => Math.min(filteredStocks.length, v + PAGE));
+      }
+    }, { rootMargin: "300px" });
+    io.observe(sentinelRef.current);
+    return () => io.disconnect();
+  }, [filteredStocks.length]);
+
   const toggleFavorite = (symbol: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setFavorites(prev => 
+    setFavorites(prev =>
       prev.includes(symbol) ? prev.filter(s => s !== symbol) : [...prev, symbol]
     );
   };
@@ -133,48 +150,51 @@ export function AllStocksList() {
           />
         </div>
 
-        {/* Stocks List */}
-        <ScrollArea className="h-[400px]">
-          <div className="space-y-2">
-            {filteredStocks.map((stock) => (
-              <div
-                key={stock.symbol}
-                onClick={() => navigate(`/stock/${stock.symbol}`)}
-                className="flex items-center justify-between p-3 rounded-lg bg-muted/20 cursor-pointer hover:bg-muted/30 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-6 w-6"
-                    onClick={(e) => toggleFavorite(stock.symbol, e)}
-                  >
-                    <Star className={`h-4 w-4 ${favorites.includes(stock.symbol) ? 'fill-yellow-500 text-yellow-500' : 'text-muted-foreground'}`} />
-                  </Button>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">{stock.symbol}</span>
-                      <Badge variant="outline" className="text-[10px] px-1 py-0">
-                        {stock.sector}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground">{stock.name}</p>
+        {/* Stocks List — infinite scroll */}
+        <div className="space-y-2">
+          {filteredStocks.slice(0, visible).map((stock) => (
+            <div
+              key={stock.symbol}
+              onClick={() => navigate(`/stock/${stock.symbol}`)}
+              className="flex items-center justify-between p-3 rounded-lg bg-muted/20 cursor-pointer hover:bg-muted/30 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={(e) => toggleFavorite(stock.symbol, e)}
+                >
+                  <Star className={`h-4 w-4 ${favorites.includes(stock.symbol) ? 'fill-yellow-500 text-yellow-500' : 'text-muted-foreground'}`} />
+                </Button>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">{stock.symbol}</span>
+                    <Badge variant="outline" className="text-[10px] px-1 py-0">
+                      {stock.sector}
+                    </Badge>
                   </div>
+                  <p className="text-xs text-muted-foreground">{stock.name}</p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <SparklineChart isPositive={stock.isUp} width={50} height={20} />
-                  <div className="text-right min-w-[70px]">
-                    <div className="text-sm font-medium">KES {stock.price.toFixed(2)}</div>
-                    <div className={`flex items-center justify-end text-xs ${stock.isUp ? 'text-bull' : 'text-bear'}`}>
-                      {stock.isUp ? <TrendingUp className="h-3 w-3 mr-0.5" /> : <TrendingDown className="h-3 w-3 mr-0.5" />}
-                      {stock.isUp ? '+' : ''}{stock.change}%
-                    </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <SparklineChart isPositive={stock.isUp} width={50} height={20} />
+                <div className="text-right min-w-[70px]">
+                  <div className="text-sm font-medium">KES {stock.price.toFixed(2)}</div>
+                  <div className={`flex items-center justify-end text-xs ${stock.isUp ? 'text-bull' : 'text-bear'}`}>
+                    {stock.isUp ? <TrendingUp className="h-3 w-3 mr-0.5" /> : <TrendingDown className="h-3 w-3 mr-0.5" />}
+                    {stock.isUp ? '+' : ''}{stock.change}%
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-        </ScrollArea>
+            </div>
+          ))}
+          {visible < filteredStocks.length && (
+            <div ref={sentinelRef} className="py-4 text-center text-xs text-muted-foreground">
+              Loading more…
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

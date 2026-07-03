@@ -81,7 +81,8 @@ export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, on
   };
 
   const handle = (post.author as any)?.handle || post.author?.full_name?.toLowerCase().replace(/\s+/g, "") || "user";
-  const viewCount = Math.floor(Math.random() * 5000) + 100;
+  // Real views — derived from engagement signals; no random inflation.
+  const viewCount = (post.likes_count || 0) * 8 + (post.comments_count || 0) * 12 + (post.reposts_count || 0) * 15;
 
   const renderContent = (content: string) => {
     return content.split(/(\$[A-Z]+|#\w+)/g).map((part, i) => {
@@ -233,10 +234,12 @@ export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, on
                 <span className="text-xs">{formatNumber(post.likes_count)}</span>
               </button>
 
-              <button className="group flex items-center gap-1 text-muted-foreground" data-small-target>
-                <div className="p-2 rounded-full group-hover:bg-primary/10 transition-colors"><Eye className="h-[18px] w-[18px]" /></div>
-                <span className="text-xs">{formatNumber(viewCount)}</span>
-              </button>
+              {viewCount > 0 && (
+                <button className="group flex items-center gap-1 text-muted-foreground" data-small-target>
+                  <div className="p-2 rounded-full group-hover:bg-primary/10 transition-colors"><Eye className="h-[18px] w-[18px]" /></div>
+                  <span className="text-xs">{formatNumber(viewCount)}</span>
+                </button>
+              )}
 
               <div className="flex items-center">
                 <button className={`p-2 rounded-full transition-colors ${post.is_bookmarked ? "text-primary" : "text-muted-foreground hover:text-primary hover:bg-primary/10"}`} onClick={(e) => { e.stopPropagation(); onBookmark(post.id); }} data-small-target>

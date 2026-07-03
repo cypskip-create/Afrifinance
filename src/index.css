@@ -247,6 +247,22 @@
     box-shadow: var(--shadow-card);
   }
 
+  /* ── PAGE-CANVAS SCOPE ──
+     On pages marked .page-canvas, every base <Card> / gradient / soft card
+     collapses into the flat page canvas. Padding on the inner content stays,
+     so layout doesn't break. Dialog/Sheet content is unaffected because
+     Radix renders those outside .page-canvas via a portal. */
+  .page-canvas [class~="rounded-lg"][class~="border"][class~="bg-card"]:not(.grouped-card),
+  .page-canvas [class~="rounded-2xl"][class~="border"][class~="bg-card"]:not(.grouped-card),
+  .page-canvas [class~="rounded-xl"][class~="border"][class~="bg-card"]:not(.grouped-card),
+  .page-canvas .card-gradient:not(.grouped-card),
+  .page-canvas .soft-card:not(.grouped-card) {
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
 
   .btn-primary {
     background: hsl(var(--primary));

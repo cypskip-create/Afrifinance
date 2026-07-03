@@ -22,6 +22,7 @@ const timeframes = [
   { label: "1W", days: 7 },
   { label: "1M", days: 30 },
   { label: "3M", days: 90 },
+  { label: "YTD", days: Math.max(1, Math.ceil((Date.now() - new Date(new Date().getFullYear(), 0, 1).getTime()) / (24 * 60 * 60 * 1000))) },
   { label: "1Y", days: 365 },
   { label: "ALL", days: 730 },
 ];

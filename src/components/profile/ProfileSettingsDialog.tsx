@@ -179,8 +179,8 @@ export function ProfileSettingsDialog({ open, onOpenChange, currentHandle, portf
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[90dvh] p-0 rounded-2xl overflow-hidden flex flex-col">
-        <DialogHeader className="p-4 pb-2 shrink-0">
+      <DialogContent className="max-w-full w-screen h-[100dvh] p-0 rounded-none border-0 overflow-hidden flex flex-col sm:max-w-full">
+        <DialogHeader className="p-4 pb-2 shrink-0 border-b border-border">
           <DialogTitle className="text-base">{section === "menu" ? "Settings" : ""}</DialogTitle>
         </DialogHeader>
 

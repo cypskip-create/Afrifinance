@@ -98,12 +98,8 @@ export function XComposeModal({ open, onOpenChange, user, profile, onPost, portf
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg p-0 gap-0 rounded-2xl overflow-hidden border-border">
-        {/* Header — single close button on the right */}
-        <div className="flex items-center justify-end px-4 py-3 border-b border-border">
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => onOpenChange(false)} data-small-target>
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
+        {/* Header — Radix DialogContent renders its own close X, so we don't add one here */}
+        <div className="h-3" />
 
         {/* Compose area */}
         <div className="flex gap-3 p-4 pb-0">

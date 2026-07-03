@@ -66,7 +66,7 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="page-canvas min-h-screen bg-background pb-24">
       <TopBar
         title="AfriFinance"
         subtitle={user ? `${greeting}, ${firstName}` : "Your smart companion"}
@@ -256,19 +256,6 @@ export default function Home() {
           </button>
         )}
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-3 pt-1">
-          <NavLink to="/track-investments">
-            <Button className="btn-primary h-11 w-full text-sm font-semibold gap-2">
-              <TrendingUp className="h-4 w-4" /> Investments
-            </Button>
-          </NavLink>
-          <NavLink to="/discover">
-            <Button variant="outline" className="h-11 w-full text-sm font-semibold gap-2 rounded-full">
-              <Search className="h-4 w-4" /> Discover
-            </Button>
-          </NavLink>
-        </div>
       </div>
     </div>
   );

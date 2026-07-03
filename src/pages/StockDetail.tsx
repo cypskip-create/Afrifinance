@@ -168,7 +168,7 @@ export default function StockDetail() {
   );
 
   return (
-    <div className="min-h-screen bg-background pb-28">
+    <div className="page-canvas min-h-screen bg-background pb-28">
       {/* Slim sticky header */}
       <header className="sticky top-0 z-40 bg-background/90 backdrop-blur-xl border-b border-border/50">
         <div className="flex items-center justify-between px-3 py-2">

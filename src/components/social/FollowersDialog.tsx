@@ -133,31 +133,27 @@ export function FollowersDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>{userName}</DialogTitle>
+      <DialogContent className="max-w-full w-screen h-[100dvh] p-0 rounded-none border-0 flex flex-col gap-0 sm:max-w-full">
+        <DialogHeader className="px-4 py-3 border-b border-border shrink-0">
+          <DialogTitle className="text-base">{userName}</DialogTitle>
         </DialogHeader>
-        
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "followers" | "following")}>
-          <TabsList className="w-full grid grid-cols-2">
-            <TabsTrigger value="followers">
+
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "followers" | "following")} className="flex-1 flex flex-col min-h-0">
+          <TabsList className="w-full grid grid-cols-2 rounded-none border-b border-border bg-transparent h-11 shrink-0">
+            <TabsTrigger value="followers" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary">
               Followers ({followers.length})
             </TabsTrigger>
-            <TabsTrigger value="following">
+            <TabsTrigger value="following" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary">
               Following ({following.length})
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="followers" className="mt-4">
-            <ScrollArea className="h-[300px]">
-              {renderUserList(followers)}
-            </ScrollArea>
+          <TabsContent value="followers" className="flex-1 overflow-y-auto px-4 py-3 mt-0">
+            {renderUserList(followers)}
           </TabsContent>
 
-          <TabsContent value="following" className="mt-4">
-            <ScrollArea className="h-[300px]">
-              {renderUserList(following)}
-            </ScrollArea>
+          <TabsContent value="following" className="flex-1 overflow-y-auto px-4 py-3 mt-0">
+            {renderUserList(following)}
           </TabsContent>
         </Tabs>
       </DialogContent>
