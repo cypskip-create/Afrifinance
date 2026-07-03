@@ -126,16 +126,11 @@ export default function TrackInvestments() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24">
-      {/* Header — thin, editorial */}
+    <div className="page-canvas min-h-screen bg-background pb-24">
+      {/* Header — thin, editorial (no back button) */}
       <header className="sticky top-0 z-40 bg-background/85 backdrop-blur-xl border-b border-border/60">
         <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-full h-9 w-9" data-small-target>
-              <ArrowLeft className="h-[18px] w-[18px]" />
-            </Button>
-            <h1 className="text-base font-semibold">Portfolio</h1>
-          </div>
+          <h1 className="text-base font-semibold">Portfolio</h1>
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon" className={`rounded-full h-9 w-9 ${isRefreshing ? 'animate-spin' : ''}`} onClick={handleRefresh} data-small-target>
               <RefreshCw className="h-4 w-4 text-muted-foreground" />
@@ -207,16 +202,6 @@ export default function TrackInvestments() {
               initialValue={chartMode === 'value' ? stats.totalCost : 0}
               mode={chartMode}
             />
-          </div>
-          <div className="flex items-center justify-between gap-1 mt-3 pt-3 hairline-t">
-            {["1D", "1W", "1M", "3M", "YTD", "1Y", "ALL"].map(p => (
-              <button
-                key={p}
-                data-small-target
-                className={`text-[10px] rounded-full h-7 px-3 font-semibold transition-colors ${chartPeriod === p ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
-                onClick={() => setChartPeriod(p)}
-              >{p}</button>
-            ))}
           </div>
         </div>
 
