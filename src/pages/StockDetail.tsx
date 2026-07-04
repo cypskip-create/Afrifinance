@@ -341,17 +341,20 @@ export default function StockDetail() {
         {/* RESEARCH */}
         <section ref={refs.research} data-section="research" className="space-y-4 scroll-mt-32">
           <Eyebrow>Research</Eyebrow>
-          <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide -mx-1 px-1 pb-1">
-            {(["valuation", "growth", "health", "dividends", "ownership", "risk"] as const).map(g => (
-              <button
-                key={g}
-                data-small-target
-                onClick={() => setResearchGroup(g)}
-                className={`px-3 py-1 text-[11px] font-semibold rounded-full whitespace-nowrap capitalize transition-colors ${researchGroup === g ? 'bg-foreground text-background' : 'bg-muted/40 text-muted-foreground'}`}
-              >
-                {g}
-              </button>
-            ))}
+          {/* Second-level sticky nav — sits directly under the primary sub-nav */}
+          <div className="sticky top-[97px] z-20 -mx-4 px-4 py-2 bg-background/92 backdrop-blur-xl border-b border-border/60">
+            <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
+              {(["valuation", "growth", "health", "dividends", "ownership", "risk"] as const).map(g => (
+                <button
+                  key={g}
+                  data-small-target
+                  onClick={() => setResearchGroup(g)}
+                  className={`px-3 py-1 text-[11px] font-semibold rounded-full whitespace-nowrap capitalize transition-colors ${researchGroup === g ? 'bg-foreground text-background' : 'bg-muted/40 text-muted-foreground'}`}
+                >
+                  {g}
+                </button>
+              ))}
+            </div>
           </div>
           {researchGroup === "valuation" && <ValuationTab price={stock.price} pe={stock.pe} fundamentals={fundamentals} />}
           {researchGroup === "growth" && <GrowthTab fundamentals={fundamentals} />}
@@ -360,6 +363,7 @@ export default function StockDetail() {
           {researchGroup === "ownership" && <OwnershipTab fundamentals={fundamentals} />}
           {researchGroup === "risk" && <RiskTab fundamentals={fundamentals} />}
         </section>
+
 
         {/* FINANCIALS */}
         <section ref={refs.financials} data-section="financials" className="space-y-4 scroll-mt-32">
