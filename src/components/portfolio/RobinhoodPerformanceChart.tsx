@@ -158,10 +158,14 @@ export function RobinhoodPerformanceChart({
             {isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
             {mode === "value" ? (
               <>
-                <span className="font-semibold">
-                  {isPositive ? '+' : ''}KES {Math.abs(changeValue).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                {!hideValue && (
+                  <span className="font-semibold">
+                    {isPositive ? '+' : ''}KES {Math.abs(changeValue).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </span>
+                )}
+                <span className={hideValue ? 'font-semibold' : 'opacity-80'}>
+                  {hideValue ? '' : '('}{isPositive ? '+' : ''}{changePercent.toFixed(2)}%{hideValue ? '' : ')'}
                 </span>
-                <span className="opacity-80">({isPositive ? '+' : ''}{changePercent.toFixed(2)}%)</span>
               </>
             ) : (
               <span className="font-semibold">
