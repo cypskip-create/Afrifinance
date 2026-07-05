@@ -15,6 +15,10 @@ interface RobinhoodPerformanceChartProps {
   initialValue: number;
   portfolioData?: PerformanceData[];
   mode?: "value" | "performance";
+  /** When true, mask absolute currency values (still show %). */
+  hideValue?: boolean;
+  /** Optional seed so the simulated curve stays stable per portfolio. */
+  seed?: string;
 }
 
 const timeframes = [
@@ -45,6 +49,8 @@ export function RobinhoodPerformanceChart({
   initialValue,
   portfolioData,
   mode = "value",
+  hideValue = false,
+  seed = "",
 }: RobinhoodPerformanceChartProps) {
   const [activeTimeframe, setActiveTimeframe] = useState("1M");
   const [hoverValue, setHoverValue] = useState<number | null>(null);
