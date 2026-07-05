@@ -154,7 +154,9 @@ export default function TrackInvestments() {
           <div className="mt-2 flex items-center gap-2 text-sm tabular">
             <span className={`inline-flex items-center gap-0.5 font-semibold ${stats.totalGain >= 0 ? 'text-bull' : 'text-bear'}`}>
               {stats.totalGain >= 0 ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
-              {showBalance ? `${stats.totalGain >= 0 ? '+' : '−'}KES ${Math.abs(stats.totalGain).toFixed(2)}` : '••••'}
+              {showBalance && (
+                <>{stats.totalGain >= 0 ? '+' : '−'}KES {Math.abs(stats.totalGain).toFixed(2)} </>
+              )}
               <span className="opacity-80 ml-1">({stats.gainPct >= 0 ? '+' : ''}{stats.gainPct.toFixed(2)}%)</span>
             </span>
             <span className="text-muted-foreground text-xs">All time</span>
@@ -201,6 +203,8 @@ export default function TrackInvestments() {
               currentValue={chartMode === 'value' ? stats.totalValue : stats.gainPct}
               initialValue={chartMode === 'value' ? stats.totalCost : 0}
               mode={chartMode}
+              hideValue={!showBalance}
+              seed={holdings.map(h => h.symbol).join(',')}
             />
           </div>
         </div>
