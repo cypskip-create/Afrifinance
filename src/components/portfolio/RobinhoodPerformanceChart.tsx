@@ -56,6 +56,20 @@ export function RobinhoodPerformanceChart({
   const [hoverValue, setHoverValue] = useState<number | null>(null);
   const [hoverDate, setHoverDate] = useState<string | null>(null);
 
+  // Seeded RNG so the chart is stable per-portfolio and per-timeframe.
+  const rng = (s: string) => {
+    let h = 2166136261;
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return () => {
+      h = Math.imul(h ^ (h >>> 15), 2246822507);
+      h = Math.imul(h ^ (h >>> 13), 3266489909);
+      return ((h ^= h >>> 16) >>> 0) / 4294967296;
+    };
+  };
+
   const generateData = (days: number, current: number, initial: number): PerformanceData[] => {
     const data: PerformanceData[] = [];
     const now = Date.now();
@@ -63,6 +77,7 @@ export function RobinhoodPerformanceChart({
     const startValue = initial;
     const endValue = current;
     const volatility = mode === "performance" ? 0.015 : 0.02;
+    const rand = rng(`${seed}|${activeTimeframe}|${mode}|${initial.toFixed(2)}|${current.toFixed(2)}`);
 
     const points = days <= 1 ? 78
                  : days <= 7 ? days * 4
@@ -74,7 +89,7 @@ export function RobinhoodPerformanceChart({
     for (let i = 0; i < points; i++) {
       const progress = i / (points - 1);
       const baseValue = startValue + (endValue - startValue) * progress;
-      const randomWalk = (Math.random() - 0.5) * volatility * Math.max(Math.abs(baseValue), 1);
+      const randomWalk = (rand() - 0.5) * volatility * Math.max(Math.abs(baseValue), 1);
       const smoothing = 0.7;
       const value = prevValue * smoothing + (baseValue + randomWalk) * (1 - smoothing);
       prevValue = value;
@@ -89,6 +104,8 @@ export function RobinhoodPerformanceChart({
 
       data.push({ date: dateStr, value, timestamp });
     }
+    // Force endpoint to exactly match current value so the chart lines up with the hero.
+    if (data.length > 0) data[data.length - 1].value = endValue;
     return data;
   };
 
@@ -96,7 +113,7 @@ export function RobinhoodPerformanceChart({
   const chartData = useMemo(
     () => portfolioData || generateData(selectedTimeframe.days, currentValue, initialValue),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [activeTimeframe, currentValue, initialValue, portfolioData, mode]
+    [activeTimeframe, currentValue, initialValue, portfolioData, mode, seed]
   );
 
   const displayValue = hoverValue ?? currentValue;
@@ -125,6 +142,7 @@ export function RobinhoodPerformanceChart({
     if (mode === "performance") {
       return `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`;
     }
+    if (hideValue) return '••••••';
     return `KES ${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
