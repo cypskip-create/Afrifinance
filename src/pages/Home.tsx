@@ -108,7 +108,12 @@ export default function Home() {
                 </p>
                 <div className={`text-xs font-semibold flex items-center gap-1 mt-0.5 tabular ${portfolioGain >= 0 ? 'text-bull' : 'text-bear'}`}>
                   {portfolioGain >= 0 ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
-                  {portfolioGain >= 0 ? '+' : ''}KES {Math.abs(portfolioGain).toLocaleString('en-US', { maximumFractionDigits: 0 })} · {portfolioGainPct >= 0 ? '+' : ''}{portfolioGainPct.toFixed(2)}%
+                  {showBalance && (
+                    <>
+                      {portfolioGain >= 0 ? '+' : ''}KES {Math.abs(portfolioGain).toLocaleString('en-US', { maximumFractionDigits: 0 })} ·{' '}
+                    </>
+                  )}
+                  <span>{portfolioGainPct >= 0 ? '+' : ''}{portfolioGainPct.toFixed(2)}%</span>
                 </div>
               </div>
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={e => { e.stopPropagation(); setShowBalance(!showBalance); }}>

@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, GitCompare, Plus, X, TrendingUp, TrendingDown, Search, BarChart3, PieChart, Activity, DollarSign, Percent, Scale, ChevronRight } from "lucide-react";
 import { SparklineChart } from "@/components/shared/SparklineChart";
@@ -59,10 +57,10 @@ export default function StockCompare() {
   const [showSearch, setShowSearch] = useState(false);
 
   const filteredStocks = stocksDatabase.filter(
-    stock => 
+    stock =>
       !selectedStocks.find(s => s.symbol === stock.symbol) &&
       (stock.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
-       stock.name.toLowerCase().includes(searchQuery.toLowerCase()))
+        stock.name.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const addStock = (stock: Stock) => {
@@ -83,230 +81,205 @@ export default function StockCompare() {
       const val = s[key as keyof Stock];
       return typeof val === 'number' ? val : parseFloat(String(val)) || 0;
     });
-    const bestIdx = isHigherBetter 
+    const bestIdx = isHigherBetter
       ? values.indexOf(Math.max(...values))
       : values.indexOf(Math.min(...values));
     return selectedStocks[bestIdx]?.symbol;
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border">
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="tap-scale">
+    <div className="page-canvas min-h-screen bg-background pb-20">
+      {/* Header — thin, editorial */}
+      <header className="sticky top-0 z-40 bg-background/85 backdrop-blur-xl border-b border-border/60">
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="tap-scale h-9 w-9">
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-lg font-bold flex items-center gap-2">
-                <GitCompare className="h-5 w-5 text-primary" />
-                Compare Stocks
+              <h1 className="text-base font-semibold flex items-center gap-2">
+                <GitCompare className="h-4 w-4 text-primary" />
+                Compare
               </h1>
-              <p className="text-xs text-muted-foreground">Side-by-side analysis</p>
+              <p className="text-[10px] text-muted-foreground">Side-by-side analysis</p>
             </div>
           </div>
           {selectedStocks.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSelectedStocks([])}
-              className="text-xs text-muted-foreground"
-            >
-              Clear All
+            <Button variant="ghost" size="sm" onClick={() => setSelectedStocks([])} className="text-xs text-muted-foreground">
+              Clear
             </Button>
           )}
         </div>
       </header>
 
-      <div className="p-4 space-y-4">
-        {/* Add Stock Section */}
+      <div className="px-4 pt-6 space-y-8">
+        {/* Add stock — canvas, no card */}
         {selectedStocks.length < 4 && (
-          <Card className="card-gradient">
-            <CardContent className="p-4">
-              {showSearch ? (
-                <div className="space-y-3">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search stocks..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10"
-                      autoFocus
-                    />
-                  </div>
-                  <div className="max-h-48 overflow-y-auto space-y-1">
-                    {filteredStocks.slice(0, 6).map((stock) => (
-                      <div
-                        key={stock.symbol}
-                        onClick={() => addStock(stock)}
-                        className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/30 cursor-pointer tap-scale"
-                      >
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                            <span className="text-[10px] font-bold text-primary">{stock.symbol.slice(0, 2)}</span>
-                          </div>
-                          <div>
-                            <div className="font-medium text-sm">{stock.symbol}</div>
-                            <div className="text-[10px] text-muted-foreground">{stock.name}</div>
-                          </div>
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    ))}
-                  </div>
-                  <Button variant="ghost" size="sm" onClick={() => setShowSearch(false)} className="w-full">
-                    Cancel
-                  </Button>
+          <div>
+            {showSearch ? (
+              <div className="space-y-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search stocks..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                    autoFocus
+                  />
                 </div>
-              ) : (
-                <Button
-                  variant="outline"
-                  className="w-full h-12 border-dashed"
-                  onClick={() => setShowSearch(true)}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Stock to Compare ({selectedStocks.length}/4)
+                <div className="border-t border-border/60 max-h-64 overflow-y-auto">
+                  {filteredStocks.slice(0, 8).map((stock) => (
+                    <button
+                      key={stock.symbol}
+                      onClick={() => addStock(stock)}
+                      className="w-full flex items-center justify-between py-2.5 border-b border-border/40 hover:bg-muted/30 -mx-4 px-4 transition-colors"
+                    >
+                      <div className="flex items-center gap-2.5 text-left">
+                        <div className="w-8 h-8 rounded-xl bg-primary/8 flex items-center justify-center text-[10px] font-bold text-primary">
+                          {stock.symbol.slice(0, 2)}
+                        </div>
+                        <div>
+                          <div className="text-sm font-semibold">{stock.symbol}</div>
+                          <div className="text-[10px] text-muted-foreground">{stock.name}</div>
+                        </div>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                  ))}
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => setShowSearch(false)} className="w-full">
+                  Cancel
                 </Button>
-              )}
-            </CardContent>
-          </Card>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowSearch(true)}
+                className="w-full h-12 rounded-full border border-dashed border-border/70 hover:border-primary/40 hover:bg-primary/5 flex items-center justify-center gap-2 text-sm font-medium transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                Add Stock to Compare ({selectedStocks.length}/4)
+              </button>
+            )}
+          </div>
         )}
 
-        {/* Selected Stocks Cards */}
+        {/* Selected chips — no card, hairline rail */}
         {selectedStocks.length > 0 && (
-          <ScrollArea className="w-full">
-            <div className="flex gap-3 pb-2">
+          <ScrollArea className="w-full -mx-4">
+            <div className="flex gap-4 px-4 pb-2">
               {selectedStocks.map((stock) => (
-                <Card key={stock.symbol} className="card-gradient min-w-[160px] flex-shrink-0">
-                  <CardContent className="p-3 relative">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute top-1 right-1 h-6 w-6"
-                      onClick={() => removeStock(stock.symbol)}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                        <span className="text-[10px] font-bold text-primary">{stock.symbol.slice(0, 2)}</span>
-                      </div>
-                      <div>
-                        <div className="font-bold text-sm">{stock.symbol}</div>
-                        <div className="text-[9px] text-muted-foreground">{stock.sector}</div>
-                      </div>
+                <div key={stock.symbol} className="min-w-[150px] flex-shrink-0 border-t border-border/60 pt-3 relative">
+                  <button
+                    className="absolute -top-1 right-0 h-6 w-6 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground"
+                    onClick={() => removeStock(stock.symbol)}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-xl bg-primary/8 flex items-center justify-center text-[10px] font-bold text-primary">
+                      {stock.symbol.slice(0, 2)}
                     </div>
-                    <div className="text-center">
-                      <div className="font-bold">KES {stock.price.toFixed(2)}</div>
-                      <div className={`text-xs flex items-center justify-center gap-0.5 ${stock.change >= 0 ? 'text-bull' : 'text-bear'}`}>
-                        {stock.change >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                        {stock.change >= 0 ? '+' : ''}{stock.change}%
-                      </div>
+                    <div>
+                      <div className="text-sm font-semibold">{stock.symbol}</div>
+                      <div className="text-[9px] text-muted-foreground">{stock.sector}</div>
                     </div>
-                    <div className="mt-2 flex justify-center">
-                      <SparklineChart isPositive={stock.change >= 0} width={80} height={25} />
-                    </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                  <div className="text-sm font-semibold tabular">KES {stock.price.toFixed(2)}</div>
+                  <div className={`text-[11px] flex items-center gap-0.5 tabular ${stock.change >= 0 ? 'text-bull' : 'text-bear'}`}>
+                    {stock.change >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                    {stock.change >= 0 ? '+' : ''}{stock.change}%
+                  </div>
+                  <div className="mt-2">
+                    <SparklineChart isPositive={stock.change >= 0} width={130} height={26} />
+                  </div>
+                </div>
               ))}
             </div>
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
         )}
 
-        {/* Comparison Table */}
+        {/* Comparison table — flat */}
         {selectedStocks.length >= 2 && (
-          <Card className="card-gradient">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <BarChart3 className="h-4 w-4 text-accent" />
-                Detailed Comparison
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left p-3 font-medium text-muted-foreground sticky left-0 bg-card">Metric</th>
-                      {selectedStocks.map((stock) => (
-                        <th key={stock.symbol} className="text-center p-3 font-bold min-w-[90px]">
-                          {stock.symbol}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {comparisonMetrics.map((metric) => {
-                      const Icon = metric.icon;
-                      const isHigherBetter = !['pe', 'debtToEquity', 'beta'].includes(metric.key);
-                      const bestSymbol = getBestValue(metric.key, isHigherBetter);
-                      
-                      return (
-                        <tr key={metric.key} className="border-b border-border/50 hover:bg-muted/20">
-                          <td className="p-3 font-medium sticky left-0 bg-card">
-                            <div className="flex items-center gap-2">
-                              <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-                              {metric.label}
-                            </div>
-                          </td>
-                          {selectedStocks.map((stock) => {
-                            const value = stock[metric.key as keyof Stock];
-                            const isBest = bestSymbol === stock.symbol;
-                            const numValue = typeof value === 'number' ? value : 0;
-                            const colorClass = metric.colorize && typeof value === 'number'
-                              ? numValue >= 0 ? 'text-bull' : 'text-bear'
-                              : '';
-                            
-                            return (
-                              <td 
-                                key={stock.symbol} 
-                                className={`text-center p-3 ${isBest ? 'bg-primary/10 font-bold' : ''} ${colorClass}`}
-                              >
-                                {typeof value === 'number' 
-                                  ? (metric.format as (v: number) => string)(value)
-                                  : (metric.format as (v: string) => string)(value as string)}
-                                {isBest && <span className="ml-1 text-primary">★</span>}
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
+          <div>
+            <p className="section-eyebrow mb-2 flex items-center gap-2">
+              <BarChart3 className="h-3.5 w-3.5 text-accent" /> Detailed Comparison
+            </p>
+            <div className="-mx-4 overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-y border-border/60">
+                    <th className="text-left py-2 px-4 font-medium text-muted-foreground sticky left-0 bg-background">Metric</th>
+                    {selectedStocks.map((stock) => (
+                      <th key={stock.symbol} className="text-center py-2 px-3 font-semibold min-w-[90px]">
+                        {stock.symbol}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {comparisonMetrics.map((metric) => {
+                    const Icon = metric.icon;
+                    const isHigherBetter = !['pe', 'debtToEquity', 'beta'].includes(metric.key);
+                    const bestSymbol = getBestValue(metric.key, isHigherBetter);
+
+                    return (
+                      <tr key={metric.key} className="border-b border-border/40">
+                        <td className="py-2.5 px-4 font-medium sticky left-0 bg-background">
+                          <div className="flex items-center gap-2">
+                            <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                            {metric.label}
+                          </div>
+                        </td>
+                        {selectedStocks.map((stock) => {
+                          const value = stock[metric.key as keyof Stock];
+                          const isBest = bestSymbol === stock.symbol;
+                          const numValue = typeof value === 'number' ? value : 0;
+                          const colorClass = metric.colorize && typeof value === 'number'
+                            ? numValue >= 0 ? 'text-bull' : 'text-bear'
+                            : '';
+
+                          return (
+                            <td
+                              key={stock.symbol}
+                              className={`text-center py-2.5 px-3 tabular ${isBest ? 'font-bold text-primary' : ''} ${colorClass}`}
+                            >
+                              {typeof value === 'number'
+                                ? (metric.format as (v: number) => string)(value)
+                                : (metric.format as (v: string) => string)(value as string)}
+                              {isBest && <span className="ml-1">★</span>}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
         )}
 
-        {/* Empty State */}
+        {/* Empty state */}
         {selectedStocks.length === 0 && (
-          <Card className="card-gradient">
-            <CardContent className="p-8 text-center">
-              <GitCompare className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-              <h3 className="font-semibold mb-2">Compare Stocks</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Add 2-4 stocks to compare their performance, valuation, and key metrics side by side.
-              </p>
-              <Button onClick={() => setShowSearch(true)} className="btn-primary">
-                <Plus className="h-4 w-4 mr-2" />
-                Add First Stock
-              </Button>
-            </CardContent>
-          </Card>
+          <div className="text-center py-14">
+            <GitCompare className="h-12 w-12 mx-auto mb-4 text-muted-foreground/40" />
+            <h3 className="font-semibold mb-2">Compare Stocks</h3>
+            <p className="text-sm text-muted-foreground mb-5 max-w-xs mx-auto">
+              Add 2–4 stocks to compare performance, valuation and key metrics side-by-side.
+            </p>
+            <Button onClick={() => setShowSearch(true)} className="btn-primary">
+              <Plus className="h-4 w-4 mr-2" />
+              Add First Stock
+            </Button>
+          </div>
         )}
 
         {selectedStocks.length === 1 && (
-          <Card className="card-gradient border-primary/30">
-            <CardContent className="p-4 text-center">
-              <p className="text-sm text-muted-foreground">
-                Add at least one more stock to start comparing
-              </p>
-            </CardContent>
-          </Card>
+          <div className="border-t border-b border-primary/25 bg-primary/5 -mx-4 px-4 py-3 text-center">
+            <p className="text-xs text-muted-foreground">Add at least one more stock to start comparing</p>
+          </div>
         )}
       </div>
     </div>

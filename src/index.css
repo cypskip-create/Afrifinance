@@ -363,6 +363,23 @@
   .refresh-spin { animation: spin 0.6s linear infinite; }
   @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
+  /* Breathing glow used by pull-to-refresh (calmer than a spinner). */
+  .refresh-breathe {
+    animation: refreshBreathe 1.15s ease-in-out infinite;
+  }
+  @keyframes refreshBreathe {
+    0%, 100% {
+      transform: scale(0.92);
+      opacity: 0.55;
+      box-shadow: 0 0 0 0 hsl(var(--primary) / 0);
+    }
+    50% {
+      transform: scale(1.06);
+      opacity: 1;
+      box-shadow: 0 0 22px 4px hsl(var(--primary) / 0.45);
+    }
+  }
+
   .glass {
     @apply bg-background/70 backdrop-blur-xl border border-border/50;
   }
