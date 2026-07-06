@@ -26,7 +26,20 @@ export interface Fundamentals {
   earningsSurprises: { quarter: string; estimate: number; actual: number }[];
   insiderTrades: { date: string; insider: string; role: string; type: "Buy" | "Sell"; shares: number; value: number }[];
   marginsHistory: { year: string; gross: number; operating: number; net: number }[];
+
+  // ▼ Institutional research datasets
+  returnsHistory: { year: string; roe: number; roa: number; roic: number }[];
+  epsEstimateTrend: { month: string; est: number }[];        // last-N-month analyst EPS drift
+  revenueForecast: { year: string; low: number; mid: number; high: number; actual?: number }[];
+  revenueSegments: { name: string; value: number; color: string }[];
+  geographicRevenue: { region: string; value: number; color: string }[];
+  freeCashFlowTrend: { year: string; fcf: number; capex: number }[];
+  shareCount: { year: string; shares: number }[];            // dilution history (billions)
+  piotroski: { score: number; checks: { label: string; ok: boolean }[] };
+  altmanZ: { score: number; band: "safe" | "grey" | "distress" };
+  volatility: { period: string; company: number; sector: number }[];
 }
+
 
 const COLORS = {
   primary: "hsl(var(--primary))",
