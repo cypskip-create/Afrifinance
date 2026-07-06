@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, User, Loader2, Upload, X } from "lucide-react";
+import { Camera, User, Loader2, Upload, X, Check, AlertCircle } from "lucide-react";
+
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -29,6 +30,12 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
   const [previewUrl, setPreviewUrl] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Handle availability state
+  type HandleState = "idle" | "checking" | "available" | "taken" | "invalid" | "current";
+  const [handleState, setHandleState] = useState<HandleState>("idle");
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const originalHandle = ((profile as any)?.handle || "").toLowerCase();
+
   useEffect(() => {
     if (open && profile) {
       setFullName(profile.full_name || "");
@@ -36,8 +43,44 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
       setBio(profile.bio || "");
       setAvatarUrl(profile.avatar_url || "");
       setPreviewUrl(profile.avatar_url || "");
+      setHandleState("idle");
+      setSuggestions([]);
     }
   }, [open, profile]);
+
+  // Debounced live handle check
+  useEffect(() => {
+    if (!open) return;
+    const clean = handle.replace(/^@/, "").toLowerCase();
+    if (!clean) { setHandleState("idle"); setSuggestions([]); return; }
+    if (clean === originalHandle) { setHandleState("current"); setSuggestions([]); return; }
+    if (clean.length < 3 || clean.length > 30 || !/^[a-z0-9_]+$/.test(clean)) {
+      setHandleState("invalid"); setSuggestions([]); return;
+    }
+    setHandleState("checking");
+    const t = setTimeout(async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("handle")
+        .ilike("handle", clean)
+        .maybeSingle();
+      if (error) { setHandleState("idle"); return; }
+      if (!data) { setHandleState("available"); setSuggestions([]); return; }
+      setHandleState("taken");
+      // Generate suggestions
+      const bases = [clean, clean.slice(0, 20)];
+      const suffixes = ["_ke", "01", "_trader", "invest", "_nse", "254"];
+      const candidates = Array.from(new Set(bases.flatMap(b => suffixes.map(s => `${b}${s}`.slice(0, 30)))));
+      const { data: taken } = await supabase
+        .from("profiles")
+        .select("handle")
+        .in("handle", candidates);
+      const takenSet = new Set((taken || []).map(t => (t.handle || "").toLowerCase()));
+      setSuggestions(candidates.filter(c => !takenSet.has(c)).slice(0, 3));
+    }, 450);
+    return () => clearTimeout(t);
+  }, [handle, open, originalHandle]);
+
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -238,9 +281,7 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="handle" className="text-sm font-medium">
-                Handle
-              </Label>
+              <Label htmlFor="handle" className="text-sm font-medium">Handle</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">@</span>
                 <Input
@@ -248,14 +289,36 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
                   value={handle}
                   onChange={(e) => setHandle(e.target.value.replace(/^@/, '').toLowerCase().replace(/[^a-z0-9_]/g, ''))}
                   placeholder="cypskip"
-                  className="h-11 pl-8"
+                  className="h-11 pl-8 pr-9"
                   maxLength={30}
                 />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                  {handleState === "checking" && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                  {handleState === "available" && <Check className="h-4 w-4 text-bull" />}
+                  {(handleState === "taken" || handleState === "invalid") && <AlertCircle className="h-4 w-4 text-bear" />}
+                </span>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Letters, numbers, and underscores only
-              </p>
+              {handleState === "available" && <p className="text-xs text-bull">✓ Available</p>}
+              {handleState === "current" && <p className="text-xs text-muted-foreground">Your current handle</p>}
+              {handleState === "invalid" && <p className="text-xs text-bear">Use 3–30 letters, numbers, or underscores</p>}
+              {handleState === "taken" && (
+                <div className="space-y-1.5">
+                  <p className="text-xs text-bear">Already taken</p>
+                  {suggestions.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {suggestions.map(s => (
+                        <button key={s} type="button" onClick={() => setHandle(s)}
+                          className="text-[11px] px-2 py-1 rounded-full bg-muted hover:bg-muted/70 font-medium">
+                          @{s}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              {handleState === "idle" && <p className="text-xs text-muted-foreground">Letters, numbers, and underscores only</p>}
             </div>
+
 
             <div className="space-y-2">
               <Label htmlFor="bio" className="text-sm font-medium">
@@ -306,7 +369,7 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
             <Button 
               className="flex-1 h-11 btn-primary"
               onClick={handleSave}
-              disabled={loading || uploading}
+              disabled={loading || uploading || handleState === "checking" || handleState === "taken" || handleState === "invalid"}
             >
               {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Save Changes
