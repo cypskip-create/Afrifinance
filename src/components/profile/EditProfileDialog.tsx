@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, User, Loader2, Upload, X } from "lucide-react";
+import { Camera, User, Loader2, Upload, X, Check, AlertCircle } from "lucide-react";
+
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -29,6 +30,12 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
   const [previewUrl, setPreviewUrl] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Handle availability state
+  type HandleState = "idle" | "checking" | "available" | "taken" | "invalid" | "current";
+  const [handleState, setHandleState] = useState<HandleState>("idle");
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const originalHandle = ((profile as any)?.handle || "").toLowerCase();
+
   useEffect(() => {
     if (open && profile) {
       setFullName(profile.full_name || "");
@@ -36,8 +43,44 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
       setBio(profile.bio || "");
       setAvatarUrl(profile.avatar_url || "");
       setPreviewUrl(profile.avatar_url || "");
+      setHandleState("idle");
+      setSuggestions([]);
     }
   }, [open, profile]);
+
+  // Debounced live handle check
+  useEffect(() => {
+    if (!open) return;
+    const clean = handle.replace(/^@/, "").toLowerCase();
+    if (!clean) { setHandleState("idle"); setSuggestions([]); return; }
+    if (clean === originalHandle) { setHandleState("current"); setSuggestions([]); return; }
+    if (clean.length < 3 || clean.length > 30 || !/^[a-z0-9_]+$/.test(clean)) {
+      setHandleState("invalid"); setSuggestions([]); return;
+    }
+    setHandleState("checking");
+    const t = setTimeout(async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("handle")
+        .ilike("handle", clean)
+        .maybeSingle();
+      if (error) { setHandleState("idle"); return; }
+      if (!data) { setHandleState("available"); setSuggestions([]); return; }
+      setHandleState("taken");
+      // Generate suggestions
+      const bases = [clean, clean.slice(0, 20)];
+      const suffixes = ["_ke", "01", "_trader", "invest", "_nse", "254"];
+      const candidates = Array.from(new Set(bases.flatMap(b => suffixes.map(s => `${b}${s}`.slice(0, 30)))));
+      const { data: taken } = await supabase
+        .from("profiles")
+        .select("handle")
+        .in("handle", candidates);
+      const takenSet = new Set((taken || []).map(t => (t.handle || "").toLowerCase()));
+      setSuggestions(candidates.filter(c => !takenSet.has(c)).slice(0, 3));
+    }, 450);
+    return () => clearTimeout(t);
+  }, [handle, open, originalHandle]);
+
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
