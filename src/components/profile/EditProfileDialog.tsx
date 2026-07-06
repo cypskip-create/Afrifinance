@@ -369,7 +369,7 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
             <Button 
               className="flex-1 h-11 btn-primary"
               onClick={handleSave}
-              disabled={loading || uploading}
+              disabled={loading || uploading || handleState === "checking" || handleState === "taken" || handleState === "invalid"}
             >
               {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Save Changes
