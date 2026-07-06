@@ -281,9 +281,7 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="handle" className="text-sm font-medium">
-                Handle
-              </Label>
+              <Label htmlFor="handle" className="text-sm font-medium">Handle</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">@</span>
                 <Input
@@ -291,14 +289,36 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
                   value={handle}
                   onChange={(e) => setHandle(e.target.value.replace(/^@/, '').toLowerCase().replace(/[^a-z0-9_]/g, ''))}
                   placeholder="cypskip"
-                  className="h-11 pl-8"
+                  className="h-11 pl-8 pr-9"
                   maxLength={30}
                 />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                  {handleState === "checking" && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                  {handleState === "available" && <Check className="h-4 w-4 text-bull" />}
+                  {(handleState === "taken" || handleState === "invalid") && <AlertCircle className="h-4 w-4 text-bear" />}
+                </span>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Letters, numbers, and underscores only
-              </p>
+              {handleState === "available" && <p className="text-xs text-bull">✓ Available</p>}
+              {handleState === "current" && <p className="text-xs text-muted-foreground">Your current handle</p>}
+              {handleState === "invalid" && <p className="text-xs text-bear">Use 3–30 letters, numbers, or underscores</p>}
+              {handleState === "taken" && (
+                <div className="space-y-1.5">
+                  <p className="text-xs text-bear">Already taken</p>
+                  {suggestions.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {suggestions.map(s => (
+                        <button key={s} type="button" onClick={() => setHandle(s)}
+                          className="text-[11px] px-2 py-1 rounded-full bg-muted hover:bg-muted/70 font-medium">
+                          @{s}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              {handleState === "idle" && <p className="text-xs text-muted-foreground">Letters, numbers, and underscores only</p>}
             </div>
+
 
             <div className="space-y-2">
               <Label htmlFor="bio" className="text-sm font-medium">
