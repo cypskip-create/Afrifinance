@@ -1,51 +1,67 @@
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, Radar } from "recharts";
+import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, Radar, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts";
 import { Fundamentals } from "@/data/stockFundamentals";
+import { fx, tooltipStyle, axisStyle, gridStyle } from "@/lib/chartPalette";
 
-interface Props { fundamentals: Fundamentals }
+const Eyebrow = ({ children }: { children: React.ReactNode }) => (
+  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground mb-2">{children}</p>
+);
 
-const levelToScore = (l: string) => l === "Low" ? 80 : l === "Medium" ? 50 : 20;
-const toneFor = (l: string) =>
-  l === "Low" ? "text-bull border-bull/40" : l === "Medium" ? "text-chart-3 border-chart-3/40" : "text-bear border-bear/40";
+const levelScore = (l: string) => l === "Low" ? 80 : l === "Medium" ? 50 : 20;
+const levelColor = (l: string) => l === "Low" ? fx.strong : l === "Medium" ? fx.ok : fx.weak;
 
-export function RiskTab({ fundamentals }: Props) {
-  const radarData = fundamentals.riskFactors.map(r => ({
+export function RiskTab({ fundamentals }: { fundamentals: Fundamentals }) {
+  const radar = fundamentals.riskFactors.map(r => ({
     factor: r.label.replace(" risk", "").replace(" exposure", ""),
-    safety: levelToScore(r.level),
+    safety: levelScore(r.level),
   }));
 
   return (
-    <div className="space-y-3">
-      <Card className="soft-card">
-        <CardContent className="p-4">
-          <h4 className="text-xs font-bold mb-2">Risk Snowflake — higher is safer</h4>
-          <div className="h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <RadarChart data={radarData}>
-                <PolarGrid stroke="hsl(var(--border))" />
-                <PolarAngleAxis dataKey="factor" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
-                <Radar name="Safety" dataKey="safety" stroke="hsl(var(--bull))" fill="hsl(var(--bull))" fillOpacity={0.35} />
-              </RadarChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="space-y-8">
+      <div>
+        <Eyebrow>Risk Snowflake — higher is safer</Eyebrow>
+        <div className="h-56 border-t border-border/60 pt-2">
+          <ResponsiveContainer width="100%" height="100%">
+            <RadarChart data={radar}>
+              <PolarGrid stroke="hsl(var(--border))" />
+              <PolarAngleAxis dataKey="factor" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
+              <Radar dataKey="safety" stroke={fx.strong} fill={fx.strong} fillOpacity={0.3} />
+            </RadarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
 
-      <Card className="soft-card">
-        <CardContent className="p-4 space-y-3">
-          <h4 className="text-xs font-bold">Key Risk Factors</h4>
+      <div>
+        <Eyebrow>Volatility vs Sector (Annualized %)</Eyebrow>
+        <div className="h-44 border-t border-border/60 pt-2">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={fundamentals.volatility} margin={{ top: 10, right: 8, bottom: 0, left: -14 }} barCategoryGap="30%">
+              <CartesianGrid {...gridStyle} />
+              <XAxis dataKey="period" {...axisStyle} />
+              <YAxis {...axisStyle} tickFormatter={(v) => `${v}%`} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `${v}%`} />
+              <Legend wrapperStyle={{ fontSize: 10 }} />
+              <Bar dataKey="company" name="Company" fill={fx.revenue} radius={[4, 4, 0, 0]} />
+              <Bar dataKey="sector" name="Sector" fill={fx.sector} radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div>
+        <Eyebrow>Key Risk Factors</Eyebrow>
+        <div className="border-t border-border/60">
           {fundamentals.riskFactors.map(r => (
-            <div key={r.label} className="flex items-start justify-between gap-2">
-              <div className="flex-1">
+            <div key={r.label} className="flex items-start justify-between gap-3 py-3 border-b border-border/40 last:border-0">
+              <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium">{r.label}</p>
                 <p className="text-[10px] text-muted-foreground">{r.note}</p>
               </div>
-              <Badge variant="outline" className={`text-[10px] shrink-0 ${toneFor(r.level)}`}>{r.level}</Badge>
+              <Badge variant="outline" className="text-[10px] shrink-0" style={{ color: levelColor(r.level), borderColor: `${levelColor(r.level)}55` }}>{r.level}</Badge>
             </div>
           ))}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

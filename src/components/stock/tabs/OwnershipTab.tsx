@@ -1,67 +1,73 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
 import { Fundamentals } from "@/data/stockFundamentals";
+import { fx } from "@/lib/chartPalette";
 
-interface Props { fundamentals: Fundamentals }
+const Eyebrow = ({ children }: { children: React.ReactNode }) => (
+  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground mb-2">{children}</p>
+);
 
-export function OwnershipTab({ fundamentals }: Props) {
-  const data = fundamentals.ownership;
+// Reassign semantic colors to ownership buckets by matching name.
+const colorFor = (name: string) => {
+  const n = name.toLowerCase();
+  if (n.includes("institution")) return fx.institutional;
+  if (n.includes("public") || n.includes("retail")) return fx.retail;
+  if (n.includes("foreign")) return fx.foreign;
+  if (n.includes("government")) return fx.government;
+  if (n.includes("insider")) return fx.insider;
+  return fx.public;
+};
+
+export function OwnershipTab({ fundamentals }: { fundamentals: Fundamentals }) {
+  const data = fundamentals.ownership.map(d => ({ ...d, color: colorFor(d.name) }));
+  const total = data.reduce((s, d) => s + d.value, 0);
+  const norm = data.map(d => ({ ...d, pct: (d.value / total) * 100 }));
+
   return (
-    <div className="space-y-3">
-      <Card className="soft-card">
-        <CardContent className="p-4">
-          <h4 className="text-xs font-bold mb-2">Ownership Breakdown</h4>
-          <div className="flex items-center gap-3">
-            <div className="h-40 w-40 shrink-0">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={data} dataKey="value" innerRadius={36} outerRadius={64} paddingAngle={3} stroke="none">
-                    {data.map((d, i) => <Cell key={i} fill={d.color} />)}
-                  </Pie>
-                  <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 11 }} formatter={(v: any) => `${v.toFixed(1)}%`} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex-1 space-y-1.5">
-              {data.map(d => (
-                <div key={d.name} className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: d.color }} />
-                    <span>{d.name}</span>
-                  </div>
-                  <span className="font-bold">{d.value.toFixed(1)}%</span>
+    <div className="space-y-8">
+      <div>
+        <Eyebrow>Ownership Breakdown</Eyebrow>
+        <div className="border-t border-border/60 pt-3">
+          {/* Horizontal stacked bar — institutional visualization */}
+          <div className="flex h-8 w-full rounded-md overflow-hidden">
+            {norm.map(d => (
+              <div key={d.name} className="h-full transition-all hover:opacity-80"
+                title={`${d.name}: ${d.pct.toFixed(1)}%`}
+                style={{ width: `${d.pct}%`, background: d.color }} />
+            ))}
+          </div>
+          <div className="mt-3 space-y-2">
+            {norm.map(d => (
+              <div key={d.name} className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: d.color }} />
+                  <span className="truncate">{d.name}</span>
                 </div>
-              ))}
-            </div>
+                <div className="flex items-baseline gap-2 shrink-0">
+                  <div className="w-32 h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div className="h-full rounded-full" style={{ width: `${d.pct}%`, background: d.color }} />
+                  </div>
+                  <span className="font-bold tabular w-10 text-right">{d.pct.toFixed(1)}%</span>
+                </div>
+              </div>
+            ))}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <Card className="soft-card">
-        <CardContent className="p-4">
-          <h4 className="text-xs font-bold mb-2">Top Shareholders</h4>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-border/40 text-left text-muted-foreground">
-                  <th className="py-1.5 font-medium">Holder</th>
-                  <th className="py-1.5 font-medium">Type</th>
-                  <th className="py-1.5 font-medium text-right">Stake</th>
-                </tr>
-              </thead>
-              <tbody>
-                {fundamentals.topShareholders.map(s => (
-                  <tr key={s.name} className="border-b border-border/20 last:border-0">
-                    <td className="py-2 font-medium">{s.name}</td>
-                    <td className="py-2 text-muted-foreground">{s.type}</td>
-                    <td className="py-2 text-right font-bold">{s.pct.toFixed(2)}%</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <div>
+        <Eyebrow>Top Shareholders</Eyebrow>
+        <div className="border-t border-border/60">
+          <div className="grid grid-cols-[1fr_auto_auto] gap-4 py-2 border-b border-border/40 text-[10px] uppercase tracking-wider text-muted-foreground">
+            <span>Holder</span><span>Type</span><span className="text-right">Stake</span>
           </div>
-        </CardContent>
-      </Card>
+          {fundamentals.topShareholders.map(s => (
+            <div key={s.name} className="grid grid-cols-[1fr_auto_auto] gap-4 py-2.5 border-b border-border/40 last:border-0 items-center">
+              <span className="text-xs font-medium truncate">{s.name}</span>
+              <span className="text-[10px] text-muted-foreground">{s.type}</span>
+              <span className="text-xs font-bold tabular text-right">{s.pct.toFixed(2)}%</span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
