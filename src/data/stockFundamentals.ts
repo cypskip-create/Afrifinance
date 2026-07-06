@@ -180,8 +180,85 @@ function build(seed: number): Fundamentals {
       operating: r(18, 32, 140 + i),
       net: r(8, 22, 150 + i),
     })),
+
+    returnsHistory: Array.from({ length: 6 }, (_, i) => ({
+      year: `${2019 + i}`,
+      roe: r(8, 28, 160 + i),
+      roa: r(3, 14, 170 + i),
+      roic: r(6, 22, 180 + i),
+    })),
+    epsEstimateTrend: Array.from({ length: 12 }, (_, i) => {
+      const base = r(1.2, 2.4, 190);
+      const drift = ((r(0, 1, 200 + i) - 0.5) * 0.06) * (i / 6);
+      return { month: `M${i - 11}`, est: +(base + drift).toFixed(2) };
+    }),
+    revenueForecast: (() => {
+      const baseline = r(60, 140, 210);
+      return Array.from({ length: 6 }, (_, i) => {
+        const yr = 2022 + i;
+        const grow = 1 + i * 0.08;
+        const mid = +(baseline * grow).toFixed(1);
+        const spread = mid * 0.08;
+        const isActual = yr <= 2024;
+        return {
+          year: `${yr}${isActual ? "" : "E"}`,
+          low: +(mid - spread).toFixed(1),
+          mid,
+          high: +(mid + spread).toFixed(1),
+          actual: isActual ? +(mid + (r(-0.04, 0.04, 220 + i) * mid)).toFixed(1) : undefined,
+        };
+      });
+    })(),
+    revenueSegments: [
+      { name: "M-Pesa", value: r(30, 45, 230), color: "#10b981" },
+      { name: "Mobile Data", value: r(18, 28, 231), color: "#3b82f6" },
+      { name: "Voice", value: r(12, 22, 232), color: "#8b5cf6" },
+      { name: "Fixed & Fibre", value: r(6, 12, 233), color: "#f97316" },
+      { name: "Other", value: r(3, 8, 234), color: "#94a3b8" },
+    ],
+    geographicRevenue: [
+      { region: "Kenya", value: r(60, 78, 240), color: "#3b82f6" },
+      { region: "Ethiopia", value: r(6, 14, 241), color: "#10b981" },
+      { region: "Tanzania", value: r(4, 9, 242), color: "#f97316" },
+      { region: "Uganda", value: r(3, 8, 243), color: "#8b5cf6" },
+      { region: "Rest of Africa", value: r(2, 6, 244), color: "#94a3b8" },
+    ],
+    freeCashFlowTrend: Array.from({ length: 8 }, (_, i) => ({
+      year: `${2017 + i}`,
+      fcf: +r(4, 30, 250 + i).toFixed(1),
+      capex: +r(3, 18, 260 + i).toFixed(1),
+    })),
+    shareCount: Array.from({ length: 8 }, (_, i) => ({
+      year: `${2017 + i}`,
+      shares: +(r(3.8, 4.2, 270 + i)).toFixed(2),
+    })),
+    piotroski: (() => {
+      const checks = [
+        { label: "Positive net income", ok: r(0, 1, 280) > 0.2 },
+        { label: "Positive operating cash flow", ok: r(0, 1, 281) > 0.2 },
+        { label: "ROA improving YoY", ok: r(0, 1, 282) > 0.4 },
+        { label: "OCF > net income", ok: r(0, 1, 283) > 0.3 },
+        { label: "Lower long-term debt YoY", ok: r(0, 1, 284) > 0.5 },
+        { label: "Higher current ratio YoY", ok: r(0, 1, 285) > 0.4 },
+        { label: "No new share dilution", ok: r(0, 1, 286) > 0.4 },
+        { label: "Gross margin improving", ok: r(0, 1, 287) > 0.4 },
+        { label: "Asset turnover improving", ok: r(0, 1, 288) > 0.4 },
+      ];
+      return { score: checks.filter(c => c.ok).length, checks };
+    })(),
+    altmanZ: (() => {
+      const s = +r(1.4, 4.2, 290).toFixed(2);
+      return { score: s, band: s > 2.99 ? "safe" : s > 1.81 ? "grey" : "distress" };
+    })(),
+    volatility: [
+      { period: "30D", company: r(12, 32, 300), sector: r(10, 22, 301) },
+      { period: "90D", company: r(14, 36, 302), sector: r(12, 24, 303) },
+      { period: "1Y",  company: r(18, 42, 304), sector: r(14, 28, 305) },
+      { period: "3Y",  company: r(22, 46, 306), sector: r(16, 30, 307) },
+    ],
   };
 }
+
 
 const cache = new Map<string, Fundamentals>();
 
