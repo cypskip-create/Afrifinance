@@ -22,7 +22,7 @@ export function PortfolioPrivacyDialog({ open, onOpenChange, portfolioPublic, on
   const [hideAmounts, setHideAmounts] = useState(false);
   const [hideGains, setHideGains] = useState(false);
   const [showOnlyTopHoldings, setShowOnlyTop] = useState(false);
-  const [allowCopyTrade, setAllowCopyTrade] = useState(false);
+  const [followersOnly, setFollowersOnly] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -35,7 +35,7 @@ export function PortfolioPrivacyDialog({ open, onOpenChange, portfolioPublic, on
           setHideAmounts(!!p.hideAmounts);
           setHideGains(!!p.hideGains);
           setShowOnlyTop(!!p.showOnlyTopHoldings);
-          setAllowCopyTrade(!!p.allowCopyTrade);
+          setFollowersOnly(!!p.followersOnly);
         }
       } catch {}
     }
@@ -48,7 +48,7 @@ export function PortfolioPrivacyDialog({ open, onOpenChange, portfolioPublic, on
       const { error } = await supabase.from("profiles").update({ portfolio_public: isPublic }).eq("user_id", user.id);
       if (error) throw error;
       try {
-        localStorage.setItem(`portfolio_privacy_${user.id}`, JSON.stringify({ hideAmounts, hideGains, showOnlyTopHoldings, allowCopyTrade }));
+        localStorage.setItem(`portfolio_privacy_${user.id}`, JSON.stringify({ hideAmounts, hideGains, showOnlyTopHoldings, followersOnly }));
       } catch {}
       toast({ title: "Portfolio settings saved", description: isPublic ? "Your portfolio is now visible to others" : "Your portfolio is now private" });
       onSaved?.();
@@ -91,7 +91,7 @@ export function PortfolioPrivacyDialog({ open, onOpenChange, portfolioPublic, on
               <Row icon={<Percent className="h-4 w-4" />} title="Hide gains/losses" desc="Show holdings without P&L" checked={hideGains} onChange={setHideGains} />
               <Row icon={<Eye className="h-4 w-4" />} title="Show only top 5 holdings" desc="Limit to your largest positions" checked={showOnlyTopHoldings} onChange={setShowOnlyTop} />
               <Separator />
-              <Row icon={<Shield className="h-4 w-4" />} title="Allow copy-trading" desc="Let followers mirror your trades" checked={allowCopyTrade} onChange={setAllowCopyTrade} />
+              <Row icon={<Shield className="h-4 w-4" />} title="Followers only" desc="Only accounts you approve can view holdings" checked={followersOnly} onChange={setFollowersOnly} />
             </>
           )}
 

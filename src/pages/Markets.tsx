@@ -108,10 +108,38 @@ const featuredLists = [
 ];
 
 const investmentThemes = [
-  { title: "Banking Revolution", desc: "Digital banking leaders outperforming", stocks: ["EQTY", "KCB", "COOP"], change: 8.2, icon: "🏦" },
-  { title: "Digital Payments", desc: "M-Pesa & fintech ecosystem", stocks: ["SAFCOM", "NCBA", "ABSA"], change: 5.4, icon: "💳" },
-  { title: "Energy Transition", desc: "Green energy & power infrastructure", stocks: ["KPLC", "KEGN", "TOTL"], change: -1.8, icon: "⚡" },
-  { title: "High Dividend Leaders", desc: "Consistent income generators", stocks: ["EABL", "SCBK", "BAT"], change: 3.1, icon: "💰" },
+  {
+    title: "Digital Banking",
+    desc: "Lenders growing non-funded income from mobile channels",
+    stocks: ["EQTY", "KCB", "COOP"],
+    change: 8.2,
+    icon: "🏦",
+    why: "Agency & mobile lending now drive >40% of group revenue",
+  },
+  {
+    title: "Mobile Money",
+    desc: "M-Pesa ecosystem and payment rails",
+    stocks: ["SAFCOM", "NCBA", "ABSA"],
+    change: 5.4,
+    icon: "💳",
+    why: "Transaction volumes compounding at double digits",
+  },
+  {
+    title: "Power & Infrastructure",
+    desc: "Grid, generation and construction inputs",
+    stocks: ["KPLC", "BAMB"],
+    change: -1.8,
+    icon: "⚡",
+    why: "Tariff review and public works pipeline drive earnings",
+  },
+  {
+    title: "Dividend Income",
+    desc: "Consistent payers with covered distributions",
+    stocks: ["BAT", "SCBK", "EABL"],
+    change: 3.1,
+    icon: "💰",
+    why: "Yields of 5–11% with multi-year payout track records",
+  },
 ];
 
 const earningsCalendar = [
@@ -280,7 +308,7 @@ export default function Markets() {
               </h3>
               <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-2">
                 {investmentThemes.map(theme => (
-                  <Card key={theme.title} className="soft-card min-w-[200px] flex-shrink-0 p-4 cursor-pointer active:scale-[0.97] transition-transform">
+                  <div key={theme.title} className="min-w-[210px] flex-shrink-0 border-l border-border/60 pl-3 cursor-pointer">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-2xl">{theme.icon}</span>
                       <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${theme.change >= 0 ? 'bg-bull/10 text-bull' : 'bg-bear/10 text-bear'}`}>
@@ -291,10 +319,11 @@ export default function Markets() {
                     <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{theme.desc}</p>
                     <div className="flex gap-1 mt-2">
                       {theme.stocks.map(s => (
-                        <Badge key={s} variant="secondary" className="text-[10px] py-0 px-1.5">{s}</Badge>
+                        <Badge key={s} variant="secondary" className="text-[10px] py-0 px-1.5 border-0">{s}</Badge>
                       ))}
                     </div>
-                  </Card>
+                    <p className="text-[10px] text-muted-foreground mt-2 leading-snug">{theme.why}</p>
+                  </div>
                 ))}
               </div>
             </div>
