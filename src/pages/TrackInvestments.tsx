@@ -1,23 +1,15 @@
 import { useState, useMemo } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { AddInvestmentDialog } from "@/components/portfolio/AddInvestmentDialog";
 import { RobinhoodPerformanceChart } from "@/components/portfolio/RobinhoodPerformanceChart";
 import { PortfolioSnowflake } from "@/components/portfolio/PortfolioSnowflake";
 import { PortfolioInsights } from "@/components/portfolio/PortfolioInsights";
 import {
-  Trash2, TrendingUp, ArrowLeft, ArrowUpRight, ArrowDownRight,
-  Eye, EyeOff, MoreHorizontal, Plus, RefreshCw, ChevronDown, ChevronUp,
-  Wallet, Target, Shield, Activity
+  ArrowUpRight, ArrowDownRight, Eye, EyeOff, RefreshCw,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { SparklineChart } from "@/components/shared/SparklineChart";
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
 
 import { getPrice as getSharedPrice, computePortfolioStats } from "@/lib/stockPrices";
 import { HoldingsList } from "@/components/portfolio/HoldingsList";
