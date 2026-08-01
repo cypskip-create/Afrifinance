@@ -264,44 +264,34 @@ export default function TrackInvestments() {
 
         {/* ── INSIGHTS ── */}
         {holdings.length > 0 && (
-          <div className="grid grid-cols-2 gap-3">
-            <Card className="border-0 rounded-2xl p-4 shadow-sm bg-gradient-to-br from-card to-muted/20">
-              <h4 className="text-xs font-bold text-muted-foreground mb-3 flex items-center gap-1.5">
-                <TrendingUp className="h-3.5 w-3.5 text-primary" />
-                Portfolio Movers
-              </h4>
-              <div className="space-y-2.5">
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <p className="section-eyebrow">Portfolio movers</p>
+              <div className="mt-2">
                 {topMovers.map(m => (
-                  <div key={m.id} className="flex items-center justify-between bg-muted/30 rounded-lg p-2">
-                    <span className="text-xs font-bold">{m.symbol}</span>
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${m.gain >= 0 ? 'bg-bull/10 text-bull' : 'bg-bear/10 text-bear'}`}>
+                  <div key={m.id} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
+                    <span className="text-[12px] font-semibold">{m.symbol}</span>
+                    <span className={`text-[12px] font-semibold tabular ${m.gain >= 0 ? 'text-bull' : 'text-bear'}`}>
                       {m.gain >= 0 ? '+' : ''}{m.gainPct.toFixed(1)}%
                     </span>
                   </div>
                 ))}
               </div>
-            </Card>
+            </div>
 
-            <Card className="border-0 rounded-2xl p-4 shadow-sm bg-gradient-to-br from-card to-muted/20">
-              <h4 className="text-xs font-bold text-muted-foreground mb-3 flex items-center gap-1.5">
-                <Shield className="h-3.5 w-3.5 text-primary" />
-                Diversification
-              </h4>
-              <div className="text-center">
-                <div className="relative w-20 h-20 mx-auto mb-2">
-                  <svg className="w-20 h-20 -rotate-90" viewBox="0 0 36 36">
-                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="hsl(var(--muted))" strokeWidth="3" />
-                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="hsl(var(--primary))" strokeWidth="3" strokeDasharray={`${diversificationScore * 10}, 100`} strokeLinecap="round" />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-xl font-extrabold text-primary">{diversificationScore}</span>
-                  </div>
-                </div>
-                <p className="text-xs font-semibold text-muted-foreground">
-                  {diversificationScore >= 7 ? '🟢 Well Balanced' : diversificationScore >= 4 ? '🟡 Moderate' : '🔴 Concentrated'}
-                </p>
+            <div>
+              <p className="section-eyebrow">Diversification</p>
+              <div className="mt-2 flex items-baseline gap-1">
+                <span className="text-[28px] leading-none font-semibold tabular">{diversificationScore}</span>
+                <span className="text-[11px] text-muted-foreground">/10</span>
               </div>
-            </Card>
+              <div className="mt-2 h-1 rounded-full bg-muted overflow-hidden">
+                <div className="h-full bg-foreground/70" style={{ width: `${diversificationScore * 10}%` }} />
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-2">
+                {diversificationScore >= 7 ? 'Well balanced across sectors' : diversificationScore >= 4 ? 'Moderately diversified' : 'Concentrated — consider spreading risk'}
+              </p>
+            </div>
           </div>
         )}
       </div>
