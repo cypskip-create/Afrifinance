@@ -94,10 +94,6 @@ export default function TrackInvestments() {
     else { setSortBy(key); setSortAsc(false); }
   };
 
-  const SortIcon = ({ field }: { field: SortKey }) => {
-    if (sortBy !== field) return null;
-    return sortAsc ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />;
-  };
 
   if (loading) {
     return (
