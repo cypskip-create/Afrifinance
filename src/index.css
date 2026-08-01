@@ -430,6 +430,35 @@
     border: 1px solid hsl(var(--primary) / 0.15);
   }
 
+  /* Research flow — generous vertical rhythm so charts breathe and read as
+     separate ideas rather than a stacked wall of widgets. */
+  .research-flow > * { margin-top: 1.75rem; }
+  .research-flow > *:first-child { margin-top: 0; }
+  .research-flow h3, .research-flow h4 { margin-bottom: 0.75rem; }
+
+  /* AMOLED consistency — pure black everywhere, no lifted surfaces, no glows.
+     Sheets, dialogs, popovers and gradients all resolve to true black. */
+  .amoled [role="dialog"],
+  .amoled .glass {
+    background-color: hsl(0 0% 0%) !important;
+  }
+  .amoled .grouped-card {
+    background-color: hsl(0 0% 4%);
+    border-color: hsl(0 0% 12%);
+    box-shadow: none;
+  }
+  .amoled [class*="bg-gradient"] {
+    background-image: none !important;
+  }
+  .amoled .bottom-nav {
+    background: hsl(0 0% 0% / 0.92);
+  }
+
+  /* No decorative AI glow — shadows only survive on real overlays. */
+  .page-canvas [class*="shadow-"]:not([role="dialog"]):not(.grouped-card) {
+    box-shadow: none !important;
+  }
+
   /* Row — hairline separated list item, replaces most cards */
   .row {
     @apply flex items-center justify-between py-3 border-b border-border/50 last:border-0;

@@ -358,6 +358,7 @@ export default function StockDetail() {
               ))}
             </div>
           </div>
+          <div className="research-flow pt-2">
           {researchGroup === "valuation" && <ValuationTab price={stock.price} pe={stock.pe} fundamentals={fundamentals} />}
           {researchGroup === "growth" && <GrowthTab fundamentals={fundamentals} />}
           {researchGroup === "health" && <HealthTab fundamentals={fundamentals} />}
@@ -365,6 +366,7 @@ export default function StockDetail() {
           {researchGroup === "scores" && <ScoresTab fundamentals={fundamentals} />}
           {researchGroup === "ownership" && <OwnershipTab fundamentals={fundamentals} />}
           {researchGroup === "risk" && <RiskTab fundamentals={fundamentals} />}
+          </div>
         </section>
 
 
