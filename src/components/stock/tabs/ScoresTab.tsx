@@ -53,6 +53,12 @@ export function ScoresTab({ fundamentals }: { fundamentals: Fundamentals }) {
   const prevReturns = fundamentals.returnsHistory[fundamentals.returnsHistory.length - 2];
   const returnTrend = latestReturns.roe - prevReturns.roe;
 
+  const surprises = fundamentals.earningsSurprises.map(e => ({
+    ...e,
+    actualColor: e.actual >= e.estimate ? fx.positive : fx.negative,
+  }));
+
+
   return (
     <div className="space-y-8">
       {/* Composite dials */}
