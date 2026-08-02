@@ -4,6 +4,8 @@ import { MessageSquare, TrendingUp, TrendingDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { usePosts } from "@/hooks/usePosts";
 import { useMemo } from "react";
+import { formatPostDate } from "@/lib/formatTimestamp";
+
 
 interface Props { symbol: string }
 
