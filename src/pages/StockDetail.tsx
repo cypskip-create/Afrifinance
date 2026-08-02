@@ -431,7 +431,7 @@ export default function StockDetail() {
       </div>
 
       {/* Fixed Add Investment CTA */}
-      <div className="fixed bottom-20 left-4 right-4 z-30">
+      <div className="fixed left-4 right-4 z-30" style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}>
         <AddInvestmentDialog
           lockedSymbol={symbol} lockedName={stock.name} lockedSector={stock.sector}
           trigger={
