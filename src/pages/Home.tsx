@@ -13,6 +13,8 @@ import { usePosts } from "@/hooks/usePosts";
 import { getTimeBasedGreeting } from "@/utils/timeGreeting";
 import { MarketStatusIndicator } from "@/components/shared/MarketStatusIndicator";
 import { computePortfolioStats } from "@/lib/stockPrices";
+import { formatPostDate } from "@/lib/formatTimestamp";
+
 
 const Eyebrow = ({ children, action, onAction }: { children: React.ReactNode; action?: string; onAction?: () => void }) => (
   <div className="flex items-center justify-between mb-2">
