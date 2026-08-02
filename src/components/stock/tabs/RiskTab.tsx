@@ -1,7 +1,9 @@
 import { Badge } from "@/components/ui/badge";
-import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, Radar, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts";
+import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, Radar, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { Fundamentals } from "@/data/stockFundamentals";
-import { fx, tooltipStyle, axisStyle, gridStyle } from "@/lib/chartPalette";
+import { fx, axisStyle, gridStyle } from "@/lib/chartPalette";
+import { ColorTooltip, ChartKey } from "@/components/charts/ChartTooltip";
+
 
 const Eyebrow = ({ children }: { children: React.ReactNode }) => (
   <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground mb-2">{children}</p>
@@ -35,18 +37,23 @@ export function RiskTab({ fundamentals }: { fundamentals: Fundamentals }) {
         <Eyebrow>Volatility vs Sector (Annualized %)</Eyebrow>
         <div className="h-44 border-t border-border/60 pt-2">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={fundamentals.volatility} margin={{ top: 10, right: 8, bottom: 0, left: -14 }} barCategoryGap="30%">
+            <BarChart data={fundamentals.volatility} margin={{ top: 10, right: 8, bottom: 0, left: -14 }} barCategoryGap="40%" barGap={6}>
               <CartesianGrid {...gridStyle} />
               <XAxis dataKey="period" {...axisStyle} />
               <YAxis {...axisStyle} tickFormatter={(v) => `${v}%`} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `${v}%`} />
-              <Legend wrapperStyle={{ fontSize: 10 }} />
+              <Tooltip
+                cursor={{ fill: "hsl(var(--muted))", fillOpacity: 0.35 }}
+                content={<ColorTooltip format={(v) => `${v}%`} colorFor={(e) => (e.dataKey === "company" ? fx.revenue : fx.foreign)} />}
+              />
               <Bar dataKey="company" name="Company" fill={fx.revenue} radius={[4, 4, 0, 0]} />
-              <Bar dataKey="sector" name="Sector" fill={fx.sector} radius={[4, 4, 0, 0]} />
+              <Bar dataKey="sector" name="Sector" fill={fx.foreign} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
+        <ChartKey items={[{ label: "Company volatility", color: fx.revenue }, { label: "Sector volatility", color: fx.foreign }]} />
       </div>
+
+
 
       <div>
         <Eyebrow>Key Risk Factors</Eyebrow>

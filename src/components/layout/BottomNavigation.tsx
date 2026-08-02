@@ -14,7 +14,7 @@ const navItems = [
 
 // Immersive routes — full-bleed research/reading surfaces where the nav competes
 // with content. It slides away and returns on the way back.
-const IMMERSIVE = [/^\/stock\//, /^\/compare/, /^\/sector\//, /^\/sector-heatmap/, /^\/screener/];
+const IMMERSIVE = [/^\/stock\//, /^\/compare/, /^\/sector\//, /^\/sector-heatmap/, /^\/screener/, /^\/profile\//];
 
 export function BottomNavigation() {
   const location = useLocation();
