@@ -20,6 +20,8 @@ import { usePosts, Post, Comment } from "@/hooks/usePosts";
 import { XCommentSheet } from "@/components/social/XCommentSheet";
 import { ProfileSettingsDialog } from "@/components/profile/ProfileSettingsDialog";
 import { PortfolioPrivacyDialog } from "@/components/profile/PortfolioPrivacyDialog";
+import { getPrice } from "@/lib/stockPrices";
+
 
 interface UserProfileData {
   id: string; user_id: string; full_name: string | null; avatar_url: string | null;
