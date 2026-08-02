@@ -101,29 +101,29 @@ export function ValuationTab({ price, pe, fundamentals }: Props) {
         <Eyebrow>Valuation Multiples vs Sector</Eyebrow>
         <div className="h-52 border-t border-border/60 pt-3">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={comparison} margin={{ top: 12, right: 8, bottom: 0, left: -18 }} barCategoryGap="30%">
+            <BarChart data={comparison} margin={{ top: 12, right: 8, bottom: 0, left: -18 }} barCategoryGap="40%" barGap={6}>
               <CartesianGrid {...gridStyle} />
               <XAxis dataKey="metric" {...axisStyle} />
               <YAxis {...axisStyle} />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Bar dataKey="company" radius={[6, 6, 0, 0]} name="Company">
-                {comparison.map((c, i) => (
-                  <Cell key={i} fill={c.company < c.sector ? fx.strong : fx.weak} />
-                ))}
-                <LabelList dataKey="company" position="top" style={{ fontSize: 9, fill: "hsl(var(--foreground))" }} />
+              <Tooltip
+                cursor={{ fill: "hsl(var(--muted))", fillOpacity: 0.35 }}
+                content={<ColorTooltip colorFor={(e) => (e.dataKey === "company" ? fx.revenue : fx.foreign)} />}
+              />
+              <Bar dataKey="company" radius={[6, 6, 0, 0]} name="Company" fill={fx.revenue}>
+                <LabelList dataKey="company" position="top" style={{ fontSize: 9, fill: fx.revenue }} />
               </Bar>
-              <Bar dataKey="sector" radius={[6, 6, 0, 0]} name="Sector" fill={fx.sector}>
-                <LabelList dataKey="sector" position="top" style={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
+              <Bar dataKey="sector" radius={[6, 6, 0, 0]} name="Sector" fill={fx.foreign}>
+                <LabelList dataKey="sector" position="top" style={{ fontSize: 9, fill: fx.foreign }} />
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
-        <div className="flex items-center gap-4 text-[10px] text-muted-foreground mt-1">
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm" style={{ background: fx.strong }} />Cheaper</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm" style={{ background: fx.weak }} />Richer</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm" style={{ background: fx.sector }} />Sector</span>
-        </div>
+        <ChartKey items={[
+          { label: "Company multiple", color: fx.revenue },
+          { label: "Sector average", color: fx.foreign },
+        ]} />
       </div>
+
     </div>
   );
 }
