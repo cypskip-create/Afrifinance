@@ -76,6 +76,20 @@ export default function TradersHub() {
   const portfolioSymbols = useMemo(() => new Set(portfolio.map(h => h.symbol)), [portfolio]);
   const watchlistSymbols = useMemo(() => new Set(watchlist.map(w => w.symbol)), [watchlist]);
 
+  // Most-mentioned tickers across the feed (stock hubs rail)
+  const hotTickers = useMemo(() => {
+    const counts = new Map<string, number>();
+    posts.forEach(p => (p.stock_mentions || []).forEach(s => {
+      const sym = s.toUpperCase();
+      counts.set(sym, (counts.get(sym) || 0) + 1);
+    }));
+    return [...counts.entries()]
+      .map(([symbol, count]) => ({ symbol, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 12);
+  }, [posts]);
+
+
   const portfolioSnapshot = useMemo(() => {
     if (!portfolio || portfolio.length === 0) return null;
     const holdings = portfolio.map(h => {
