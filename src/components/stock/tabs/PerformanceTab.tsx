@@ -165,33 +165,43 @@ export function PerformanceTab({ symbol, price, fundamentals }: Props) {
           <div className="h-44">
             <ResponsiveContainer width="100%" height="100%">
               {surpriseView === "abs" ? (
-                <BarChart data={surprises} margin={{ top: 5, right: 6, bottom: 0, left: -20 }}>
+                <BarChart data={surprises} margin={{ top: 5, right: 6, bottom: 0, left: -20 }} barCategoryGap="38%" barGap={5}>
                   <XAxis dataKey="quarter" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `KES ${v}`} />
-                  <Legend wrapperStyle={{ fontSize: 10 }} />
-                  <Bar dataKey="Estimate" fill="hsl(var(--muted-foreground))" fillOpacity={0.4} radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="Actual" radius={[4, 4, 0, 0]}>
+                  <Tooltip
+                    cursor={barCursor}
+                    content={<ColorTooltip format={(v) => `KES ${v}`} colorFor={(e) => (e.dataKey === "Estimate" ? fx.forecast : (e.payload?.Actual ?? 0) >= (e.payload?.Estimate ?? 0) ? fx.positive : fx.negative)} />}
+                  />
+                  <Bar dataKey="Estimate" fill={fx.forecast} radius={[4, 4, 0, 0]} name="Estimate" />
+                  <Bar dataKey="Actual" radius={[4, 4, 0, 0]} name="Actual">
                     {surprises.map((s, i) => (
-                      <Cell key={i} fill={s.Actual >= s.Estimate ? "hsl(var(--bull))" : "hsl(var(--bear))"} />
+                      <Cell key={i} fill={s.Actual >= s.Estimate ? fx.positive : fx.negative} />
                     ))}
                   </Bar>
                 </BarChart>
               ) : (
-                <BarChart data={surprises} margin={{ top: 5, right: 6, bottom: 0, left: -20 }}>
+                <BarChart data={surprises} margin={{ top: 5, right: 6, bottom: 0, left: -20 }} barCategoryGap="40%">
                   <XAxis dataKey="quarter" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
                   <ReferenceLine y={0} stroke="hsl(var(--border))" />
-                  <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `${v}%`} />
-                  <Bar dataKey="surprise" radius={[4, 4, 0, 0]}>
+                  <Tooltip
+                    cursor={barCursor}
+                    content={<ColorTooltip format={(v) => `${v}%`} colorFor={(e) => ((e.payload?.surprise ?? 0) >= 0 ? fx.positive : fx.negative)} />}
+                  />
+                  <Bar dataKey="surprise" name="Surprise" radius={[4, 4, 0, 0]}>
                     {surprises.map((s, i) => (
-                      <Cell key={i} fill={s.surprise >= 0 ? "hsl(var(--bull))" : "hsl(var(--bear))"} />
+                      <Cell key={i} fill={s.surprise >= 0 ? fx.positive : fx.negative} />
                     ))}
                   </Bar>
                 </BarChart>
               )}
             </ResponsiveContainer>
           </div>
+          <ChartKey items={[
+            ...(surpriseView === "abs" ? [{ label: "Analyst estimate", color: fx.forecast }] : []),
+            { label: "Beat estimate", color: fx.positive },
+            { label: "Missed estimate", color: fx.negative },
+          ]} />
         </CardContent>
       </Card>
 
@@ -201,19 +211,27 @@ export function PerformanceTab({ symbol, price, fundamentals }: Props) {
           <h4 className="text-xs font-bold mb-2">Profitability Margins</h4>
           <div className="h-40">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={fundamentals.marginsHistory} margin={{ top: 5, right: 6, bottom: 0, left: -20 }}>
+              <BarChart data={fundamentals.marginsHistory} margin={{ top: 5, right: 6, bottom: 0, left: -20 }} barCategoryGap="34%" barGap={4}>
                 <XAxis dataKey="year" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `${v}%`} />
-                <Legend wrapperStyle={{ fontSize: 10 }} />
-                <Bar dataKey="gross" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Gross" />
-                <Bar dataKey="operating" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} name="Operating" />
-                <Bar dataKey="net" fill="hsl(var(--bull))" radius={[4, 4, 0, 0]} name="Net" />
+                <Tooltip
+                  cursor={barCursor}
+                  content={<ColorTooltip format={(v) => `${v}%`} colorFor={(e) => (e.dataKey === "gross" ? fx.grossMargin : e.dataKey === "operating" ? fx.operatingMargin : fx.netMargin)} />}
+                />
+                <Bar dataKey="gross" fill={fx.grossMargin} radius={[4, 4, 0, 0]} name="Gross" />
+                <Bar dataKey="operating" fill={fx.operatingMargin} radius={[4, 4, 0, 0]} name="Operating" />
+                <Bar dataKey="net" fill={fx.netMargin} radius={[4, 4, 0, 0]} name="Net" />
               </BarChart>
             </ResponsiveContainer>
           </div>
+          <ChartKey items={[
+            { label: "Gross margin", color: fx.grossMargin },
+            { label: "Operating margin", color: fx.operatingMargin },
+            { label: "Net margin", color: fx.netMargin },
+          ]} />
         </CardContent>
       </Card>
+
 
       {/* INSIDER TRANSACTIONS */}
       <Card className="soft-card">
