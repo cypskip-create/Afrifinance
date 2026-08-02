@@ -3,10 +3,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
-  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell, Legend, ReferenceLine,
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell, ReferenceLine,
 } from "recharts";
 import { TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { Fundamentals } from "@/data/stockFundamentals";
+import { fx } from "@/lib/chartPalette";
+import { ColorTooltip, ChartKey } from "@/components/charts/ChartTooltip";
 
 interface Props {
   symbol: string;
@@ -14,12 +16,8 @@ interface Props {
   fundamentals: Fundamentals;
 }
 
-const tooltipStyle = {
-  background: "hsl(var(--card))",
-  border: "1px solid hsl(var(--border))",
-  borderRadius: 12,
-  fontSize: 11,
-};
+const barCursor = { fill: "hsl(var(--muted))", fillOpacity: 0.35 };
+
 
 export function PerformanceTab({ symbol, price, fundamentals }: Props) {
   const [benchmark, setBenchmark] = useState<"sector" | "nse">("sector");
