@@ -226,14 +226,18 @@ export default function Home() {
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 min-w-0">
                       <span className="text-xs font-semibold truncate">{post.author?.full_name || "User"}</span>
+                      {(post.author as any)?.handle && (
+                        <span className="text-[10px] text-muted-foreground truncate">@{(post.author as any).handle}</span>
+                      )}
                       <span className="text-[10px] text-muted-foreground shrink-0">
-                        · {Math.floor((Date.now() - new Date(post.created_at).getTime()) / 3600000)}h
+                        · {formatPostDate(post.created_at)}
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{post.content}</p>
                   </div>
+
                 </button>
               ))}
             </div>
