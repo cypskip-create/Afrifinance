@@ -1,15 +1,17 @@
 import { useMemo } from "react";
 import { CheckCircle2, XCircle } from "lucide-react";
 import {
-  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid,
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
   AreaChart, Area, LineChart, Line,
 } from "recharts";
 import { Fundamentals } from "@/data/stockFundamentals";
-import { fx, tooltipStyle, axisStyle, gridStyle } from "@/lib/chartPalette";
+import { fx, axisStyle, gridStyle } from "@/lib/chartPalette";
+import { ColorTooltip, ChartKey } from "@/components/charts/ChartTooltip";
 
 const Eyebrow = ({ children }: { children: React.ReactNode }) => (
   <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground mb-2">{children}</p>
 );
+
 
 export function HealthTab({ fundamentals }: { fundamentals: Fundamentals }) {
   const cd = useMemo(() => fundamentals.cashVsDebt.map(r => ({
@@ -34,17 +36,20 @@ export function HealthTab({ fundamentals }: { fundamentals: Fundamentals }) {
         </div>
         <div className="h-56 border-t border-border/60 pt-2">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={cd} margin={{ top: 10, right: 8, bottom: 0, left: -14 }} barCategoryGap="20%">
+            <BarChart data={cd} margin={{ top: 10, right: 8, bottom: 0, left: -14 }} barCategoryGap="34%">
               <CartesianGrid {...gridStyle} />
               <XAxis dataKey="year" {...axisStyle} />
               <YAxis {...axisStyle} tickFormatter={(v) => `${v}B`} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `KES ${v}B`} />
-              <Legend wrapperStyle={{ fontSize: 10 }} />
+              <Tooltip
+                cursor={{ fill: "hsl(var(--muted))", fillOpacity: 0.35 }}
+                content={<ColorTooltip format={(v) => `KES ${v}B`} colorFor={(e) => (e.dataKey === "Cash" ? fx.cash : fx.debt)} />}
+              />
               <Bar dataKey="Cash" stackId="a" fill={fx.cash} />
               <Bar dataKey="Debt" stackId="a" fill={fx.debt} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
+        <ChartKey items={[{ label: "Cash & equivalents", color: fx.cash }, { label: "Total debt", color: fx.debt }]} />
       </div>
 
       <div>
@@ -61,28 +66,32 @@ export function HealthTab({ fundamentals }: { fundamentals: Fundamentals }) {
               <CartesianGrid {...gridStyle} />
               <XAxis dataKey="year" {...axisStyle} />
               <YAxis {...axisStyle} tickFormatter={(v) => `${v}B`} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `KES ${v}B`} />
+              <Tooltip content={<ColorTooltip format={(v) => `KES ${v}B`} colorFor={() => fx.fcf} />} />
               <Area type="monotone" dataKey="CashFlow" stroke={fx.fcf} strokeWidth={2.2} fill="url(#ocfg)" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
+        <ChartKey items={[{ label: "Operating cash flow", color: fx.fcf }]} />
       </div>
 
       <div>
         <Eyebrow>Free Cash Flow vs Capex</Eyebrow>
         <div className="h-44 border-t border-border/60 pt-2">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={fcf} margin={{ top: 10, right: 8, bottom: 0, left: -14 }} barCategoryGap="25%">
+            <BarChart data={fcf} margin={{ top: 10, right: 8, bottom: 0, left: -14 }} barCategoryGap="36%">
               <CartesianGrid {...gridStyle} />
               <XAxis dataKey="year" {...axisStyle} />
               <YAxis {...axisStyle} tickFormatter={(v) => `${v}B`} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `KES ${v}B`} />
-              <Legend wrapperStyle={{ fontSize: 10 }} />
+              <Tooltip
+                cursor={{ fill: "hsl(var(--muted))", fillOpacity: 0.35 }}
+                content={<ColorTooltip format={(v) => `KES ${v}B`} colorFor={(e) => (e.dataKey === "fcf" ? fx.fcf : fx.liabilities)} />}
+              />
               <Bar dataKey="fcf" name="Free Cash Flow" fill={fx.fcf} radius={[4, 4, 0, 0]} />
               <Bar dataKey="capex" name="Capex" fill={fx.liabilities} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
+        <ChartKey items={[{ label: "Free cash flow", color: fx.fcf }, { label: "Capital expenditure", color: fx.liabilities }]} />
       </div>
 
       <div>
@@ -93,12 +102,14 @@ export function HealthTab({ fundamentals }: { fundamentals: Fundamentals }) {
               <CartesianGrid {...gridStyle} />
               <XAxis dataKey="year" {...axisStyle} />
               <YAxis {...axisStyle} domain={["auto", "auto"]} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `${v}B shares`} />
+              <Tooltip content={<ColorTooltip format={(v) => `${v}B shares`} colorFor={() => fx.equity} />} />
               <Line type="monotone" dataKey="shares" stroke={fx.equity} strokeWidth={2} dot={{ r: 3, fill: fx.equity }} name="Shares outstanding" />
             </LineChart>
           </ResponsiveContainer>
         </div>
+        <ChartKey items={[{ label: "Shares outstanding", color: fx.equity }]} />
       </div>
+
 
       <div>
         <Eyebrow>Health Checklist</Eyebrow>
