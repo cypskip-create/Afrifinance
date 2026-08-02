@@ -48,13 +48,15 @@ export function GrowthTab({ fundamentals }: Props) {
         </div>
         <div className="h-56 border-t border-border/60 pt-2">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data} margin={{ top: 10, right: 8, bottom: 0, left: -12 }}>
+            <ComposedChart data={data} margin={{ top: 10, right: 8, bottom: 0, left: -12 }} barCategoryGap="28%">
               <CartesianGrid {...gridStyle} />
               <XAxis dataKey="year" {...axisStyle} />
               <YAxis {...axisStyle} tickFormatter={yFmt} />
-              <Tooltip contentStyle={tooltipStyle} formatter={tipFmt} />
-              <Legend wrapperStyle={{ fontSize: 10 }} />
-              <Bar dataKey={key} radius={[4, 4, 0, 0]} name={`${key} (actual)`}>
+              <Tooltip
+                cursor={{ fill: "hsl(var(--muted))", fillOpacity: 0.35 }}
+                content={<ColorTooltip format={tipFmt} colorFor={(e) => (e.payload?.forecast ? fx.forecast : color)} />}
+              />
+              <Bar dataKey={key} radius={[4, 4, 0, 0]} name={key}>
                 {data.map((d, i) => (
                   <Cell key={i} fill={d.forecast ? fx.forecast : color} fillOpacity={d.forecast ? 0.9 : 1}
                     strokeDasharray={d.forecast ? "3 3" : undefined}
@@ -65,9 +67,7 @@ export function GrowthTab({ fundamentals }: Props) {
             </ComposedChart>
           </ResponsiveContainer>
         </div>
-        <p className="text-[10px] text-muted-foreground mt-1">
-          Solid bars = reported · Dashed = analyst forecast
-        </p>
+        <ChartKey items={[{ label: `${key} (reported)`, color }, { label: "Analyst forecast", color: fx.forecast }]} />
       </div>
 
       {/* Revenue forecast range */}
@@ -85,15 +85,28 @@ export function GrowthTab({ fundamentals }: Props) {
               <CartesianGrid {...gridStyle} />
               <XAxis dataKey="year" {...axisStyle} />
               <YAxis {...axisStyle} tickFormatter={(v) => `${v}B`} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `KES ${v}B`} />
+              <Tooltip
+                content={
+                  <ColorTooltip
+                    format={(v) => (v == null ? "—" : `KES ${v}B`)}
+                    colorFor={(e) =>
+                      e.dataKey === "actual" ? fx.netIncome : e.dataKey === "mid" ? fx.revenue : fx.forecast
+                    }
+                  />
+                }
+              />
               <Area dataKey="high" stroke="none" fill="url(#revBand)" name="High" stackId={undefined as any} />
               <Area dataKey="low" stroke="none" fill="hsl(var(--background))" name="Low" />
               <Line type="monotone" dataKey="mid" stroke={fx.revenue} strokeWidth={2.5} dot={{ r: 3, fill: fx.revenue }} name="Consensus" strokeDasharray="4 3" />
               <Line type="monotone" dataKey="actual" stroke={fx.netIncome} strokeWidth={2.5} dot={{ r: 3, fill: fx.netIncome }} name="Actual" connectNulls={false} />
-              <Legend wrapperStyle={{ fontSize: 10 }} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
+        <ChartKey items={[
+          { label: "Actual revenue", color: fx.netIncome },
+          { label: "Consensus", color: fx.revenue },
+          { label: "Forecast range", color: fx.forecast },
+        ]} />
       </div>
 
       {/* Margins over time (multi-line) */}
@@ -105,14 +118,18 @@ export function GrowthTab({ fundamentals }: Props) {
               <CartesianGrid {...gridStyle} />
               <XAxis dataKey="year" {...axisStyle} />
               <YAxis {...axisStyle} tickFormatter={(v) => `${v}%`} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `${v}%`} />
-              <Legend wrapperStyle={{ fontSize: 10 }} />
+              <Tooltip content={<ColorTooltip format={(v) => `${v}%`} />} />
               <Line type="monotone" dataKey="gross" stroke={fx.grossMargin} strokeWidth={2} dot={false} name="Gross" />
               <Line type="monotone" dataKey="operating" stroke={fx.operatingMargin} strokeWidth={2} dot={false} name="Operating" />
               <Line type="monotone" dataKey="net" stroke={fx.netMargin} strokeWidth={2} dot={false} name="Net" />
             </LineChart>
           </ResponsiveContainer>
         </div>
+        <ChartKey items={[
+          { label: "Gross margin", color: fx.grossMargin },
+          { label: "Operating margin", color: fx.operatingMargin },
+          { label: "Net margin", color: fx.netMargin },
+        ]} />
       </div>
 
       {/* EPS estimate trend (analyst drift) */}
@@ -124,11 +141,12 @@ export function GrowthTab({ fundamentals }: Props) {
               <CartesianGrid {...gridStyle} />
               <XAxis dataKey="month" {...axisStyle} />
               <YAxis {...axisStyle} tickFormatter={(v) => `KES ${v}`} domain={["auto", "auto"]} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `KES ${v}`} />
+              <Tooltip content={<ColorTooltip format={(v) => `KES ${v}`} />} />
               <Line type="monotone" dataKey="est" stroke={fx.eps} strokeWidth={2.5} dot={{ r: 3, fill: fx.eps }} name="Consensus EPS" />
             </LineChart>
           </ResponsiveContainer>
         </div>
+        <ChartKey items={[{ label: "Consensus EPS", color: fx.eps }]} />
       </div>
 
       {/* Growth vs sector — hairline rows */}
@@ -156,3 +174,4 @@ export function GrowthTab({ fundamentals }: Props) {
     </div>
   );
 }
+
