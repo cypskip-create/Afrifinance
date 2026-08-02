@@ -201,15 +201,40 @@ export default function TrackInvestments() {
         {sectorAlloc.length > 0 && (
           <div>
             <p className="section-eyebrow">Asset allocation</p>
-            <div className="mt-3 flex h-2 rounded-full overflow-hidden bg-muted">
-              {sectorAlloc.map(s => (
-                <div key={s.name} className={s.color} style={{ width: `${s.pct}%` }} />
-              ))}
+            <div className="h-52 mt-2">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={sectorAlloc.map((s, i) => ({ ...s, fill: ALLOC_COLORS[i % ALLOC_COLORS.length] }))}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius="55%"
+                    outerRadius="82%"
+                    paddingAngle={2}
+                    stroke="none"
+                  >
+                    {sectorAlloc.map((s, i) => (
+                      <Cell key={s.name} fill={ALLOC_COLORS[i % ALLOC_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    content={
+                      <ColorTooltip
+                        format={(v: any) =>
+                          showBalance
+                            ? `KES ${Number(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`
+                            : "••••"
+                        }
+                      />
+                    }
+                  />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
-            <div className="mt-3">
-              {sectorAlloc.map(s => (
+            <div className="mt-1">
+              {sectorAlloc.map((s, i) => (
                 <div key={s.name} className="flex items-center gap-2.5 py-2.5 border-b border-border/50 last:border-0">
-                  <span className={`w-2 h-2 rounded-full ${s.color}`} />
+                  <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: ALLOC_COLORS[i % ALLOC_COLORS.length] }} />
                   <span className="text-[12px] flex-1 truncate">{s.name}</span>
                   <span className="text-[11px] text-muted-foreground tabular">
                     {showBalance ? `KES ${s.value.toLocaleString('en-US', { maximumFractionDigits: 0 })}` : '••••'}
@@ -220,6 +245,7 @@ export default function TrackInvestments() {
             </div>
           </div>
         )}
+
 
         {/* ── HOLDINGS ── */}
         <div>
