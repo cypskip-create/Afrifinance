@@ -255,8 +255,9 @@ export default function UserProfile() {
 
   const portfolioSummary = useMemo(() => {
     if (!publicPortfolio.length) return null;
+    // Same price source & maths as the Portfolio page, so both always agree.
     const holdings = publicPortfolio.map(h => {
-      const cp = MOCK_PRICES[h.symbol] || h.avg_cost * 1.05;
+      const cp = getPrice(h.symbol, h.avg_cost);
       const gain = ((cp - h.avg_cost) / h.avg_cost) * 100;
       return { ...h, currentPrice: cp, gain };
     });
@@ -264,6 +265,7 @@ export default function UserProfile() {
     const totalCost = holdings.reduce((s, h) => s + h.avg_cost * h.shares, 0);
     return { totalValue, totalGain: totalValue - totalCost, gainPercent: totalCost > 0 ? ((totalValue - totalCost) / totalCost) * 100 : 0, holdings };
   }, [publicPortfolio]);
+
 
   const castToPost = (p: UserPost): Post => ({
     ...p, updated_at: p.created_at,
