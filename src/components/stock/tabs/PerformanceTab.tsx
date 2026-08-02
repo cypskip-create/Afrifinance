@@ -60,21 +60,29 @@ export function PerformanceTab({ symbol, price, fundamentals }: Props) {
           </div>
           <div className="h-44">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={returns} margin={{ top: 5, right: 6, bottom: 0, left: -18 }}>
+              <BarChart data={returns} margin={{ top: 5, right: 6, bottom: 0, left: -18 }} barCategoryGap="40%" barGap={6}>
                 <XAxis dataKey="period" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `${v}%`} />
+                <Tooltip
+                  cursor={barCursor}
+                  content={<ColorTooltip format={(v) => `${v}%`} colorFor={(e) => (e.dataKey === "Benchmark" ? fx.foreign : (e.payload?.Company ?? 0) >= 0 ? fx.positive : fx.negative)} />}
+                />
                 <ReferenceLine y={0} stroke="hsl(var(--border))" />
-                <Legend wrapperStyle={{ fontSize: 10 }} />
                 <Bar dataKey="Company" radius={[4, 4, 0, 0]} name={symbol}>
                   {returns.map((d, i) => (
-                    <Cell key={i} fill={d.Company >= 0 ? "hsl(var(--bull))" : "hsl(var(--bear))"} />
+                    <Cell key={i} fill={d.Company >= 0 ? fx.positive : fx.negative} />
                   ))}
                 </Bar>
-                <Bar dataKey="Benchmark" radius={[4, 4, 0, 0]} fill="hsl(var(--muted-foreground))" fillOpacity={0.5} />
+                <Bar dataKey="Benchmark" radius={[4, 4, 0, 0]} fill={fx.foreign} name={benchmark === "sector" ? "Sector" : "NSE 20"} />
               </BarChart>
             </ResponsiveContainer>
           </div>
+          <ChartKey items={[
+            { label: `${symbol} — gain`, color: fx.positive },
+            { label: `${symbol} — loss`, color: fx.negative },
+            { label: benchmark === "sector" ? "Sector average" : "NSE 20", color: fx.foreign },
+          ]} />
+
           <div className="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-border/40">
             {(["1Y", "3Y", "5Y"] as const).map(p => {
               const row = fundamentals.pastReturns.find(r => r.period === p)!;
