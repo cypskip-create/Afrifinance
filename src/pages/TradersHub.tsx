@@ -236,7 +236,30 @@ export default function TradersHub() {
             </button>
           ))}
         </div>
+
+        {/* Stock hubs — Moomoo-style ticker rail */}
+        {hotTickers.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto no-scrollbar px-4 py-2 border-t border-border/40">
+            {hotTickers.map(t => {
+              const active = searchQuery.toUpperCase() === `$${t.symbol}`;
+              return (
+                <button
+                  key={t.symbol}
+                  data-small-target
+                  onClick={() => (active ? clearSearch() : handleSearch(`$${t.symbol}`))}
+                  className={`shrink-0 flex items-center gap-1.5 h-7 px-3 rounded-full text-[11px] font-semibold transition-colors ${
+                    active ? "bg-foreground text-background" : "bg-muted/60 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  ${t.symbol}
+                  <span className="opacity-60 font-normal">{t.count}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </header>
+
 
       {searchQuery && (
         <div className="px-4 py-2 bg-muted/20 border-b border-border/40 flex items-center justify-between">
