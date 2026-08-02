@@ -58,6 +58,9 @@ export default function TradersHub() {
     if (shouldCompose === "true" && ticker) {
       setComposeOpen(true);
       setPrefillContent(`$${ticker} `);
+    } else if (ticker) {
+      // Deep-link from a stock page: show every post mentioning the ticker
+      setSearchQuery(`$${ticker.toUpperCase()}`);
     }
     const postId = searchParams.get("post");
     if (postId) {
@@ -68,6 +71,7 @@ export default function TradersHub() {
       }, 500);
     }
   }, [searchParams]);
+
 
   const portfolioSymbols = useMemo(() => new Set(portfolio.map(h => h.symbol)), [portfolio]);
   const watchlistSymbols = useMemo(() => new Set(watchlist.map(w => w.symbol)), [watchlist]);
