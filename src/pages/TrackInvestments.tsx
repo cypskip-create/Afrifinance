@@ -13,8 +13,14 @@ import { useNavigate } from "react-router-dom";
 
 import { getPrice as getSharedPrice, computePortfolioStats } from "@/lib/stockPrices";
 import { HoldingsList } from "@/components/portfolio/HoldingsList";
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
+import { ColorTooltip } from "@/components/charts/ChartTooltip";
+import { fx } from "@/lib/chartPalette";
+
+const ALLOC_COLORS = [fx.revenue, fx.netIncome, fx.assets, fx.foreign, fx.liabilities, fx.operatingIncome, fx.eps, fx.retail];
 
 type SortKey = "value" | "gain" | "name";
+
 
 export default function TrackInvestments() {
   const { portfolio, loading, removeFromPortfolio, refetch } = usePortfolio();
