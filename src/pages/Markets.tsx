@@ -232,10 +232,10 @@ export default function Markets() {
       <div className="px-4 pt-4 space-y-5 animate-fade-in">
         {/* ── INTERACTIVE ANALYSIS TOOLS ── shown on every Markets tab */}
         <div>
-          <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+          <h2 className="text-sm font-bold mb-3 flex items-center gap-2">
             <Filter className="h-4 w-4 text-primary" />
             Analysis Tools
-          </h3>
+          </h2>
           <div className="grid grid-cols-2 gap-2.5">
             <Card className="soft-card p-3 cursor-pointer active:scale-[0.97] transition-transform" onClick={() => navigate('/screener')}>
               <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-2"><Filter className="h-4 w-4" /></div>
@@ -274,10 +274,10 @@ export default function Markets() {
 
             {/* NSE Indices */}
             <div>
-              <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+              <h2 className="text-sm font-bold mb-3 flex items-center gap-2">
                 <Landmark className="h-4 w-4 text-primary" />
                 NSE Indices
-              </h3>
+              </h2>
               <div className="grid grid-cols-2 gap-2.5">
                 {indices.map(idx => (
                   <Card key={idx.name} className="soft-card p-3 active:scale-[0.98] transition-transform cursor-pointer" onClick={() => navigate('/markets')}>
@@ -302,10 +302,10 @@ export default function Markets() {
 
             {/* Investment Themes */}
             <div>
-              <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+              <h2 className="text-sm font-bold mb-3 flex items-center gap-2">
                 <Lightbulb className="h-4 w-4 text-accent" />
                 Investment Themes
-              </h3>
+              </h2>
               <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-2">
                 {investmentThemes.map(theme => (
                   <div key={theme.title} className="min-w-[210px] flex-shrink-0 border-l border-border/60 pl-3 cursor-pointer">
@@ -330,10 +330,10 @@ export default function Markets() {
 
             {/* Local Commodities */}
             <div>
-              <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+              <h2 className="text-sm font-bold mb-3 flex items-center gap-2">
                 <Zap className="h-4 w-4 text-accent" />
                 Local Commodities
-              </h3>
+              </h2>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {commodities.map(c => (
                   <Card key={c.name} className="soft-card p-3">
@@ -349,7 +349,7 @@ export default function Markets() {
 
             {/* Featured Lists */}
             <div>
-              <h3 className="text-sm font-bold mb-3">Featured Lists</h3>
+              <h2 className="text-sm font-bold mb-3">Featured Lists</h2>
               <div className="grid grid-cols-2 gap-2.5">
                 {featuredLists.map(list => (
                   <Card key={list.title} className="soft-card p-4 cursor-pointer active:scale-[0.97] transition-transform" onClick={() => setActiveTab("All Stocks")}>
@@ -366,10 +366,10 @@ export default function Markets() {
 
             {/* Earnings Calendar */}
             <div>
-              <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+              <h2 className="text-sm font-bold mb-3 flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-primary" />
                 Upcoming Earnings
-              </h3>
+              </h2>
               <Card className="soft-card overflow-hidden">
                 {earningsCalendar.map(e => (
                   <div key={e.symbol} onClick={() => navigate(`/stock/${e.symbol}`)} className="flex items-center justify-between py-3 px-4 border-b border-border/40 last:border-0 cursor-pointer active:bg-muted/30 transition-colors">
@@ -391,10 +391,10 @@ export default function Markets() {
 
             {/* Volume Leaders */}
             <div>
-              <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+              <h2 className="text-sm font-bold mb-3 flex items-center gap-2">
                 <Volume2 className="h-4 w-4 text-accent" />
                 Volume Leaders
-              </h3>
+              </h2>
               <Card className="soft-card overflow-hidden">
                 {volumeLeaders.map(v => (
                   <div key={v.symbol} onClick={() => navigate(`/stock/${v.symbol}`)} className="flex items-center justify-between py-3 px-4 border-b border-border/40 last:border-0 cursor-pointer active:bg-muted/30 transition-colors">
@@ -423,10 +423,10 @@ export default function Markets() {
 
             {/* Top Gainers & Losers */}
             <div>
-              <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+              <h2 className="text-sm font-bold mb-3 flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-bull" />
                 Top Gainers
-              </h3>
+              </h2>
               <Card className="soft-card overflow-hidden">
                 <div className="divide-y divide-border/40">
                   {topGainers.slice(0, 5).map(s => (
@@ -437,10 +437,10 @@ export default function Markets() {
             </div>
 
             <div>
-              <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+              <h2 className="text-sm font-bold mb-3 flex items-center gap-2">
                 <TrendingDown className="h-4 w-4 text-bear" />
                 Top Losers
-              </h3>
+              </h2>
               <Card className="soft-card overflow-hidden">
                 <div className="divide-y divide-border/40">
                   {topLosers.slice(0, 5).map(s => (
@@ -452,10 +452,10 @@ export default function Markets() {
 
             {/* Analyst Ratings */}
             <div>
-              <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+              <h2 className="text-sm font-bold mb-3 flex items-center gap-2">
                 <Award className="h-4 w-4 text-accent" />
                 Analyst Ratings
-              </h3>
+              </h2>
               <Card className="soft-card overflow-hidden">
                 {analystRatings.map(r => (
                   <div key={r.symbol} onClick={() => navigate(`/stock/${r.symbol}`)} className="flex items-center justify-between py-3 px-4 border-b border-border/40 last:border-0 cursor-pointer active:bg-muted/30">
@@ -483,10 +483,10 @@ export default function Markets() {
 
             {/* Sector Heat Map */}
             <div>
-              <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+              <h2 className="text-sm font-bold mb-3 flex items-center gap-2">
                 <BarChart3 className="h-4 w-4 text-primary" />
                 Sector Performance
-              </h3>
+              </h2>
               <div className="grid grid-cols-2 gap-2">
                 {sectors.map(s => (
                   <Card key={s.name} className="soft-card p-3 cursor-pointer active:scale-[0.97] transition-transform" onClick={() => { setNseFilter(s.name === "Telecom" ? "Telecom" : s.name); setActiveTab("All Stocks"); }}>
@@ -583,7 +583,7 @@ export default function Markets() {
 
             {/* Sector Heat Map */}
             <div>
-              <h3 className="text-sm font-bold mb-3">Sector Heat Map</h3>
+              <h2 className="text-sm font-bold mb-3">Sector Heat Map</h2>
               <div className="grid grid-cols-3 gap-2">
                 {sectors.map(s => (
                   <div
@@ -609,10 +609,10 @@ export default function Markets() {
         {/* ─── IPOs TAB ─── */}
         {activeTab === "Discover" && (
           <>
-            <h3 className="text-sm font-bold flex items-center gap-2">
+            <h2 className="text-sm font-bold flex items-center gap-2">
               <Flame className="h-4 w-4 text-accent" />
               Listing Soon
-            </h3>
+            </h2>
             <div className="space-y-3">
               {ipos.map(ipo => (
                 <Card key={ipo.name} className="soft-card overflow-hidden">
@@ -650,10 +650,10 @@ export default function Markets() {
               ))}
             </div>
 
-            <h3 className="text-sm font-bold flex items-center gap-2 mt-2">
+            <h2 className="text-sm font-bold flex items-center gap-2 mt-2">
               <Activity className="h-4 w-4 text-primary" />
               Recently Listed
-            </h3>
+            </h2>
             <Card className="soft-card overflow-hidden">
               {recentIPOs.map(ipo => (
                 <div key={ipo.symbol} onClick={() => navigate(`/stock/${ipo.symbol}`)} className="flex items-center justify-between py-3 px-4 border-b border-border/40 last:border-0 cursor-pointer active:bg-muted/30">
@@ -676,10 +676,10 @@ export default function Markets() {
         {/* ─── DIVIDENDS TAB ─── */}
         {activeTab === "Calendars" && (
           <>
-            <h3 className="text-sm font-bold flex items-center gap-2">
+            <h2 className="text-sm font-bold flex items-center gap-2">
               <Calendar className="h-4 w-4 text-primary" />
               Upcoming Dividends
-            </h3>
+            </h2>
             <Card className="soft-card overflow-hidden">
               {dividendCalendar.map(d => (
                 <div key={d.symbol} onClick={() => navigate(`/stock/${d.symbol}`)} className="flex items-center justify-between py-3 px-4 border-b border-border/40 last:border-0 cursor-pointer active:bg-muted/30">
@@ -704,10 +704,10 @@ export default function Markets() {
             </Card>
 
             <div className="flex items-center justify-between mt-2">
-              <h3 className="text-sm font-bold flex items-center gap-2">
+              <h2 className="text-sm font-bold flex items-center gap-2">
                 <DollarSign className="h-4 w-4 text-bull" />
                 High Dividend Stocks
-              </h3>
+              </h2>
               <div className="flex gap-1.5">
                 {["yield", "amount"].map(s => (
                   <Button key={s} variant={divSortBy === s ? "default" : "outline"} size="sm" className={`text-xs rounded-full h-7 ${divSortBy === s ? 'bg-primary text-primary-foreground' : ''}`} onClick={() => setDivSortBy(s)}>
