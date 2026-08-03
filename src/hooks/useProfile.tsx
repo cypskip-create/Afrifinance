@@ -35,7 +35,7 @@ export function useProfile() {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, user_id, full_name, avatar_url, banner_url, bio, handle, portfolio_public, followers_count, following_count, subscription_plan, tradershub_onboarded, created_at, updated_at')
         .eq('user_id', user.id)
         .single();
 

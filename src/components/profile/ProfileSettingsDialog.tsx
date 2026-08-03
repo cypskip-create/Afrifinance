@@ -86,7 +86,7 @@ export function ProfileSettingsDialog({ open, onOpenChange, currentHandle, portf
     if (!HANDLE_REGEX.test(v)) { setAvailable(false); return; }
     setChecking(true);
     const t = setTimeout(async () => {
-      const { data } = await supabase.from("profiles").select("user_id").eq("handle", v).maybeSingle();
+      const { data } = await supabase.from("profiles_public").select("user_id").eq("handle", v).maybeSingle();
       setAvailable(!data || data.user_id === user?.id);
       setChecking(false);
     }, 400);

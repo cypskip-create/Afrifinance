@@ -40,6 +40,9 @@ verify_jwt = false
 [functions.ai-stock-analysis]
 verify_jwt = true
 
+[functions.stock-thesis]
+verify_jwt = true
+
 [functions.check-price-alerts]
 verify_jwt = false
 
