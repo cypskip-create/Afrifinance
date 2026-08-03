@@ -1,15 +1,18 @@
 import { useMemo } from "react";
 import { CheckCircle2, XCircle } from "lucide-react";
 import {
-  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid,
+  ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid,
   AreaChart, Area, LineChart, Line,
 } from "recharts";
 import { Fundamentals } from "@/data/stockFundamentals";
-import { fx, tooltipStyle, axisStyle, gridStyle } from "@/lib/chartPalette";
+import { fx, axisStyle, gridStyle } from "@/lib/chartPalette";
+import { ColorTooltip, ChartKey } from "@/components/charts/ChartTooltip";
+import { BarChartBlock } from "@/components/charts/BarChartBlock";
 
 const Eyebrow = ({ children }: { children: React.ReactNode }) => (
   <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground mb-2">{children}</p>
 );
+
 
 export function HealthTab({ fundamentals }: { fundamentals: Fundamentals }) {
   const cd = useMemo(() => fundamentals.cashVsDebt.map(r => ({
@@ -25,31 +28,24 @@ export function HealthTab({ fundamentals }: { fundamentals: Fundamentals }) {
 
   return (
     <div className="space-y-8">
-      <div>
-        <div className="flex items-center justify-between">
-          <Eyebrow>Cash vs Debt (KES B)</Eyebrow>
-          <p className="text-xs font-semibold tabular" style={{ color: netCash >= 0 ? fx.cash : fx.debt }}>
-            Net {netCash >= 0 ? "cash" : "debt"}: KES {Math.abs(netCash).toFixed(1)}B
-          </p>
-        </div>
-        <div className="h-56 border-t border-border/60 pt-2">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={cd} margin={{ top: 10, right: 8, bottom: 0, left: -14 }} barCategoryGap="20%">
-              <CartesianGrid {...gridStyle} />
-              <XAxis dataKey="year" {...axisStyle} />
-              <YAxis {...axisStyle} tickFormatter={(v) => `${v}B`} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `KES ${v}B`} />
-              <Legend wrapperStyle={{ fontSize: 10 }} />
-              <Bar dataKey="Cash" stackId="a" fill={fx.cash} />
-              <Bar dataKey="Debt" stackId="a" fill={fx.debt} radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
+      <BarChartBlock
+        title="Cash vs Debt (KES B)"
+        annual={cd}
+        allowQuarterly
+        xKey="year"
+        stackId="a"
+        series={[
+          { key: "Cash", label: "Cash & equivalents", color: fx.cash },
+          { key: "Debt", label: "Total debt", color: fx.debt },
+        ]}
+        yFmt={(v) => `${v}B`}
+        valueFmt={(v) => `KES ${v}B`}
+        note={`Net ${netCash >= 0 ? "cash" : "debt"}: KES ${Math.abs(netCash).toFixed(1)}B`}
+      />
 
       <div>
         <Eyebrow>Operating Cash Flow</Eyebrow>
-        <div className="h-40 border-t border-border/60 pt-2">
+        <div className="h-64 border-t border-border/60 pt-2">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={cf} margin={{ top: 5, right: 8, bottom: 0, left: -14 }}>
               <defs>
@@ -61,44 +57,44 @@ export function HealthTab({ fundamentals }: { fundamentals: Fundamentals }) {
               <CartesianGrid {...gridStyle} />
               <XAxis dataKey="year" {...axisStyle} />
               <YAxis {...axisStyle} tickFormatter={(v) => `${v}B`} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `KES ${v}B`} />
+              <Tooltip content={<ColorTooltip format={(v) => `KES ${v}B`} colorFor={() => fx.fcf} />} />
               <Area type="monotone" dataKey="CashFlow" stroke={fx.fcf} strokeWidth={2.2} fill="url(#ocfg)" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
+        <ChartKey items={[{ label: "Operating cash flow", color: fx.fcf }]} />
       </div>
 
-      <div>
-        <Eyebrow>Free Cash Flow vs Capex</Eyebrow>
-        <div className="h-44 border-t border-border/60 pt-2">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={fcf} margin={{ top: 10, right: 8, bottom: 0, left: -14 }} barCategoryGap="25%">
-              <CartesianGrid {...gridStyle} />
-              <XAxis dataKey="year" {...axisStyle} />
-              <YAxis {...axisStyle} tickFormatter={(v) => `${v}B`} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `KES ${v}B`} />
-              <Legend wrapperStyle={{ fontSize: 10 }} />
-              <Bar dataKey="fcf" name="Free Cash Flow" fill={fx.fcf} radius={[4, 4, 0, 0]} />
-              <Bar dataKey="capex" name="Capex" fill={fx.liabilities} radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
+      <BarChartBlock
+        title="Free Cash Flow vs Capex (KES B)"
+        annual={fcf}
+        allowQuarterly
+        xKey="year"
+        series={[
+          { key: "fcf", label: "Free cash flow", color: fx.fcf },
+          { key: "capex", label: "Capital expenditure", color: fx.liabilities },
+        ]}
+        yFmt={(v) => `${v}B`}
+        valueFmt={(v) => `KES ${v}B`}
+      />
+
 
       <div>
         <Eyebrow>Share Count (Dilution History, B)</Eyebrow>
-        <div className="h-36 border-t border-border/60 pt-2">
+        <div className="h-64 border-t border-border/60 pt-2">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={fundamentals.shareCount} margin={{ top: 10, right: 8, bottom: 0, left: -14 }}>
               <CartesianGrid {...gridStyle} />
               <XAxis dataKey="year" {...axisStyle} />
               <YAxis {...axisStyle} domain={["auto", "auto"]} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `${v}B shares`} />
+              <Tooltip content={<ColorTooltip format={(v) => `${v}B shares`} colorFor={() => fx.equity} />} />
               <Line type="monotone" dataKey="shares" stroke={fx.equity} strokeWidth={2} dot={{ r: 3, fill: fx.equity }} name="Shares outstanding" />
             </LineChart>
           </ResponsiveContainer>
         </div>
+        <ChartKey items={[{ label: "Shares outstanding", color: fx.equity }]} />
       </div>
+
 
       <div>
         <Eyebrow>Health Checklist</Eyebrow>

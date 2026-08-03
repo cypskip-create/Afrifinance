@@ -1,11 +1,15 @@
 import { CheckCircle2, XCircle, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight } from "lucide-react";
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, BarChart, Bar, Cell, PieChart, Pie } from "recharts";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Cell, PieChart, Pie } from "recharts";
 import { Fundamentals } from "@/data/stockFundamentals";
-import { fx, tooltipStyle, axisStyle, gridStyle } from "@/lib/chartPalette";
+import { fx, axisStyle, gridStyle } from "@/lib/chartPalette";
+import { ColorTooltip, ChartKey } from "@/components/charts/ChartTooltip";
+import { BarChartBlock } from "@/components/charts/BarChartBlock";
+
 
 const Eyebrow = ({ children }: { children: React.ReactNode }) => (
   <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground mb-2">{children}</p>
 );
+
 
 // Circular score badge
 function ScoreDial({ score, max, label, sub, color }: { score: number; max: number; label: string; sub?: string; color: string }) {
@@ -51,6 +55,12 @@ export function ScoresTab({ fundamentals }: { fundamentals: Fundamentals }) {
   const prevReturns = fundamentals.returnsHistory[fundamentals.returnsHistory.length - 2];
   const returnTrend = latestReturns.roe - prevReturns.roe;
 
+  const surprises = fundamentals.earningsSurprises.map(e => ({
+    ...e,
+    actualColor: e.actual >= e.estimate ? fx.positive : fx.negative,
+  }));
+
+
   return (
     <div className="space-y-8">
       {/* Composite dials */}
@@ -89,46 +99,41 @@ export function ScoresTab({ fundamentals }: { fundamentals: Fundamentals }) {
             ROE {returnTrend >= 0 ? "+" : ""}{returnTrend.toFixed(1)}pp YoY
           </span>
         </div>
-        <div className="h-52 border-t border-border/60 pt-2">
+        <div className="h-64 border-t border-border/60 pt-2">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={fundamentals.returnsHistory} margin={{ top: 10, right: 8, bottom: 0, left: -14 }}>
               <CartesianGrid {...gridStyle} />
               <XAxis dataKey="year" {...axisStyle} />
               <YAxis {...axisStyle} tickFormatter={(v) => `${v}%`} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `${(+v).toFixed(1)}%`} />
+              <Tooltip content={<ColorTooltip format={(v) => `${(+v).toFixed(1)}%`} />} />
               <Line type="monotone" dataKey="roe" stroke={fx.equity} strokeWidth={2.2} dot={{ r: 3, fill: fx.equity }} name="ROE" />
               <Line type="monotone" dataKey="roa" stroke={fx.assets} strokeWidth={2.2} dot={{ r: 3, fill: fx.assets }} name="ROA" />
               <Line type="monotone" dataKey="roic" stroke={fx.operatingIncome} strokeWidth={2.2} dot={{ r: 3, fill: fx.operatingIncome }} name="ROIC" />
             </LineChart>
           </ResponsiveContainer>
         </div>
-        <div className="flex items-center gap-4 text-[10px] text-muted-foreground mt-1">
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm" style={{ background: fx.equity }} />ROE</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm" style={{ background: fx.assets }} />ROA</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm" style={{ background: fx.operatingIncome }} />ROIC</span>
-        </div>
+        <ChartKey items={[
+          { label: "ROE", color: fx.equity },
+          { label: "ROA", color: fx.assets },
+          { label: "ROIC", color: fx.operatingIncome },
+        ]} />
       </div>
 
       {/* Earnings surprise history */}
-      <div>
-        <Eyebrow>Earnings Surprise History</Eyebrow>
-        <div className="h-44 border-t border-border/60 pt-2">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={fundamentals.earningsSurprises} margin={{ top: 10, right: 8, bottom: 0, left: -14 }} barCategoryGap="18%">
-              <CartesianGrid {...gridStyle} />
-              <XAxis dataKey="quarter" {...axisStyle} />
-              <YAxis {...axisStyle} tickFormatter={(v) => `${v}`} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `KES ${v}`} />
-              <Bar dataKey="estimate" name="Estimate" fill={fx.sector} radius={[3, 3, 0, 0]} />
-              <Bar dataKey="actual" name="Actual" radius={[3, 3, 0, 0]}>
-                {fundamentals.earningsSurprises.map((e, i) => (
-                  <Cell key={i} fill={e.actual >= e.estimate ? fx.positive : fx.negative} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
+      <BarChartBlock
+        title="Earnings Surprise History"
+        annual={surprises}
+        annualCount={5}
+        xKey="quarter"
+        series={[
+          { key: "estimate", label: "Analyst estimate", color: fx.forecast },
+          { key: "actual", label: "Actual EPS", color: fx.positive },
+        ]}
+        colorFor={(row, s) => (s.key === "estimate" ? fx.forecast : row.actualColor)}
+        valueFmt={(v) => `KES ${v}`}
+      />
+
+
 
       {/* Insider transactions */}
       <div>

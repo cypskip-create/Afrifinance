@@ -4,6 +4,8 @@ import { MessageSquare, TrendingUp, TrendingDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { usePosts } from "@/hooks/usePosts";
 import { useMemo } from "react";
+import { formatPostDate } from "@/lib/formatTimestamp";
+
 
 interface Props { symbol: string }
 
@@ -68,9 +70,14 @@ export function CommunityTab({ symbol }: Props) {
           {relevant.map(p => (
             <Card key={p.id} className="soft-card cursor-pointer active:scale-[0.99] transition-transform" onClick={() => navigate(`/traders-hub?post=${p.id}`)}>
               <CardContent className="p-3">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-xs font-bold">{p.author?.full_name || "User"}</p>
-                  <span className="text-[10px] text-muted-foreground">{new Date(p.created_at).toLocaleDateString()}</span>
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <p className="text-xs font-bold truncate">
+                    {p.author?.full_name || "User"}
+                    {(p.author as any)?.handle && (
+                      <span className="font-normal text-muted-foreground"> @{(p.author as any).handle}</span>
+                    )}
+                  </p>
+                  <span className="text-[10px] text-muted-foreground shrink-0">{formatPostDate(p.created_at)}</span>
                 </div>
                 <p className="text-xs line-clamp-3">{p.content}</p>
                 <div className="flex gap-3 mt-2 text-[10px] text-muted-foreground">
@@ -81,10 +88,11 @@ export function CommunityTab({ symbol }: Props) {
               </CardContent>
             </Card>
           ))}
-          <Button variant="outline" className="w-full rounded-full" size="sm" onClick={() => navigate(`/traders-hub?ticker=${symbol}`)}>
-            View all discussions on TradersHub
+          <Button variant="outline" className="w-full rounded-full" size="sm" onClick={() => navigate(`/traders-hub?search=$${symbol}`)}>
+            View all ${symbol} discussions on TradersHub
           </Button>
         </div>
+
       )}
     </div>
   );

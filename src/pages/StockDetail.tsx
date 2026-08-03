@@ -358,6 +358,7 @@ export default function StockDetail() {
               ))}
             </div>
           </div>
+          <div className="research-flow pt-2">
           {researchGroup === "valuation" && <ValuationTab price={stock.price} pe={stock.pe} fundamentals={fundamentals} />}
           {researchGroup === "growth" && <GrowthTab fundamentals={fundamentals} />}
           {researchGroup === "health" && <HealthTab fundamentals={fundamentals} />}
@@ -365,6 +366,7 @@ export default function StockDetail() {
           {researchGroup === "scores" && <ScoresTab fundamentals={fundamentals} />}
           {researchGroup === "ownership" && <OwnershipTab fundamentals={fundamentals} />}
           {researchGroup === "risk" && <RiskTab fundamentals={fundamentals} />}
+          </div>
         </section>
 
 
@@ -428,18 +430,19 @@ export default function StockDetail() {
         </section>
       </div>
 
-      {/* Fixed Add Investment CTA */}
-      <div className="fixed bottom-20 left-4 right-4 z-30">
+      {/* Fixed Add Investment CTA — compact, pinned to the very bottom edge */}
+      <div className="fixed left-6 right-6 z-30" style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 2px)" }}>
         <AddInvestmentDialog
           lockedSymbol={symbol} lockedName={stock.name} lockedSector={stock.sector}
           trigger={
-            <Button className="w-full h-12 rounded-full bg-foreground text-background font-semibold text-sm shadow-lg hover:shadow-xl">
-              <Plus className="h-4 w-4 mr-2" />
+            <Button className="w-full h-10 rounded-full bg-foreground text-background font-semibold text-xs shadow-lg hover:shadow-xl">
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
               {myHolding ? `Update ${symbol} holding` : `Add ${symbol} to portfolio`}
             </Button>
           }
         />
       </div>
+
 
       {showAlertsDialog && <PriceAlertsManager />}
     </div>

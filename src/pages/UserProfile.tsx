@@ -14,11 +14,14 @@ import { useToast } from "@/hooks/use-toast";
 import { FollowersDialog } from "@/components/social/FollowersDialog";
 import { EditProfileDialog } from "@/components/profile/EditProfileDialog";
 import { SparklineChart } from "@/components/shared/SparklineChart";
+import { HoldingsList } from "@/components/portfolio/HoldingsList";
 import { XPostCard } from "@/components/social/XPostCard";
 import { usePosts, Post, Comment } from "@/hooks/usePosts";
 import { XCommentSheet } from "@/components/social/XCommentSheet";
 import { ProfileSettingsDialog } from "@/components/profile/ProfileSettingsDialog";
 import { PortfolioPrivacyDialog } from "@/components/profile/PortfolioPrivacyDialog";
+import { getPrice } from "@/lib/stockPrices";
+
 
 interface UserProfileData {
   id: string; user_id: string; full_name: string | null; avatar_url: string | null;
@@ -254,8 +257,9 @@ export default function UserProfile() {
 
   const portfolioSummary = useMemo(() => {
     if (!publicPortfolio.length) return null;
+    // Same price source & maths as the Portfolio page, so both always agree.
     const holdings = publicPortfolio.map(h => {
-      const cp = MOCK_PRICES[h.symbol] || h.avg_cost * 1.05;
+      const cp = getPrice(h.symbol, h.avg_cost);
       const gain = ((cp - h.avg_cost) / h.avg_cost) * 100;
       return { ...h, currentPrice: cp, gain };
     });
@@ -263,6 +267,7 @@ export default function UserProfile() {
     const totalCost = holdings.reduce((s, h) => s + h.avg_cost * h.shares, 0);
     return { totalValue, totalGain: totalValue - totalCost, gainPercent: totalCost > 0 ? ((totalValue - totalCost) / totalCost) * 100 : 0, holdings };
   }, [publicPortfolio]);
+
 
   const castToPost = (p: UserPost): Post => ({
     ...p, updated_at: p.created_at,
@@ -526,56 +531,30 @@ export default function UserProfile() {
             </div>
           ) : (
             <div className="p-4 space-y-4">
-              {/* Portfolio Summary Card */}
+              {/* Portfolio summary — flat on canvas */}
               {portfolioSummary && (
-                <Card className="soft-card overflow-hidden">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-muted-foreground font-medium">Portfolio Value</span>
-                      <Button variant="ghost" size="sm" className="h-7 rounded-full text-xs text-primary" onClick={() => navigate("/track-investments")}>
-                        View Full Portfolio <ChevronRight className="h-3 w-3 ml-0.5" />
-                      </Button>
-                    </div>
-                    <div className="text-2xl font-extrabold">KES {portfolioSummary.totalValue.toLocaleString()}</div>
-                    <div className={`text-sm font-semibold mt-1 flex items-center gap-1 ${portfolioSummary.totalGain >= 0 ? "text-bull" : "text-bear"}`}>
-                      {portfolioSummary.totalGain >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-                      {portfolioSummary.totalGain >= 0 ? "+" : ""}KES {Math.abs(portfolioSummary.totalGain).toLocaleString()} ({portfolioSummary.gainPercent.toFixed(1)}%)
-                    </div>
-                    
-                    {/* Mini performance chart placeholder */}
-                    <div className="mt-3 h-16 flex items-end gap-0.5">
-                      {Array.from({ length: 20 }).map((_, i) => {
-                        const h = 20 + Math.random() * 80;
-                        return <div key={i} className="flex-1 bg-primary/20 rounded-t" style={{ height: `${h}%` }} />;
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
+                <div>
+                  <p className="section-eyebrow">Portfolio value</p>
+                  <div className="mt-1 text-[28px] leading-none font-semibold tabular">
+                    KES {portfolioSummary.totalValue.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                  </div>
+                  <div className={`text-[12px] font-semibold mt-1.5 flex items-center gap-1 tabular ${portfolioSummary.totalGain >= 0 ? "text-bull" : "text-bear"}`}>
+                    {portfolioSummary.totalGain >= 0 ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+                    {portfolioSummary.totalGain >= 0 ? "+" : "−"}KES {Math.abs(portfolioSummary.totalGain).toLocaleString('en-US', { maximumFractionDigits: 0 })} ({portfolioSummary.gainPercent.toFixed(2)}%)
+                  </div>
+                </div>
               )}
 
-              {/* Holdings list */}
-              <div className="space-y-1">
-                {portfolioSummary?.holdings.map(h => (
-                  <div key={h.symbol} className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/30 transition-colors cursor-pointer tap-scale" onClick={() => navigate(`/stock/${h.symbol}`)}>
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">{h.symbol.slice(0, 2)}</div>
-                      <div>
-                        <div className="font-semibold text-sm">${h.symbol}</div>
-                        <div className="text-xs text-muted-foreground">{h.shares} shares · KES {h.avg_cost.toFixed(2)} avg</div>
-                      </div>
-                    </div>
-                    <div className="text-right flex items-center gap-2">
-                      <SparklineChart isPositive={h.gain >= 0} width={40} height={16} />
-                      <div>
-                        <div className="text-sm font-medium">KES {h.currentPrice.toFixed(2)}</div>
-                        <div className={`text-xs font-medium ${h.gain >= 0 ? "text-bull" : "text-bear"}`}>
-                          {h.gain >= 0 ? "+" : ""}{h.gain.toFixed(1)}%
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              {/* Holdings — same institutional layout as the Portfolio page */}
+              <HoldingsList
+                holdings={(portfolioSummary?.holdings || []).map(h => ({
+                  symbol: h.symbol,
+                  name: (h as any).name || h.symbol,
+                  shares: h.shares,
+                  avg_cost: h.avg_cost,
+                  sector: (h as any).sector ?? null,
+                }))}
+              />
 
               {/* Share portfolio button */}
               {isOwnProfile && (

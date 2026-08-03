@@ -1,7 +1,7 @@
 import { CheckCircle2, XCircle } from "lucide-react";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from "recharts";
 import { Fundamentals } from "@/data/stockFundamentals";
-import { fx, tooltipStyle, axisStyle, gridStyle } from "@/lib/chartPalette";
+import { fx } from "@/lib/chartPalette";
+import { BarChartBlock } from "@/components/charts/BarChartBlock";
 
 const Eyebrow = ({ children }: { children: React.ReactNode }) => (
   <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground mb-2">{children}</p>
@@ -10,7 +10,10 @@ const Eyebrow = ({ children }: { children: React.ReactNode }) => (
 export function DividendsTab({ divYield, annualDividend, fundamentals }: {
   divYield: string; annualDividend: string; fundamentals: Fundamentals;
 }) {
-  const data = fundamentals.dividendHistory;
+  const data = fundamentals.dividendHistory.map((d, i, arr) => {
+    const prev = i > 0 ? arr[i - 1].dps : d.dps;
+    return { ...d, color: d.dps >= prev ? fx.positive : fx.negative };
+  });
   const payout = fundamentals.payoutRatio;
   const payoutColor = payout < 60 ? fx.strong : payout < 80 ? fx.ok : fx.weak;
 
@@ -25,26 +28,17 @@ export function DividendsTab({ divYield, annualDividend, fundamentals }: {
         </div>
       </div>
 
-      <div>
-        <Eyebrow>Dividend Per Share — 10 Year History</Eyebrow>
-        <div className="h-48 border-t border-border/60 pt-2">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} margin={{ top: 10, right: 8, bottom: 0, left: -18 }} barCategoryGap="18%">
-              <CartesianGrid {...gridStyle} />
-              <XAxis dataKey="year" {...axisStyle} />
-              <YAxis {...axisStyle} tickFormatter={(v) => `${v}`} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `KES ${v}`} />
-              <Bar dataKey="dps" radius={[4, 4, 0, 0]}>
-                {data.map((d, i) => {
-                  const prev = i > 0 ? data[i - 1].dps : d.dps;
-                  return <Cell key={i} fill={d.dps >= prev ? fx.positive : fx.negative} />;
-                })}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-        <p className="text-[10px] text-muted-foreground mt-1">Green = growing · Red = cut vs prior year</p>
-      </div>
+      <BarChartBlock
+        title="Dividend Per Share"
+        annual={data}
+        allowQuarterly
+        xKey="year"
+        series={[{ key: "dps", label: "Dividend per share", color: fx.positive }]}
+        colorFor={(row) => row.color}
+        valueFmt={(v) => `KES ${v}`}
+      />
+
+
 
       <div>
         <Eyebrow>Payout Sustainability</Eyebrow>

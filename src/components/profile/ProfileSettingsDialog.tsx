@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Check, X, AtSign, Eye, Bell, MessageCircle, Heart, UserPlus, Shield, Lock, Globe, AlertCircle, Languages, Palette, Zap, Volume2, Database, UserX, VolumeX, Mail, KeyRound, Trash2, Download, Type, Accessibility, Smartphone, ChevronRight, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { applyFontSizeName, FONT_SCALES } from "@/lib/appearance";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -58,7 +59,10 @@ export function ProfileSettingsDialog({ open, onOpenChange, currentHandle, portf
     if (!user) return;
     (async () => {
       const { data } = await supabase.from("user_preferences" as any).select("*").eq("user_id", user.id).maybeSingle();
-      if (data) setPrefs((p: any) => ({ ...p, ...(data as any) }));
+      if (data) {
+        setPrefs((p: any) => ({ ...p, ...(data as any) }));
+        if ((data as any).font_size) applyFontSizeName((data as any).font_size);
+      }
       const { data: kw } = await supabase.from("muted_keywords" as any).select("*").eq("user_id", user.id);
       setMutedKeywords((kw as any[]) || []);
       const { data: bu } = await supabase.from("blocked_users" as any).select("blocked_id").eq("blocker_id", user.id);
@@ -82,7 +86,7 @@ export function ProfileSettingsDialog({ open, onOpenChange, currentHandle, portf
     if (!HANDLE_REGEX.test(v)) { setAvailable(false); return; }
     setChecking(true);
     const t = setTimeout(async () => {
-      const { data } = await supabase.from("profiles").select("user_id").eq("handle", v).maybeSingle();
+      const { data } = await supabase.from("profiles_public").select("user_id").eq("handle", v).maybeSingle();
       setAvailable(!data || data.user_id === user?.id);
       setChecking(false);
     }, 400);
@@ -101,8 +105,10 @@ export function ProfileSettingsDialog({ open, onOpenChange, currentHandle, portf
   const togglePref = async (key: string, value: any) => {
     const next = { ...prefs, [key]: value };
     setPrefs(next);
+    if (key === "font_size") applyFontSizeName(value);
     await persistPrefs(next);
   };
+
 
   const handleSave = async () => {
     if (!user) return;
@@ -289,7 +295,7 @@ export function ProfileSettingsDialog({ open, onOpenChange, currentHandle, portf
             <div className="space-y-3 pb-4">
               <Header title="Display" />
               <SelectRow label="Theme" value={prefs.theme} options={[["light","Light"],["dark","Dark"],["system","Match system"]]} onChange={(v) => togglePref("theme", v)} />
-              <SelectRow label="Font size" value={prefs.font_size} options={[["small","Small"],["default","Default"],["large","Large"]]} onChange={(v) => togglePref("font_size", v)} />
+              <SelectRow label="Font size" value={prefs.font_size} options={[["small","Small"],["default","Default"],["large","Large"],["xlarge","Extra large"]]} onChange={(v) => togglePref("font_size", v)} />
             </div>
           )}
 

@@ -1,7 +1,10 @@
 import { Badge } from "@/components/ui/badge";
-import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, Radar, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts";
+import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, Radar } from "recharts";
 import { Fundamentals } from "@/data/stockFundamentals";
-import { fx, tooltipStyle, axisStyle, gridStyle } from "@/lib/chartPalette";
+import { fx } from "@/lib/chartPalette";
+import { BarChartBlock } from "@/components/charts/BarChartBlock";
+
+
 
 const Eyebrow = ({ children }: { children: React.ReactNode }) => (
   <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground mb-2">{children}</p>
@@ -20,7 +23,7 @@ export function RiskTab({ fundamentals }: { fundamentals: Fundamentals }) {
     <div className="space-y-8">
       <div>
         <Eyebrow>Risk Snowflake — higher is safer</Eyebrow>
-        <div className="h-56 border-t border-border/60 pt-2">
+        <div className="h-64 border-t border-border/60 pt-2">
           <ResponsiveContainer width="100%" height="100%">
             <RadarChart data={radar}>
               <PolarGrid stroke="hsl(var(--border))" />
@@ -31,22 +34,21 @@ export function RiskTab({ fundamentals }: { fundamentals: Fundamentals }) {
         </div>
       </div>
 
-      <div>
-        <Eyebrow>Volatility vs Sector (Annualized %)</Eyebrow>
-        <div className="h-44 border-t border-border/60 pt-2">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={fundamentals.volatility} margin={{ top: 10, right: 8, bottom: 0, left: -14 }} barCategoryGap="30%">
-              <CartesianGrid {...gridStyle} />
-              <XAxis dataKey="period" {...axisStyle} />
-              <YAxis {...axisStyle} tickFormatter={(v) => `${v}%`} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `${v}%`} />
-              <Legend wrapperStyle={{ fontSize: 10 }} />
-              <Bar dataKey="company" name="Company" fill={fx.revenue} radius={[4, 4, 0, 0]} />
-              <Bar dataKey="sector" name="Sector" fill={fx.sector} radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
+      <BarChartBlock
+        title="Volatility vs Sector (Annualized %)"
+        annual={fundamentals.volatility}
+        annualCount={4}
+        xKey="period"
+        series={[
+          { key: "company", label: "Company volatility", color: fx.revenue },
+          { key: "sector", label: "Sector volatility", color: fx.foreign },
+        ]}
+        yFmt={(v) => `${v}%`}
+        valueFmt={(v) => `${Number(v).toFixed(1)}%`}
+      />
+
+
+
 
       <div>
         <Eyebrow>Key Risk Factors</Eyebrow>

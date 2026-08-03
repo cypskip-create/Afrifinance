@@ -164,7 +164,7 @@ export default function News() {
                           <span className="text-[11px] font-semibold text-primary">{article.source}</span>
                           <span className="text-[11px] text-muted-foreground">{article.time}</span>
                         </div>
-                        <h3 className="font-bold text-xs leading-snug line-clamp-2">{article.title}</h3>
+                        <h2 className="font-bold text-xs leading-snug line-clamp-2">{article.title}</h2>
                       </div>
                       <div className="flex items-center justify-between mt-2">
                         <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
@@ -224,7 +224,7 @@ export default function News() {
                   )}
                 </div>
                 <div className="absolute bottom-0 left-0 right-0 p-4">
-                  <h3 className="text-white font-bold text-sm leading-snug mb-1.5">{breakingNews.title}</h3>
+                  <h2 className="text-white font-bold text-sm leading-snug mb-1.5">{breakingNews.title}</h2>
                   <div className="flex items-center gap-2 text-white/70 text-xs">
                     <span className="font-medium text-white">{breakingNews.source}</span>
                     <span>·</span>
@@ -240,7 +240,7 @@ export default function News() {
             <div className="animate-fade-in">
               <div className="flex items-center gap-2 mb-2">
                 <Zap className="h-4 w-4 text-primary" />
-                <h3 className="text-sm font-bold">Market Pulse</h3>
+                <h2 className="text-sm font-bold">Market Pulse</h2>
                 <span className="text-[10px] text-muted-foreground ml-auto">Live</span>
               </div>
               <div className="grid grid-cols-3 gap-2">
@@ -263,10 +263,10 @@ export default function News() {
             {/* Trending Topics */}
             <div className="animate-fade-in">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-bold flex items-center gap-2">
+                <h2 className="text-sm font-bold flex items-center gap-2">
                   <Flame className="h-4 w-4 text-accent" />
                   Trending
-                </h3>
+                </h2>
               </div>
               <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
                 {trendingTopics.map((topic, idx) => (
@@ -281,10 +281,10 @@ export default function News() {
             {/* Most Discussed */}
             <div className="animate-fade-in">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-bold flex items-center gap-2">
+                <h2 className="text-sm font-bold flex items-center gap-2">
                   <MessageCircle className="h-4 w-4 text-primary" />
                   Most Discussed
-                </h3>
+                </h2>
                 <button className="text-[11px] text-primary font-medium" onClick={() => navigate('/traders-hub')}>See all</button>
               </div>
               <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
@@ -362,7 +362,7 @@ export default function News() {
                                 <span className="text-[11px] font-semibold text-primary">{article.source}</span>
                                 <span className="text-[11px] text-muted-foreground">{article.time}</span>
                               </div>
-                              <h3 className="font-bold text-xs leading-snug line-clamp-2 mb-1.5">{article.title}</h3>
+                              <h2 className="font-bold text-xs leading-snug line-clamp-2 mb-1.5">{article.title}</h2>
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 {article.sentiment && (
                                   <Badge className={`text-[9px] px-1.5 py-0 rounded-full border-0 ${getSentimentColor(article.sentiment)}`}>

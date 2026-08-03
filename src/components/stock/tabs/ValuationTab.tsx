@@ -1,7 +1,9 @@
 import { Badge } from "@/components/ui/badge";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell, LabelList, CartesianGrid } from "recharts";
 import { Fundamentals } from "@/data/stockFundamentals";
-import { fx, tooltipStyle, axisStyle, gridStyle } from "@/lib/chartPalette";
+import { fx } from "@/lib/chartPalette";
+import { BarChartBlock } from "@/components/charts/BarChartBlock";
+
+
 
 interface Props { price: number; pe: string; fundamentals: Fundamentals }
 
@@ -95,33 +97,19 @@ export function ValuationTab({ price, pe, fundamentals }: Props) {
       </div>
 
       {/* Multiples vs sector */}
-      <div>
-        <Eyebrow>Valuation Multiples vs Sector</Eyebrow>
-        <div className="h-52 border-t border-border/60 pt-3">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={comparison} margin={{ top: 12, right: 8, bottom: 0, left: -18 }} barCategoryGap="30%">
-              <CartesianGrid {...gridStyle} />
-              <XAxis dataKey="metric" {...axisStyle} />
-              <YAxis {...axisStyle} />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Bar dataKey="company" radius={[6, 6, 0, 0]} name="Company">
-                {comparison.map((c, i) => (
-                  <Cell key={i} fill={c.company < c.sector ? fx.strong : fx.weak} />
-                ))}
-                <LabelList dataKey="company" position="top" style={{ fontSize: 9, fill: "hsl(var(--foreground))" }} />
-              </Bar>
-              <Bar dataKey="sector" radius={[6, 6, 0, 0]} name="Sector" fill={fx.sector}>
-                <LabelList dataKey="sector" position="top" style={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-        <div className="flex items-center gap-4 text-[10px] text-muted-foreground mt-1">
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm" style={{ background: fx.strong }} />Cheaper</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm" style={{ background: fx.weak }} />Richer</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm" style={{ background: fx.sector }} />Sector</span>
-        </div>
-      </div>
+      <BarChartBlock
+        title="Valuation Multiples vs Sector"
+        annual={comparison}
+        xKey="metric"
+        series={[
+          { key: "company", label: "Company multiple", color: fx.revenue },
+          { key: "sector", label: "Sector average", color: fx.foreign },
+        ]}
+        valueFmt={(v) => `${Number(v).toFixed(2)}x`}
+        yFmt={(v) => `${v}x`}
+      />
+
+
     </div>
   );
 }

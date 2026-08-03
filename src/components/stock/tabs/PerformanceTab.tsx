@@ -2,11 +2,10 @@ import { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import {
-  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell, Legend, ReferenceLine,
-} from "recharts";
 import { TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { Fundamentals } from "@/data/stockFundamentals";
+import { fx } from "@/lib/chartPalette";
+import { BarChartBlock } from "@/components/charts/BarChartBlock";
 
 interface Props {
   symbol: string;
@@ -14,12 +13,8 @@ interface Props {
   fundamentals: Fundamentals;
 }
 
-const tooltipStyle = {
-  background: "hsl(var(--card))",
-  border: "1px solid hsl(var(--border))",
-  borderRadius: 12,
-  fontSize: 11,
-};
+
+
 
 export function PerformanceTab({ symbol, price, fundamentals }: Props) {
   const [benchmark, setBenchmark] = useState<"sector" | "nse">("sector");
@@ -53,30 +48,26 @@ export function PerformanceTab({ symbol, price, fundamentals }: Props) {
       {/* PAST RETURNS */}
       <Card className="soft-card">
         <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="text-xs font-bold">Total Return vs Benchmark</h4>
-            <ToggleGroup type="single" size="sm" value={benchmark} onValueChange={(v) => v && setBenchmark(v as any)}>
-              <ToggleGroupItem value="sector" className="h-6 text-[10px] px-2">Sector</ToggleGroupItem>
-              <ToggleGroupItem value="nse" className="h-6 text-[10px] px-2">NSE 20</ToggleGroupItem>
-            </ToggleGroup>
-          </div>
-          <div className="h-44">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={returns} margin={{ top: 5, right: 6, bottom: 0, left: -18 }}>
-                <XAxis dataKey="period" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `${v}%`} />
-                <ReferenceLine y={0} stroke="hsl(var(--border))" />
-                <Legend wrapperStyle={{ fontSize: 10 }} />
-                <Bar dataKey="Company" radius={[4, 4, 0, 0]} name={symbol}>
-                  {returns.map((d, i) => (
-                    <Cell key={i} fill={d.Company >= 0 ? "hsl(var(--bull))" : "hsl(var(--bear))"} />
-                  ))}
-                </Bar>
-                <Bar dataKey="Benchmark" radius={[4, 4, 0, 0]} fill="hsl(var(--muted-foreground))" fillOpacity={0.5} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <BarChartBlock
+            title="Total Return vs Benchmark"
+            annual={returns}
+            annualCount={6}
+            xKey="period"
+            series={[
+              { key: "Company", label: symbol, color: fx.positive },
+              { key: "Benchmark", label: benchmark === "sector" ? "Sector average" : "NSE 20", color: fx.foreign },
+            ]}
+            colorFor={(row, s) => (s.key === "Benchmark" ? fx.foreign : row.Company >= 0 ? fx.positive : fx.negative)}
+            yFmt={(v) => `${v}%`}
+            valueFmt={(v) => `${Number(v) >= 0 ? "+" : ""}${Number(v).toFixed(1)}%`}
+            right={
+              <ToggleGroup type="single" size="sm" value={benchmark} onValueChange={(v) => v && setBenchmark(v as any)}>
+                <ToggleGroupItem value="sector" className="h-6 text-[10px] px-2">Sector</ToggleGroupItem>
+                <ToggleGroupItem value="nse" className="h-6 text-[10px] px-2">NSE 20</ToggleGroupItem>
+              </ToggleGroup>
+            }
+          />
+
           <div className="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-border/40">
             {(["1Y", "3Y", "5Y"] as const).map(p => {
               const row = fundamentals.pastReturns.find(r => r.period === p)!;
@@ -96,6 +87,7 @@ export function PerformanceTab({ symbol, price, fundamentals }: Props) {
           </div>
         </CardContent>
       </Card>
+
 
       {/* ANALYST PRICE TARGETS */}
       <Card className="soft-card">
@@ -146,68 +138,68 @@ export function PerformanceTab({ symbol, price, fundamentals }: Props) {
       {/* EARNINGS SURPRISES */}
       <Card className="soft-card">
         <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <h4 className="text-xs font-bold">Earnings Surprises</h4>
-              <p className="text-[10px] text-muted-foreground">Beat estimate {beatRate}% of last 8 quarters</p>
-            </div>
-            <ToggleGroup type="single" size="sm" value={surpriseView} onValueChange={(v) => v && setSurpriseView(v as any)}>
-              <ToggleGroupItem value="abs" className="h-6 text-[10px] px-2">EPS</ToggleGroupItem>
-              <ToggleGroupItem value="pct" className="h-6 text-[10px] px-2">Surprise %</ToggleGroupItem>
-            </ToggleGroup>
-          </div>
-          <div className="h-44">
-            <ResponsiveContainer width="100%" height="100%">
-              {surpriseView === "abs" ? (
-                <BarChart data={surprises} margin={{ top: 5, right: 6, bottom: 0, left: -20 }}>
-                  <XAxis dataKey="quarter" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `KES ${v}`} />
-                  <Legend wrapperStyle={{ fontSize: 10 }} />
-                  <Bar dataKey="Estimate" fill="hsl(var(--muted-foreground))" fillOpacity={0.4} radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="Actual" radius={[4, 4, 0, 0]}>
-                    {surprises.map((s, i) => (
-                      <Cell key={i} fill={s.Actual >= s.Estimate ? "hsl(var(--bull))" : "hsl(var(--bear))"} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              ) : (
-                <BarChart data={surprises} margin={{ top: 5, right: 6, bottom: 0, left: -20 }}>
-                  <XAxis dataKey="quarter" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
-                  <ReferenceLine y={0} stroke="hsl(var(--border))" />
-                  <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `${v}%`} />
-                  <Bar dataKey="surprise" radius={[4, 4, 0, 0]}>
-                    {surprises.map((s, i) => (
-                      <Cell key={i} fill={s.surprise >= 0 ? "hsl(var(--bull))" : "hsl(var(--bear))"} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              )}
-            </ResponsiveContainer>
-          </div>
+          <p className="text-[10px] text-muted-foreground mb-1">Beat estimate {beatRate}% of last 8 quarters</p>
+          {surpriseView === "abs" ? (
+            <BarChartBlock
+              title="Earnings Surprises"
+              annual={surprises}
+              annualCount={5}
+              xKey="quarter"
+              series={[
+                { key: "Estimate", label: "Analyst estimate", color: fx.forecast },
+                { key: "Actual", label: "Actual EPS", color: fx.positive },
+              ]}
+              colorFor={(row, s) => (s.key === "Estimate" ? fx.forecast : row.Actual >= row.Estimate ? fx.positive : fx.negative)}
+              valueFmt={(v) => `KES ${v}`}
+              right={
+                <ToggleGroup type="single" size="sm" value={surpriseView} onValueChange={(v) => v && setSurpriseView(v as any)}>
+                  <ToggleGroupItem value="abs" className="h-6 text-[10px] px-2">EPS</ToggleGroupItem>
+                  <ToggleGroupItem value="pct" className="h-6 text-[10px] px-2">Surprise %</ToggleGroupItem>
+                </ToggleGroup>
+              }
+            />
+          ) : (
+            <BarChartBlock
+              title="Earnings Surprises"
+              annual={surprises}
+              annualCount={5}
+              xKey="quarter"
+              series={[{ key: "surprise", label: "Surprise vs estimate", color: fx.positive }]}
+              colorFor={(row) => (row.surprise >= 0 ? fx.positive : fx.negative)}
+              yFmt={(v) => `${v}%`}
+              valueFmt={(v) => `${v}%`}
+              right={
+                <ToggleGroup type="single" size="sm" value={surpriseView} onValueChange={(v) => v && setSurpriseView(v as any)}>
+                  <ToggleGroupItem value="abs" className="h-6 text-[10px] px-2">EPS</ToggleGroupItem>
+                  <ToggleGroupItem value="pct" className="h-6 text-[10px] px-2">Surprise %</ToggleGroupItem>
+                </ToggleGroup>
+              }
+            />
+          )}
         </CardContent>
       </Card>
+
 
       {/* MARGIN TRENDS */}
       <Card className="soft-card">
         <CardContent className="p-4">
-          <h4 className="text-xs font-bold mb-2">Profitability Margins</h4>
-          <div className="h-40">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={fundamentals.marginsHistory} margin={{ top: 5, right: 6, bottom: 0, left: -20 }}>
-                <XAxis dataKey="year" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `${v}%`} />
-                <Legend wrapperStyle={{ fontSize: 10 }} />
-                <Bar dataKey="gross" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Gross" />
-                <Bar dataKey="operating" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} name="Operating" />
-                <Bar dataKey="net" fill="hsl(var(--bull))" radius={[4, 4, 0, 0]} name="Net" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <BarChartBlock
+            title="Profitability Margins"
+            annual={fundamentals.marginsHistory}
+            allowQuarterly
+            xKey="year"
+            series={[
+              { key: "gross", label: "Gross margin", color: fx.grossMargin },
+              { key: "operating", label: "Operating margin", color: fx.operatingMargin },
+              { key: "net", label: "Net margin", color: fx.netMargin },
+            ]}
+            yFmt={(v) => `${v}%`}
+            valueFmt={(v) => `${Number(v).toFixed(1)}%`}
+          />
         </CardContent>
       </Card>
+
+
 
       {/* INSIDER TRANSACTIONS */}
       <Card className="soft-card">

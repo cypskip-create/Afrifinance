@@ -58,6 +58,9 @@ export default function TradersHub() {
     if (shouldCompose === "true" && ticker) {
       setComposeOpen(true);
       setPrefillContent(`$${ticker} `);
+    } else if (ticker) {
+      // Deep-link from a stock page: show every post mentioning the ticker
+      setSearchQuery(`$${ticker.toUpperCase()}`);
     }
     const postId = searchParams.get("post");
     if (postId) {
@@ -69,8 +72,23 @@ export default function TradersHub() {
     }
   }, [searchParams]);
 
+
   const portfolioSymbols = useMemo(() => new Set(portfolio.map(h => h.symbol)), [portfolio]);
   const watchlistSymbols = useMemo(() => new Set(watchlist.map(w => w.symbol)), [watchlist]);
+
+  // Most-mentioned tickers across the feed (stock hubs rail)
+  const hotTickers = useMemo(() => {
+    const counts = new Map<string, number>();
+    posts.forEach(p => (p.stock_mentions || []).forEach(s => {
+      const sym = s.toUpperCase();
+      counts.set(sym, (counts.get(sym) || 0) + 1);
+    }));
+    return [...counts.entries()]
+      .map(([symbol, count]) => ({ symbol, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 12);
+  }, [posts]);
+
 
   const portfolioSnapshot = useMemo(() => {
     if (!portfolio || portfolio.length === 0) return null;
@@ -232,7 +250,30 @@ export default function TradersHub() {
             </button>
           ))}
         </div>
+
+        {/* Stock hubs — Moomoo-style ticker rail */}
+        {hotTickers.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto no-scrollbar px-4 py-2 border-t border-border/40">
+            {hotTickers.map(t => {
+              const active = searchQuery.toUpperCase() === `$${t.symbol}`;
+              return (
+                <button
+                  key={t.symbol}
+                  data-small-target
+                  onClick={() => (active ? clearSearch() : handleSearch(`$${t.symbol}`))}
+                  className={`shrink-0 flex items-center gap-1.5 h-7 px-3 rounded-full text-[11px] font-semibold transition-colors ${
+                    active ? "bg-foreground text-background" : "bg-muted/60 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  ${t.symbol}
+                  <span className="opacity-60 font-normal">{t.count}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </header>
+
 
       {searchQuery && (
         <div className="px-4 py-2 bg-muted/20 border-b border-border/40 flex items-center justify-between">

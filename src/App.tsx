@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "./components/theme/ThemeProvider";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { HelmetProvider } from "react-helmet-async";
 import { MainLayout } from "./components/layout/MainLayout";
 import { AuthProvider } from "./hooks/useAuth";
 import Home from "./pages/Home";
@@ -30,6 +31,7 @@ import UserProfile from "./pages/UserProfile";
 const queryClient = new QueryClient();
 
 const App = () => (
+  <HelmetProvider>
   <QueryClientProvider client={queryClient}>
     <ThemeProvider defaultTheme="light" storageKey="kenyan-stocks-theme">
       <TooltipProvider>
@@ -69,6 +71,7 @@ const App = () => (
       </TooltipProvider>
     </ThemeProvider>
   </QueryClientProvider>
+  </HelmetProvider>
 );
 
 export default App;

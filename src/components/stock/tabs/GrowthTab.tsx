@@ -1,11 +1,15 @@
 import { useState, useMemo } from "react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
-  ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, Cell, Legend,
+  ResponsiveContainer, XAxis, YAxis, Tooltip, Line,
   LineChart, CartesianGrid, AreaChart, Area,
 } from "recharts";
 import { Fundamentals } from "@/data/stockFundamentals";
-import { fx, tooltipStyle, axisStyle, gridStyle } from "@/lib/chartPalette";
+import { fx, axisStyle, gridStyle } from "@/lib/chartPalette";
+import { ColorTooltip, ChartKey } from "@/components/charts/ChartTooltip";
+import { BarChartBlock } from "@/components/charts/BarChartBlock";
+
+
 
 interface Props { fundamentals: Fundamentals }
 type Metric = "revenue" | "earnings" | "eps";
@@ -34,44 +38,29 @@ export function GrowthTab({ fundamentals }: Props) {
 
   return (
     <div className="space-y-8">
-      {/* Growth trend with forecast */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <Eyebrow>Growth History & Forecast</Eyebrow>
+      {/* Growth trend */}
+      <BarChartBlock
+        title="Growth History"
+        annual={data.filter(d => !d.forecast)}
+        allowQuarterly
+        xKey="year"
+        series={[{ key, label: metric === "eps" ? "EPS" : key, color }]}
+        yFmt={yFmt}
+        valueFmt={(v) => tipFmt(v)}
+        right={
           <ToggleGroup type="single" size="sm" value={metric} onValueChange={(v) => v && setMetric(v as Metric)}>
             <ToggleGroupItem value="revenue" className="h-6 text-[10px] px-2">Revenue</ToggleGroupItem>
             <ToggleGroupItem value="earnings" className="h-6 text-[10px] px-2">Earnings</ToggleGroupItem>
             <ToggleGroupItem value="eps" className="h-6 text-[10px] px-2">EPS</ToggleGroupItem>
           </ToggleGroup>
-        </div>
-        <div className="h-56 border-t border-border/60 pt-2">
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data} margin={{ top: 10, right: 8, bottom: 0, left: -12 }}>
-              <CartesianGrid {...gridStyle} />
-              <XAxis dataKey="year" {...axisStyle} />
-              <YAxis {...axisStyle} tickFormatter={yFmt} />
-              <Tooltip contentStyle={tooltipStyle} formatter={tipFmt} />
-              <Legend wrapperStyle={{ fontSize: 10 }} />
-              <Bar dataKey={key} radius={[4, 4, 0, 0]} name={`${key} (actual)`}>
-                {data.map((d, i) => (
-                  <Cell key={i} fill={d.forecast ? fx.forecast : color} fillOpacity={d.forecast ? 0.9 : 1}
-                    strokeDasharray={d.forecast ? "3 3" : undefined}
-                    stroke={d.forecast ? color : undefined} />
-                ))}
-              </Bar>
-              <Line type="monotone" dataKey={key} stroke={color} strokeWidth={2} dot={false} name="Trend" />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </div>
-        <p className="text-[10px] text-muted-foreground mt-1">
-          Solid bars = reported · Dashed = analyst forecast
-        </p>
-      </div>
+        }
+      />
+
 
       {/* Revenue forecast range */}
       <div>
         <Eyebrow>Revenue Forecast Range (KES B)</Eyebrow>
-        <div className="h-52 border-t border-border/60 pt-2">
+        <div className="h-64 border-t border-border/60 pt-2">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={fundamentals.revenueForecast} margin={{ top: 10, right: 8, bottom: 0, left: -12 }}>
               <defs>
@@ -83,50 +72,68 @@ export function GrowthTab({ fundamentals }: Props) {
               <CartesianGrid {...gridStyle} />
               <XAxis dataKey="year" {...axisStyle} />
               <YAxis {...axisStyle} tickFormatter={(v) => `${v}B`} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `KES ${v}B`} />
+              <Tooltip
+                content={
+                  <ColorTooltip
+                    format={(v) => (v == null ? "—" : `KES ${v}B`)}
+                    colorFor={(e) =>
+                      e.dataKey === "actual" ? fx.netIncome : e.dataKey === "mid" ? fx.revenue : fx.forecast
+                    }
+                  />
+                }
+              />
               <Area dataKey="high" stroke="none" fill="url(#revBand)" name="High" stackId={undefined as any} />
               <Area dataKey="low" stroke="none" fill="hsl(var(--background))" name="Low" />
               <Line type="monotone" dataKey="mid" stroke={fx.revenue} strokeWidth={2.5} dot={{ r: 3, fill: fx.revenue }} name="Consensus" strokeDasharray="4 3" />
               <Line type="monotone" dataKey="actual" stroke={fx.netIncome} strokeWidth={2.5} dot={{ r: 3, fill: fx.netIncome }} name="Actual" connectNulls={false} />
-              <Legend wrapperStyle={{ fontSize: 10 }} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
+        <ChartKey items={[
+          { label: "Actual revenue", color: fx.netIncome },
+          { label: "Consensus", color: fx.revenue },
+          { label: "Forecast range", color: fx.forecast },
+        ]} />
       </div>
 
       {/* Margins over time (multi-line) */}
       <div>
         <Eyebrow>Margins Trend</Eyebrow>
-        <div className="h-48 border-t border-border/60 pt-2">
+        <div className="h-64 border-t border-border/60 pt-2">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={margins} margin={{ top: 10, right: 8, bottom: 0, left: -14 }}>
               <CartesianGrid {...gridStyle} />
               <XAxis dataKey="year" {...axisStyle} />
               <YAxis {...axisStyle} tickFormatter={(v) => `${v}%`} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `${v}%`} />
-              <Legend wrapperStyle={{ fontSize: 10 }} />
+              <Tooltip content={<ColorTooltip format={(v) => `${v}%`} />} />
               <Line type="monotone" dataKey="gross" stroke={fx.grossMargin} strokeWidth={2} dot={false} name="Gross" />
               <Line type="monotone" dataKey="operating" stroke={fx.operatingMargin} strokeWidth={2} dot={false} name="Operating" />
               <Line type="monotone" dataKey="net" stroke={fx.netMargin} strokeWidth={2} dot={false} name="Net" />
             </LineChart>
           </ResponsiveContainer>
         </div>
+        <ChartKey items={[
+          { label: "Gross margin", color: fx.grossMargin },
+          { label: "Operating margin", color: fx.operatingMargin },
+          { label: "Net margin", color: fx.netMargin },
+        ]} />
       </div>
 
       {/* EPS estimate trend (analyst drift) */}
       <div>
         <Eyebrow>Analyst EPS Estimate — Last 12 Months</Eyebrow>
-        <div className="h-40 border-t border-border/60 pt-2">
+        <div className="h-64 border-t border-border/60 pt-2">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={fundamentals.epsEstimateTrend} margin={{ top: 10, right: 8, bottom: 0, left: -14 }}>
               <CartesianGrid {...gridStyle} />
               <XAxis dataKey="month" {...axisStyle} />
               <YAxis {...axisStyle} tickFormatter={(v) => `KES ${v}`} domain={["auto", "auto"]} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `KES ${v}`} />
+              <Tooltip content={<ColorTooltip format={(v) => `KES ${v}`} />} />
               <Line type="monotone" dataKey="est" stroke={fx.eps} strokeWidth={2.5} dot={{ r: 3, fill: fx.eps }} name="Consensus EPS" />
             </LineChart>
           </ResponsiveContainer>
         </div>
+        <ChartKey items={[{ label: "Consensus EPS", color: fx.eps }]} />
       </div>
 
       {/* Growth vs sector — hairline rows */}
@@ -154,3 +161,4 @@ export function GrowthTab({ fundamentals }: Props) {
     </div>
   );
 }
+
