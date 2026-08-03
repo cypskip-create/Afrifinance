@@ -2,13 +2,10 @@ import { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import {
-  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell, ReferenceLine,
-} from "recharts";
 import { TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { Fundamentals } from "@/data/stockFundamentals";
 import { fx } from "@/lib/chartPalette";
-import { ColorTooltip, ChartKey } from "@/components/charts/ChartTooltip";
+import { BarChartBlock } from "@/components/charts/BarChartBlock";
 
 interface Props {
   symbol: string;
@@ -16,7 +13,7 @@ interface Props {
   fundamentals: Fundamentals;
 }
 
-const barCursor = { fill: "hsl(var(--muted))", fillOpacity: 0.35 };
+
 
 
 export function PerformanceTab({ symbol, price, fundamentals }: Props) {
@@ -51,37 +48,25 @@ export function PerformanceTab({ symbol, price, fundamentals }: Props) {
       {/* PAST RETURNS */}
       <Card className="soft-card">
         <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="text-xs font-bold">Total Return vs Benchmark</h4>
-            <ToggleGroup type="single" size="sm" value={benchmark} onValueChange={(v) => v && setBenchmark(v as any)}>
-              <ToggleGroupItem value="sector" className="h-6 text-[10px] px-2">Sector</ToggleGroupItem>
-              <ToggleGroupItem value="nse" className="h-6 text-[10px] px-2">NSE 20</ToggleGroupItem>
-            </ToggleGroup>
-          </div>
-          <div className="h-44">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={returns} margin={{ top: 5, right: 6, bottom: 0, left: -18 }} barCategoryGap="40%" barGap={6}>
-                <XAxis dataKey="period" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
-                <Tooltip
-                  cursor={barCursor}
-                  content={<ColorTooltip format={(v) => `${v}%`} colorFor={(e) => (e.dataKey === "Benchmark" ? fx.foreign : (e.payload?.Company ?? 0) >= 0 ? fx.positive : fx.negative)} />}
-                />
-                <ReferenceLine y={0} stroke="hsl(var(--border))" />
-                <Bar dataKey="Company" radius={[4, 4, 0, 0]} name={symbol}>
-                  {returns.map((d, i) => (
-                    <Cell key={i} fill={d.Company >= 0 ? fx.positive : fx.negative} />
-                  ))}
-                </Bar>
-                <Bar dataKey="Benchmark" radius={[4, 4, 0, 0]} fill={fx.foreign} name={benchmark === "sector" ? "Sector" : "NSE 20"} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          <ChartKey items={[
-            { label: `${symbol} — gain`, color: fx.positive },
-            { label: `${symbol} — loss`, color: fx.negative },
-            { label: benchmark === "sector" ? "Sector average" : "NSE 20", color: fx.foreign },
-          ]} />
+          <BarChartBlock
+            title="Total Return vs Benchmark"
+            annual={returns}
+            annualCount={6}
+            xKey="period"
+            series={[
+              { key: "Company", label: symbol, color: fx.positive },
+              { key: "Benchmark", label: benchmark === "sector" ? "Sector average" : "NSE 20", color: fx.foreign },
+            ]}
+            colorFor={(row, s) => (s.key === "Benchmark" ? fx.foreign : row.Company >= 0 ? fx.positive : fx.negative)}
+            yFmt={(v) => `${v}%`}
+            valueFmt={(v) => `${Number(v) >= 0 ? "+" : ""}${Number(v).toFixed(1)}%`}
+            right={
+              <ToggleGroup type="single" size="sm" value={benchmark} onValueChange={(v) => v && setBenchmark(v as any)}>
+                <ToggleGroupItem value="sector" className="h-6 text-[10px] px-2">Sector</ToggleGroupItem>
+                <ToggleGroupItem value="nse" className="h-6 text-[10px] px-2">NSE 20</ToggleGroupItem>
+              </ToggleGroup>
+            }
+          />
 
           <div className="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-border/40">
             {(["1Y", "3Y", "5Y"] as const).map(p => {
@@ -102,6 +87,7 @@ export function PerformanceTab({ symbol, price, fundamentals }: Props) {
           </div>
         </CardContent>
       </Card>
+
 
       {/* ANALYST PRICE TARGETS */}
       <Card className="soft-card">
