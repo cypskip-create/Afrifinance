@@ -152,85 +152,67 @@ export function PerformanceTab({ symbol, price, fundamentals }: Props) {
       {/* EARNINGS SURPRISES */}
       <Card className="soft-card">
         <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <h4 className="text-xs font-bold">Earnings Surprises</h4>
-              <p className="text-[10px] text-muted-foreground">Beat estimate {beatRate}% of last 8 quarters</p>
-            </div>
-            <ToggleGroup type="single" size="sm" value={surpriseView} onValueChange={(v) => v && setSurpriseView(v as any)}>
-              <ToggleGroupItem value="abs" className="h-6 text-[10px] px-2">EPS</ToggleGroupItem>
-              <ToggleGroupItem value="pct" className="h-6 text-[10px] px-2">Surprise %</ToggleGroupItem>
-            </ToggleGroup>
-          </div>
-          <div className="h-44">
-            <ResponsiveContainer width="100%" height="100%">
-              {surpriseView === "abs" ? (
-                <BarChart data={surprises} margin={{ top: 5, right: 6, bottom: 0, left: -20 }} barCategoryGap="38%" barGap={5}>
-                  <XAxis dataKey="quarter" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                  <Tooltip
-                    cursor={barCursor}
-                    content={<ColorTooltip format={(v) => `KES ${v}`} colorFor={(e) => (e.dataKey === "Estimate" ? fx.forecast : (e.payload?.Actual ?? 0) >= (e.payload?.Estimate ?? 0) ? fx.positive : fx.negative)} />}
-                  />
-                  <Bar dataKey="Estimate" fill={fx.forecast} radius={[4, 4, 0, 0]} name="Estimate" />
-                  <Bar dataKey="Actual" radius={[4, 4, 0, 0]} name="Actual">
-                    {surprises.map((s, i) => (
-                      <Cell key={i} fill={s.Actual >= s.Estimate ? fx.positive : fx.negative} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              ) : (
-                <BarChart data={surprises} margin={{ top: 5, right: 6, bottom: 0, left: -20 }} barCategoryGap="40%">
-                  <XAxis dataKey="quarter" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
-                  <ReferenceLine y={0} stroke="hsl(var(--border))" />
-                  <Tooltip
-                    cursor={barCursor}
-                    content={<ColorTooltip format={(v) => `${v}%`} colorFor={(e) => ((e.payload?.surprise ?? 0) >= 0 ? fx.positive : fx.negative)} />}
-                  />
-                  <Bar dataKey="surprise" name="Surprise" radius={[4, 4, 0, 0]}>
-                    {surprises.map((s, i) => (
-                      <Cell key={i} fill={s.surprise >= 0 ? fx.positive : fx.negative} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              )}
-            </ResponsiveContainer>
-          </div>
-          <ChartKey items={[
-            ...(surpriseView === "abs" ? [{ label: "Analyst estimate", color: fx.forecast }] : []),
-            { label: "Beat estimate", color: fx.positive },
-            { label: "Missed estimate", color: fx.negative },
-          ]} />
+          <p className="text-[10px] text-muted-foreground mb-1">Beat estimate {beatRate}% of last 8 quarters</p>
+          {surpriseView === "abs" ? (
+            <BarChartBlock
+              title="Earnings Surprises"
+              annual={surprises}
+              annualCount={5}
+              xKey="quarter"
+              series={[
+                { key: "Estimate", label: "Analyst estimate", color: fx.forecast },
+                { key: "Actual", label: "Actual EPS", color: fx.positive },
+              ]}
+              colorFor={(row, s) => (s.key === "Estimate" ? fx.forecast : row.Actual >= row.Estimate ? fx.positive : fx.negative)}
+              valueFmt={(v) => `KES ${v}`}
+              right={
+                <ToggleGroup type="single" size="sm" value={surpriseView} onValueChange={(v) => v && setSurpriseView(v as any)}>
+                  <ToggleGroupItem value="abs" className="h-6 text-[10px] px-2">EPS</ToggleGroupItem>
+                  <ToggleGroupItem value="pct" className="h-6 text-[10px] px-2">Surprise %</ToggleGroupItem>
+                </ToggleGroup>
+              }
+            />
+          ) : (
+            <BarChartBlock
+              title="Earnings Surprises"
+              annual={surprises}
+              annualCount={5}
+              xKey="quarter"
+              series={[{ key: "surprise", label: "Surprise vs estimate", color: fx.positive }]}
+              colorFor={(row) => (row.surprise >= 0 ? fx.positive : fx.negative)}
+              yFmt={(v) => `${v}%`}
+              valueFmt={(v) => `${v}%`}
+              right={
+                <ToggleGroup type="single" size="sm" value={surpriseView} onValueChange={(v) => v && setSurpriseView(v as any)}>
+                  <ToggleGroupItem value="abs" className="h-6 text-[10px] px-2">EPS</ToggleGroupItem>
+                  <ToggleGroupItem value="pct" className="h-6 text-[10px] px-2">Surprise %</ToggleGroupItem>
+                </ToggleGroup>
+              }
+            />
+          )}
         </CardContent>
       </Card>
+
 
       {/* MARGIN TRENDS */}
       <Card className="soft-card">
         <CardContent className="p-4">
-          <h4 className="text-xs font-bold mb-2">Profitability Margins</h4>
-          <div className="h-40">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={fundamentals.marginsHistory} margin={{ top: 5, right: 6, bottom: 0, left: -20 }} barCategoryGap="34%" barGap={4}>
-                <XAxis dataKey="year" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
-                <Tooltip
-                  cursor={barCursor}
-                  content={<ColorTooltip format={(v) => `${v}%`} colorFor={(e) => (e.dataKey === "gross" ? fx.grossMargin : e.dataKey === "operating" ? fx.operatingMargin : fx.netMargin)} />}
-                />
-                <Bar dataKey="gross" fill={fx.grossMargin} radius={[4, 4, 0, 0]} name="Gross" />
-                <Bar dataKey="operating" fill={fx.operatingMargin} radius={[4, 4, 0, 0]} name="Operating" />
-                <Bar dataKey="net" fill={fx.netMargin} radius={[4, 4, 0, 0]} name="Net" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          <ChartKey items={[
-            { label: "Gross margin", color: fx.grossMargin },
-            { label: "Operating margin", color: fx.operatingMargin },
-            { label: "Net margin", color: fx.netMargin },
-          ]} />
+          <BarChartBlock
+            title="Profitability Margins"
+            annual={fundamentals.marginsHistory}
+            allowQuarterly
+            xKey="year"
+            series={[
+              { key: "gross", label: "Gross margin", color: fx.grossMargin },
+              { key: "operating", label: "Operating margin", color: fx.operatingMargin },
+              { key: "net", label: "Net margin", color: fx.netMargin },
+            ]}
+            yFmt={(v) => `${v}%`}
+            valueFmt={(v) => `${Number(v).toFixed(1)}%`}
+          />
         </CardContent>
       </Card>
+
 
 
       {/* INSIDER TRANSACTIONS */}
