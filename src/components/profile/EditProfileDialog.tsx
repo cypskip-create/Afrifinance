@@ -60,7 +60,7 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
     setHandleState("checking");
     const t = setTimeout(async () => {
       const { data, error } = await supabase
-        .from("profiles")
+        .from("profiles_public")
         .select("handle")
         .ilike("handle", clean)
         .maybeSingle();
@@ -72,7 +72,7 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
       const suffixes = ["_ke", "01", "_trader", "invest", "_nse", "254"];
       const candidates = Array.from(new Set(bases.flatMap(b => suffixes.map(s => `${b}${s}`.slice(0, 30)))));
       const { data: taken } = await supabase
-        .from("profiles")
+        .from("profiles_public")
         .select("handle")
         .in("handle", candidates);
       const takenSet = new Set((taken || []).map(t => (t.handle || "").toLowerCase()));

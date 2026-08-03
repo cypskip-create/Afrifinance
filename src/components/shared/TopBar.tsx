@@ -59,24 +59,24 @@ export function TopBar({
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onBlur={() => { if (!searchQuery) setSearchOpen(false); }}
                   />
-                  <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={() => { setSearchQuery(""); setSearchOpen(false); }}>
+                  <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-full" aria-label="Close search" onClick={() => { setSearchQuery(""); setSearchOpen(false); }}>
                     <X className="h-4 w-4" />
                   </Button>
                 </form>
               ) : (
-                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full" onClick={() => setSearchOpen(true)}>
+                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full" aria-label="Search stocks" onClick={() => setSearchOpen(true)}>
                   <Search className="h-[18px] w-[18px]" />
                 </Button>
               )}
             </>
           )}
           {showWidgetSettings && onWidgetSettingsClick && (
-            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full" onClick={onWidgetSettingsClick}>
+            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full" aria-label="Customize widgets" onClick={onWidgetSettingsClick}>
               <Settings2 className="h-[18px] w-[18px]" />
             </Button>
           )}
           {showNotifications && (
-            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full relative" onClick={() => navigate('/notifications')}>
+            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full relative" aria-label="Open notifications" onClick={() => navigate('/notifications')}>
               <Bell className="h-[18px] w-[18px]" />
               {unreadCount > 0 && (
                 <span className="absolute top-1 right-1.5 min-w-[16px] h-[16px] px-1 bg-primary text-primary-foreground text-[9px] font-bold rounded-full flex items-center justify-center">

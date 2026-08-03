@@ -188,7 +188,7 @@
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    font-size: calc(13px * var(--app-font-scale, 1));
+    font-size: calc(14px * var(--app-font-scale, 1));
     line-height: 1.5;
     overscroll-behavior-y: contain;
     -webkit-overflow-scrolling: touch;

@@ -31,7 +31,7 @@ export function ColorTooltip({ active, payload, label, format, colorFor, footer 
   if (!active || !payload || payload.length === 0) return null;
 
   return (
-    <div className="rounded-lg border border-border bg-card px-2.5 py-2 shadow-lg min-w-[120px]">
+    <div className="rounded-lg border border-border bg-popover/95 text-popover-foreground backdrop-blur-md px-2.5 py-2 shadow-xl ring-1 ring-border/60 min-w-[120px]">
       {label !== undefined && label !== null && (
         <p className="text-[10px] font-semibold text-foreground mb-1.5">{String(label)}</p>
       )}

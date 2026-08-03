@@ -1,8 +1,7 @@
 import { CheckCircle2, XCircle } from "lucide-react";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from "recharts";
 import { Fundamentals } from "@/data/stockFundamentals";
-import { fx, axisStyle, gridStyle } from "@/lib/chartPalette";
-import { ColorTooltip, ChartKey } from "@/components/charts/ChartTooltip";
+import { fx } from "@/lib/chartPalette";
+import { BarChartBlock } from "@/components/charts/BarChartBlock";
 
 const Eyebrow = ({ children }: { children: React.ReactNode }) => (
   <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground mb-2">{children}</p>
@@ -29,29 +28,16 @@ export function DividendsTab({ divYield, annualDividend, fundamentals }: {
         </div>
       </div>
 
-      <div>
-        <Eyebrow>Dividend Per Share — 10 Year History</Eyebrow>
-        <div className="h-48 border-t border-border/60 pt-2">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} margin={{ top: 10, right: 8, bottom: 0, left: -18 }} barCategoryGap="32%">
-              <CartesianGrid {...gridStyle} />
-              <XAxis dataKey="year" {...axisStyle} />
-              <YAxis {...axisStyle} tickFormatter={(v) => `${v}`} />
-              <Tooltip
-                cursor={{ fill: "hsl(var(--muted))", fillOpacity: 0.35 }}
-                content={<ColorTooltip format={(v) => `KES ${v}`} colorFor={(e) => e.payload?.color} />}
-              />
-              <Bar dataKey="dps" name="DPS" radius={[4, 4, 0, 0]}>
-                {data.map((d, i) => <Cell key={i} fill={d.color} />)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-        <ChartKey items={[
-          { label: "Dividend grew vs prior year", color: fx.positive },
-          { label: "Dividend cut vs prior year", color: fx.negative },
-        ]} />
-      </div>
+      <BarChartBlock
+        title="Dividend Per Share"
+        annual={data}
+        allowQuarterly
+        xKey="year"
+        series={[{ key: "dps", label: "Dividend per share", color: fx.positive }]}
+        colorFor={(row) => row.color}
+        valueFmt={(v) => `KES ${v}`}
+      />
+
 
 
       <div>

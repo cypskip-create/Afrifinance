@@ -1,8 +1,10 @@
 import { CheckCircle2, XCircle, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight } from "lucide-react";
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, BarChart, Bar, Cell, PieChart, Pie } from "recharts";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Cell, PieChart, Pie } from "recharts";
 import { Fundamentals } from "@/data/stockFundamentals";
 import { fx, axisStyle, gridStyle } from "@/lib/chartPalette";
 import { ColorTooltip, ChartKey } from "@/components/charts/ChartTooltip";
+import { BarChartBlock } from "@/components/charts/BarChartBlock";
+
 
 const Eyebrow = ({ children }: { children: React.ReactNode }) => (
   <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground mb-2">{children}</p>
@@ -97,7 +99,7 @@ export function ScoresTab({ fundamentals }: { fundamentals: Fundamentals }) {
             ROE {returnTrend >= 0 ? "+" : ""}{returnTrend.toFixed(1)}pp YoY
           </span>
         </div>
-        <div className="h-52 border-t border-border/60 pt-2">
+        <div className="h-64 border-t border-border/60 pt-2">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={fundamentals.returnsHistory} margin={{ top: 10, right: 8, bottom: 0, left: -14 }}>
               <CartesianGrid {...gridStyle} />
@@ -118,33 +120,19 @@ export function ScoresTab({ fundamentals }: { fundamentals: Fundamentals }) {
       </div>
 
       {/* Earnings surprise history */}
-      <div>
-        <Eyebrow>Earnings Surprise History</Eyebrow>
-        <div className="h-44 border-t border-border/60 pt-2">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={surprises} margin={{ top: 10, right: 8, bottom: 0, left: -14 }} barCategoryGap="38%" barGap={4}>
-              <CartesianGrid {...gridStyle} />
-              <XAxis dataKey="quarter" {...axisStyle} />
-              <YAxis {...axisStyle} tickFormatter={(v) => `${v}`} />
-              <Tooltip
-                cursor={{ fill: "hsl(var(--muted))", fillOpacity: 0.35 }}
-                content={<ColorTooltip format={(v) => `KES ${v}`} colorFor={(e) => (e.dataKey === "estimate" ? fx.forecast : e.payload?.actualColor)} />}
-              />
-              <Bar dataKey="estimate" name="Estimate" fill={fx.forecast} radius={[3, 3, 0, 0]} />
-              <Bar dataKey="actual" name="Actual" radius={[3, 3, 0, 0]}>
-                {surprises.map((e, i) => (
-                  <Cell key={i} fill={e.actualColor} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-        <ChartKey items={[
-          { label: "Analyst estimate", color: fx.forecast },
-          { label: "Actual — beat", color: fx.positive },
-          { label: "Actual — miss", color: fx.negative },
-        ]} />
-      </div>
+      <BarChartBlock
+        title="Earnings Surprise History"
+        annual={surprises}
+        annualCount={5}
+        xKey="quarter"
+        series={[
+          { key: "estimate", label: "Analyst estimate", color: fx.forecast },
+          { key: "actual", label: "Actual EPS", color: fx.positive },
+        ]}
+        colorFor={(row, s) => (s.key === "estimate" ? fx.forecast : row.actualColor)}
+        valueFmt={(v) => `KES ${v}`}
+      />
+
 
 
       {/* Insider transactions */}
