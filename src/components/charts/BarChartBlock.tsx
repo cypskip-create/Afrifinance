@@ -50,11 +50,13 @@ interface Props {
   right?: React.ReactNode;
   note?: string;
   stackId?: string;
+  /** Override how many annual rows to show (default 3). */
+  annualCount?: number;
 }
 
 export function BarChartBlock({
   title, annual, allowQuarterly, quarterly, xKey, series,
-  yFmt, valueFmt, colorFor, height = 260, right, note, stackId,
+  yFmt, valueFmt, colorFor, height = 260, right, note, stackId, annualCount,
 }: Props) {
   const [period, setPeriod] = useState<ChartPeriod>("annual");
   const [active, setActive] = useState<number | null>(null);
@@ -66,8 +68,8 @@ export function BarChartBlock({
       const q = quarterly ?? toQuarterly(annual, numericKeys, xKey, QUARTERLY_PERIODS);
       return q.slice(-QUARTERLY_PERIODS);
     }
-    return lastAnnual(annual, ANNUAL_PERIODS);
-  }, [period, annual, quarterly, numericKeys, xKey]);
+    return lastAnnual(annual, annualCount ?? ANNUAL_PERIODS);
+  }, [period, annual, quarterly, numericKeys, xKey, annualCount]);
 
   const idx = active !== null && active < data.length ? active : data.length - 1;
   const row = data[idx];
