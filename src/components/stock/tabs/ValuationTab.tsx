@@ -1,8 +1,8 @@
 import { Badge } from "@/components/ui/badge";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, LabelList, CartesianGrid } from "recharts";
 import { Fundamentals } from "@/data/stockFundamentals";
-import { fx, axisStyle, gridStyle } from "@/lib/chartPalette";
-import { ColorTooltip, ChartKey } from "@/components/charts/ChartTooltip";
+import { fx } from "@/lib/chartPalette";
+import { BarChartBlock } from "@/components/charts/BarChartBlock";
+
 
 
 interface Props { price: number; pe: string; fundamentals: Fundamentals }
@@ -97,32 +97,18 @@ export function ValuationTab({ price, pe, fundamentals }: Props) {
       </div>
 
       {/* Multiples vs sector */}
-      <div>
-        <Eyebrow>Valuation Multiples vs Sector</Eyebrow>
-        <div className="h-52 border-t border-border/60 pt-3">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={comparison} margin={{ top: 12, right: 8, bottom: 0, left: -18 }} barCategoryGap="40%" barGap={6}>
-              <CartesianGrid {...gridStyle} />
-              <XAxis dataKey="metric" {...axisStyle} />
-              <YAxis {...axisStyle} />
-              <Tooltip
-                cursor={{ fill: "hsl(var(--muted))", fillOpacity: 0.35 }}
-                content={<ColorTooltip colorFor={(e) => (e.dataKey === "company" ? fx.revenue : fx.foreign)} />}
-              />
-              <Bar dataKey="company" radius={[6, 6, 0, 0]} name="Company" fill={fx.revenue}>
-                <LabelList dataKey="company" position="top" style={{ fontSize: 9, fill: fx.revenue }} />
-              </Bar>
-              <Bar dataKey="sector" radius={[6, 6, 0, 0]} name="Sector" fill={fx.foreign}>
-                <LabelList dataKey="sector" position="top" style={{ fontSize: 9, fill: fx.foreign }} />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-        <ChartKey items={[
-          { label: "Company multiple", color: fx.revenue },
-          { label: "Sector average", color: fx.foreign },
-        ]} />
-      </div>
+      <BarChartBlock
+        title="Valuation Multiples vs Sector"
+        annual={comparison}
+        xKey="metric"
+        series={[
+          { key: "company", label: "Company multiple", color: fx.revenue },
+          { key: "sector", label: "Sector average", color: fx.foreign },
+        ]}
+        valueFmt={(v) => `${Number(v).toFixed(2)}x`}
+        yFmt={(v) => `${v}x`}
+      />
+
 
     </div>
   );
