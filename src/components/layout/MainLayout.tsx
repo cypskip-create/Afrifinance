@@ -4,6 +4,8 @@ import { BottomNavigation } from "./BottomNavigation";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { LogoRefresh } from "@/components/shared/LogoRefresh";
 import { SplashScreen } from "@/components/shared/SplashScreen";
+import { RouteSeo } from "@/components/shared/RouteSeo";
+
 
 // Session-scoped: splash only shows once per app open, not on every re-mount.
 let splashShown = false;
@@ -52,8 +54,10 @@ export function MainLayout() {
 
   return (
     <ProtectedRoute>
+      <RouteSeo />
       {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
       <div className="min-h-screen bg-background">
+
         {/* Branded pull indicator */}
         <div
           className="flex items-center justify-center overflow-hidden transition-all duration-200 ease-out"
