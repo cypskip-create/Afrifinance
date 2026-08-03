@@ -101,8 +101,10 @@ export function ProfileSettingsDialog({ open, onOpenChange, currentHandle, portf
   const togglePref = async (key: string, value: any) => {
     const next = { ...prefs, [key]: value };
     setPrefs(next);
+    if (key === "font_size") applyFontSizeName(value);
     await persistPrefs(next);
   };
+
 
   const handleSave = async () => {
     if (!user) return;
