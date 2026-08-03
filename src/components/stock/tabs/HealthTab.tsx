@@ -45,7 +45,7 @@ export function HealthTab({ fundamentals }: { fundamentals: Fundamentals }) {
 
       <div>
         <Eyebrow>Operating Cash Flow</Eyebrow>
-        <div className="h-56 border-t border-border/60 pt-2">
+        <div className="h-64 border-t border-border/60 pt-2">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={cf} margin={{ top: 5, right: 8, bottom: 0, left: -14 }}>
               <defs>
@@ -81,7 +81,7 @@ export function HealthTab({ fundamentals }: { fundamentals: Fundamentals }) {
 
       <div>
         <Eyebrow>Share Count (Dilution History, B)</Eyebrow>
-        <div className="h-36 border-t border-border/60 pt-2">
+        <div className="h-64 border-t border-border/60 pt-2">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={fundamentals.shareCount} margin={{ top: 10, right: 8, bottom: 0, left: -14 }}>
               <CartesianGrid {...gridStyle} />

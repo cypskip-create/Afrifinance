@@ -99,7 +99,7 @@ export function ScoresTab({ fundamentals }: { fundamentals: Fundamentals }) {
             ROE {returnTrend >= 0 ? "+" : ""}{returnTrend.toFixed(1)}pp YoY
           </span>
         </div>
-        <div className="h-52 border-t border-border/60 pt-2">
+        <div className="h-64 border-t border-border/60 pt-2">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={fundamentals.returnsHistory} margin={{ top: 10, right: 8, bottom: 0, left: -14 }}>
               <CartesianGrid {...gridStyle} />

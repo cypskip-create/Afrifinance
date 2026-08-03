@@ -23,7 +23,7 @@ export function RiskTab({ fundamentals }: { fundamentals: Fundamentals }) {
     <div className="space-y-8">
       <div>
         <Eyebrow>Risk Snowflake — higher is safer</Eyebrow>
-        <div className="h-56 border-t border-border/60 pt-2">
+        <div className="h-64 border-t border-border/60 pt-2">
           <ResponsiveContainer width="100%" height="100%">
             <RadarChart data={radar}>
               <PolarGrid stroke="hsl(var(--border))" />

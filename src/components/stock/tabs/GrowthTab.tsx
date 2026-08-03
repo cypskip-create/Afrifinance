@@ -60,7 +60,7 @@ export function GrowthTab({ fundamentals }: Props) {
       {/* Revenue forecast range */}
       <div>
         <Eyebrow>Revenue Forecast Range (KES B)</Eyebrow>
-        <div className="h-52 border-t border-border/60 pt-2">
+        <div className="h-64 border-t border-border/60 pt-2">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={fundamentals.revenueForecast} margin={{ top: 10, right: 8, bottom: 0, left: -12 }}>
               <defs>
@@ -99,7 +99,7 @@ export function GrowthTab({ fundamentals }: Props) {
       {/* Margins over time (multi-line) */}
       <div>
         <Eyebrow>Margins Trend</Eyebrow>
-        <div className="h-48 border-t border-border/60 pt-2">
+        <div className="h-64 border-t border-border/60 pt-2">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={margins} margin={{ top: 10, right: 8, bottom: 0, left: -14 }}>
               <CartesianGrid {...gridStyle} />
@@ -122,7 +122,7 @@ export function GrowthTab({ fundamentals }: Props) {
       {/* EPS estimate trend (analyst drift) */}
       <div>
         <Eyebrow>Analyst EPS Estimate — Last 12 Months</Eyebrow>
-        <div className="h-40 border-t border-border/60 pt-2">
+        <div className="h-64 border-t border-border/60 pt-2">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={fundamentals.epsEstimateTrend} margin={{ top: 10, right: 8, bottom: 0, left: -14 }}>
               <CartesianGrid {...gridStyle} />
