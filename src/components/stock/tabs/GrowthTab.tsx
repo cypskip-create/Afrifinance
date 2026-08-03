@@ -1,12 +1,14 @@
 import { useState, useMemo } from "react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
-  ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, Cell,
+  ResponsiveContainer, XAxis, YAxis, Tooltip, Line,
   LineChart, CartesianGrid, AreaChart, Area,
 } from "recharts";
 import { Fundamentals } from "@/data/stockFundamentals";
 import { fx, axisStyle, gridStyle } from "@/lib/chartPalette";
 import { ColorTooltip, ChartKey } from "@/components/charts/ChartTooltip";
+import { BarChartBlock } from "@/components/charts/BarChartBlock";
+
 
 
 interface Props { fundamentals: Fundamentals }
@@ -36,39 +38,24 @@ export function GrowthTab({ fundamentals }: Props) {
 
   return (
     <div className="space-y-8">
-      {/* Growth trend with forecast */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <Eyebrow>Growth History & Forecast</Eyebrow>
+      {/* Growth trend */}
+      <BarChartBlock
+        title="Growth History"
+        annual={data.filter(d => !d.forecast)}
+        allowQuarterly
+        xKey="year"
+        series={[{ key, label: metric === "eps" ? "EPS" : key, color }]}
+        yFmt={yFmt}
+        valueFmt={(v) => tipFmt(v)}
+        right={
           <ToggleGroup type="single" size="sm" value={metric} onValueChange={(v) => v && setMetric(v as Metric)}>
             <ToggleGroupItem value="revenue" className="h-6 text-[10px] px-2">Revenue</ToggleGroupItem>
             <ToggleGroupItem value="earnings" className="h-6 text-[10px] px-2">Earnings</ToggleGroupItem>
             <ToggleGroupItem value="eps" className="h-6 text-[10px] px-2">EPS</ToggleGroupItem>
           </ToggleGroup>
-        </div>
-        <div className="h-56 border-t border-border/60 pt-2">
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data} margin={{ top: 10, right: 8, bottom: 0, left: -12 }} barCategoryGap="28%">
-              <CartesianGrid {...gridStyle} />
-              <XAxis dataKey="year" {...axisStyle} />
-              <YAxis {...axisStyle} tickFormatter={yFmt} />
-              <Tooltip
-                cursor={{ fill: "hsl(var(--muted))", fillOpacity: 0.35 }}
-                content={<ColorTooltip format={tipFmt} colorFor={(e) => (e.payload?.forecast ? fx.forecast : color)} />}
-              />
-              <Bar dataKey={key} radius={[4, 4, 0, 0]} name={key}>
-                {data.map((d, i) => (
-                  <Cell key={i} fill={d.forecast ? fx.forecast : color} fillOpacity={d.forecast ? 0.9 : 1}
-                    strokeDasharray={d.forecast ? "3 3" : undefined}
-                    stroke={d.forecast ? color : undefined} />
-                ))}
-              </Bar>
-              <Line type="monotone" dataKey={key} stroke={color} strokeWidth={2} dot={false} name="Trend" />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </div>
-        <ChartKey items={[{ label: `${key} (reported)`, color }, { label: "Analyst forecast", color: fx.forecast }]} />
-      </div>
+        }
+      />
+
 
       {/* Revenue forecast range */}
       <div>
