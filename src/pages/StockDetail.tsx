@@ -201,8 +201,18 @@ export default function StockDetail() {
       {/* HERO — company · price · delta. No card. */}
       <div className="px-4 pt-4 pb-2 animate-fade-in">
         <h1 className="text-[15px] font-medium text-muted-foreground tracking-tight leading-tight">{stock.name}</h1>
-        <div className="mt-1 flex items-baseline gap-2">
+        <div className="mt-1 flex items-end justify-between gap-3">
           <span className="text-4xl font-bold tabular tracking-tight">KES {displayPrice.toFixed(2)}</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label="Compare stock"
+            onClick={() => navigate(`/compare?stock=${symbol}`)}
+            className="h-8 rounded-full px-3 text-[11px] font-semibold text-muted-foreground gap-1.5"
+          >
+            <GitCompare className="h-3.5 w-3.5" />
+            Compare
+          </Button>
         </div>
         <div className={`text-sm font-semibold flex items-center gap-1 mt-1 tabular ${displayIsUp ? 'text-bull' : 'text-bear'}`}>
           {displayIsUp ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
@@ -214,17 +224,31 @@ export default function StockDetail() {
       {/* CHART — embedded, no card wrapper */}
       <div className="relative">
         <div className="h-[280px] px-1">
-          <StockPriceChart symbol={symbol} timeframe={selectedTimeframe} onHoverPrice={handleChartHover} />
+          <StockPriceChart symbol={symbol} timeframe={selectedTimeframe} chartType={chartType} onHoverPrice={handleChartHover} />
         </div>
         {/* Chart tool row */}
         <div className="absolute top-2 right-3 z-10 flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-muted-foreground" onClick={() => toast({ title: "Candlestick view coming next" })}>
-            <CandlestickChart className="h-3.5 w-3.5" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-muted-foreground" onClick={() => navigate(`/compare?stock=${symbol}`)}>
-            <GitCompare className="h-3.5 w-3.5" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-muted-foreground" onClick={() => toast({ title: "Fullscreen coming next" })}>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" aria-label="Change chart type" className="h-7 w-7 rounded-full text-muted-foreground">
+                {chartType === "candle" ? <CandlestickChart className="h-3.5 w-3.5" /> : chartType === "line" ? <LineChartIcon className="h-3.5 w-3.5" /> : <AreaChartIcon className="h-3.5 w-3.5" />}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              {([
+                { id: "line", label: "Line", icon: LineChartIcon },
+                { id: "area", label: "Area", icon: AreaChartIcon },
+                { id: "candle", label: "Candlestick", icon: CandlestickChart },
+              ] as const).map(o => (
+                <DropdownMenuItem key={o.id} onClick={() => setChartType(o.id)} className="text-xs gap-2">
+                  <o.icon className="h-3.5 w-3.5" />
+                  {o.label}
+                  {chartType === o.id && <span className="ml-auto text-primary">✓</span>}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button variant="ghost" size="icon" aria-label="Fullscreen chart" className="h-7 w-7 rounded-full text-muted-foreground" onClick={() => setFullscreen(true)}>
             <Maximize2 className="h-3.5 w-3.5" />
           </Button>
         </div>
@@ -243,6 +267,65 @@ export default function StockDetail() {
           </button>
         ))}
       </div>
+
+      {/* FULLSCREEN CHART — Moomoo-style landscape overlay */}
+      {fullscreen && (
+        <div className="fixed inset-0 z-[100] bg-background flex flex-col animate-fade-in">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border/60">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-sm">{symbol}</span>
+                <span className="text-[10px] text-muted-foreground">{stock.exchange}</span>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-xl font-bold tabular">KES {displayPrice.toFixed(2)}</span>
+                <span className={`text-xs font-semibold tabular ${displayIsUp ? 'text-bull' : 'text-bear'}`}>
+                  {priceChange >= 0 ? '+' : ''}{priceChangePercent}%
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" aria-label="Change chart type" className="h-9 w-9 rounded-full text-muted-foreground">
+                    {chartType === "candle" ? <CandlestickChart className="h-4 w-4" /> : chartType === "line" ? <LineChartIcon className="h-4 w-4" /> : <AreaChartIcon className="h-4 w-4" />}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-40">
+                  {([
+                    { id: "line", label: "Line", icon: LineChartIcon },
+                    { id: "area", label: "Area", icon: AreaChartIcon },
+                    { id: "candle", label: "Candlestick", icon: CandlestickChart },
+                  ] as const).map(o => (
+                    <DropdownMenuItem key={o.id} onClick={() => setChartType(o.id)} className="text-xs gap-2">
+                      <o.icon className="h-3.5 w-3.5" />{o.label}
+                      {chartType === o.id && <span className="ml-auto text-primary">✓</span>}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button variant="ghost" size="icon" aria-label="Exit fullscreen" className="h-9 w-9 rounded-full text-muted-foreground" onClick={() => setFullscreen(false)}>
+                <Minimize2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          <div className="flex-1 min-h-0 px-1 py-2">
+            <StockPriceChart symbol={symbol} timeframe={selectedTimeframe} chartType={chartType} onHoverPrice={handleChartHover} />
+          </div>
+          <div className="flex items-center justify-between px-4 py-3 border-t border-border/60" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}>
+            {timeframes.map(tf => (
+              <button
+                key={tf}
+                data-small-target
+                onClick={() => setSelectedTimeframe(tf)}
+                className={`px-2.5 py-1.5 text-[12px] font-semibold rounded-md tabular transition-colors ${tf === selectedTimeframe ? 'bg-foreground text-background' : 'text-muted-foreground'}`}
+              >
+                {tf}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* STICKY SUB-NAV */}
       <div className="sticky top-[53px] z-30 bg-background/92 backdrop-blur-xl border-b border-border/60">
