@@ -175,40 +175,38 @@ export default function Notifications() {
             <p className="text-xs text-muted-foreground">No notifications here</p>
           </div>
         ) : (
-          <div className="space-y-5">
+          <div className="space-y-6">
             {grouped.map(([feature, items]) => {
               const meta = featureMeta[feature] || featureMeta.system;
               const FeatureIcon = meta.icon;
               return (
                 <div key={feature}>
-                  <div className="flex items-center gap-2 mb-2 px-1">
+                  <div className="flex items-center gap-2 pb-2 border-b border-border/60">
                     <FeatureIcon className={`h-3.5 w-3.5 ${meta.color}`} />
-                    <h3 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{meta.label}</h3>
+                    <h2 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{meta.label}</h2>
                     <span className="text-[10px] text-muted-foreground">· {items.length}</span>
                   </div>
-                  <div className="space-y-2">
+                  <div>
                     {items.map(n => {
                       const Icon = typeIcon[n.type] || Bell;
                       return (
                         <div
                           key={n.id}
                           onClick={() => handleClick(n)}
-                          className={`flex items-start gap-3 p-3 rounded-2xl transition-all cursor-pointer active:scale-[0.99] ${
-                            !n.read ? 'bg-primary/5 border border-primary/15' : 'bg-card border border-border/40'
+                          className={`flex items-start gap-3 py-3 -mx-4 px-4 border-b border-border/40 transition-colors cursor-pointer hover:bg-muted/25 ${
+                            !n.read ? 'bg-primary/[0.04]' : ''
                           }`}
                         >
-                          <div className={`p-2 rounded-xl bg-muted/50 ${meta.color} shrink-0`}>
-                            <Icon className="h-4 w-4" />
-                          </div>
+                          <Icon className={`h-4 w-4 mt-0.5 shrink-0 ${meta.color}`} />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2">
                               <div className="flex items-center gap-1.5 min-w-0">
-                                <h4 className="font-semibold text-[13px] truncate">{n.title}</h4>
+                                <h3 className="font-semibold text-[13px] truncate">{n.title}</h3>
                                 {!n.read && <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />}
                               </div>
                               <div className="flex items-center gap-1 shrink-0">
-                                <span className="text-[10px] text-muted-foreground">{formatTime(n.created_at)}</span>
-                                <Button variant="ghost" size="icon" className="h-6 w-6 opacity-60 hover:opacity-100" onClick={e => { e.stopPropagation(); remove(n.id); }}>
+                                <span className="text-[10px] text-muted-foreground tabular">{formatTime(n.created_at)}</span>
+                                <Button variant="ghost" size="icon" aria-label="Delete notification" className="h-6 w-6 opacity-60 hover:opacity-100" onClick={e => { e.stopPropagation(); remove(n.id); }}>
                                   <Trash2 className="h-3 w-3" />
                                 </Button>
                               </div>
