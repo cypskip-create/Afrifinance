@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -183,26 +183,23 @@ export default function StockScreenerPage() {
           </div>
         </div>
 
-        {/* Filters Panel */}
-        <Card className="card-gradient">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Filter className="h-4 w-4 text-primary" />
-                Filters
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-xs">
-                  {filteredStocks.length} results
-                </Badge>
-                <Button variant="ghost" size="sm" onClick={resetFilters} className="text-xs h-7 px-2">
-                  <RotateCcw className="h-3 w-3 mr-1" />
-                  Reset
-                </Button>
-              </div>
+        {/* Filters — flat canvas */}
+        <div className="pt-1">
+          <div className="flex items-center justify-between border-b border-border/60 pb-2">
+            <p className="section-eyebrow flex items-center gap-2">
+              <Filter className="h-3.5 w-3.5 text-primary" />
+              Filters
+            </p>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-muted-foreground tabular">{filteredStocks.length} results</span>
+              <Button variant="ghost" size="sm" onClick={resetFilters} className="text-[11px] h-7 px-2" aria-label="Reset filters">
+                <RotateCcw className="h-3 w-3 mr-1" />
+                Reset
+              </Button>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
+          </div>
+
+          <div className="space-y-4 pt-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-muted-foreground mb-1.5 block">Sector</label>
@@ -287,7 +284,7 @@ export default function StockScreenerPage() {
               </>
             )}
 
-            <div className="flex items-center justify-between pt-2 border-t border-border">
+            <div className="flex items-center justify-between pt-2 border-t border-border/60">
               <Button
                 variant="outline"
                 size="sm"
@@ -298,60 +295,54 @@ export default function StockScreenerPage() {
                 {filters.sortOrder === 'desc' ? 'Descending' : 'Ascending'}
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        {/* Results */}
-        <div className="space-y-2">
+        {/* Results — hairline rows, no cards */}
+        <div className="-mx-4 border-t border-border/60">
           {filteredStocks.map((stock) => (
-            <Card
+            <button
               key={stock.symbol}
               onClick={() => navigate(`/stock/${stock.symbol}`)}
-              className="card-gradient cursor-pointer hover:scale-[1.01] transition-all tap-scale"
+              className="w-full text-left px-4 py-3 border-b border-border/40 hover:bg-muted/25 transition-colors"
             >
-              <CardContent className="p-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-bold text-sm">{stock.symbol}</span>
-                      <Badge variant="outline" className="text-[9px] py-0 px-1.5">
-                        {stock.sector}
-                      </Badge>
-                    </div>
-                    <div className="text-xs text-muted-foreground truncate mb-2">{stock.name}</div>
-                    <div className="flex gap-3 flex-wrap">
-                      <span className="text-[10px] text-muted-foreground">Vol: {stock.volume}</span>
-                      <span className="text-[10px] text-muted-foreground">P/E: {stock.pe}</span>
-                      <span className="text-[10px] text-muted-foreground">Div: {stock.dividendYield}%</span>
-                      <span className="text-[10px] text-muted-foreground">RSI: {stock.rsi}</span>
-                    </div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="font-semibold text-sm">{stock.symbol}</span>
+                    <span className="text-[9px] text-muted-foreground uppercase tracking-wider">{stock.sector}</span>
                   </div>
-                  
-                  <div className="flex items-center gap-3">
-                    <SparklineChart isPositive={stock.change >= 0} width={50} height={22} />
-                    <div className="text-right min-w-[75px]">
-                      <div className="font-bold text-sm">KES {stock.price}</div>
-                      <div className={`text-xs flex items-center justify-end gap-0.5 ${stock.change >= 0 ? 'text-bull' : 'text-bear'}`}>
-                        {stock.change >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                        {stock.change >= 0 ? '+' : ''}{stock.change}%
-                      </div>
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  <div className="text-xs text-muted-foreground truncate mb-1.5">{stock.name}</div>
+                  <div className="flex gap-3 flex-wrap text-[10px] text-muted-foreground tabular">
+                    <span>Vol {stock.volume}</span>
+                    <span>P/E {stock.pe}</span>
+                    <span>Div {stock.dividendYield}%</span>
+                    <span>RSI {stock.rsi}</span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+
+                <div className="flex items-center gap-3 shrink-0">
+                  <SparklineChart isPositive={stock.change >= 0} width={50} height={22} />
+                  <div className="text-right min-w-[75px]">
+                    <div className="font-semibold text-sm tabular">KES {stock.price}</div>
+                    <div className={`text-xs flex items-center justify-end gap-0.5 tabular ${stock.change >= 0 ? 'text-bull' : 'text-bear'}`}>
+                      {stock.change >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                      {stock.change >= 0 ? '+' : ''}{stock.change}%
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </div>
+            </button>
           ))}
         </div>
 
         {filteredStocks.length === 0 && (
-          <Card className="card-gradient">
-            <CardContent className="p-8 text-center">
-              <Search className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
-              <p className="text-sm font-medium mb-1">No stocks found</p>
-              <p className="text-xs text-muted-foreground">Try adjusting your filters</p>
-            </CardContent>
-          </Card>
+          <div className="py-14 text-center">
+            <Search className="h-10 w-10 mx-auto mb-3 text-muted-foreground/40" />
+            <p className="text-sm font-medium mb-1">No stocks found</p>
+            <p className="text-xs text-muted-foreground">Try adjusting your filters</p>
+          </div>
         )}
       </div>
     </div>

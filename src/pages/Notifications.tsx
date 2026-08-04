@@ -4,7 +4,7 @@ import {
   CheckCircle, Trash2, Settings, ChevronRight, ArrowLeft, Newspaper,
   DollarSign, Users, Zap, Eye, Target
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -121,11 +121,13 @@ export default function Notifications() {
         </div>
       </header>
 
-      <div className="p-4 space-y-3">
+      <div className="px-4 pt-4 pb-4 space-y-3">
         {showSettings && (
-          <Card className="card-gradient animate-fade-in">
-            <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Settings className="h-4 w-4 text-primary" />Notification Settings</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
+          <div className="animate-fade-in">
+            <p className="section-eyebrow flex items-center gap-2 pb-2 border-b border-border/60">
+              <Settings className="h-3.5 w-3.5 text-primary" />Notification settings
+            </p>
+            <div>
               {[
                 { key: "tradershub", label: "TradersHub", desc: "Likes, comments, replies, reposts" },
                 { key: "social", label: "Social", desc: "Followers & mentions" },
@@ -134,7 +136,7 @@ export default function Notifications() {
                 { key: "portfolio", label: "Portfolio", desc: "Trades & dividends" },
                 { key: "push", label: "Push Notifications", desc: "Real-time mobile alerts" },
               ].map(s => (
-                <div key={s.key} className="flex items-center justify-between py-1">
+                <div key={s.key} className="flex items-center justify-between py-2.5 border-b border-border/40">
                   <div>
                     <div className="text-sm font-medium">{s.label}</div>
                     <div className="text-[11px] text-muted-foreground">{s.desc}</div>
@@ -142,8 +144,8 @@ export default function Notifications() {
                   <Switch checked={(settings as any)[s.key]} onCheckedChange={c => setSettings(p => ({ ...p, [s.key]: c }))} />
                 </div>
               ))}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {notifications.length > 0 && (
@@ -167,50 +169,44 @@ export default function Notifications() {
             <div className="animate-spin rounded-full h-7 w-7 border-2 border-primary/30 border-t-primary" />
           </div>
         ) : filtered.length === 0 ? (
-          <Card className="card-gradient">
-            <CardContent className="p-10 text-center">
-              <div className="w-14 h-14 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
-                <Bell className="h-7 w-7 text-muted-foreground/50" />
-              </div>
-              <h3 className="font-semibold text-sm mb-1">All caught up!</h3>
-              <p className="text-xs text-muted-foreground">No notifications here</p>
-            </CardContent>
-          </Card>
+          <div className="py-16 text-center">
+            <Bell className="h-10 w-10 mx-auto mb-3 text-muted-foreground/40" />
+            <h3 className="font-semibold text-sm mb-1">All caught up</h3>
+            <p className="text-xs text-muted-foreground">No notifications here</p>
+          </div>
         ) : (
-          <div className="space-y-5">
+          <div className="space-y-6">
             {grouped.map(([feature, items]) => {
               const meta = featureMeta[feature] || featureMeta.system;
               const FeatureIcon = meta.icon;
               return (
                 <div key={feature}>
-                  <div className="flex items-center gap-2 mb-2 px-1">
+                  <div className="flex items-center gap-2 pb-2 border-b border-border/60">
                     <FeatureIcon className={`h-3.5 w-3.5 ${meta.color}`} />
-                    <h3 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{meta.label}</h3>
+                    <h2 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{meta.label}</h2>
                     <span className="text-[10px] text-muted-foreground">· {items.length}</span>
                   </div>
-                  <div className="space-y-2">
+                  <div>
                     {items.map(n => {
                       const Icon = typeIcon[n.type] || Bell;
                       return (
                         <div
                           key={n.id}
                           onClick={() => handleClick(n)}
-                          className={`flex items-start gap-3 p-3 rounded-2xl transition-all cursor-pointer active:scale-[0.99] ${
-                            !n.read ? 'bg-primary/5 border border-primary/15' : 'bg-card border border-border/40'
+                          className={`flex items-start gap-3 py-3 -mx-4 px-4 border-b border-border/40 transition-colors cursor-pointer hover:bg-muted/25 ${
+                            !n.read ? 'bg-primary/[0.04]' : ''
                           }`}
                         >
-                          <div className={`p-2 rounded-xl bg-muted/50 ${meta.color} shrink-0`}>
-                            <Icon className="h-4 w-4" />
-                          </div>
+                          <Icon className={`h-4 w-4 mt-0.5 shrink-0 ${meta.color}`} />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2">
                               <div className="flex items-center gap-1.5 min-w-0">
-                                <h4 className="font-semibold text-[13px] truncate">{n.title}</h4>
+                                <h3 className="font-semibold text-[13px] truncate">{n.title}</h3>
                                 {!n.read && <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />}
                               </div>
                               <div className="flex items-center gap-1 shrink-0">
-                                <span className="text-[10px] text-muted-foreground">{formatTime(n.created_at)}</span>
-                                <Button variant="ghost" size="icon" className="h-6 w-6 opacity-60 hover:opacity-100" onClick={e => { e.stopPropagation(); remove(n.id); }}>
+                                <span className="text-[10px] text-muted-foreground tabular">{formatTime(n.created_at)}</span>
+                                <Button variant="ghost" size="icon" aria-label="Delete notification" className="h-6 w-6 opacity-60 hover:opacity-100" onClick={e => { e.stopPropagation(); remove(n.id); }}>
                                   <Trash2 className="h-3 w-3" />
                                 </Button>
                               </div>
