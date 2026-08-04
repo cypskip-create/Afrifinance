@@ -121,11 +121,13 @@ export default function Notifications() {
         </div>
       </header>
 
-      <div className="p-4 space-y-3">
+      <div className="px-4 pt-4 pb-4 space-y-3">
         {showSettings && (
-          <Card className="card-gradient animate-fade-in">
-            <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Settings className="h-4 w-4 text-primary" />Notification Settings</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
+          <div className="animate-fade-in">
+            <p className="section-eyebrow flex items-center gap-2 pb-2 border-b border-border/60">
+              <Settings className="h-3.5 w-3.5 text-primary" />Notification settings
+            </p>
+            <div>
               {[
                 { key: "tradershub", label: "TradersHub", desc: "Likes, comments, replies, reposts" },
                 { key: "social", label: "Social", desc: "Followers & mentions" },
@@ -134,7 +136,7 @@ export default function Notifications() {
                 { key: "portfolio", label: "Portfolio", desc: "Trades & dividends" },
                 { key: "push", label: "Push Notifications", desc: "Real-time mobile alerts" },
               ].map(s => (
-                <div key={s.key} className="flex items-center justify-between py-1">
+                <div key={s.key} className="flex items-center justify-between py-2.5 border-b border-border/40">
                   <div>
                     <div className="text-sm font-medium">{s.label}</div>
                     <div className="text-[11px] text-muted-foreground">{s.desc}</div>
@@ -142,8 +144,8 @@ export default function Notifications() {
                   <Switch checked={(settings as any)[s.key]} onCheckedChange={c => setSettings(p => ({ ...p, [s.key]: c }))} />
                 </div>
               ))}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {notifications.length > 0 && (
@@ -167,15 +169,11 @@ export default function Notifications() {
             <div className="animate-spin rounded-full h-7 w-7 border-2 border-primary/30 border-t-primary" />
           </div>
         ) : filtered.length === 0 ? (
-          <Card className="card-gradient">
-            <CardContent className="p-10 text-center">
-              <div className="w-14 h-14 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
-                <Bell className="h-7 w-7 text-muted-foreground/50" />
-              </div>
-              <h3 className="font-semibold text-sm mb-1">All caught up!</h3>
-              <p className="text-xs text-muted-foreground">No notifications here</p>
-            </CardContent>
-          </Card>
+          <div className="py-16 text-center">
+            <Bell className="h-10 w-10 mx-auto mb-3 text-muted-foreground/40" />
+            <h3 className="font-semibold text-sm mb-1">All caught up</h3>
+            <p className="text-xs text-muted-foreground">No notifications here</p>
+          </div>
         ) : (
           <div className="space-y-5">
             {grouped.map(([feature, items]) => {
