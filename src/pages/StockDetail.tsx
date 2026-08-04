@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Heart, TrendingUp, TrendingDown, Share2, Bell, GitCompare, MessageSquare, Plus, Pencil, Maximize2, CandlestickChart, ChevronRight, FileText, Users2, Briefcase, Download, Building2, Eye } from "lucide-react";
+import { ArrowLeft, Heart, TrendingUp, TrendingDown, AlarmClock, GitCompare, MessageSquare, Plus, Pencil, Maximize2, Minimize2, CandlestickChart, LineChart as LineChartIcon, AreaChart as AreaChartIcon, ChevronRight, FileText, Users2, Briefcase, Download, Building2, Eye, Bell } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { StockPriceChart } from "@/components/stock/StockPriceChart";
 import { useWatchlist } from "@/hooks/useWatchlist";
