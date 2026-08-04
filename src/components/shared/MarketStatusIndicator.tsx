@@ -55,8 +55,8 @@ export const MarketStatusIndicator = () => {
   };
 
   return (
-    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${statusColors[marketStatus.status as keyof typeof statusColors]}`}>
-      <span className={`h-2 w-2 rounded-full ${dotColors[marketStatus.status as keyof typeof dotColors]}`} />
+    <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${statusColors[marketStatus.status as keyof typeof statusColors]}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${dotColors[marketStatus.status as keyof typeof dotColors]}`} />
       <span>{marketStatus.label}</span>
       <span className="opacity-75 hidden sm:inline">• {marketStatus.sublabel}</span>
     </div>
