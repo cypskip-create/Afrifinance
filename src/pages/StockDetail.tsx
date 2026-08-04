@@ -2,7 +2,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Heart, TrendingUp, TrendingDown, AlarmClock, GitCompare, MessageSquare, Plus, Pencil, Maximize2, Minimize2, CandlestickChart, LineChart as LineChartIcon, AreaChart as AreaChartIcon, ChevronRight, FileText, Users2, Briefcase, Download, Building2, Eye, Bell } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { StockPriceChart } from "@/components/stock/StockPriceChart";
+import { StockPriceChart, type ChartType } from "@/components/stock/StockPriceChart";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useCallback, useRef, useEffect } from "react";
@@ -78,6 +79,8 @@ export default function StockDetail() {
   const navigate = useNavigate();
   const { symbol } = useParams();
   const [selectedTimeframe, setSelectedTimeframe] = useState("1D");
+  const [chartType, setChartType] = useState<ChartType>("area");
+  const [fullscreen, setFullscreen] = useState(false);
   const [showAlertsDialog, setShowAlertsDialog] = useState(false);
   const [hoverPrice, setHoverPrice] = useState<number | null>(null);
   const [hoverDate, setHoverDate] = useState<string | null>(null);
@@ -511,7 +514,7 @@ export default function StockDetail() {
       </div>
 
       {/* Fixed Add Investment CTA — compact, pinned to the very bottom edge */}
-      <div className="fixed left-6 right-6 z-30" style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 2px)" }}>
+      <div className="fixed left-6 right-6 z-30" style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 1px)" }}>
         <AddInvestmentDialog
           lockedSymbol={symbol} lockedName={stock.name} lockedSector={stock.sector}
           trigger={
