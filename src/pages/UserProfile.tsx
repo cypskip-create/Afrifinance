@@ -432,11 +432,11 @@ export default function UserProfile() {
                     <Pin className="h-3 w-3" />
                     <span className="font-medium">Pinned</span>
                   </div>
-                  <XPostCard post={castToPost(pinnedPost)} currentUserId={user?.id} onLike={handleLike} onComment={openComments} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handlePostShare} onDelete={isOwnProfile ? handleDelete : undefined} />
+                  <XPostCard post={castToPost(pinnedPost)} currentUserId={user?.id} onComment={openComments} onBookmark={handleBookmark} onShare={handlePostShare} onDelete={isOwnProfile ? handleDelete : undefined} onReact={handleReact} />
                 </div>
               )}
               {regularPosts.map(post => (
-                <XPostCard key={post.id} post={castToPost(post)} currentUserId={user?.id} onLike={handleLike} onComment={openComments} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handlePostShare} onDelete={isOwnProfile ? handleDelete : undefined} />
+                <XPostCard key={post.id} post={castToPost(post)} currentUserId={user?.id} onComment={openComments} onBookmark={handleBookmark} onShare={handlePostShare} onDelete={isOwnProfile ? handleDelete : undefined} onReact={handleReact} />
               ))}
             </div>
           )}
@@ -448,7 +448,7 @@ export default function UserProfile() {
             <div className="p-12 text-center text-muted-foreground"><MessageCircle className="h-10 w-10 mx-auto mb-3 opacity-40" /><p className="text-sm">No replies yet</p></div>
           ) : (
             <div className="divide-y divide-border">
-              {repostedPosts.map(post => <XPostCard key={post.id} post={castToPost(post)} currentUserId={user?.id} onLike={handleLike} onComment={openComments} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handlePostShare} />)}
+              {repostedPosts.map(post => <XPostCard key={post.id} post={castToPost(post)} currentUserId={user?.id} onComment={openComments} onBookmark={handleBookmark} onShare={handlePostShare} onReact={handleReact} />)}
             </div>
           )}
         </TabsContent>
@@ -483,7 +483,7 @@ export default function UserProfile() {
             <div className="p-12 text-center text-muted-foreground"><Heart className="h-10 w-10 mx-auto mb-3 opacity-40" /><p className="text-sm">No likes yet</p></div>
           ) : (
             <div className="divide-y divide-border">
-              {likedPosts.map(post => <XPostCard key={post.id} post={castToPost(post)} currentUserId={user?.id} onLike={handleLike} onComment={openComments} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handlePostShare} />)}
+              {likedPosts.map(post => <XPostCard key={post.id} post={castToPost(post)} currentUserId={user?.id} onComment={openComments} onBookmark={handleBookmark} onShare={handlePostShare} onReact={handleReact} />)}
             </div>
           )}
         </TabsContent>
@@ -499,7 +499,7 @@ export default function UserProfile() {
             <div className="p-12 text-center text-muted-foreground"><Bookmark className="h-10 w-10 mx-auto mb-3 opacity-40" /><p className="text-sm">No bookmarks yet</p><p className="text-xs mt-1">Save posts to read them later</p></div>
           ) : (
             <div className="divide-y divide-border">
-              {bookmarkedPosts.map(post => <XPostCard key={post.id} post={castToPost(post)} currentUserId={user?.id} onLike={handleLike} onComment={openComments} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handlePostShare} />)}
+              {bookmarkedPosts.map(post => <XPostCard key={post.id} post={castToPost(post)} currentUserId={user?.id} onComment={openComments} onBookmark={handleBookmark} onShare={handlePostShare} onReact={handleReact} />)}
             </div>
           )}
         </TabsContent>
