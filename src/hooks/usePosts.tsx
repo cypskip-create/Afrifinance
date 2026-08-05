@@ -8,7 +8,11 @@ export interface PostAuthor {
   full_name: string | null;
   avatar_url: string | null;
   bio: string | null;
+  handle?: string | null;
 }
+
+export type ReactionKind = 'insightful' | 'bullish' | 'cautious' | 'support' | 'disagree' | 'fire';
+export type ReactionCounts = Partial<Record<ReactionKind, number>>;
 
 export interface Post {
   id: string;
@@ -28,6 +32,8 @@ export interface Post {
   is_bookmarked: boolean;
   quoted_post_id?: string | null;
   quoted_post?: Post | null;
+  reaction_counts: ReactionCounts;
+  my_reaction: ReactionKind | null;
 }
 
 export interface Comment {
@@ -43,6 +49,8 @@ export interface Comment {
   reposts_count?: number;
   is_liked?: boolean;
   is_reposted?: boolean;
+  reaction_counts?: ReactionCounts;
+  my_reaction?: ReactionKind | null;
 }
 
 // Module-level cache so re-entering TradersHub is instant
@@ -75,7 +83,7 @@ export function usePosts() {
       const userIds = [...new Set(postsData.map(p => p.user_id))];
 
       // Bulk fetch — eliminate N+1
-      const [profilesRes, likesRes, repostsRes, commentsRes, myLikesRes, myRepostsRes, myBookmarksRes] = await Promise.all([
+      const [profilesRes, likesRes, repostsRes, commentsRes, myLikesRes, myRepostsRes, myBookmarksRes, reactionsRes] = await Promise.all([
        supabase.from('profiles_public').select('id, user_id, full_name, handle, avatar_url, bio').in('user_id', userIds),
         supabase.from('post_likes').select('post_id').in('post_id', postIds),
         supabase.from('post_reposts').select('post_id').in('post_id', postIds),
@@ -83,6 +91,7 @@ export function usePosts() {
         user ? supabase.from('post_likes').select('post_id').eq('user_id', user.id).in('post_id', postIds) : Promise.resolve({ data: [] as any[] }),
         user ? supabase.from('post_reposts').select('post_id').eq('user_id', user.id).in('post_id', postIds) : Promise.resolve({ data: [] as any[] }),
         user ? supabase.from('post_bookmarks').select('post_id').eq('user_id', user.id).in('post_id', postIds) : Promise.resolve({ data: [] as any[] }),
+        supabase.from('post_reactions' as any).select('post_id, user_id, reaction').in('post_id', postIds),
       ]);
 
       const profileMap = new Map(profilesRes.data?.map((p: any) => [p.user_id, p]));
@@ -97,6 +106,14 @@ export function usePosts() {
       const myLikes = new Set(myLikesRes.data?.map((r: any) => r.post_id));
       const myReposts = new Set(myRepostsRes.data?.map((r: any) => r.post_id));
       const myBookmarks = new Set(myBookmarksRes.data?.map((r: any) => r.post_id));
+      const reactionMap = new Map<string, ReactionCounts>();
+      const myReactionMap = new Map<string, ReactionKind>();
+      reactionsRes.data?.forEach((r: any) => {
+        const counts = reactionMap.get(r.post_id) || {};
+        counts[r.reaction as ReactionKind] = (counts[r.reaction as ReactionKind] || 0) + 1;
+        reactionMap.set(r.post_id, counts);
+        if (r.user_id === user?.id) myReactionMap.set(r.post_id, r.reaction as ReactionKind);
+      });
 
       // Fetch quoted posts in bulk
       const quotedIds = postsData.map((p: any) => p.quoted_post_id).filter(Boolean);
@@ -121,6 +138,8 @@ export function usePosts() {
         is_reposted: myReposts.has(post.id),
         is_bookmarked: myBookmarks.has(post.id),
         quoted_post: post.quoted_post_id ? quotedMap.get(post.quoted_post_id) || null : null,
+        reaction_counts: reactionMap.get(post.id) || {},
+        my_reaction: myReactionMap.get(post.id) || null,
       }));
 
       setPosts(enriched as Post[]);
@@ -201,18 +220,36 @@ export function usePosts() {
     }
   };
 
+  const reactToPost = async (postId: string, reaction: ReactionKind) => {
+    if (!user) return { error: { message: 'Must be logged in' } };
+    const current = posts.find(p => p.id === postId)?.my_reaction;
+    const query = current === reaction
+      ? supabase.from('post_reactions' as any).delete().eq('post_id', postId).eq('user_id', user.id)
+      : supabase.from('post_reactions' as any).upsert({ post_id: postId, user_id: user.id, reaction }, { onConflict: 'post_id,user_id' });
+    const { error } = await query;
+    if (!error) await fetchPosts();
+    return { error };
+  };
+
+  const reactToComment = async (commentId: string, reaction: ReactionKind, current?: ReactionKind | null) => {
+    if (!user) return { error: { message: 'Must be logged in' } };
+    if (current === reaction) return await supabase.from('comment_reactions' as any).delete().eq('comment_id', commentId).eq('user_id', user.id);
+    return await supabase.from('comment_reactions' as any).upsert({ comment_id: commentId, user_id: user.id, reaction }, { onConflict: 'comment_id,user_id' });
+  };
+
   const fetchComments = async (postId: string): Promise<Comment[]> => {
     const { data: comments } = await supabase
       .from('post_comments').select('*').eq('post_id', postId).order('created_at', { ascending: true });
     if (!comments || comments.length === 0) return [];
     const userIds = [...new Set(comments.map((c: any) => c.user_id))];
     const commentIds = comments.map((c: any) => c.id);
-    const [profilesRes, likesRes, repostsRes, myLikesRes, myRepostsRes] = await Promise.all([
+    const [profilesRes, likesRes, repostsRes, myLikesRes, myRepostsRes, reactionsRes] = await Promise.all([
       supabase.from('profiles_public').select('id, user_id, full_name, handle, avatar_url, bio').in('user_id', userIds),
       supabase.from('comment_likes' as any).select('comment_id').in('comment_id', commentIds),
       supabase.from('comment_reposts' as any).select('comment_id').in('comment_id', commentIds),
       user ? supabase.from('comment_likes' as any).select('comment_id').eq('user_id', user.id).in('comment_id', commentIds) : Promise.resolve({ data: [] as any[] }),
       user ? supabase.from('comment_reposts' as any).select('comment_id').eq('user_id', user.id).in('comment_id', commentIds) : Promise.resolve({ data: [] as any[] }),
+      supabase.from('comment_reactions' as any).select('comment_id, user_id, reaction').in('comment_id', commentIds),
     ]);
     const profileMap = new Map(profilesRes.data?.map((p: any) => [p.user_id, p]));
     const likeCounts = new Map<string, number>();
@@ -221,6 +258,14 @@ export function usePosts() {
     repostsRes.data?.forEach((r: any) => repostCounts.set(r.comment_id, (repostCounts.get(r.comment_id) || 0) + 1));
     const myLikes = new Set(myLikesRes.data?.map((r: any) => r.comment_id));
     const myReposts = new Set(myRepostsRes.data?.map((r: any) => r.comment_id));
+    const reactionMap = new Map<string, ReactionCounts>();
+    const myReactionMap = new Map<string, ReactionKind>();
+    reactionsRes.data?.forEach((r: any) => {
+      const counts = reactionMap.get(r.comment_id) || {};
+      counts[r.reaction as ReactionKind] = (counts[r.reaction as ReactionKind] || 0) + 1;
+      reactionMap.set(r.comment_id, counts);
+      if (r.user_id === user?.id) myReactionMap.set(r.comment_id, r.reaction as ReactionKind);
+    });
 
     const all: Comment[] = comments.map((c: any) => ({
       ...c, author: profileMap.get(c.user_id), replies: [],
@@ -228,6 +273,8 @@ export function usePosts() {
       reposts_count: repostCounts.get(c.id) || 0,
       is_liked: myLikes.has(c.id),
       is_reposted: myReposts.has(c.id),
+      reaction_counts: reactionMap.get(c.id) || {},
+      my_reaction: myReactionMap.get(c.id) || null,
     }));
     const byId = new Map(all.map(c => [c.id, c]));
     const roots: Comment[] = [];
@@ -296,7 +343,7 @@ export function usePosts() {
   return {
     posts, loading, error,
     fetchPosts, createPost, deletePost, editPost,
-    likePost, repostPost, bookmarkPost,
+    likePost, repostPost, bookmarkPost, reactToPost, reactToComment,
     fetchComments, addComment, getUserPosts,
     likeComment, repostComment,
   };

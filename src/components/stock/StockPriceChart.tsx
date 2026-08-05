@@ -3,6 +3,14 @@ import {
 } from "recharts";
 import { useMemo, useCallback } from "react";
 
+let lastHaptic = 0;
+const chartHaptic = () => {
+  const now = Date.now();
+  if (now - lastHaptic < 45) return;
+  lastHaptic = now;
+  if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate(5);
+};
+
 export type ChartType = "line" | "area" | "candle";
 
 interface StockPriceChartProps {
@@ -86,6 +94,7 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
     if (e?.activePayload?.[0] && onHoverPrice) {
       const p = e.activePayload[0].payload;
       onHoverPrice(p.price, p.date);
+      chartHaptic();
     }
   }, [onHoverPrice]);
   const handleMouseLeave = useCallback(() => { if (onHoverPrice) onHoverPrice(null, null); }, [onHoverPrice]);
@@ -96,7 +105,7 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
   if (chartType === "candle") {
     const barSize = data.length > 120 ? 2 : data.length > 60 ? 4 : 7;
     return (
-      <div className="relative h-full w-full">
+      <div className="relative h-full w-full touch-none" onTouchEnd={handleMouseLeave}>
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
             data={data}
@@ -124,7 +133,7 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
   }
 
   return (
-    <div className="relative h-full w-full">
+    <div className="relative h-full w-full touch-none" onTouchEnd={handleMouseLeave}>
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart
           data={data}

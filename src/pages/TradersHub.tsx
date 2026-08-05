@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Search, X, Bell, Flame, Users, MessageCircle, Feather } from "lucide-react";
+import { Search, X, Flame, Users, MessageCircle, Feather } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
@@ -17,6 +17,8 @@ import { TrendingSidebar } from "@/components/social/TrendingSidebar";
 import { TradersHubDisclaimer } from "@/components/social/TradersHubDisclaimer";
 import { PostSkeletonList } from "@/components/social/PostSkeleton";
 import { supabase } from "@/integrations/supabase/client";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { CommunityReaction } from "@/components/social/CommunityReactionButton";
 
 const MOCK_PRICES: Record<string, number> = {
   SCOM: 12.85, SAFCOM: 12.85, EQTY: 62.50, KCB: 45.30, COOP: 15.20,
@@ -29,8 +31,8 @@ export default function TradersHub() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const { profile } = useProfile();
-  const { posts, loading, createPost, likePost, repostPost, bookmarkPost, fetchComments, addComment, deletePost, editPost } = usePosts();
-  const { isFollowing } = useFollows();
+  const { posts, loading, createPost, bookmarkPost, reactToPost, reactToComment, fetchComments, addComment, deletePost, editPost } = usePosts();
+  const { isFollowing, toggleFollow } = useFollows();
   const { portfolio } = usePortfolio();
   const { watchlist } = useWatchlist();
   const { toast } = useToast();
@@ -164,8 +166,8 @@ export default function TradersHub() {
     setComposeOpen(true);
   };
 
-  const handleLike = async (postId: string) => { if (!user) { navigate("/auth"); return; } await likePost(postId); };
-  const handleRepost = async (postId: string) => { if (!user) { navigate("/auth"); return; } const { error } = await repostPost(postId); if (!error) toast({ title: "Reposted!" }); };
+  const handleReact = async (postId: string, reaction: CommunityReaction) => { if (!user) { navigate("/auth"); return; } await reactToPost(postId, reaction); };
+  const handleFollow = async (targetId: string) => { if (!user) { navigate("/auth"); return; } await toggleFollow(targetId); };
   const handleBookmark = async (postId: string) => { if (!user) { navigate("/auth"); return; } const post = posts.find(p => p.id === postId); const { error } = await bookmarkPost(postId); if (!error) toast({ title: post?.is_bookmarked ? "Removed" : "Bookmarked" }); };
   const handleShare = async (post: Post) => {
     if (navigator.share) { try { await navigator.share({ title: `Post by ${post.author?.full_name}`, text: post.content.slice(0, 100), url: window.location.href }); } catch {} }
@@ -207,16 +209,14 @@ export default function TradersHub() {
 
       {/* Header */}
       <header className="sticky top-0 z-40 bg-card/90 backdrop-blur-xl border-b border-border/60">
-        <div className="flex items-center justify-between px-4 py-3">
-          <h1 className="text-xl font-bold">TradersHub</h1>
-          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full relative" onClick={() => navigate("/notifications")}>
-            <Bell className="h-5 w-5" />
-            <span className="absolute top-1.5 right-2 w-2 h-2 bg-accent rounded-full" />
-          </Button>
-        </div>
-
-        <div className="px-4 pb-2">
-          <div className="relative">
+        <div className="px-4 py-3">
+          <h1 className="text-base font-bold mb-3">TradersHub</h1>
+          <div className="flex items-center gap-2">
+            <Avatar className="h-9 w-9 cursor-pointer shrink-0" onClick={() => user && navigate(`/profile/${user.id}`)}>
+              <AvatarImage src={profile?.avatar_url || ""} className="object-cover" />
+              <AvatarFallback className="text-[11px] font-bold bg-primary/10 text-primary">{profile?.full_name?.slice(0, 2).toUpperCase() || "ME"}</AvatarFallback>
+            </Avatar>
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search posts, $stocks, #topics..."
@@ -229,7 +229,7 @@ export default function TradersHub() {
                 <X className="h-4 w-4" />
               </Button>
             )}
-          </div>
+          </div></div>
         </div>
 
         <div className="flex">
@@ -318,7 +318,7 @@ export default function TradersHub() {
             <div>
               {filteredPosts.map(post => (
                 <div key={post.id} id={`post-${post.id}`} className={`transition-colors ${highlightedPostId === post.id ? 'bg-primary/5 ring-1 ring-primary/20 rounded-xl' : ''}`}>
-                  <XPostCard post={post} currentUserId={user?.id} onLike={handleLike} onComment={openComments} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handleShare} onDelete={handleDelete} onEdit={handleEdit} onQuote={handleOpenQuote} />
+                  <XPostCard post={post} currentUserId={user?.id} onComment={openComments} onBookmark={handleBookmark} onShare={handleShare} onDelete={handleDelete} onEdit={handleEdit} onReact={handleReact} isFollowing={isFollowing(post.user_id)} onFollow={handleFollow} />
                 </div>
               ))}
             </div>
@@ -341,7 +341,7 @@ export default function TradersHub() {
       )}
 
       <XComposeModal open={composeOpen} onOpenChange={(o) => { setComposeOpen(o); if (!o) { setPrefillContent(""); setQuotedPost(null); } }} user={user} profile={profile} onPost={handlePost} portfolioSnapshot={portfolioSnapshot} prefillContent={prefillContent} quotedPost={quotedPost as any} />
-      <XCommentSheet open={commentSheetOpen} onOpenChange={setCommentSheetOpen} post={selectedPost} currentUserId={user?.id} comments={comments} loadingComments={loadingComments} onAddComment={handleAddComment} onLike={handleLike} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handleShare} onDelete={handleDelete} onQuote={handleOpenQuote} />
+      <XCommentSheet open={commentSheetOpen} onOpenChange={setCommentSheetOpen} post={selectedPost} currentUserId={user?.id} comments={comments} loadingComments={loadingComments} onAddComment={handleAddComment} onBookmark={handleBookmark} onShare={handleShare} onDelete={handleDelete} onReact={handleReact} onReactComment={reactToComment} onQuote={handleOpenQuote} />
     </div>
   );
 }
