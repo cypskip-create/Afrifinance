@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Heart, MessageCircle, Repeat2, Share, Bookmark, BookmarkCheck, Trash2, MoreHorizontal, Verified, Eye, Quote, Pencil, VolumeX, Flag, UserX, Link2 } from "lucide-react";
+import { MessageCircle, Share, Bookmark, BookmarkCheck, Trash2, MoreHorizontal, Verified, Eye, Pencil, VolumeX, Flag, UserX, Link2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { ImageViewer } from "./ImageViewer";
 import { formatTimestamp } from "@/lib/formatTimestamp";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { CommunityReactionButton, CommunityReaction } from "./CommunityReactionButton";
 
 
 const NSE_PRICES: Record<string, { price: number; change: number }> = {
@@ -27,21 +28,24 @@ const NSE_PRICES: Record<string, { price: number; change: number }> = {
 interface XPostCardProps {
   post: Post;
   currentUserId?: string;
-  onLike: (postId: string) => void;
+  onLike?: (postId: string) => void;
   onComment: (post: Post) => void;
-  onRepost: (postId: string) => void;
+  onRepost?: (postId: string) => void;
   onBookmark: (postId: string) => void;
   onShare: (post: Post) => void;
   onDelete?: (postId: string) => void;
   onEdit?: (postId: string, newContent: string) => void;
   onQuote?: (post: Post) => void;
   isQuoted?: boolean;
+  onReact?: (postId: string, reaction: CommunityReaction) => void;
+  isFollowing?: boolean;
+  onFollow?: (userId: string) => void;
+  expanded?: boolean;
 }
 
-export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, onBookmark, onShare, onDelete, onEdit, onQuote, isQuoted }: XPostCardProps) {
+export function XPostCard({ post, currentUserId, onComment, onBookmark, onShare, onDelete, onEdit, onReact, isFollowing, onFollow, expanded }: XPostCardProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [showRepostMenu, setShowRepostMenu] = useState(false);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editContent, setEditContent] = useState(post.content);
@@ -136,6 +140,12 @@ export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, on
                   <span className="text-muted-foreground text-[11px] italic ml-0.5">(edited)</span>
                 )}
               </div>
+              <div className="flex items-center gap-1 shrink-0">
+                {currentUserId !== post.user_id && onFollow && (
+                  <Button variant={isFollowing ? "ghost" : "outline"} size="sm" className="h-7 px-3 rounded-full text-[11px] font-semibold" onClick={(e) => { e.stopPropagation(); onFollow(post.user_id); }}>
+                    {isFollowing ? "Following" : "Follow"}
+                  </Button>
+                )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                   <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10" data-small-target>
@@ -169,6 +179,7 @@ export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, on
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>
+              </div>
             </div>
 
             <p className="text-[15px] leading-[1.5] mt-1 whitespace-pre-wrap break-words">{renderContent(post.content)}</p>
@@ -209,46 +220,17 @@ export function XPostCard({ post, currentUserId, onLike, onComment, onRepost, on
               </div>
             )}
 
-            {/* Action bar */}
-            <div className="flex items-center justify-between mt-3 -ml-2 max-w-[425px]">
+            {expanded && <p className="mt-3 text-[11px] text-muted-foreground tabular">{formatNumber(viewCount || 1)} views</p>}
+            {/* Community action bar: reactions, replies, bookmark */}
+            <div className="flex items-center justify-between mt-3 -ml-2 max-w-[425px] border-t border-border/40 pt-1">
+              <CommunityReactionButton counts={post.reaction_counts || {}} selected={post.my_reaction} onSelect={reaction => onReact?.(post.id, reaction)} />
               <button className="group flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors" onClick={(e) => { e.stopPropagation(); onComment(post); }} data-small-target>
                 <div className="p-2 rounded-full group-hover:bg-primary/10 transition-colors"><MessageCircle className="h-[18px] w-[18px]" /></div>
                 <span className="text-xs">{formatNumber(post.comments_count)}</span>
               </button>
-
-              <DropdownMenu open={showRepostMenu} onOpenChange={setShowRepostMenu}>
-                <DropdownMenuTrigger asChild>
-                  <button className={`group flex items-center gap-1 transition-colors ${post.is_reposted ? "text-bull" : "text-muted-foreground hover:text-bull"}`} onClick={(e) => { e.stopPropagation(); setShowRepostMenu(true); }} data-small-target>
-                    <div className="p-2 rounded-full group-hover:bg-bull/10 transition-colors"><Repeat2 className="h-[18px] w-[18px]" /></div>
-                    <span className="text-xs">{formatNumber(post.reposts_count)}</span>
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-44 rounded-xl">
-                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onRepost(post.id); setShowRepostMenu(false); }}><Repeat2 className="h-4 w-4 mr-2" />Repost</DropdownMenuItem>
-                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setShowRepostMenu(false); if (onQuote) onQuote(post); }}><Quote className="h-4 w-4 mr-2" />Quote</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              <button className={`group flex items-center gap-1 transition-colors ${post.is_liked ? "text-destructive" : "text-muted-foreground hover:text-destructive"}`} onClick={(e) => { e.stopPropagation(); onLike(post.id); }} data-small-target>
-                <div className="p-2 rounded-full group-hover:bg-destructive/10 transition-colors"><Heart className={`h-[18px] w-[18px] ${post.is_liked ? "fill-current" : ""}`} /></div>
-                <span className="text-xs">{formatNumber(post.likes_count)}</span>
-              </button>
-
-              {viewCount > 0 && (
-                <button className="group flex items-center gap-1 text-muted-foreground" data-small-target>
-                  <div className="p-2 rounded-full group-hover:bg-primary/10 transition-colors"><Eye className="h-[18px] w-[18px]" /></div>
-                  <span className="text-xs">{formatNumber(viewCount)}</span>
-                </button>
-              )}
-
-              <div className="flex items-center">
-                <button className={`p-2 rounded-full transition-colors ${post.is_bookmarked ? "text-primary" : "text-muted-foreground hover:text-primary hover:bg-primary/10"}`} onClick={(e) => { e.stopPropagation(); onBookmark(post.id); }} data-small-target>
+                <button className={`p-2 rounded-full transition-colors ${post.is_bookmarked ? "text-primary" : "text-muted-foreground hover:text-primary hover:bg-primary/10"}`} onClick={(e) => { e.stopPropagation(); onBookmark(post.id); }} data-small-target aria-label="Bookmark post">
                   {post.is_bookmarked ? <BookmarkCheck className="h-[18px] w-[18px] fill-current" /> : <Bookmark className="h-[18px] w-[18px]" />}
                 </button>
-                <button className="p-2 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors" onClick={(e) => { e.stopPropagation(); onShare(post); }} data-small-target>
-                  <Share className="h-[18px] w-[18px]" />
-                </button>
-              </div>
             </div>
           </div>
         </div>

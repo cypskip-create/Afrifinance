@@ -16,7 +16,7 @@ import { EditProfileDialog } from "@/components/profile/EditProfileDialog";
 import { SparklineChart } from "@/components/shared/SparklineChart";
 import { HoldingsList } from "@/components/portfolio/HoldingsList";
 import { XPostCard } from "@/components/social/XPostCard";
-import { usePosts, Post, Comment } from "@/hooks/usePosts";
+import { usePosts, Post, Comment, ReactionKind } from "@/hooks/usePosts";
 import { XCommentSheet } from "@/components/social/XCommentSheet";
 import { ProfileSettingsDialog } from "@/components/profile/ProfileSettingsDialog";
 import { PortfolioPrivacyDialog } from "@/components/profile/PortfolioPrivacyDialog";
@@ -53,7 +53,7 @@ export default function UserProfile() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { isFollowing, toggleFollow, fetchFollowers, fetchFollowing } = useFollows();
-  const { likePost, repostPost, bookmarkPost, fetchComments, addComment, deletePost } = usePosts();
+  const { bookmarkPost, reactToPost, reactToComment, fetchComments, addComment, deletePost } = usePosts();
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
   const [profileData, setProfileData] = useState<UserProfileData | null>(null);
@@ -233,8 +233,7 @@ export default function UserProfile() {
     else { await navigator.clipboard.writeText(window.location.href); toast({ title: "Profile link copied!" }); }
   };
 
-  const handleLike = async (postId: string) => { if (!user) { navigate("/auth"); return; } await likePost(postId); };
-  const handleRepost = async (postId: string) => { if (!user) { navigate("/auth"); return; } await repostPost(postId); };
+  const handleReact = async (postId: string, reaction: ReactionKind) => { if (!user) { navigate("/auth"); return; } await reactToPost(postId, reaction); };
   const handleBookmark = async (postId: string) => { if (!user) { navigate("/auth"); return; } await bookmarkPost(postId); };
   const handlePostShare = async (post: Post) => { await navigator.clipboard.writeText(window.location.href); toast({ title: "Link copied" }); };
   const handleDelete = async (postId: string) => { await deletePost(postId); fetchUserPosts(); };
@@ -271,6 +270,7 @@ export default function UserProfile() {
 
   const castToPost = (p: UserPost): Post => ({
     ...p, updated_at: p.created_at,
+    reaction_counts: {}, my_reaction: null,
     author: p.author ? { id: p.author.id || "", user_id: p.author.user_id || p.user_id, full_name: p.author.full_name, avatar_url: p.author.avatar_url, bio: p.author.bio || null }
       : { id: "", user_id: p.user_id, full_name: profileData?.full_name || null, avatar_url: profileData?.avatar_url || null, bio: null },
   });
@@ -403,9 +403,6 @@ export default function UserProfile() {
         <TabsList className="w-full flex bg-transparent border-b border-border rounded-none h-11 p-0 overflow-x-auto">
           {[
             { value: "posts", label: "Posts" },
-            { value: "replies", label: "Replies" },
-            { value: "media", label: "Media" },
-            ...(isOwnProfile ? [{ value: "likes", label: "Likes" }] : []),
             ...(isOwnProfile ? [{ value: "bookmarks", label: "Bookmarks" }] : []),
             { value: "portfolio", label: "Portfolio" },
           ].map(tab => (
@@ -432,11 +429,11 @@ export default function UserProfile() {
                     <Pin className="h-3 w-3" />
                     <span className="font-medium">Pinned</span>
                   </div>
-                  <XPostCard post={castToPost(pinnedPost)} currentUserId={user?.id} onLike={handleLike} onComment={openComments} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handlePostShare} onDelete={isOwnProfile ? handleDelete : undefined} />
+                  <XPostCard post={castToPost(pinnedPost)} currentUserId={user?.id} onComment={openComments} onBookmark={handleBookmark} onShare={handlePostShare} onDelete={isOwnProfile ? handleDelete : undefined} onReact={handleReact} />
                 </div>
               )}
               {regularPosts.map(post => (
-                <XPostCard key={post.id} post={castToPost(post)} currentUserId={user?.id} onLike={handleLike} onComment={openComments} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handlePostShare} onDelete={isOwnProfile ? handleDelete : undefined} />
+                <XPostCard key={post.id} post={castToPost(post)} currentUserId={user?.id} onComment={openComments} onBookmark={handleBookmark} onShare={handlePostShare} onDelete={isOwnProfile ? handleDelete : undefined} onReact={handleReact} />
               ))}
             </div>
           )}
@@ -448,7 +445,7 @@ export default function UserProfile() {
             <div className="p-12 text-center text-muted-foreground"><MessageCircle className="h-10 w-10 mx-auto mb-3 opacity-40" /><p className="text-sm">No replies yet</p></div>
           ) : (
             <div className="divide-y divide-border">
-              {repostedPosts.map(post => <XPostCard key={post.id} post={castToPost(post)} currentUserId={user?.id} onLike={handleLike} onComment={openComments} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handlePostShare} />)}
+              {repostedPosts.map(post => <XPostCard key={post.id} post={castToPost(post)} currentUserId={user?.id} onComment={openComments} onBookmark={handleBookmark} onShare={handlePostShare} onReact={handleReact} />)}
             </div>
           )}
         </TabsContent>
@@ -483,7 +480,7 @@ export default function UserProfile() {
             <div className="p-12 text-center text-muted-foreground"><Heart className="h-10 w-10 mx-auto mb-3 opacity-40" /><p className="text-sm">No likes yet</p></div>
           ) : (
             <div className="divide-y divide-border">
-              {likedPosts.map(post => <XPostCard key={post.id} post={castToPost(post)} currentUserId={user?.id} onLike={handleLike} onComment={openComments} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handlePostShare} />)}
+              {likedPosts.map(post => <XPostCard key={post.id} post={castToPost(post)} currentUserId={user?.id} onComment={openComments} onBookmark={handleBookmark} onShare={handlePostShare} onReact={handleReact} />)}
             </div>
           )}
         </TabsContent>
@@ -499,7 +496,7 @@ export default function UserProfile() {
             <div className="p-12 text-center text-muted-foreground"><Bookmark className="h-10 w-10 mx-auto mb-3 opacity-40" /><p className="text-sm">No bookmarks yet</p><p className="text-xs mt-1">Save posts to read them later</p></div>
           ) : (
             <div className="divide-y divide-border">
-              {bookmarkedPosts.map(post => <XPostCard key={post.id} post={castToPost(post)} currentUserId={user?.id} onLike={handleLike} onComment={openComments} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handlePostShare} />)}
+              {bookmarkedPosts.map(post => <XPostCard key={post.id} post={castToPost(post)} currentUserId={user?.id} onComment={openComments} onBookmark={handleBookmark} onShare={handlePostShare} onReact={handleReact} />)}
             </div>
           )}
         </TabsContent>
@@ -568,7 +565,7 @@ export default function UserProfile() {
       </Tabs>
 
       {/* Comment sheet */}
-      <XCommentSheet open={commentSheetOpen} onOpenChange={setCommentSheetOpen} post={selectedPost} currentUserId={user?.id} comments={comments} loadingComments={loadingComments} onAddComment={handleAddComment} onLike={handleLike} onRepost={handleRepost} onBookmark={handleBookmark} onShare={handlePostShare} onDelete={isOwnProfile ? handleDelete : undefined} />
+      <XCommentSheet open={commentSheetOpen} onOpenChange={setCommentSheetOpen} post={selectedPost} currentUserId={user?.id} comments={comments} loadingComments={loadingComments} onAddComment={handleAddComment} onBookmark={handleBookmark} onShare={handlePostShare} onDelete={isOwnProfile ? handleDelete : undefined} onReact={handleReact} onReactComment={reactToComment} />
       {userId && <FollowersDialog open={followersDialogOpen} onOpenChange={setFollowersDialogOpen} userId={userId} initialTab={dialogTab} />}
       <EditProfileDialog open={editProfileOpen} onOpenChange={(open) => { setEditProfileOpen(open); if (!open) fetchProfile(); }} />
       <ProfileSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} currentHandle={profileData.handle} portfolioPublic={profileData.portfolio_public} onSaved={fetchProfile} />

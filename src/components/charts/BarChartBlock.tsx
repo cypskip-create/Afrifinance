@@ -121,6 +121,7 @@ export function BarChartBlock({
                 barSize={18}
                 stackId={stackId}
                 isAnimationActive={false}
+                onClick={(_row: any, index: number) => setActive(index)}
               >
                 {data.map((r, i) => (
                   <Cell

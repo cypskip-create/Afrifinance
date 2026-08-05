@@ -65,8 +65,8 @@ export default function Account() {
     { icon: FileText, label: "Terms & privacy", action: () => comingSoon("Terms & privacy") },
   ];
 
-  const monthly = 1200;
-  const yearly = 12000; // save KES 2,400 vs monthly
+  const monthly = 800;
+  const yearly = 8000; // two months free
   const priceLabel = annual ? `KES ${yearly.toLocaleString()}` : `KES ${monthly.toLocaleString()}`;
   const periodLabel = annual ? "/year" : "/month";
 

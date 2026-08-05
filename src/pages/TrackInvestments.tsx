@@ -6,7 +6,7 @@ import { RobinhoodPerformanceChart } from "@/components/portfolio/RobinhoodPerfo
 import { PortfolioSnowflake } from "@/components/portfolio/PortfolioSnowflake";
 import { PortfolioInsights } from "@/components/portfolio/PortfolioInsights";
 import {
-  ArrowUpRight, ArrowDownRight, Eye, EyeOff, RefreshCw,
+  ArrowUpRight, ArrowDownRight, Eye, EyeOff, RefreshCw, Newspaper, ChevronRight,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -18,6 +18,12 @@ import { ColorTooltip } from "@/components/charts/ChartTooltip";
 import { fx } from "@/lib/chartPalette";
 
 const ALLOC_COLORS = [fx.revenue, fx.netIncome, fx.assets, fx.foreign, fx.liabilities, fx.operatingIncome, fx.eps, fx.retail];
+const PORTFOLIO_NEWS = [
+  { id: 1, symbols: ["SAFCOM", "SCOM"], title: "Safaricom services revenue rises as M-Pesa activity expands", source: "Business Daily", time: "2h" },
+  { id: 2, symbols: ["EQTY"], title: "Equity Group outlines regional growth and asset-quality priorities", source: "NSE Update", time: "4h" },
+  { id: 3, symbols: ["KCB"], title: "KCB investors assess earnings outlook ahead of the next filing", source: "Capital Markets", time: "6h" },
+  { id: 4, symbols: ["COOP", "ABSA", "NCBA"], title: "Kenyan banks gain as sector liquidity indicators improve", source: "Market Desk", time: "8h" },
+];
 
 type SortKey = "value" | "gain" | "name";
 
@@ -71,6 +77,10 @@ export default function TrackInvestments() {
   const topMovers = useMemo(() => {
     const sorted = [...holdings].sort((a, b) => Math.abs(b.gainPct) - Math.abs(a.gainPct));
     return sorted.slice(0, 3);
+  }, [holdings]);
+  const portfolioUpdates = useMemo(() => {
+    const symbols = new Set(holdings.map(h => h.symbol.toUpperCase()));
+    return PORTFOLIO_NEWS.filter(item => item.symbols.some(symbol => symbols.has(symbol)));
   }, [holdings]);
 
   const diversificationScore = useMemo(() => {
@@ -202,6 +212,23 @@ export default function TrackInvestments() {
         />
 
         <PortfolioInsights holdings={portfolio} prices={Object.fromEntries(portfolio.map(h => [h.symbol, getPrice(h.symbol)]))} />
+
+        {portfolioUpdates.length > 0 && (
+          <section>
+            <div className="flex items-center justify-between mb-2">
+              <p className="section-eyebrow">Updates for your holdings</p>
+              <Button variant="ghost" size="sm" className="h-7 px-2 text-[11px]" onClick={() => navigate("/news")}>All news <ChevronRight className="h-3 w-3 ml-1" /></Button>
+            </div>
+            <div className="border-t border-border/60">
+              {portfolioUpdates.map(item => (
+                <button key={item.id} className="w-full flex items-start gap-3 py-3 border-b border-border/40 text-left" onClick={() => navigate(`/news?stock=${item.symbols[0]}`)}>
+                  <Newspaper className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+                  <div className="min-w-0 flex-1"><p className="text-[12px] font-medium leading-snug">{item.title}</p><p className="mt-1 text-[10px] text-muted-foreground">{item.source} · {item.time}</p></div>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* ── ALLOCATION ── */}
         {sectorAlloc.length > 0 && (
