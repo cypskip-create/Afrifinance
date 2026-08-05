@@ -403,9 +403,6 @@ export default function UserProfile() {
         <TabsList className="w-full flex bg-transparent border-b border-border rounded-none h-11 p-0 overflow-x-auto">
           {[
             { value: "posts", label: "Posts" },
-            { value: "replies", label: "Replies" },
-            { value: "media", label: "Media" },
-            ...(isOwnProfile ? [{ value: "likes", label: "Likes" }] : []),
             ...(isOwnProfile ? [{ value: "bookmarks", label: "Bookmarks" }] : []),
             { value: "portfolio", label: "Portfolio" },
           ].map(tab => (
