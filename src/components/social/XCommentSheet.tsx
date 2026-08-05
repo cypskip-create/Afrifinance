@@ -3,7 +3,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Verified, Send, ArrowLeft, SlidersHorizontal, ChevronDown, MessageCircle, X, Heart, Repeat2, Quote, MoreHorizontal, ChevronRight, Pencil } from "lucide-react";
+import { Verified, Send, ArrowLeft, SlidersHorizontal, ChevronDown, MessageCircle, X, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Post, Comment, usePosts } from "@/hooks/usePosts";
 import { XPostCard } from "./XPostCard";
@@ -11,6 +11,8 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import { CommunityReactionButton, CommunityReaction } from "./CommunityReactionButton";
+import { ReactionKind } from "@/hooks/usePosts";
 
 interface XCommentSheetProps {
   open: boolean;
@@ -20,13 +22,13 @@ interface XCommentSheetProps {
   comments: Comment[];
   loadingComments: boolean;
   onAddComment: (content: string, parentCommentId?: string) => Promise<void>;
-  onLike: (postId: string) => void;
-  onRepost: (postId: string) => void;
   onBookmark: (postId: string) => void;
   onShare: (post: Post) => void;
   onDelete?: (postId: string) => void;
   onQuote?: (post: Post, comment?: Comment) => void;
   onCommentsRefresh?: () => Promise<void>;
+  onReact?: (postId: string, reaction: CommunityReaction) => void;
+  onReactComment?: (commentId: string, reaction: ReactionKind, current?: ReactionKind | null) => Promise<any>;
 }
 
 const getInitials = (name?: string | null) =>
@@ -41,7 +43,7 @@ const formatTimeAgo = (date: string) => {
 };
 
 function CommentNode({
-  comment, depth, onReply, onQuote, replyingTo, navigateTo, onRefresh,
+  comment, depth, onReply, onQuote, replyingTo, navigateTo, onRefresh, onReactComment,
 }: {
   comment: Comment;
   depth: number;
@@ -50,33 +52,26 @@ function CommentNode({
   replyingTo: string | null;
   navigateTo: (url: string) => void;
   onRefresh: () => Promise<void>;
+  onReactComment?: (commentId: string, reaction: ReactionKind, current?: ReactionKind | null) => Promise<any>;
 }) {
-  const { likeComment, repostComment } = usePosts();
-  const { toast } = useToast();
+  const { } = usePosts();
   const [expanded, setExpanded] = useState(false);
-  const [optimistic, setOptimistic] = useState({
-    is_liked: !!comment.is_liked,
-    likes_count: comment.likes_count || 0,
-    is_reposted: !!comment.is_reposted,
-    reposts_count: comment.reposts_count || 0,
-  });
+  const [reaction, setReaction] = useState(comment.my_reaction || null);
+  const [reactionCounts, setReactionCounts] = useState(comment.reaction_counts || {});
 
   const hasReplies = !!comment.replies && comment.replies.length > 0;
   const replyCount = comment.replies?.length || 0;
 
-  const handleLikeReply = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const wasLiked = optimistic.is_liked;
-    setOptimistic(o => ({ ...o, is_liked: !wasLiked, likes_count: o.likes_count + (wasLiked ? -1 : 1) }));
-    await likeComment(comment.id, wasLiked);
-  };
-
-  const handleRepostReply = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const wasReposted = optimistic.is_reposted;
-    setOptimistic(o => ({ ...o, is_reposted: !wasReposted, reposts_count: o.reposts_count + (wasReposted ? -1 : 1) }));
-    await repostComment(comment.id, wasReposted);
-    if (!wasReposted) toast({ title: "Reposted!" });
+  const handleReaction = async (next: CommunityReaction) => {
+    const previous = reaction;
+    setReaction(previous === next ? null : next);
+    setReactionCounts(counts => {
+      const updated = { ...counts };
+      if (previous) updated[previous] = Math.max(0, (updated[previous] || 0) - 1);
+      if (previous !== next) updated[next] = (updated[next] || 0) + 1;
+      return updated;
+    });
+    await onReactComment?.(comment.id, next, previous);
   };
 
   const renderContent = (content: string) =>
@@ -122,30 +117,11 @@ function CommentNode({
           </div>
           <p className="text-[13px] mt-0.5 leading-relaxed break-words">{renderContent(comment.content)}</p>
 
-          <div className="flex items-center gap-4 mt-1.5 -ml-1.5">
+          <div className="flex items-center gap-3 mt-1.5 -ml-1.5">
+            <CommunityReactionButton compact counts={reactionCounts} selected={reaction} onSelect={handleReaction} />
             <button onClick={(e) => { e.stopPropagation(); onReply(comment); }} className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-primary p-1 rounded-full" data-small-target>
               <MessageCircle className="h-3.5 w-3.5" />
               <span>Reply</span>
-            </button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <button className={`flex items-center gap-1 text-[11px] p-1 rounded-full ${optimistic.is_reposted ? 'text-bull' : 'text-muted-foreground hover:text-bull'}`} data-small-target>
-                  <Repeat2 className="h-3.5 w-3.5" />
-                  {optimistic.reposts_count > 0 && <span>{optimistic.reposts_count}</span>}
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-40 rounded-xl">
-                <DropdownMenuItem onClick={handleRepostReply}>
-                  <Repeat2 className="h-4 w-4 mr-2" />{optimistic.is_reposted ? "Undo repost" : "Repost"}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onQuote(comment); }}>
-                  <Pencil className="h-4 w-4 mr-2" />Quote
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <button onClick={handleLikeReply} className={`flex items-center gap-1 text-[11px] p-1 rounded-full ${optimistic.is_liked ? 'text-destructive' : 'text-muted-foreground hover:text-destructive'}`} data-small-target>
-              <Heart className={`h-3.5 w-3.5 ${optimistic.is_liked ? 'fill-current' : ''}`} />
-              {optimistic.likes_count > 0 && <span>{optimistic.likes_count}</span>}
             </button>
           </div>
 
@@ -182,6 +158,7 @@ function CommentNode({
               replyingTo={replyingTo}
               navigateTo={navigateTo}
               onRefresh={onRefresh}
+              onReactComment={onReactComment}
             />
           ))}
         </div>
@@ -195,7 +172,7 @@ function CommentNode({
 
 export function XCommentSheet({
   open, onOpenChange, post, currentUserId, comments, loadingComments,
-  onAddComment, onLike, onRepost, onBookmark, onShare, onDelete, onQuote, onCommentsRefresh,
+  onAddComment, onBookmark, onShare, onDelete, onQuote, onCommentsRefresh, onReact, onReactComment,
 }: XCommentSheetProps) {
   const navigate = useNavigate();
   const [newComment, setNewComment] = useState("");
@@ -250,12 +227,12 @@ export function XCommentSheet({
           <XPostCard
             post={post}
             currentUserId={currentUserId}
-            onLike={onLike}
             onComment={() => {}}
-            onRepost={onRepost}
             onBookmark={onBookmark}
             onShare={onShare}
             onDelete={onDelete}
+            onReact={onReact}
+            expanded
           />
 
           <div className="px-4 py-2.5 border-b border-border/60 flex items-center justify-between sticky top-0 bg-background/95 backdrop-blur z-[5]">
@@ -297,6 +274,7 @@ export function XCommentSheet({
                   replyingTo={replyingTo?.id || null}
                   navigateTo={navigateTo}
                   onRefresh={async () => { if (onCommentsRefresh) await onCommentsRefresh(); }}
+                  onReactComment={onReactComment}
                 />
               ))}
             </div>

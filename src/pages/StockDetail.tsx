@@ -194,7 +194,7 @@ export default function StockDetail() {
             <Button variant="ghost" size="icon" aria-label="Toggle watchlist" onClick={handleWatchlistToggle} className="h-9 w-9 tap-scale">
               <Heart className={`h-4 w-4 ${isInWatchlist(symbol || '') ? 'fill-primary text-primary' : 'text-muted-foreground'}`} />
             </Button>
-            <Button variant="ghost" size="icon" aria-label="Price alerts" className="h-9 w-9 tap-scale" onClick={() => navigate("/alerts")}>
+            <Button variant="ghost" size="icon" aria-label="Price alerts" className="h-9 w-9 tap-scale" onClick={() => navigate("/notifications?tab=alerts")}>
               <AlarmClock className="h-4 w-4 text-muted-foreground" />
             </Button>
           </div>

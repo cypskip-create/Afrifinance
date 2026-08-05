@@ -1,6 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { TrendingUp, TrendingDown } from "lucide-react";
 
@@ -147,8 +146,7 @@ export function RobinhoodPerformanceChart({
   };
 
   return (
-    <Card className="card-gradient overflow-hidden">
-      <CardContent className="p-4">
+    <div className="overflow-hidden px-4">
         {/* Hero */}
         <div className="mb-3">
           <div className="text-xl font-bold tracking-tight tabular-nums">
@@ -230,7 +228,6 @@ export function RobinhoodPerformanceChart({
             </Button>
           ))}
         </div>
-      </CardContent>
-    </Card>
+    </div>
   );
 }

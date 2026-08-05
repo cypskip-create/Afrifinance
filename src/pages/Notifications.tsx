@@ -8,7 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useNotifications, AppNotification } from "@/hooks/useNotifications";
 import { useAuth } from "@/hooks/useAuth";
@@ -46,10 +46,11 @@ function formatTime(date: string) {
 
 export default function Notifications() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { user } = useAuth();
   const { notifications, loading, unreadCount, markAsRead, markAllAsRead, remove, clearAll } = useNotifications();
-  const [activeFilter, setActiveFilter] = useState("all");
+  const [activeFilter, setActiveFilter] = useState(() => searchParams.get("tab") === "alerts" ? "alerts" : "all");
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettings] = useState({
     tradershub: true, social: true, alerts: true, news: true, portfolio: true, push: false,

@@ -28,9 +28,9 @@ const NSE_PRICES: Record<string, { price: number; change: number }> = {
 interface XPostCardProps {
   post: Post;
   currentUserId?: string;
-  onLike: (postId: string) => void;
+  onLike?: (postId: string) => void;
   onComment: (post: Post) => void;
-  onRepost: (postId: string) => void;
+  onRepost?: (postId: string) => void;
   onBookmark: (postId: string) => void;
   onShare: (post: Post) => void;
   onDelete?: (postId: string) => void;
