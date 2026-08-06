@@ -11,8 +11,17 @@ export interface PostAuthor {
   handle?: string | null;
 }
 
-export type ReactionKind = 'insightful' | 'bullish' | 'cautious' | 'support' | 'disagree' | 'fire';
+export type ReactionKind = import("@/components/social/CommunityReactionButton").CommunityReaction;
 export type ReactionCounts = Partial<Record<ReactionKind, number>>;
+
+export interface CommentPreview {
+  id: string;
+  content: string;
+  author_name: string;
+  handle: string;
+  user_id: string;
+}
+
 
 export interface Post {
   id: string;
