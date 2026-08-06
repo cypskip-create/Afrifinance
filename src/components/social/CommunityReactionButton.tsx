@@ -1,68 +1,145 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
-export type CommunityReaction = "insightful" | "bullish" | "cautious" | "support" | "disagree" | "fire";
+/**
+ * AfriFinance reaction palette — finance-first, deliberately not a like button.
+ * Legacy ids are kept so historical reactions still render.
+ */
+export type CommunityReaction =
+  | "bullish" | "bearish" | "strong_hold" | "insightful" | "watch" | "fire" | "laugh" | "love"
+  // legacy
+  | "cautious" | "support" | "disagree";
 
-export const COMMUNITY_REACTIONS: { id: CommunityReaction; emoji: string; label: string }[] = [
+export interface ReactionMeta { id: CommunityReaction; emoji: string; label: string }
+
+export const COMMUNITY_REACTIONS: ReactionMeta[] = [
+  { id: "bullish", emoji: "🐂", label: "Bullish" },
+  { id: "bearish", emoji: "🐻", label: "Bearish" },
+  { id: "strong_hold", emoji: "🤲", label: "Strong Hold" },
   { id: "insightful", emoji: "💡", label: "Insightful" },
-  { id: "bullish", emoji: "📈", label: "Bullish" },
+  { id: "watch", emoji: "👀", label: "Watch" },
+  { id: "fire", emoji: "🔥", label: "Fire" },
+  { id: "laugh", emoji: "😂", label: "Laugh" },
+  { id: "love", emoji: "❤️", label: "Love" },
+];
+
+const LEGACY: ReactionMeta[] = [
   { id: "cautious", emoji: "🛡️", label: "Cautious" },
   { id: "support", emoji: "🤝", label: "Support" },
   { id: "disagree", emoji: "👎", label: "Disagree" },
-  { id: "fire", emoji: "🔥", label: "Hot take" },
 ];
 
-interface Props {
-  counts: Partial<Record<CommunityReaction, number>>;
+export const ALL_REACTIONS = [...COMMUNITY_REACTIONS, ...LEGACY];
+
+export function reactionMeta(id?: CommunityReaction | null): ReactionMeta | undefined {
+  return ALL_REACTIONS.find(r => r.id === id);
+}
+
+export type ReactionCountMap = Partial<Record<CommunityReaction, number>>;
+
+export function sortedReactions(counts: ReactionCountMap): { meta: ReactionMeta; count: number }[] {
+  return ALL_REACTIONS
+    .map(meta => ({ meta, count: counts[meta.id] || 0 }))
+    .filter(r => r.count > 0)
+    .sort((a, b) => b.count - a.count);
+}
+
+interface TrayProps {
+  counts: ReactionCountMap;
   selected?: CommunityReaction | null;
   onSelect: (reaction: CommunityReaction) => void;
   compact?: boolean;
+  /** Hide the aggregate count (used where chips already show totals). */
+  hideTotal?: boolean;
 }
 
-export function CommunityReactionButton({ counts, selected, onSelect, compact }: Props) {
+/** Reaction control: shows top reactions + total, opens the tray on tap. */
+export function CommunityReactionButton({ counts, selected, onSelect, compact, hideTotal }: TrayProps) {
   const [open, setOpen] = useState(false);
-  const total = Object.values(counts).reduce((sum, count) => sum + (count || 0), 0);
-  const top = COMMUNITY_REACTIONS
-    .filter(item => (counts[item.id] || 0) > 0)
-    .sort((a, b) => (counts[b.id] || 0) - (counts[a.id] || 0))
-    .slice(0, 3);
-  const active = COMMUNITY_REACTIONS.find(item => item.id === selected);
+  const ranked = sortedReactions(counts);
+  const total = ranked.reduce((sum, r) => sum + r.count, 0);
+  const top = ranked.slice(0, 3);
+  const active = reactionMeta(selected);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className={cn("h-9 px-2 gap-1.5 text-muted-foreground hover:text-primary", selected && "text-primary", compact && "h-8")}
-          onClick={event => event.stopPropagation()}
+        <button
+          type="button"
           aria-label="React to this post"
+          onClick={e => e.stopPropagation()}
+          className={cn(
+            "flex items-center gap-1.5 rounded-full text-muted-foreground transition-colors hover:text-foreground",
+            compact ? "h-7 px-1.5" : "h-8 px-1.5",
+            selected && "text-foreground"
+          )}
+          data-small-target
         >
-          <span className="text-[15px] leading-none">{active?.emoji || "💡"}</span>
-          {!compact && <span className="text-[11px] font-semibold">React</span>}
-          {top.length > 0 && <span className="flex -space-x-1">{top.map(item => <span key={item.id} className="text-[12px]">{item.emoji}</span>)}</span>}
-          {total > 0 && <span className="text-[11px] tabular">{total}</span>}
-        </Button>
+          {top.length > 0 ? (
+            <span className="flex items-center -space-x-1">
+              {top.map(r => (
+                <span key={r.meta.id} className="text-[14px] leading-none">{r.meta.emoji}</span>
+              ))}
+            </span>
+          ) : (
+            <span className={cn("text-[15px] leading-none", !active && "grayscale opacity-70")}>{active?.emoji || "🐂"}</span>
+          )}
+          {!hideTotal && <span className="text-[11px] font-medium tabular-nums">{total > 0 ? total : "React"}</span>}
+        </button>
       </PopoverTrigger>
-      <PopoverContent side="top" align="start" className="w-auto p-1.5 rounded-full" onClick={event => event.stopPropagation()}>
-        <div className="flex items-center gap-0.5">
+      <PopoverContent
+        side="top"
+        align="start"
+        className="w-[248px] p-2 rounded-2xl"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="grid grid-cols-4 gap-1">
           {COMMUNITY_REACTIONS.map(item => (
-            <Button
+            <button
               key={item.id}
-              variant="ghost"
-              size="icon"
-              className={cn("h-10 w-10 rounded-full text-xl hover:scale-110", selected === item.id && "bg-primary/10")}
+              type="button"
               title={item.label}
               aria-label={item.label}
               onClick={() => { onSelect(item.id); setOpen(false); }}
+              className={cn(
+                "flex flex-col items-center gap-0.5 rounded-xl py-1.5 transition-colors hover:bg-muted/60",
+                selected === item.id && "bg-primary/10"
+              )}
             >
-              {item.emoji}
-            </Button>
+              <span className="text-[19px] leading-none">{item.emoji}</span>
+              <span className="text-[9px] text-muted-foreground leading-none">{item.label}</span>
+            </button>
           ))}
         </div>
       </PopoverContent>
     </Popover>
+  );
+}
+
+/** Moomoo-style reaction chips (used in the expanded post view). */
+export function ReactionChips({
+  counts, selected, onSelect,
+}: { counts: ReactionCountMap; selected?: CommunityReaction | null; onSelect?: (r: CommunityReaction) => void }) {
+  const ranked = sortedReactions(counts);
+  if (ranked.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {ranked.map(r => (
+        <button
+          key={r.meta.id}
+          type="button"
+          onClick={e => { e.stopPropagation(); onSelect?.(r.meta.id); }}
+          className={cn(
+            "flex items-center gap-1.5 h-7 px-2.5 rounded-full bg-muted/50 text-[11px] font-medium tabular-nums transition-colors hover:bg-muted",
+            selected === r.meta.id && "bg-primary/15 text-foreground"
+          )}
+          data-small-target
+        >
+          <span className="text-[13px] leading-none">{r.meta.emoji}</span>
+          <span className="text-muted-foreground">{r.count}</span>
+        </button>
+      ))}
+    </div>
   );
 }

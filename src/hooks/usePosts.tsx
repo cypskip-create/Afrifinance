@@ -11,8 +11,17 @@ export interface PostAuthor {
   handle?: string | null;
 }
 
-export type ReactionKind = 'insightful' | 'bullish' | 'cautious' | 'support' | 'disagree' | 'fire';
+export type ReactionKind = import("@/components/social/CommunityReactionButton").CommunityReaction;
 export type ReactionCounts = Partial<Record<ReactionKind, number>>;
+
+export interface CommentPreview {
+  id: string;
+  content: string;
+  author_name: string;
+  handle: string;
+  user_id: string;
+}
+
 
 export interface Post {
   id: string;
@@ -34,7 +43,9 @@ export interface Post {
   quoted_post?: Post | null;
   reaction_counts: ReactionCounts;
   my_reaction: ReactionKind | null;
+  comment_previews?: CommentPreview[];
 }
+
 
 export interface Comment {
   id: string;
@@ -87,7 +98,7 @@ export function usePosts() {
        supabase.from('profiles_public').select('id, user_id, full_name, handle, avatar_url, bio').in('user_id', userIds),
         supabase.from('post_likes').select('post_id').in('post_id', postIds),
         supabase.from('post_reposts').select('post_id').in('post_id', postIds),
-        supabase.from('post_comments').select('post_id').in('post_id', postIds),
+        supabase.from('post_comments').select('id, post_id, content, user_id, created_at').in('post_id', postIds).order('created_at', { ascending: false }),
         user ? supabase.from('post_likes').select('post_id').eq('user_id', user.id).in('post_id', postIds) : Promise.resolve({ data: [] as any[] }),
         user ? supabase.from('post_reposts').select('post_id').eq('user_id', user.id).in('post_id', postIds) : Promise.resolve({ data: [] as any[] }),
         user ? supabase.from('post_bookmarks').select('post_id').eq('user_id', user.id).in('post_id', postIds) : Promise.resolve({ data: [] as any[] }),
@@ -128,6 +139,29 @@ export function usePosts() {
         }
       }
 
+      // Latest 2 comments per post → inline previews (Moomoo-style)
+      const previewRows = (commentsRes.data || []) as any[];
+      const commentAuthorIds = [...new Set(previewRows.map(c => c.user_id))].filter(id => !profileMap.has(id));
+      if (commentAuthorIds.length > 0) {
+        const { data: extra } = await supabase
+          .from('profiles_public').select('id, user_id, full_name, handle, avatar_url, bio').in('user_id', commentAuthorIds);
+        extra?.forEach((p: any) => profileMap.set(p.user_id, p));
+      }
+      const previewMap = new Map<string, CommentPreview[]>();
+      previewRows.forEach(c => {
+        const list = previewMap.get(c.post_id) || [];
+        if (list.length >= 2) return;
+        const author: any = profileMap.get(c.user_id);
+        list.push({
+          id: c.id,
+          content: c.content,
+          user_id: c.user_id,
+          author_name: author?.full_name || 'Investor',
+          handle: author?.handle || '',
+        });
+        previewMap.set(c.post_id, list);
+      });
+
       const enriched = postsData.map((post: any) => ({
         ...post,
         author: profileMap.get(post.user_id),
@@ -140,7 +174,9 @@ export function usePosts() {
         quoted_post: post.quoted_post_id ? quotedMap.get(post.quoted_post_id) || null : null,
         reaction_counts: reactionMap.get(post.id) || {},
         my_reaction: myReactionMap.get(post.id) || null,
+        comment_previews: previewMap.get(post.id) || [],
       }));
+
 
       setPosts(enriched as Post[]);
       __postsCache = enriched as Post[];
