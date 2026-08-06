@@ -139,6 +139,29 @@ export function usePosts() {
         }
       }
 
+      // Latest 2 comments per post → inline previews (Moomoo-style)
+      const previewRows = (commentsRes.data || []) as any[];
+      const commentAuthorIds = [...new Set(previewRows.map(c => c.user_id))].filter(id => !profileMap.has(id));
+      if (commentAuthorIds.length > 0) {
+        const { data: extra } = await supabase
+          .from('profiles_public').select('id, user_id, full_name, handle, avatar_url, bio').in('user_id', commentAuthorIds);
+        extra?.forEach((p: any) => profileMap.set(p.user_id, p));
+      }
+      const previewMap = new Map<string, CommentPreview[]>();
+      previewRows.forEach(c => {
+        const list = previewMap.get(c.post_id) || [];
+        if (list.length >= 2) return;
+        const author: any = profileMap.get(c.user_id);
+        list.push({
+          id: c.id,
+          content: c.content,
+          user_id: c.user_id,
+          author_name: author?.full_name || 'Investor',
+          handle: author?.handle || '',
+        });
+        previewMap.set(c.post_id, list);
+      });
+
       const enriched = postsData.map((post: any) => ({
         ...post,
         author: profileMap.get(post.user_id),
@@ -151,7 +174,9 @@ export function usePosts() {
         quoted_post: post.quoted_post_id ? quotedMap.get(post.quoted_post_id) || null : null,
         reaction_counts: reactionMap.get(post.id) || {},
         my_reaction: myReactionMap.get(post.id) || null,
+        comment_previews: previewMap.get(post.id) || [],
       }));
+
 
       setPosts(enriched as Post[]);
       __postsCache = enriched as Post[];
