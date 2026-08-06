@@ -27,6 +27,7 @@ import Rooms from "./pages/Rooms";
 import StockScreener from "./pages/StockScreener";
 import StockCompare from "./pages/StockCompare";
 import UserProfile from "./pages/UserProfile";
+import PostDetail from "./pages/PostDetail";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +59,7 @@ const App = () => (
                 <Route path="market-brief" element={<SectorHeatmap />} />
                 <Route path="track-investments" element={<TrackInvestments />} />
                 <Route path="traders-hub" element={<TradersHub />} />
+                <Route path="traders-hub/post/:postId" element={<PostDetail />} />
                 <Route path="rooms" element={<Rooms />} />
                 <Route path="screener" element={<StockScreener />} />
                 <Route path="compare" element={<StockCompare />} />
