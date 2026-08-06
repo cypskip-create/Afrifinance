@@ -43,7 +43,9 @@ export interface Post {
   quoted_post?: Post | null;
   reaction_counts: ReactionCounts;
   my_reaction: ReactionKind | null;
+  comment_previews?: CommentPreview[];
 }
+
 
 export interface Comment {
   id: string;
