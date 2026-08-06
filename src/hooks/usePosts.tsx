@@ -98,7 +98,7 @@ export function usePosts() {
        supabase.from('profiles_public').select('id, user_id, full_name, handle, avatar_url, bio').in('user_id', userIds),
         supabase.from('post_likes').select('post_id').in('post_id', postIds),
         supabase.from('post_reposts').select('post_id').in('post_id', postIds),
-        supabase.from('post_comments').select('post_id').in('post_id', postIds),
+        supabase.from('post_comments').select('id, post_id, content, user_id, created_at').in('post_id', postIds).order('created_at', { ascending: false }),
         user ? supabase.from('post_likes').select('post_id').eq('user_id', user.id).in('post_id', postIds) : Promise.resolve({ data: [] as any[] }),
         user ? supabase.from('post_reposts').select('post_id').eq('user_id', user.id).in('post_id', postIds) : Promise.resolve({ data: [] as any[] }),
         user ? supabase.from('post_bookmarks').select('post_id').eq('user_id', user.id).in('post_id', postIds) : Promise.resolve({ data: [] as any[] }),
