@@ -12,6 +12,7 @@ import { formatTimestamp } from "@/lib/formatTimestamp";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { CommunityReactionButton, CommunityReaction } from "./CommunityReactionButton";
+import { atHandle, getHandle } from "@/lib/handle";
 
 
 const NSE_PRICES: Record<string, { price: number; change: number }> = {
@@ -57,7 +58,7 @@ export function XPostCard({ post, currentUserId, onComment, onBookmark, onShare,
   const handleMute = async () => {
     if (!currentUserId) return navigate("/auth");
     await supabase.from("muted_users").insert({ muter_id: currentUserId, muted_id: post.user_id });
-    toast({ title: `Muted @${(post.author as any)?.handle || post.author?.full_name || "user"}` });
+    toast({ title: `Muted ${atHandle(post.author as any)}` });
   };
   const handleBlock = async () => {
     if (!currentUserId) return navigate("/auth");
@@ -84,7 +85,7 @@ export function XPostCard({ post, currentUserId, onComment, onBookmark, onShare,
     return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
   };
 
-  const handle = (post.author as any)?.handle || post.author?.full_name?.toLowerCase().replace(/\s+/g, "") || "user";
+  const handle = getHandle(post.author as any);
   // Real views — derived from engagement signals; no random inflation.
   const viewCount = (post.likes_count || 0) * 8 + (post.comments_count || 0) * 12 + (post.reposts_count || 0) * 15;
 
@@ -172,8 +173,8 @@ export function XPostCard({ post, currentUserId, onComment, onBookmark, onShare,
                   {currentUserId !== post.user_id && (
                     <>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMute(); }}><VolumeX className="h-4 w-4 mr-2" />Mute @{(post.author as any)?.handle || "user"}</DropdownMenuItem>
-                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleBlock(); }}><UserX className="h-4 w-4 mr-2" />Block @{(post.author as any)?.handle || "user"}</DropdownMenuItem>
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMute(); }}><VolumeX className="h-4 w-4 mr-2" />Mute {atHandle(post.author as any)}</DropdownMenuItem>
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleBlock(); }}><UserX className="h-4 w-4 mr-2" />Block {atHandle(post.author as any)}</DropdownMenuItem>
                       <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleReport(); }} className="text-destructive"><Flag className="h-4 w-4 mr-2" />Report post</DropdownMenuItem>
                     </>
                   )}

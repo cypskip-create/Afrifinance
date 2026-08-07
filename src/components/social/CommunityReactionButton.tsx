@@ -59,7 +59,9 @@ export function CommunityReactionButton({ counts, selected, onSelect, compact, h
   const [open, setOpen] = useState(false);
   const ranked = sortedReactions(counts);
   const total = ranked.reduce((sum, r) => sum + r.count, 0);
-  const top = ranked.slice(0, 3);
+  // Only the single most-used reaction is shown in the collapsed view — whichever
+  // reaction has the most reactors "wins" the icon slot, like the fire emoji does today.
+  const winner = ranked[0];
   const active = reactionMeta(selected);
 
   return (
@@ -76,12 +78,8 @@ export function CommunityReactionButton({ counts, selected, onSelect, compact, h
           )}
           data-small-target
         >
-          {top.length > 0 ? (
-            <span className="flex items-center -space-x-1">
-              {top.map(r => (
-                <span key={r.meta.id} className="text-[14px] leading-none">{r.meta.emoji}</span>
-              ))}
-            </span>
+          {winner ? (
+            <span className="text-[15px] leading-none">{winner.meta.emoji}</span>
           ) : (
             <span className={cn("text-[15px] leading-none", !active && "grayscale opacity-70")}>{active?.emoji || "🐂"}</span>
           )}
@@ -91,7 +89,7 @@ export function CommunityReactionButton({ counts, selected, onSelect, compact, h
       <PopoverContent
         side="top"
         align="start"
-        className="w-[248px] p-2 rounded-2xl"
+        className="w-[264px] p-2.5 rounded-2xl"
         onClick={e => e.stopPropagation()}
       >
         <div className="grid grid-cols-4 gap-1">
@@ -103,12 +101,12 @@ export function CommunityReactionButton({ counts, selected, onSelect, compact, h
               aria-label={item.label}
               onClick={() => { onSelect(item.id); setOpen(false); }}
               className={cn(
-                "flex flex-col items-center gap-0.5 rounded-xl py-1.5 transition-colors hover:bg-muted/60",
+                "flex flex-col items-center gap-1 rounded-xl py-2 transition-colors hover:bg-muted/60 active:scale-95",
                 selected === item.id && "bg-primary/10"
               )}
             >
-              <span className="text-[19px] leading-none">{item.emoji}</span>
-              <span className="text-[9px] text-muted-foreground leading-none">{item.label}</span>
+              <span className="text-[22px] leading-none">{item.emoji}</span>
+              <span className="text-[9.5px] text-muted-foreground leading-none">{item.label}</span>
             </button>
           ))}
         </div>

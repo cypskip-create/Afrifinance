@@ -44,7 +44,6 @@ function CommentNode({ comment, depth, onReply, onReactComment, replyingToId }: 
             <AvatarImage src={comment.author?.avatar_url || ""} />
             <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-bold">{getInitials(comment.author?.full_name)}</AvatarFallback>
           </Avatar>
-          {replies.length > 0 && expanded && <div className="flex-1 w-px bg-border/60 mt-1" />}
         </div>
 
         <div className="flex-1 min-w-0">
@@ -88,7 +87,10 @@ function CommentNode({ comment, depth, onReply, onReactComment, replyingToId }: 
       </div>
 
       {expanded && replies.length > 0 && (
-        <div className="pl-[26px]">
+        <div
+          className="ml-[17px] pl-[16px] border-l-2"
+          style={{ borderColor: `hsl(var(--border) / ${Math.max(0.25, 0.6 - depth * 0.12)})` }}
+        >
           {replies.map(r => (
             <CommentNode key={r.id} comment={r} depth={depth + 1} onReply={onReply} onReactComment={onReactComment} replyingToId={replyingToId} />
           ))}

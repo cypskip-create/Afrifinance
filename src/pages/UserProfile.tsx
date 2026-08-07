@@ -16,11 +16,13 @@ import { EditProfileDialog } from "@/components/profile/EditProfileDialog";
 import { SparklineChart } from "@/components/shared/SparklineChart";
 import { HoldingsList } from "@/components/portfolio/HoldingsList";
 import { XPostCard } from "@/components/social/XPostCard";
+import { HubPostCard } from "@/components/social/HubPostCard";
 import { usePosts, Post, Comment, ReactionKind } from "@/hooks/usePosts";
 import { XCommentSheet } from "@/components/social/XCommentSheet";
 import { ProfileSettingsDialog } from "@/components/profile/ProfileSettingsDialog";
 import { PortfolioPrivacyDialog } from "@/components/profile/PortfolioPrivacyDialog";
 import { getPrice } from "@/lib/stockPrices";
+import { atHandle } from "@/lib/handle";
 
 
 interface UserProfileData {
@@ -35,7 +37,7 @@ interface UserPost {
   user_id: string; stock_mentions: string[] | null; likes_count: number;
   comments_count: number; reposts_count: number; is_liked: boolean;
   is_reposted: boolean; is_bookmarked: boolean;
-  author?: { id?: string; user_id?: string; full_name: string | null; avatar_url: string | null; bio?: string | null };
+  author?: { id?: string; user_id?: string; full_name: string | null; avatar_url: string | null; bio?: string | null; handle?: string | null };
 }
 
 interface PortfolioHolding {
@@ -96,7 +98,7 @@ export default function UserProfile() {
     const { data: pd } = await supabase.from("posts").select("*").in("id", pids);
     if (!pd) return;
     const uids = [...new Set(pd.map(p => p.user_id))];
-    const { data: profs } = await supabase.from("profiles_public").select("user_id, full_name, avatar_url").in("user_id", uids);
+    const { data: profs } = await supabase.from("profiles_public").select("user_id, full_name, avatar_url, handle").in("user_id", uids);
     const pm = new Map(profs?.map(p => [p.user_id, p]));
     const enriched = await Promise.all(pd.map(async (post) => {
       const [l, c, r] = await Promise.all([
@@ -105,7 +107,7 @@ export default function UserProfile() {
         supabase.from("post_reposts").select("id", { count: "exact", head: true }).eq("post_id", post.id),
       ]);
       const a = pm.get(post.user_id);
-      return { ...post, likes_count: l.count || 0, comments_count: c.count || 0, reposts_count: r.count || 0, is_liked: false, is_reposted: false, is_bookmarked: true, author: a ? { full_name: a.full_name, avatar_url: a.avatar_url } : undefined };
+      return { ...post, likes_count: l.count || 0, comments_count: c.count || 0, reposts_count: r.count || 0, is_liked: false, is_reposted: false, is_bookmarked: true, author: a ? { full_name: a.full_name, avatar_url: a.avatar_url, handle: a.handle, user_id: post.user_id } : undefined };
     }));
     setBookmarkedPosts(enriched);
   };
@@ -162,7 +164,7 @@ export default function UserProfile() {
       const { data: pd } = await supabase.from("posts").select("*").in("id", pids);
       if (pd) {
         const uids = [...new Set(pd.map(p => p.user_id))];
-        const { data: profs } = await supabase.from("profiles_public").select("user_id, full_name, avatar_url").in("user_id", uids);
+        const { data: profs } = await supabase.from("profiles_public").select("user_id, full_name, avatar_url, handle").in("user_id", uids);
         const pm = new Map(profs?.map(p => [p.user_id, p]));
         const withDetails = await Promise.all(pd.map(async (post) => {
           const [l, c, r] = await Promise.all([
@@ -171,7 +173,7 @@ export default function UserProfile() {
             supabase.from("post_reposts").select("id", { count: "exact", head: true }).eq("post_id", post.id),
           ]);
           const a = pm.get(post.user_id);
-          return { ...post, likes_count: l.count || 0, comments_count: c.count || 0, reposts_count: r.count || 0, is_liked: true, is_reposted: false, is_bookmarked: false, author: a ? { full_name: a.full_name, avatar_url: a.avatar_url } : undefined };
+          return { ...post, likes_count: l.count || 0, comments_count: c.count || 0, reposts_count: r.count || 0, is_liked: true, is_reposted: false, is_bookmarked: false, author: a ? { full_name: a.full_name, avatar_url: a.avatar_url, handle: a.handle, user_id: post.user_id } : undefined };
         }));
         setLikedPosts(withDetails);
       }
@@ -186,7 +188,7 @@ export default function UserProfile() {
       const { data: pd } = await supabase.from("posts").select("*").in("id", pids);
       if (pd) {
         const uids = [...new Set(pd.map(p => p.user_id))];
-        const { data: profs } = await supabase.from("profiles_public").select("user_id, full_name, avatar_url").in("user_id", uids);
+        const { data: profs } = await supabase.from("profiles_public").select("user_id, full_name, avatar_url, handle").in("user_id", uids);
         const pm = new Map(profs?.map(p => [p.user_id, p]));
         const withDetails = await Promise.all(pd.map(async (post) => {
           const [l, c, r] = await Promise.all([
@@ -195,7 +197,7 @@ export default function UserProfile() {
             supabase.from("post_reposts").select("id", { count: "exact", head: true }).eq("post_id", post.id),
           ]);
           const a = pm.get(post.user_id);
-          return { ...post, likes_count: l.count || 0, comments_count: c.count || 0, reposts_count: r.count || 0, is_liked: false, is_reposted: true, is_bookmarked: false, author: a ? { full_name: a.full_name, avatar_url: a.avatar_url } : undefined };
+          return { ...post, likes_count: l.count || 0, comments_count: c.count || 0, reposts_count: r.count || 0, is_liked: false, is_reposted: true, is_bookmarked: false, author: a ? { full_name: a.full_name, avatar_url: a.avatar_url, handle: a.handle, user_id: post.user_id } : undefined };
         }));
         setRepostedPosts(withDetails);
       }
@@ -252,7 +254,6 @@ export default function UserProfile() {
 
   const getInitials = (name: string | null) => name ? name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) : "U";
   const formatDate = (date: string) => new Date(date).toLocaleDateString("en-US", { month: "long", year: "numeric" });
-  const handle = profileData?.handle || profileData?.full_name?.toLowerCase().replace(/\s+/g, "") || "user";
 
   const portfolioSummary = useMemo(() => {
     if (!publicPortfolio.length) return null;
@@ -271,8 +272,9 @@ export default function UserProfile() {
   const castToPost = (p: UserPost): Post => ({
     ...p, updated_at: p.created_at,
     reaction_counts: {}, my_reaction: null,
-    author: p.author ? { id: p.author.id || "", user_id: p.author.user_id || p.user_id, full_name: p.author.full_name, avatar_url: p.author.avatar_url, bio: p.author.bio || null }
-      : { id: "", user_id: p.user_id, full_name: profileData?.full_name || null, avatar_url: profileData?.avatar_url || null, bio: null },
+    author: p.author
+      ? { id: p.author.id || "", user_id: p.author.user_id || p.user_id, full_name: p.author.full_name, avatar_url: p.author.avatar_url, bio: p.author.bio || null, handle: p.author.handle ?? null }
+      : { id: "", user_id: p.user_id, full_name: profileData?.full_name || null, avatar_url: profileData?.avatar_url || null, bio: null, handle: profileData?.handle ?? null },
   });
 
   if (loading) {
@@ -336,33 +338,33 @@ export default function UserProfile() {
         </div>
       </header>
 
-      {/* Banner — X-style compact */}
-      <div className="relative h-28 sm:h-32 bg-gradient-to-br from-primary/30 via-accent/20 to-primary/10 overflow-hidden">
+      {/* Banner */}
+      <div className="relative h-32 sm:h-40 bg-gradient-to-br from-primary/30 via-accent/20 to-primary/10 overflow-hidden">
         {profileData.banner_url && <img src={profileData.banner_url} alt="Banner" className="w-full h-full object-cover" />}
         {isOwnProfile && (
           <>
             <input type="file" ref={bannerInputRef} className="hidden" accept="image/*" onChange={handleBannerUpload} />
-            <Button size="icon" variant="secondary" className="absolute bottom-2 right-2 h-7 w-7 rounded-full bg-background/70 hover:bg-background/90 backdrop-blur-sm" onClick={() => bannerInputRef.current?.click()} disabled={uploadingBanner}>
-              {uploadingBanner ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
+            <Button size="icon" variant="secondary" className="absolute bottom-2 right-2 h-8 w-8 rounded-full bg-background/70 hover:bg-background/90 backdrop-blur-sm" onClick={() => bannerInputRef.current?.click()} disabled={uploadingBanner}>
+              {uploadingBanner ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
             </Button>
           </>
         )}
       </div>
 
-      {/* Avatar + actions — X-style */}
-      <div className="px-4 -mt-10">
+      {/* Avatar + actions */}
+      <div className="px-4 -mt-12">
         <div className="flex justify-between items-end">
-          <Avatar className="h-20 w-20 sm:h-24 sm:w-24 ring-4 ring-background shadow-md">
+          <Avatar className="h-24 w-24 sm:h-28 sm:w-28 ring-4 ring-background shadow-md">
             <AvatarImage src={profileData.avatar_url || ""} className="object-cover" />
-            <AvatarFallback className="bg-primary text-primary-foreground text-xl font-bold">{getInitials(profileData.full_name)}</AvatarFallback>
+            <AvatarFallback className="bg-primary text-primary-foreground text-2xl font-bold">{getInitials(profileData.full_name)}</AvatarFallback>
           </Avatar>
           <div className="flex gap-1.5 mb-1.5">
             {isOwnProfile ? (
-              <Button variant="outline" size="sm" className="h-8 rounded-full font-semibold text-[13px] px-4" onClick={() => setEditProfileOpen(true)}>Edit profile</Button>
+              <Button variant="outline" size="sm" className="h-9 rounded-full font-semibold text-[13.5px] px-4" onClick={() => setEditProfileOpen(true)}>Edit profile</Button>
             ) : (
               <>
-                <Button variant="outline" size="icon" className="h-8 w-8 rounded-full"><MessageCircle className="h-3.5 w-3.5" /></Button>
-                <Button variant={userIsFollowing ? "outline" : "default"} size="sm" onClick={handleFollow} className="h-8 rounded-full font-semibold text-[13px] px-4">
+                <Button variant="outline" size="icon" className="h-9 w-9 rounded-full"><MessageCircle className="h-4 w-4" /></Button>
+                <Button variant={userIsFollowing ? "outline" : "default"} size="sm" onClick={handleFollow} className="h-9 rounded-full font-semibold text-[13.5px] px-4">
                   {userIsFollowing ? "Following" : "Follow"}
                 </Button>
               </>
@@ -370,13 +372,13 @@ export default function UserProfile() {
           </div>
         </div>
 
-        {/* Name + bio — X-sized */}
-        <div className="mt-2">
-          <h2 className="text-[17px] font-extrabold leading-tight flex items-center gap-1">
+        {/* Name + bio */}
+        <div className="mt-2.5">
+          <h2 className="text-[19px] font-extrabold leading-tight flex items-center gap-1">
             {profileData.full_name || "User"}
             <Verified className="h-4 w-4 text-primary fill-primary" />
           </h2>
-          <p className="text-[13px] text-muted-foreground leading-tight">@{handle}</p>
+          <p className="text-[13.5px] text-muted-foreground leading-tight">{atHandle(profileData)}</p>
 
           {profileData.bio && <p className="mt-2 text-[14px] leading-snug">{profileData.bio}</p>}
 
@@ -429,11 +431,34 @@ export default function UserProfile() {
                     <Pin className="h-3 w-3" />
                     <span className="font-medium">Pinned</span>
                   </div>
-                  <XPostCard post={castToPost(pinnedPost)} currentUserId={user?.id} onComment={openComments} onBookmark={handleBookmark} onShare={handlePostShare} onDelete={isOwnProfile ? handleDelete : undefined} onReact={handleReact} />
+                  <HubPostCard
+                    post={castToPost(pinnedPost)}
+                    currentUserId={user?.id}
+                    isFollowing={userIsFollowing}
+                    onFollow={() => handleFollow()}
+                    onOpen={p => navigate(`/traders-hub/post/${p.id}`)}
+                    onComment={p => navigate(`/traders-hub/post/${p.id}`)}
+                    onBookmark={handleBookmark}
+                    onShare={handlePostShare}
+                    onDelete={isOwnProfile ? handleDelete : undefined}
+                    onReact={handleReact}
+                  />
                 </div>
               )}
               {regularPosts.map(post => (
-                <XPostCard key={post.id} post={castToPost(post)} currentUserId={user?.id} onComment={openComments} onBookmark={handleBookmark} onShare={handlePostShare} onDelete={isOwnProfile ? handleDelete : undefined} onReact={handleReact} />
+                <HubPostCard
+                  key={post.id}
+                  post={castToPost(post)}
+                  currentUserId={user?.id}
+                  isFollowing={userIsFollowing}
+                  onFollow={() => handleFollow()}
+                  onOpen={p => navigate(`/traders-hub/post/${p.id}`)}
+                  onComment={p => navigate(`/traders-hub/post/${p.id}`)}
+                  onBookmark={handleBookmark}
+                  onShare={handlePostShare}
+                  onDelete={isOwnProfile ? handleDelete : undefined}
+                  onReact={handleReact}
+                />
               ))}
             </div>
           )}
@@ -496,7 +521,18 @@ export default function UserProfile() {
             <div className="p-12 text-center text-muted-foreground"><Bookmark className="h-10 w-10 mx-auto mb-3 opacity-40" /><p className="text-sm">No bookmarks yet</p><p className="text-xs mt-1">Save posts to read them later</p></div>
           ) : (
             <div className="divide-y divide-border">
-              {bookmarkedPosts.map(post => <XPostCard key={post.id} post={castToPost(post)} currentUserId={user?.id} onComment={openComments} onBookmark={handleBookmark} onShare={handlePostShare} onReact={handleReact} />)}
+              {bookmarkedPosts.map(post => (
+                <HubPostCard
+                  key={post.id}
+                  post={castToPost(post)}
+                  currentUserId={user?.id}
+                  onOpen={p => navigate(`/traders-hub/post/${p.id}`)}
+                  onComment={p => navigate(`/traders-hub/post/${p.id}`)}
+                  onBookmark={handleBookmark}
+                  onShare={handlePostShare}
+                  onReact={handleReact}
+                />
+              ))}
             </div>
           )}
         </TabsContent>

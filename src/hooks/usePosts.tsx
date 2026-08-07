@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { useToast } from './use-toast';
 
 export interface PostAuthor {
   id: string;
@@ -70,6 +71,7 @@ let __postsCacheKey: string | null = null;
 
 export function usePosts() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const cacheKey = user?.id || 'anon';
   const initial = __postsCache && __postsCacheKey === cacheKey ? __postsCache : [];
   const [posts, setPosts] = useState<Post[]>(initial);
@@ -263,14 +265,21 @@ export function usePosts() {
       ? supabase.from('post_reactions' as any).delete().eq('post_id', postId).eq('user_id', user.id)
       : supabase.from('post_reactions' as any).upsert({ post_id: postId, user_id: user.id, reaction }, { onConflict: 'post_id,user_id' });
     const { error } = await query;
-    if (!error) await fetchPosts();
+    if (!error) {
+      await fetchPosts();
+    } else {
+      toast({ title: "Couldn't save that reaction", description: error.message, variant: "destructive" });
+    }
     return { error };
   };
 
   const reactToComment = async (commentId: string, reaction: ReactionKind, current?: ReactionKind | null) => {
     if (!user) return { error: { message: 'Must be logged in' } };
-    if (current === reaction) return await supabase.from('comment_reactions' as any).delete().eq('comment_id', commentId).eq('user_id', user.id);
-    return await supabase.from('comment_reactions' as any).upsert({ comment_id: commentId, user_id: user.id, reaction }, { onConflict: 'comment_id,user_id' });
+    const { error } = current === reaction
+      ? await supabase.from('comment_reactions' as any).delete().eq('comment_id', commentId).eq('user_id', user.id)
+      : await supabase.from('comment_reactions' as any).upsert({ comment_id: commentId, user_id: user.id, reaction }, { onConflict: 'comment_id,user_id' });
+    if (error) toast({ title: "Couldn't save that reaction", description: error.message, variant: "destructive" });
+    return { error };
   };
 
   const fetchComments = async (postId: string): Promise<Comment[]> => {

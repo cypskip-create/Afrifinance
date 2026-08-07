@@ -222,26 +222,26 @@ export default function TradersHub() {
       {!disclaimerDone && <TradersHubDisclaimer userId={user?.id} onAccept={() => setDisclaimerDone(true)} />}
 
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border/60">
-        <div className="flex items-center gap-2 px-3 py-2">
+        <div className="flex items-center gap-2.5 px-3 py-2.5">
           <Avatar
-            className="h-8 w-8 shrink-0"
+            className="h-10 w-10 shrink-0"
             onClick={() => user ? navigate(`/profile/${user.id}`) : navigate("/auth")}
           >
             <AvatarImage src={profile?.avatar_url || ""} className="object-cover" />
-            <AvatarFallback className="text-[10px] font-bold bg-primary/10 text-primary">{getInitials(profile?.full_name)}</AvatarFallback>
+            <AvatarFallback className="text-[12px] font-bold bg-primary/10 text-primary">{getInitials(profile?.full_name)}</AvatarFallback>
           </Avatar>
 
           <div className="relative flex-1 min-w-0">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search people, tickers, #topics, posts"
               value={searchQuery}
               onChange={e => setSearch(e.target.value)}
-              className="h-8 pl-8 pr-8 rounded-full bg-muted/50 border-0 text-[12.5px]"
+              className="h-10 pl-10 pr-9 rounded-full bg-muted/50 border-0 text-[13.5px]"
             />
             {searching && (
-              <button onClick={clearSearch} data-small-target aria-label="Clear search" className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground">
-                <X className="h-3.5 w-3.5" />
+              <button onClick={clearSearch} data-small-target aria-label="Clear search" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                <X className="h-4 w-4" />
               </button>
             )}
           </div>
@@ -250,26 +250,26 @@ export default function TradersHub() {
             data-small-target
             aria-label="TradersHub notifications"
             onClick={() => navigate("/notifications?feature=tradershub")}
-            className="relative h-8 w-8 shrink-0 flex items-center justify-center text-muted-foreground"
+            className="relative h-10 w-10 shrink-0 flex items-center justify-center text-muted-foreground"
           >
-            <Bell className="h-[18px] w-[18px]" />
+            <Bell className="h-5 w-5" />
             {hubUnread > 0 && (
-              <span className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-primary" />
+              <span className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-primary" />
             )}
           </button>
         </div>
 
-        {/* Compact top navigation */}
-        <div className="flex items-center gap-4 px-4">
+        {/* Compact top navigation — evenly split across the full width */}
+        <div className="grid grid-cols-3 px-1">
           {tabs.map(tab => (
             <button
               key={tab.id}
               data-small-target
               onClick={() => setActiveTab(tab.id)}
-              className={`relative pb-2 pt-0.5 text-[14px] transition-colors ${activeTab === tab.id ? "font-bold text-foreground" : "text-muted-foreground"}`}
+              className={`relative flex items-center justify-center pb-2 pt-0.5 text-[14px] transition-colors ${activeTab === tab.id ? "font-bold text-foreground" : "text-muted-foreground"}`}
             >
               {tab.label}
-              {activeTab === tab.id && <span className="absolute -bottom-px left-0 right-0 h-[3px] rounded-full bg-primary" />}
+              {activeTab === tab.id && <span className="absolute -bottom-px left-1/2 -translate-x-1/2 w-10 h-[3px] rounded-full bg-primary" />}
             </button>
           ))}
         </div>
