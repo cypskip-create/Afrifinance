@@ -54,6 +54,9 @@ export function RobinhoodPerformanceChart({
   const [activeTimeframe, setActiveTimeframe] = useState("1M");
   const [hoverValue, setHoverValue] = useState<number | null>(null);
   const [hoverDate, setHoverDate] = useState<string | null>(null);
+  // Crosshair overlay position — see StockPriceChart.tsx for why this reads
+  // { activeIndex, activeCoordinate } instead of the old activePayload shape.
+  const [crosshair, setCrosshair] = useState<{ x: number; y: number } | null>(null);
 
   // Seeded RNG so the chart is stable per-portfolio and per-timeframe.
   const rng = (s: string) => {
@@ -126,15 +129,24 @@ export function RobinhoodPerformanceChart({
   const gradientId = `perfGrad-${activeTimeframe}-${mode}`;
   const lineColor = isPositive ? 'hsl(var(--bull))' : 'hsl(var(--bear))';
 
-  const handleMove = useCallback((e: any) => {
-    if (e?.activePayload?.[0]) {
-      const v = e.activePayload[0].value;
+  const handleMove = useCallback((state: any) => {
+    const idx = state?.activeIndex != null ? Number(state.activeIndex) : NaN;
+    const coord = state?.activeCoordinate;
+    if (Number.isFinite(idx) && chartData[idx] && coord) {
+      const point = chartData[idx];
+      setCrosshair({ x: coord.x, y: coord.y });
       setHoverValue(prev => {
-        if (prev !== v) haptic(6);
-        return v;
+        if (prev !== point.value) haptic(6);
+        return point.value;
       });
-      setHoverDate(e.activePayload[0].payload.date);
+      setHoverDate(point.date);
     }
+  }, [chartData]);
+
+  const handleLeave = useCallback(() => {
+    setHoverValue(null);
+    setHoverDate(null);
+    setCrosshair(null);
   }, []);
 
   const formatHero = (v: number) => {
@@ -176,16 +188,16 @@ export function RobinhoodPerformanceChart({
 
         {/* Chart */}
         <div
-          className="h-[170px] -mx-4 touch-none select-none"
+          className="relative h-[170px] -mx-4 touch-none select-none"
           onTouchStart={() => haptic(10)}
-          onTouchMove={() => haptic(4)}
-          onTouchEnd={() => { setHoverValue(null); setHoverDate(null); }}
+          onTouchEnd={handleLeave}
         >
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
               data={chartData}
               onMouseMove={handleMove}
-              onMouseLeave={() => { setHoverValue(null); setHoverDate(null); }}
+              onMouseLeave={handleLeave}
+              onTouchMove={handleMove}
               margin={{ top: 5, right: 0, left: 0, bottom: 5 }}
             >
               <defs>
@@ -197,7 +209,7 @@ export function RobinhoodPerformanceChart({
               </defs>
               <XAxis dataKey="date" hide />
               <YAxis hide domain={['dataMin', 'dataMax']} />
-              <Tooltip content={() => null} cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '4 4' }} />
+              <Tooltip content={() => null} cursor={false} />
               <Area
                 type="monotone"
                 dataKey="value"
@@ -206,10 +218,20 @@ export function RobinhoodPerformanceChart({
                 fill={`url(#${gradientId})`}
                 dot={false}
                 isAnimationActive={false}
-                activeDot={{ r: 4, fill: lineColor, stroke: 'hsl(var(--background))', strokeWidth: 2 }}
+                activeDot={false}
               />
             </AreaChart>
           </ResponsiveContainer>
+          {crosshair && (
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+              <div className="absolute top-0 bottom-0 w-px bg-foreground/30" style={{ left: crosshair.x }} />
+              <div className="absolute left-0 right-0 border-t border-dashed border-foreground/30" style={{ top: crosshair.y }} />
+              <div
+                className="absolute h-2.5 w-2.5 rounded-full -translate-x-1/2 -translate-y-1/2 ring-2 ring-background"
+                style={{ left: crosshair.x, top: crosshair.y, backgroundColor: lineColor }}
+              />
+            </div>
+          )}
         </div>
 
         {/* Timeframe */}

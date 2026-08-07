@@ -175,6 +175,7 @@ export function XCommentSheet({
   onAddComment, onBookmark, onShare, onDelete, onQuote, onCommentsRefresh, onReact, onReactComment,
 }: XCommentSheetProps) {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [newComment, setNewComment] = useState("");
   const [sending, setSending] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
@@ -185,10 +186,12 @@ export function XCommentSheet({
   const handleSubmit = async () => {
     if (!newComment.trim()) return;
     setSending(true);
+    const isReply = !!replyingTo?.id;
     await onAddComment(newComment, replyingTo?.id);
     setNewComment("");
     setReplyingTo(null);
     setSending(false);
+    toast({ title: isReply ? "Reply posted" : "Comment posted" });
   };
 
   const handleQuoteComment = (c: Comment) => {

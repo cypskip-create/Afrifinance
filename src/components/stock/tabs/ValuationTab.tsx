@@ -5,13 +5,13 @@ import { BarChartBlock } from "@/components/charts/BarChartBlock";
 
 
 
-interface Props { price: number; pe: string; fundamentals: Fundamentals }
+interface Props { price: number; pe: string; fundamentals: Fundamentals; onSeePerformance?: () => void }
 
 const Eyebrow = ({ children }: { children: React.ReactNode }) => (
   <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground mb-2">{children}</p>
 );
 
-export function ValuationTab({ price, pe, fundamentals }: Props) {
+export function ValuationTab({ price, pe, fundamentals, onSeePerformance }: Props) {
   const fair = fundamentals.fairValue;
   const upside = ((fair - price) / price) * 100;
   const tag = upside > 10 ? "Undervalued" : upside < -10 ? "Overvalued" : "Fairly Valued";
@@ -63,36 +63,16 @@ export function ValuationTab({ price, pe, fundamentals }: Props) {
         </div>
       </div>
 
-      {/* Analyst price target consensus */}
+      {/* Analyst consensus — quick pointer only; full price-target breakdown lives in the Performance group */}
       <div>
-        <Eyebrow>Price Target Consensus · {targets.count} analysts</Eyebrow>
-        <div className="border-t border-border/60 pt-3">
-          <div className="relative h-9 bg-muted/40 rounded-full">
-            {/* Range bar */}
-            <div className="absolute top-1/2 -translate-y-1/2 h-1.5 rounded-full"
-              style={{ left: "8%", right: "8%", background: `linear-gradient(90deg, ${fx.weak}, ${fx.ok}, ${fx.strong})` }} />
-            {/* Low / Avg / High markers */}
-            {[
-              { label: "Low", val: targets.low, color: fx.weak, pos: "12%" },
-              { label: "Avg", val: targets.avg, color: fx.target, pos: "50%" },
-              { label: "High", val: targets.high, color: fx.strong, pos: "88%" },
-            ].map(m => (
-              <div key={m.label} className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 flex flex-col items-center" style={{ left: m.pos }}>
-                <div className="h-4 w-0.5" style={{ background: m.color }} />
-                <span className="text-[9px] font-semibold tabular mt-1" style={{ color: m.color }}>{m.val}</span>
-              </div>
-            ))}
-            {/* Current price */}
-            <div className="absolute -bottom-6 -translate-x-1/2 text-[9px] font-semibold text-muted-foreground tabular"
-              style={{ left: `${Math.max(4, Math.min(96, ((price - targets.low) / Math.max(0.01, targets.high - targets.low)) * 100))}%` }}>
-              ▲ Now KES {price.toFixed(2)}
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-2 mt-9 pt-2 border-t border-border/40">
-            <div className="text-center"><p className="text-[10px] text-muted-foreground">Buy</p><p className="text-sm font-bold tabular" style={{ color: fx.buy }}>{targets.buy}</p></div>
-            <div className="text-center"><p className="text-[10px] text-muted-foreground">Hold</p><p className="text-sm font-bold tabular" style={{ color: fx.hold }}>{targets.hold}</p></div>
-            <div className="text-center"><p className="text-[10px] text-muted-foreground">Sell</p><p className="text-sm font-bold tabular" style={{ color: fx.sell }}>{targets.sell}</p></div>
-          </div>
+        <Eyebrow>Analyst Consensus</Eyebrow>
+        <div className="flex items-center justify-between border-t border-border/60 pt-3">
+          <p className="text-xs text-muted-foreground">
+            {targets.count} analysts · avg target <span className="font-semibold tabular text-foreground">KES {targets.avg}</span>
+          </p>
+          <button data-small-target onClick={onSeePerformance} disabled={!onSeePerformance}>
+            <Badge variant="outline" className="text-[10px] cursor-pointer hover:bg-muted/60">See Performance →</Badge>
+          </button>
         </div>
       </div>
 

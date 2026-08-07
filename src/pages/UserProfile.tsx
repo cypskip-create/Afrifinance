@@ -304,30 +304,25 @@ export default function UserProfile() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full shrink-0" onClick={() => navigate(-1)}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div className="min-w-0">
-              <h1 className="font-bold text-base flex items-center gap-1 truncate">
-                {profileData.full_name || "User"}
-                <Verified className="h-3.5 w-3.5 text-primary fill-primary shrink-0" />
-              </h1>
-              <p className="text-xs text-muted-foreground">{userPosts.length} posts</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1">
+      {/* Banner — also carries the back/settings/more controls as an overlay, so
+          there's no separate header bar above it (matches X / moomoo profile layout) */}
+      <div className="relative h-32 sm:h-40 bg-gradient-to-br from-primary/30 via-accent/20 to-primary/10 overflow-hidden">
+        {profileData.banner_url && <img src={profileData.banner_url} alt="Banner" className="w-full h-full object-cover" />}
+
+        {/* Top controls overlay */}
+        <div className="absolute top-2 left-2 right-2 flex items-center justify-between z-10">
+          <Button variant="secondary" size="icon" className="h-9 w-9 rounded-full bg-background/40 hover:bg-background/60 backdrop-blur-sm text-foreground" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="flex items-center gap-1.5">
             {isOwnProfile && (
-              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={() => setSettingsOpen(true)} title="TradersHub Settings">
+              <Button variant="secondary" size="icon" className="h-9 w-9 rounded-full bg-background/40 hover:bg-background/60 backdrop-blur-sm text-foreground" onClick={() => setSettingsOpen(true)} title="TradersHub Settings">
                 <Settings className="h-5 w-5" />
               </Button>
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full"><MoreHorizontal className="h-5 w-5" /></Button>
+                <Button variant="secondary" size="icon" className="h-9 w-9 rounded-full bg-background/40 hover:bg-background/60 backdrop-blur-sm text-foreground"><MoreHorizontal className="h-5 w-5" /></Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={handleShare}><Share className="h-4 w-4 mr-2" />Share Profile</DropdownMenuItem>
@@ -336,11 +331,7 @@ export default function UserProfile() {
             </DropdownMenu>
           </div>
         </div>
-      </header>
 
-      {/* Banner */}
-      <div className="relative h-32 sm:h-40 bg-gradient-to-br from-primary/30 via-accent/20 to-primary/10 overflow-hidden">
-        {profileData.banner_url && <img src={profileData.banner_url} alt="Banner" className="w-full h-full object-cover" />}
         {isOwnProfile && (
           <>
             <input type="file" ref={bannerInputRef} className="hidden" accept="image/*" onChange={handleBannerUpload} />
@@ -362,12 +353,9 @@ export default function UserProfile() {
             {isOwnProfile ? (
               <Button variant="outline" size="sm" className="h-9 rounded-full font-semibold text-[13.5px] px-4" onClick={() => setEditProfileOpen(true)}>Edit profile</Button>
             ) : (
-              <>
-                <Button variant="outline" size="icon" className="h-9 w-9 rounded-full"><MessageCircle className="h-4 w-4" /></Button>
-                <Button variant={userIsFollowing ? "outline" : "default"} size="sm" onClick={handleFollow} className="h-9 rounded-full font-semibold text-[13.5px] px-4">
-                  {userIsFollowing ? "Following" : "Follow"}
-                </Button>
-              </>
+              <Button variant={userIsFollowing ? "outline" : "default"} size="sm" onClick={handleFollow} className="h-9 rounded-full font-semibold text-[13.5px] px-4">
+                {userIsFollowing ? "Following" : "Follow"}
+              </Button>
             )}
           </div>
         </div>

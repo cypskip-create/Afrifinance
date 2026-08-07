@@ -1,7 +1,7 @@
 import {
   AreaChart, Area, ComposedChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceLine, Cell
 } from "recharts";
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useState } from "react";
 
 let lastHaptic = 0;
 const chartHaptic = () => {
@@ -90,32 +90,62 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
   const padding = (maxPrice - minPrice) * 0.15;
   const gradientId = `gs-${symbol}-${timeframe}`;
 
-  const handleMouseMove = useCallback((e: any) => {
-    if (e?.activePayload?.[0] && onHoverPrice) {
-      const p = e.activePayload[0].payload;
-      onHoverPrice(p.price, p.date);
+  // Crosshair overlay position. Recharts v3 no longer hands mouse/touch handlers an
+  // `activePayload` — it hands them a small { activeIndex, activeCoordinate, ... } state
+  // object as the FIRST argument (the raw DOM event is the second argument). We look up
+  // the exact data point from activeIndex, and use activeCoordinate (pixel-relative to the
+  // chart) to draw our own crosshair lines + dot on an overlay above the chart. This same
+  // handler is wired to both onMouseMove (desktop) and onTouchMove (mobile drag) — v3
+  // requires touch to be wired explicitly, it is no longer inferred from onMouseMove.
+  const [crosshair, setCrosshair] = useState<{ x: number; y: number } | null>(null);
+
+  const updateFromChartState = useCallback((state: any) => {
+    const idx = state?.activeIndex != null ? Number(state.activeIndex) : NaN;
+    const coord = state?.activeCoordinate;
+    if (Number.isFinite(idx) && data[idx] && coord) {
+      const point = data[idx];
+      setCrosshair({ x: coord.x, y: coord.y });
+      onHoverPrice?.(point.price, point.date);
       chartHaptic();
     }
+  }, [data, onHoverPrice]);
+
+  const handleLeave = useCallback(() => {
+    setCrosshair(null);
+    onHoverPrice?.(null, null);
   }, [onHoverPrice]);
-  const handleMouseLeave = useCallback(() => { if (onHoverPrice) onHoverPrice(null, null); }, [onHoverPrice]);
 
   const domain: [number, number] = [minPrice - padding, maxPrice + padding];
-  const cursor = { stroke: "hsl(var(--foreground))", strokeWidth: 1, strokeOpacity: 0.35 };
+
+  const renderCrosshair = () => {
+    if (!crosshair) return null;
+    return (
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-0 bottom-0 w-px bg-foreground/30" style={{ left: crosshair.x }} />
+        <div className="absolute left-0 right-0 border-t border-dashed border-foreground/30" style={{ top: crosshair.y }} />
+        <div
+          className="absolute h-2.5 w-2.5 rounded-full -translate-x-1/2 -translate-y-1/2 ring-2 ring-background"
+          style={{ left: crosshair.x, top: crosshair.y, backgroundColor: lineColor }}
+        />
+      </div>
+    );
+  };
 
   if (chartType === "candle") {
     const barSize = data.length > 120 ? 2 : data.length > 60 ? 4 : 7;
     return (
-      <div className="relative h-full w-full touch-none" onTouchEnd={handleMouseLeave}>
+      <div className="relative h-full w-full touch-none" onTouchEnd={handleLeave}>
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
             data={data}
             margin={{ top: 8, right: 0, left: 0, bottom: 0 }}
-            onMouseMove={handleMouseMove}
-            onMouseLeave={handleMouseLeave}
+            onMouseMove={updateFromChartState}
+            onMouseLeave={handleLeave}
+            onTouchMove={updateFromChartState}
           >
             <XAxis dataKey="date" hide />
             <YAxis hide domain={domain} />
-            <Tooltip content={() => null} cursor={cursor} />
+            <Tooltip content={() => null} cursor={false} />
             <Bar dataKey="wickRange" barSize={1} isAnimationActive={false}>
               {data.map((d, i) => (
                 <Cell key={i} fill={d.up ? "hsl(var(--bull))" : "hsl(var(--bear))"} />
@@ -128,18 +158,20 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
             </Bar>
           </ComposedChart>
         </ResponsiveContainer>
+        {renderCrosshair()}
       </div>
     );
   }
 
   return (
-    <div className="relative h-full w-full touch-none" onTouchEnd={handleMouseLeave}>
+    <div className="relative h-full w-full touch-none" onTouchEnd={handleLeave}>
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart
           data={data}
           margin={{ top: 8, right: 0, left: 0, bottom: 0 }}
-          onMouseMove={handleMouseMove}
-          onMouseLeave={handleMouseLeave}
+          onMouseMove={updateFromChartState}
+          onMouseLeave={handleLeave}
+          onTouchMove={updateFromChartState}
         >
           <defs>
             <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
@@ -149,7 +181,7 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
           </defs>
           <XAxis dataKey="date" hide />
           <YAxis hide domain={domain} />
-          <Tooltip content={() => null} cursor={cursor} />
+          <Tooltip content={() => null} cursor={false} />
           <ReferenceLine y={firstPrice} stroke="hsl(var(--muted-foreground))" strokeWidth={1} strokeDasharray="2 4" strokeOpacity={0.35} />
           <Area
             type="monotone"
@@ -158,11 +190,12 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
             strokeWidth={1.6}
             fill={chartType === "area" ? `url(#${gradientId})` : "transparent"}
             dot={false}
-            activeDot={{ r: 3.5, fill: lineColor, stroke: "hsl(var(--background))", strokeWidth: 2 }}
+            activeDot={false}
             isAnimationActive={false}
           />
         </AreaChart>
       </ResponsiveContainer>
+      {renderCrosshair()}
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import { CheckCircle2, XCircle, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { CheckCircle2, XCircle, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Cell, PieChart, Pie } from "recharts";
 import { Fundamentals } from "@/data/stockFundamentals";
 import { fx, axisStyle, gridStyle } from "@/lib/chartPalette";
@@ -134,30 +134,6 @@ export function ScoresTab({ fundamentals }: { fundamentals: Fundamentals }) {
       />
 
 
-
-      {/* Insider transactions */}
-      <div>
-        <Eyebrow>Insider Transactions</Eyebrow>
-        <div className="border-t border-border/60">
-          {fundamentals.insiderTrades.map(t => (
-            <div key={t.date + t.insider} className="grid grid-cols-[auto_1fr_auto] gap-3 py-3 border-b border-border/40 last:border-0 items-center">
-              <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0" style={{ background: `${t.type === "Buy" ? fx.positive : fx.negative}22`, color: t.type === "Buy" ? fx.positive : fx.negative }}>
-                {t.type === "Buy" ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-medium truncate">{t.insider}</p>
-                <p className="text-[10px] text-muted-foreground">{t.role} · {t.date}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs font-bold tabular" style={{ color: t.type === "Buy" ? fx.positive : fx.negative }}>
-                  {t.type} · {t.shares.toLocaleString()}
-                </p>
-                <p className="text-[10px] text-muted-foreground tabular">KES {(t.value / 1e6).toFixed(1)}M</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
 
       {/* Revenue segmentation */}
       <div>

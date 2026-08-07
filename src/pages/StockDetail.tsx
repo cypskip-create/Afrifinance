@@ -64,12 +64,11 @@ const stockNews = [
   { id: 4, title: "Board announces share buyback program", source: "NSE Filings", time: "1d ago", sentiment: "bullish" as const },
 ];
 
-type SubSection = "overview" | "research" | "financials" | "news" | "community" | "more";
+type SubSection = "overview" | "research" | "news" | "community" | "more";
 
 const SUB_NAV: { id: SubSection; label: string }[] = [
   { id: "overview", label: "Overview" },
   { id: "research", label: "Research" },
-  { id: "financials", label: "Financials" },
   { id: "news", label: "News" },
   { id: "community", label: "Community" },
   { id: "more", label: "More" },
@@ -85,7 +84,7 @@ export default function StockDetail() {
   const [hoverPrice, setHoverPrice] = useState<number | null>(null);
   const [hoverDate, setHoverDate] = useState<string | null>(null);
   const [section, setSection] = useState<SubSection>("overview");
-  const [researchGroup, setResearchGroup] = useState<"valuation" | "growth" | "health" | "dividends" | "scores" | "ownership" | "risk">("valuation");
+  const [researchGroup, setResearchGroup] = useState<"valuation" | "performance" | "growth" | "health" | "dividends" | "scores" | "ownership" | "risk">("valuation");
   const { addToWatchlist, removeFromWatchlist, isInWatchlist } = useWatchlist();
   const { portfolio } = usePortfolio();
   const { toast } = useToast();
@@ -141,7 +140,6 @@ export default function StockDetail() {
   const refs = {
     overview: useRef<HTMLDivElement>(null),
     research: useRef<HTMLDivElement>(null),
-    financials: useRef<HTMLDivElement>(null),
     news: useRef<HTMLDivElement>(null),
     community: useRef<HTMLDivElement>(null),
     more: useRef<HTMLDivElement>(null),
@@ -429,7 +427,7 @@ export default function StockDetail() {
           {/* Second-level sticky nav — sits directly under the primary sub-nav */}
           <div className="sticky top-[97px] z-20 -mx-4 px-4 py-2 bg-background/92 backdrop-blur-xl border-b border-border/60">
             <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
-              {(["valuation", "growth", "health", "dividends", "scores", "ownership", "risk"] as const).map(g => (
+              {(["valuation", "performance", "growth", "health", "dividends", "scores", "ownership", "risk"] as const).map(g => (
                 <button
                   key={g}
                   data-small-target
@@ -442,7 +440,8 @@ export default function StockDetail() {
             </div>
           </div>
           <div className="research-flow pt-2">
-          {researchGroup === "valuation" && <ValuationTab price={stock.price} pe={stock.pe} fundamentals={fundamentals} />}
+          {researchGroup === "valuation" && <ValuationTab price={stock.price} pe={stock.pe} fundamentals={fundamentals} onSeePerformance={() => setResearchGroup("performance")} />}
+          {researchGroup === "performance" && <PerformanceTab symbol={symbol || ""} price={stock.price} fundamentals={fundamentals} />}
           {researchGroup === "growth" && <GrowthTab fundamentals={fundamentals} />}
           {researchGroup === "health" && <HealthTab fundamentals={fundamentals} />}
           {researchGroup === "dividends" && <DividendsTab divYield={divYield} annualDividend={stock.dividend} fundamentals={fundamentals} />}
@@ -450,14 +449,6 @@ export default function StockDetail() {
           {researchGroup === "ownership" && <OwnershipTab fundamentals={fundamentals} />}
           {researchGroup === "risk" && <RiskTab fundamentals={fundamentals} />}
           </div>
-        </section>
-
-
-
-        {/* FINANCIALS */}
-        <section ref={refs.financials} data-section="financials" className="space-y-4 scroll-mt-32">
-          <Eyebrow>Financials</Eyebrow>
-          <PerformanceTab symbol={symbol || ""} price={stock.price} fundamentals={fundamentals} />
         </section>
 
         {/* NEWS */}

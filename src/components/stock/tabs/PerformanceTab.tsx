@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { Fundamentals } from "@/data/stockFundamentals";
 import { fx } from "@/lib/chartPalette";
 import { BarChartBlock } from "@/components/charts/BarChartBlock";
@@ -201,49 +201,6 @@ export function PerformanceTab({ symbol, price, fundamentals }: Props) {
 
 
 
-      {/* INSIDER TRANSACTIONS */}
-      <Card className="soft-card">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="text-xs font-bold">Insider Transactions</h4>
-            <Badge variant="outline" className="text-[10px] text-bull border-bull/40 gap-1">
-              <TrendingUp className="h-2.5 w-2.5" /> Net buying
-            </Badge>
-          </div>
-          <div className="overflow-x-auto -mx-1">
-            <table className="w-full text-[11px]">
-              <thead>
-                <tr className="text-left text-muted-foreground border-b border-border/40">
-                  <th className="py-1.5 px-1 font-medium">Date</th>
-                  <th className="py-1.5 px-1 font-medium">Insider</th>
-                  <th className="py-1.5 px-1 font-medium">Type</th>
-                  <th className="py-1.5 px-1 font-medium text-right">Shares</th>
-                  <th className="py-1.5 px-1 font-medium text-right">Value</th>
-                </tr>
-              </thead>
-              <tbody>
-                {fundamentals.insiderTrades.map(t => (
-                  <tr key={t.date + t.insider} className="border-b border-border/20 last:border-0">
-                    <td className="py-1.5 px-1 text-muted-foreground whitespace-nowrap">{t.date.slice(5)}</td>
-                    <td className="py-1.5 px-1">
-                      <div className="font-medium leading-tight">{t.insider}</div>
-                      <div className="text-[9px] text-muted-foreground">{t.role}</div>
-                    </td>
-                    <td className="py-1.5 px-1">
-                      <Badge variant="outline" className={`text-[9px] px-1.5 ${t.type === "Buy" ? "text-bull border-bull/40" : "text-bear border-bear/40"}`}>
-                        {t.type === "Buy" ? <TrendingUp className="h-2 w-2 mr-0.5" /> : <TrendingDown className="h-2 w-2 mr-0.5" />}
-                        {t.type}
-                      </Badge>
-                    </td>
-                    <td className="py-1.5 px-1 text-right font-medium">{(t.shares / 1000).toFixed(0)}K</td>
-                    <td className="py-1.5 px-1 text-right font-bold">{(t.value / 1e6).toFixed(1)}M</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

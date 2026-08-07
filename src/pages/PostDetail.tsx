@@ -88,12 +88,14 @@ export default function PostDetail() {
     if (!draft.trim() || !post) return;
     if (!user) { navigate("/auth"); return; }
     setSending(true);
+    const isReply = !!replyingTo?.id;
     const { error } = await addComment(post.id, draft.trim(), replyingTo?.id);
     if (!error) {
       setDraft("");
       setReplyingTo(null);
       await refreshComments();
       setPost(p => p ? { ...p, comments_count: (p.comments_count || 0) + 1 } : p);
+      toast({ title: isReply ? "Reply posted" : "Comment posted" });
     }
     setSending(false);
   };
