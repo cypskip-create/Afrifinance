@@ -41,9 +41,10 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
+              <Route path="/" element={<Landing />} />
               <Route path="/landing" element={<Landing />} />
               <Route path="/auth" element={<Auth />} />
-              <Route path="/" element={<MainLayout />}>
+              <Route path="/*" element={<MainLayout />}>
                 <Route index element={<Home />} />
                 <Route path="markets" element={<Markets />} />
                 <Route path="discover" element={<Discover />} />
@@ -64,9 +65,8 @@ const App = () => (
                 <Route path="screener" element={<StockScreener />} />
                 <Route path="compare" element={<StockCompare />} />
                 <Route path="profile/:userId" element={<UserProfile />} />
+                <Route path="*" element={<NotFound />} />
               </Route>
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
         </AuthProvider>
