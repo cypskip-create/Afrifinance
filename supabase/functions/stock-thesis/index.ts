@@ -1,3 +1,5 @@
+import "../deno.d.ts";
+
 // Lovable AI Gateway - Stock Thesis + News Summary edge function
 // Returns a concise investment thesis for a given Kenyan stock, given basic metrics.
 

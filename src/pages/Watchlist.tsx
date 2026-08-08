@@ -1,180 +1,192 @@
-import { Heart, TrendingUp, TrendingDown, Plus, ArrowLeft } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useMemo, useState } from "react";
+import { ArrowLeft, Plus, Search, X, Star, TrendingUp, TrendingDown, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { TopBar } from "@/components/shared/TopBar";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useToast } from "@/hooks/use-toast";
+import { getPrice, getDayChange } from "@/lib/stockPrices";
+import { SparklineChart } from "@/components/shared/SparklineChart";
+
+// Master list used for the "Add to watchlist" search — mirrors the app's full ticker list.
+const ALL_LISTED_STOCKS = [
+  { symbol: "SAFCOM", name: "Safaricom PLC" },
+  { symbol: "EQTY", name: "Equity Group Holdings" },
+  { symbol: "KCB", name: "KCB Group" },
+  { symbol: "SCBK", name: "Standard Chartered Bank Kenya" },
+  { symbol: "COOP", name: "Co-operative Bank of Kenya" },
+  { symbol: "EABL", name: "East African Breweries" },
+  { symbol: "ABSA", name: "ABSA Bank Kenya" },
+  { symbol: "NCBA", name: "NCBA Group" },
+  { symbol: "BAMB", name: "Bamburi Cement" },
+  { symbol: "BRIT", name: "Britam Holdings" },
+  { symbol: "KPLC", name: "Kenya Power" },
+  { symbol: "BAT", name: "BAT Kenya" },
+  { symbol: "JUB", name: "Jubilee Holdings" },
+  { symbol: "DTK", name: "Diamond Trust Bank" },
+  { symbol: "SBIC", name: "Stanbic Holdings" },
+];
 
 export default function Watchlist() {
   const navigate = useNavigate();
-  const { watchlist, loading, removeFromWatchlist } = useWatchlist();
+  const { watchlist, loading, removeFromWatchlist, addToWatchlist, isInWatchlist } = useWatchlist();
   const { toast } = useToast();
+  const [addOpen, setAddOpen] = useState(false);
+  const [query, setQuery] = useState("");
 
-  // Mock current prices for demonstration
-  const currentPrices = {
-    "SAFCOM": { price: 12.85, change: 0.15, changePercent: 1.18, isUp: true },
-    "EQTY": { price: 62.50, change: 7.25, changePercent: 13.12, isUp: true },
-    "KCB": { price: 45.20, change: -1.30, changePercent: -2.79, isUp: false },
-    "COOP": { price: 13.40, change: 0.20, changePercent: 1.52, isUp: true },
+  const rows = useMemo(() => {
+    return watchlist.map(item => {
+      const price = getPrice(item.symbol);
+      const { abs, pct } = getDayChange(item.symbol);
+      return { ...item, price, change: abs, changePercent: pct, isUp: abs >= 0 };
+    });
+  }, [watchlist]);
+
+  const gainers = rows.filter(r => r.isUp).length;
+  const losers = rows.length - gainers;
+
+  const searchResults = useMemo(() => {
+    if (!query.trim()) return ALL_LISTED_STOCKS;
+    const q = query.trim().toLowerCase();
+    return ALL_LISTED_STOCKS.filter(s => s.symbol.toLowerCase().includes(q) || s.name.toLowerCase().includes(q));
+  }, [query]);
+
+  const handleAdd = async (symbol: string, name: string) => {
+    const result = await addToWatchlist(symbol, name);
+    if (result?.error) {
+      toast({ title: result.error.message === "Stock already in watchlist" ? "Already in your watchlist" : "Couldn't add stock", variant: "destructive" });
+    } else {
+      toast({ title: `${symbol} added to watchlist` });
+    }
   };
 
-  const watchlistStocks = watchlist.map(item => {
-    const priceData = currentPrices[item.symbol as keyof typeof currentPrices] || {
-      price: 10.00,
-      change: 0,
-      changePercent: 0,
-      isUp: true
-    };
-    
-    return {
-      symbol: item.symbol,
-      name: item.name,
-      price: priceData.price.toString(),
-      change: priceData.change.toString(),
-      changePercent: priceData.changePercent.toString(),
-      isUp: priceData.isUp
-    };
-  });
+  const handleRemove = async (symbol: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const result = await removeFromWatchlist(symbol);
+    toast(result?.error
+      ? { title: "Couldn't remove from watchlist", variant: "destructive" }
+      : { title: `Removed ${symbol} from watchlist` });
+  };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="flex flex-col items-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary/30 border-t-primary mb-4" />
-          <p className="text-sm text-muted-foreground">Loading watchlist...</p>
-        </div>
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary/30 border-t-primary" />
       </div>
     );
   }
 
-  const handleStockClick = (symbol: string) => {
-    navigate(`/stock/${symbol}`);
-  };
-
-  const handleRemoveFromWatchlist = async (symbol: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const result = await removeFromWatchlist(symbol);
-    if (result?.error) {
-      toast({
-        title: "Error",
-        description: "Failed to remove from watchlist",
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Success",
-        description: "Removed from watchlist",
-      });
-    }
-  };
-
   return (
-    <div className="page-canvas min-h-screen bg-background pb-20">
-      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border">
-        <div className="flex items-center justify-between p-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="tap-scale">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="text-center">
-            <h1 className="text-lg font-bold">My Watchlist</h1>
-            <p className="text-xs text-muted-foreground">Track your favorites</p>
+    <div className="min-h-screen bg-background pb-20">
+      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border/50">
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="h-9 w-9 rounded-full tap-scale">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-base font-bold leading-tight">Watchlist</h1>
+              <p className="text-[11px] text-muted-foreground leading-tight">
+                {rows.length} {rows.length === 1 ? "stock" : "stocks"}
+                {rows.length > 0 && <> · <span className="text-bull font-medium">{gainers} up</span> · <span className="text-bear font-medium">{losers} down</span></>}
+              </p>
+            </div>
           </div>
-          <div className="w-9"></div>
+          <Button size="icon" className="h-9 w-9 rounded-full" onClick={() => setAddOpen(true)}>
+            <Plus className="h-4.5 w-4.5" />
+          </Button>
         </div>
       </header>
 
-      <div className="p-4 space-y-4 stagger-children">
-        {/* Summary Stats */}
-        <Card className="card-gradient">
-          <CardContent className="p-4">
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <div className="text-lg font-bold text-bull">+KES 18,320</div>
-                <div className="text-xs text-muted-foreground">Total Gain</div>
-              </div>
-              <div>
-                <div className="text-lg font-bold text-primary">4</div>
-                <div className="text-xs text-muted-foreground">Stocks</div>
-              </div>
-              <div>
-                <div className="text-lg font-bold text-bull">+12.7%</div>
-                <div className="text-xs text-muted-foreground">Performance</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Add to Watchlist */}
-        <Card className="card-gradient">
-          <CardContent className="p-4">
-            <Button className="w-full btn-primary" onClick={() => navigate('/markets')}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add More Stocks
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Watchlist Items */}
-        <div className="space-y-3">
-          {watchlistStocks.map((stock) => (
-            <Card 
-              key={stock.symbol} 
-              className="card-gradient cursor-pointer transition-all hover:scale-[1.02]"
-              onClick={() => handleStockClick(stock.symbol)}
+      {rows.length === 0 ? (
+        <div className="flex flex-col items-center justify-center text-center px-8 py-24">
+          <Star className="h-11 w-11 mb-4 text-muted-foreground/40" />
+          <h3 className="font-semibold text-[15px] mb-1">Your watchlist is empty</h3>
+          <p className="text-[13px] text-muted-foreground mb-5 max-w-[240px]">Add stocks you're tracking to keep an eye on their price right here.</p>
+          <Button className="rounded-full" onClick={() => setAddOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />Add a stock
+          </Button>
+        </div>
+      ) : (
+        <div>
+          {rows.map(stock => (
+            <button
+              key={stock.symbol}
+              onClick={() => navigate(`/stock/${stock.symbol}`)}
+              data-small-target
+              className="w-full flex items-center gap-3 px-4 py-3 border-b border-border/40 text-left active:bg-muted/30 transition-colors"
             >
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3">
-                      <div>
-                        <div className="font-bold text-sm">{stock.symbol}</div>
-                        <div className="text-xs text-muted-foreground">{stock.name}</div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="text-right">
-                    <div className="font-bold text-sm">KES {stock.price}</div>
-                    <div className={`flex items-center space-x-1 justify-end ${stock.isUp ? 'text-bull' : 'text-bear'}`}>
-                      {stock.isUp ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                      <span className="text-xs font-medium">
-                        {stock.isUp ? '+' : ''}KES {stock.change} ({stock.changePercent}%)
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="ml-3 h-8 w-8 p-0"
-                    onClick={(e) => handleRemoveFromWatchlist(stock.symbol, e)}
-                  >
-                    <Heart className="h-4 w-4 fill-red-500 text-red-500" />
-                  </Button>
+              <div className="min-w-0 flex-1">
+                <p className="text-[13.5px] font-bold leading-tight">{stock.symbol}</p>
+                <p className="text-[11px] text-muted-foreground truncate leading-tight mt-0.5">{stock.name}</p>
+              </div>
+
+              <SparklineChart width={52} height={22} isPositive={stock.isUp} />
+
+              <div className="text-right shrink-0 w-[92px]">
+                <p className="text-[13.5px] font-bold tabular-nums leading-tight">KES {stock.price.toFixed(2)}</p>
+                <div className={`flex items-center justify-end gap-0.5 mt-0.5 ${stock.isUp ? "text-bull" : "text-bear"}`}>
+                  {stock.isUp ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                  <span className="text-[11px] font-semibold tabular-nums">{stock.isUp ? "+" : ""}{stock.changePercent.toFixed(2)}%</span>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+
+              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive" onClick={e => handleRemove(stock.symbol, e)}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </button>
           ))}
         </div>
+      )}
 
-        {/* Empty State (when no stocks) */}
-        {watchlistStocks.length === 0 && (
-          <Card className="card-gradient">
-            <CardContent className="p-8 text-center">
-              <Heart className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-              <div className="text-sm font-medium mb-2">Your watchlist is empty</div>
-              <div className="text-xs text-muted-foreground mb-4">
-                Add stocks to track their performance
-              </div>
-              <Button className="btn-primary" onClick={() => navigate('/markets')}>
-                <Plus className="h-4 w-4 mr-2" />
-                Browse Stocks
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+      {/* Add to watchlist */}
+      <Dialog open={addOpen} onOpenChange={v => { setAddOpen(v); if (!v) setQuery(""); }}>
+        <DialogContent className="max-w-sm rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-[15px]">Add to watchlist</DialogTitle>
+          </DialogHeader>
+          <div className="relative">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              autoFocus
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Search ticker or company name"
+              className="h-10 pl-10 pr-9 rounded-full text-[13.5px]"
+            />
+            {query && (
+              <button onClick={() => setQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <div className="max-h-[50vh] overflow-y-auto -mx-1 px-1">
+            {searchResults.length === 0 ? (
+              <p className="text-[13px] text-muted-foreground text-center py-8">No matching stocks</p>
+            ) : searchResults.map(s => {
+              const already = isInWatchlist(s.symbol);
+              return (
+                <div key={s.symbol} className="flex items-center justify-between gap-3 py-2.5 border-b border-border/40 last:border-0">
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-bold">{s.symbol}</p>
+                    <p className="text-[11px] text-muted-foreground truncate">{s.name}</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant={already ? "outline" : "default"}
+                    className="h-8 rounded-full text-[12px] shrink-0"
+                    disabled={already}
+                    onClick={() => handleAdd(s.symbol, s.name)}
+                  >
+                    {already ? "Added" : "Add"}
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

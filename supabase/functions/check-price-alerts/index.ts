@@ -1,12 +1,12 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import "../deno.d.ts";
+import { createClient } from "@supabase/supabase-js";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req) => {
+Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -108,6 +108,21 @@ serve(async (req) => {
           .update({ triggered_at: new Date().toISOString() })
           .eq('id', alert.id)
           .eq('user_id', userId); // Extra safety: ensure user owns the alert
+
+        // Record a notification so it shows up under the Alerts tab —
+        // client code can't insert into notifications directly (RLS), but this
+        // function runs with the service role which can.
+        const direction = alert.alert_type === 'price_above' ? 'risen above' : 'fallen below';
+        await supabaseAdmin.from('notifications').insert({
+          user_id: userId,
+          type: 'alert',
+          feature: 'alerts',
+          title: `${alert.symbol} alert triggered`,
+          message: `${alert.symbol} has ${direction} KES ${alert.target_value} (now KES ${currentPrice})`,
+          action_url: `/stock/${alert.symbol}`,
+          entity_id: alert.id,
+          entity_type: 'price_alert',
+        });
 
         triggeredAlerts.push(alert);
         console.log('Alert triggered:', alert.id);

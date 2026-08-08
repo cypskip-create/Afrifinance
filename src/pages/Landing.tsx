@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { TrendingUp, Newspaper, Bell, BarChart3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { RouteSeo } from "@/components/shared/RouteSeo";
 import { Logo } from "@/components/shared/Logo";
 
 export default function Landing() {
@@ -9,6 +10,7 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted">
+      <RouteSeo />
       {/* Hero Section */}
       <header className="container mx-auto px-4 py-6">
         <nav className="flex items-center justify-between">
