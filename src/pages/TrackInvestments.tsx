@@ -6,7 +6,7 @@ import { RobinhoodPerformanceChart } from "@/components/portfolio/RobinhoodPerfo
 import { PortfolioSnowflake } from "@/components/portfolio/PortfolioSnowflake";
 import { PortfolioInsights } from "@/components/portfolio/PortfolioInsights";
 import {
-  ArrowUpRight, ArrowDownRight, Eye, EyeOff, RefreshCw, Newspaper, ChevronRight,
+  ArrowUpRight, ArrowDownRight, Eye, EyeOff, RefreshCw, Newspaper,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -215,16 +215,15 @@ export default function TrackInvestments() {
 
         {portfolioUpdates.length > 0 && (
           <section>
-            <div className="flex items-center justify-between mb-2">
+            <div className="mb-2">
               <p className="section-eyebrow">Updates for your holdings</p>
-              <Button variant="ghost" size="sm" className="h-7 px-2 text-[11px]" onClick={() => navigate("/news")}>All news <ChevronRight className="h-3 w-3 ml-1" /></Button>
             </div>
             <div className="border-t border-border/60">
               {portfolioUpdates.map(item => (
-                <button key={item.id} className="w-full flex items-start gap-3 py-3 border-b border-border/40 text-left" onClick={() => navigate(`/news?stock=${item.symbols[0]}`)}>
+                <div key={item.id} className="w-full flex items-start gap-3 py-3 border-b border-border/40 text-left">
                   <Newspaper className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
                   <div className="min-w-0 flex-1"><p className="text-[12px] font-medium leading-snug">{item.title}</p><p className="mt-1 text-[10px] text-muted-foreground">{item.source} · {item.time}</p></div>
-                </button>
+                </div>
               ))}
             </div>
           </section>

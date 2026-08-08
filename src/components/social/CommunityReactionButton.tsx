@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ThumbsUp } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
@@ -80,8 +81,10 @@ export function CommunityReactionButton({ counts, selected, onSelect, compact, h
         >
           {winner ? (
             <span className="text-[15px] leading-none">{winner.meta.emoji}</span>
+          ) : active ? (
+            <span className="text-[15px] leading-none">{active.emoji}</span>
           ) : (
-            <span className={cn("text-[15px] leading-none", !active && "grayscale opacity-70")}>{active?.emoji || "🐂"}</span>
+            <ThumbsUp className="h-[15px] w-[15px]" strokeWidth={2} />
           )}
           {!hideTotal && <span className="text-[11px] font-medium tabular-nums">{total > 0 ? total : "React"}</span>}
         </button>

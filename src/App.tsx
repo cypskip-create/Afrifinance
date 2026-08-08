@@ -10,7 +10,7 @@ import { AuthProvider } from "./hooks/useAuth";
 import Home from "./pages/Home";
 import Markets from "./pages/Markets";
 import Discover from "./pages/Discover";
-import News from "./pages/News";
+
 import Account from "./pages/Account";
 import StockDetail from "./pages/StockDetail";
 import Watchlist from "./pages/Watchlist";
@@ -47,7 +47,7 @@ const App = () => (
                 <Route index element={<Home />} />
                 <Route path="markets" element={<Markets />} />
                 <Route path="discover" element={<Discover />} />
-                <Route path="news" element={<News />} />
+
                 <Route path="account" element={<Account />} />
                 <Route path="stock/:symbol" element={<StockDetail />} />
                 <Route path="watchlist" element={<Watchlist />} />

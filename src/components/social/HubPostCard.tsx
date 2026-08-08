@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { MessageSquare, Bookmark, BookmarkCheck, Share2, MoreHorizontal, Trash2, Pencil, Link2, Flag, VolumeX, Verified } from "lucide-react";
+import { MessageSquare, Bookmark, BookmarkCheck, Share2, MoreHorizontal, Trash2, Pencil, Link2, Flag, EyeOff, Verified } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -9,7 +9,6 @@ import { CommunityReactionButton, CommunityReaction } from "./CommunityReactionB
 import { atHandle, getHandle, getInitials } from "@/lib/handle";
 import { formatPostDate } from "@/lib/formatTimestamp";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 
 export interface HubPostCardProps {
   post: Post;
@@ -23,6 +22,8 @@ export interface HubPostCardProps {
   onShare: (post: Post) => void;
   onDelete?: (postId: string) => void;
   onEdit?: (post: Post) => void;
+  onReport?: (postId: string) => void;
+  onHide?: (postId: string) => void;
 }
 
 /** Split content into a headline + body excerpt, mirroring the reference layout. */
@@ -64,11 +65,10 @@ export function renderRichText(text: string, navigate: (url: string) => void) {
 
 export function HubPostCard({
   post, currentUserId, isFollowing, onFollow, onOpen, onComment,
-  onReact, onBookmark, onShare, onDelete, onEdit,
+  onReact, onBookmark, onShare, onDelete, onEdit, onReport, onHide,
 }: HubPostCardProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [muting, setMuting] = useState(false);
 
   const author = post.author;
   const handle = getHandle(author ? { ...author } : { user_id: post.user_id });
@@ -82,14 +82,6 @@ export function HubPostCard({
       await navigator.clipboard.writeText(`${window.location.origin}/traders-hub/post/${post.id}`);
       toast({ title: "Link copied" });
     } catch { /* clipboard unavailable */ }
-  };
-
-  const mute = async () => {
-    if (!currentUserId || muting) return;
-    setMuting(true);
-    await supabase.from("muted_users").insert({ muter_id: currentUserId, muted_id: post.user_id });
-    toast({ title: `Muted ${atHandle({ handle })}` });
-    setMuting(false);
   };
 
   return (
@@ -227,8 +219,10 @@ export function HubPostCard({
             <DropdownMenuItem onClick={e => { e.stopPropagation(); copyLink(); }}><Link2 className="h-4 w-4 mr-2" />Copy link</DropdownMenuItem>
             {!isOwn && (
               <>
-                <DropdownMenuItem onClick={e => { e.stopPropagation(); mute(); }}><VolumeX className="h-4 w-4 mr-2" />Mute {atHandle({ handle })}</DropdownMenuItem>
-                <DropdownMenuItem className="text-destructive" onClick={e => { e.stopPropagation(); toast({ title: "Reported", description: "Our team will review this post." }); }}>
+                <DropdownMenuItem onClick={e => { e.stopPropagation(); onHide?.(post.id); toast({ title: "Not interested", description: "You'll see fewer posts like this." }); }}>
+                  <EyeOff className="h-4 w-4 mr-2" />Not interested
+                </DropdownMenuItem>
+                <DropdownMenuItem className="text-destructive" onClick={e => { e.stopPropagation(); onReport?.(post.id); toast({ title: "Reported", description: "Our team will review this post." }); }}>
                   <Flag className="h-4 w-4 mr-2" />Report post
                 </DropdownMenuItem>
               </>

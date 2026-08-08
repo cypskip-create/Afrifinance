@@ -29,11 +29,6 @@ const STATIC_META: Record<string, Meta> = {
     description:
       "See what Kenyan investors are talking about today: trending tickers, hot topics and the latest TradersHub posts.",
   },
-  "/news": {
-    title: "Kenyan market news & earnings calls",
-    description:
-      "Read NSE company news, earnings coverage and live investor conference streams curated for Kenyan investors.",
-  },
   "/notifications": {
     title: "Notifications — alerts & activity",
     description:

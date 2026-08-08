@@ -13,6 +13,7 @@ import { usePosts, Post, Comment } from "@/hooks/usePosts";
 import { CommentThread } from "@/components/social/CommentThread";
 import { CommunityReactionButton, CommunityReaction, ReactionChips } from "@/components/social/CommunityReactionButton";
 import { atHandle, getInitials } from "@/lib/handle";
+import { shareLink } from "@/lib/share";
 import { renderRichText, splitContent } from "@/components/social/HubPostCard";
 import { formatTimestamp } from "@/lib/formatTimestamp";
 import { ImageViewer } from "@/components/social/ImageViewer";
@@ -116,15 +117,17 @@ export default function PostDetail() {
 
   const bookmark = async () => {
     if (!user || !post) { navigate("/auth"); return; }
+    const wasBookmarked = !!post.is_bookmarked;
     setPost(p => p ? { ...p, is_bookmarked: !p.is_bookmarked } : p);
-    await bookmarkPost(post.id);
-    toast({ title: post.is_bookmarked ? "Removed from bookmarks" : "Saved to bookmarks" });
+    await bookmarkPost(post.id, wasBookmarked);
+    toast({ title: wasBookmarked ? "Removed from bookmarks" : "Saved to bookmarks" });
   };
 
   const share = async () => {
     const url = `${window.location.origin}/traders-hub/post/${postId}`;
-    if (navigator.share) { try { await navigator.share({ title: "AfriFinance TradersHub", url }); return; } catch { /* dismissed */ } }
-    try { await navigator.clipboard.writeText(url); toast({ title: "Link copied" }); } catch { /* noop */ }
+    const result = await shareLink(url, { title: "AfriFinance TradersHub", text: post?.content?.slice(0, 120) });
+    if (result.method === "clipboard") toast({ title: "Link copied" });
+    else if (result.method === "failed") toast({ title: "Couldn't share this post", variant: "destructive" });
   };
 
   if (!post) {

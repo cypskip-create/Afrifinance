@@ -99,6 +99,31 @@ export function usePriceAlerts() {
     }
   };
 
+  const updateAlert = async (id: string, changes: Partial<Pick<PriceAlert, 'alert_type' | 'target_value' | 'is_active'>>) => {
+    if (!user) return { error: new Error('Not authenticated') };
+
+    try {
+      const { data, error } = await supabase
+        .from('price_alerts')
+        .update(changes)
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating alert:', error);
+        return { error };
+      }
+
+      setAlerts(prev => prev.map(alert => alert.id === id ? data as PriceAlert : alert));
+      return { data };
+    } catch (error) {
+      console.error('Error updating alert:', error);
+      return { error };
+    }
+  };
+
   const toggleAlert = async (id: string, isActive: boolean) => {
     if (!user) return { error: new Error('Not authenticated') };
 
@@ -128,6 +153,7 @@ export function usePriceAlerts() {
     alerts,
     loading,
     createAlert,
+    updateAlert,
     deleteAlert,
     toggleAlert,
     refetch: fetchAlerts,

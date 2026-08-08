@@ -8,6 +8,7 @@ import { useWatchlist } from "@/hooks/useWatchlist";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useCallback, useRef, useEffect } from "react";
 import { PriceAlertsManager } from "@/components/alerts/PriceAlertsManager";
+import { StockAlertDialog } from "@/components/alerts/StockAlertDialog";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { MarketStatusIndicator } from "@/components/shared/MarketStatusIndicator";
 import { AddInvestmentDialog } from "@/components/portfolio/AddInvestmentDialog";
@@ -81,6 +82,7 @@ export default function StockDetail() {
   const [chartType, setChartType] = useState<ChartType>("area");
   const [fullscreen, setFullscreen] = useState(false);
   const [showAlertsDialog, setShowAlertsDialog] = useState(false);
+  const [stockAlertOpen, setStockAlertOpen] = useState(false);
   const [hoverPrice, setHoverPrice] = useState<number | null>(null);
   const [hoverDate, setHoverDate] = useState<string | null>(null);
   const [section, setSection] = useState<SubSection>("overview");
@@ -192,7 +194,7 @@ export default function StockDetail() {
             <Button variant="ghost" size="icon" aria-label="Toggle watchlist" onClick={handleWatchlistToggle} className="h-9 w-9 tap-scale">
               <Heart className={`h-4 w-4 ${isInWatchlist(symbol || '') ? 'fill-primary text-primary' : 'text-muted-foreground'}`} />
             </Button>
-            <Button variant="ghost" size="icon" aria-label="Price alerts" className="h-9 w-9 tap-scale" onClick={() => navigate("/notifications?tab=alerts")}>
+            <Button variant="ghost" size="icon" aria-label="Price alerts" className="h-9 w-9 tap-scale" onClick={() => setStockAlertOpen(true)}>
               <AlarmClock className="h-4 w-4 text-muted-foreground" />
             </Button>
           </div>
@@ -519,6 +521,7 @@ export default function StockDetail() {
 
 
       {showAlertsDialog && <PriceAlertsManager />}
+      <StockAlertDialog open={stockAlertOpen} onOpenChange={setStockAlertOpen} symbol={symbol || ""} currentPrice={stock.price} />
     </div>
   );
 }

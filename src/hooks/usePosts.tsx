@@ -81,13 +81,21 @@ export function usePosts() {
   const fetchPosts = useCallback(async () => {
     if (!__postsCache || __postsCacheKey !== cacheKey) setLoading(true);
     try {
-      const { data: postsData, error: postsError } = await supabase
+      const { data: postsDataRaw, error: postsError } = await supabase
         .from('posts')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(50);
 
       if (postsError) throw postsError;
+
+      let postsData = postsDataRaw;
+      if (user && postsData && postsData.length > 0) {
+        const { data: hiddenRows } = await supabase.from('hidden_posts' as any).select('post_id').eq('user_id', user.id);
+        const hiddenSet = new Set((hiddenRows as any[] | null)?.map(r => r.post_id));
+        if (hiddenSet.size > 0) postsData = postsData.filter(p => !hiddenSet.has(p.id));
+      }
+
       if (!postsData || postsData.length === 0) {
         setPosts([]); setError(null); setLoading(false); return;
       }
@@ -243,11 +251,10 @@ export function usePosts() {
     }
   };
 
-  const bookmarkPost = async (postId: string) => {
+  const bookmarkPost = async (postId: string, currentlyBookmarked?: boolean) => {
     if (!user) return { error: { message: 'Must be logged in' } };
-    const post = posts.find(p => p.id === postId);
-    if (!post) return { error: { message: 'Post not found' } };
-    if (post.is_bookmarked) {
+    const isBookmarked = currentlyBookmarked ?? posts.find(p => p.id === postId)?.is_bookmarked ?? false;
+    if (isBookmarked) {
       const { error } = await supabase.from('post_bookmarks').delete().eq('post_id', postId).eq('user_id', user.id);
       if (!error) setPosts(prev => prev.map(p => p.id === postId ? { ...p, is_bookmarked: false } : p));
       return { error };
@@ -256,6 +263,19 @@ export function usePosts() {
       if (!error) setPosts(prev => prev.map(p => p.id === postId ? { ...p, is_bookmarked: true } : p));
       return { error };
     }
+  };
+
+  const reportPost = async (postId: string, reason: string = 'unspecified') => {
+    if (!user) return { error: { message: 'Must be logged in' } };
+    const { error } = await supabase.from('post_reports' as any).insert({ post_id: postId, reporter_id: user.id, reason });
+    return { error };
+  };
+
+  const hidePost = async (postId: string) => {
+    if (!user) return { error: { message: 'Must be logged in' } };
+    const { error } = await supabase.from('hidden_posts' as any).insert({ post_id: postId, user_id: user.id });
+    if (!error) setPosts(prev => prev.filter(p => p.id !== postId));
+    return { error };
   };
 
   const reactToPost = async (postId: string, reaction: ReactionKind) => {
@@ -388,7 +408,7 @@ export function usePosts() {
   return {
     posts, loading, error,
     fetchPosts, createPost, deletePost, editPost,
-    likePost, repostPost, bookmarkPost, reactToPost, reactToComment,
+    likePost, repostPost, bookmarkPost, reactToPost, reactToComment, reportPost, hidePost,
     fetchComments, addComment, getUserPosts,
     likeComment, repostComment,
   };

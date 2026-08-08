@@ -20,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { atHandle, getInitials } from "@/lib/handle";
 import { CommunityReaction } from "@/components/social/CommunityReactionButton";
 import { getPrice } from "@/lib/stockPrices";
+import { shareLink } from "@/lib/share";
 
 type Tab = "for-you" | "following" | "trending";
 
@@ -44,7 +45,7 @@ export default function TradersHub() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const { profile } = useProfile();
-  const { posts, loading, createPost, bookmarkPost, reactToPost, deletePost, editPost } = usePosts();
+  const { posts, loading, createPost, bookmarkPost, reactToPost, deletePost, editPost, reportPost, hidePost } = usePosts();
   const { isFollowing, toggleFollow } = useFollows();
   const { portfolio } = usePortfolio();
   const { watchlist } = useWatchlist();
@@ -192,14 +193,15 @@ export default function TradersHub() {
   const handleBookmark = async (postId: string) => {
     if (!user) { navigate("/auth"); return; }
     const saved = posts.find(p => p.id === postId)?.is_bookmarked;
-    const { error } = await bookmarkPost(postId);
+    const { error } = await bookmarkPost(postId, !!saved);
     if (!error) toast({ title: saved ? "Removed from bookmarks" : "Saved to bookmarks" });
   };
 
   const handleShare = async (post: Post) => {
     const url = `${window.location.origin}/traders-hub/post/${post.id}`;
-    if (navigator.share) { try { await navigator.share({ title: "AfriFinance TradersHub", text: post.content.slice(0, 120), url }); return; } catch { /* dismissed */ } }
-    try { await navigator.clipboard.writeText(url); toast({ title: "Link copied" }); } catch { /* noop */ }
+    const result = await shareLink(url, { title: "AfriFinance TradersHub", text: post.content.slice(0, 120) });
+    if (result.method === "clipboard") toast({ title: "Link copied" });
+    else if (result.method === "failed") toast({ title: "Couldn't share this post", variant: "destructive" });
   };
 
   const tabs: { id: Tab; label: string }[] = [
@@ -377,6 +379,8 @@ export default function TradersHub() {
               onShare={handleShare}
               onDelete={async id => { const { error } = await deletePost(id); if (!error) toast({ title: "Post deleted" }); }}
               onEdit={p => { setEditing(p); setEditDraft(p.content); }}
+              onReport={id => reportPost(id)}
+              onHide={id => hidePost(id)}
             />
           ))}
           <div className="flex items-center justify-center gap-2 py-8 text-[11px] text-muted-foreground">

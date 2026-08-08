@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Calendar, UserPlus, MessageCircle, MoreHorizontal, Lock, Verified, Heart, Repeat2, FileText, Camera, Loader2, Share, TrendingUp, TrendingDown, Award, Target, PieChart, ChevronRight, Image as ImageIcon, MapPin, Pin, Settings, Bookmark } from "lucide-react";
+import { ArrowLeft, Calendar, UserPlus, MessageCircle, MoreHorizontal, Lock, Verified, Heart, Repeat2, FileText, Camera, Loader2, Share, TrendingUp, TrendingDown, Award, Target, PieChart, ChevronRight, Image as ImageIcon, MapPin, Pin, Settings, Bookmark, VolumeX, UserX } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -23,6 +23,7 @@ import { ProfileSettingsDialog } from "@/components/profile/ProfileSettingsDialo
 import { PortfolioPrivacyDialog } from "@/components/profile/PortfolioPrivacyDialog";
 import { getPrice } from "@/lib/stockPrices";
 import { atHandle } from "@/lib/handle";
+import { shareLink } from "@/lib/share";
 
 
 interface UserProfileData {
@@ -55,7 +56,7 @@ export default function UserProfile() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { isFollowing, toggleFollow, fetchFollowers, fetchFollowing } = useFollows();
-  const { bookmarkPost, reactToPost, reactToComment, fetchComments, addComment, deletePost } = usePosts();
+  const { bookmarkPost, reactToPost, reactToComment, fetchComments, addComment, deletePost, reportPost, hidePost } = usePosts();
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
   const [profileData, setProfileData] = useState<UserProfileData | null>(null);
@@ -231,14 +232,50 @@ export default function UserProfile() {
   };
 
   const handleShare = async () => {
-    if (navigator.share) { try { await navigator.share({ title: `${profileData?.full_name}'s Profile`, url: window.location.href }); } catch {} }
-    else { await navigator.clipboard.writeText(window.location.href); toast({ title: "Profile link copied!" }); }
+    const result = await shareLink(window.location.href, { title: `${profileData?.full_name}'s Profile` });
+    if (result.method === "clipboard") toast({ title: "Profile link copied!" });
+    else if (result.method === "failed") toast({ title: "Couldn't share this profile", variant: "destructive" });
+  };
+
+  const handleMuteUser = async () => {
+    if (!user || !profileData) return navigate("/auth");
+    await supabase.from("muted_users").insert({ muter_id: user.id, muted_id: profileData.user_id });
+    toast({ title: `Muted ${atHandle(profileData)}` });
+  };
+  const handleBlockUser = async () => {
+    if (!user || !profileData) return navigate("/auth");
+    await supabase.from("blocked_users").insert({ blocker_id: user.id, blocked_id: profileData.user_id });
+    toast({ title: "User blocked", description: "You won't see their posts anymore." });
   };
 
   const handleReact = async (postId: string, reaction: ReactionKind) => { if (!user) { navigate("/auth"); return; } await reactToPost(postId, reaction); };
-  const handleBookmark = async (postId: string) => { if (!user) { navigate("/auth"); return; } await bookmarkPost(postId); };
-  const handlePostShare = async (post: Post) => { await navigator.clipboard.writeText(window.location.href); toast({ title: "Link copied" }); };
+  const handleBookmark = async (postId: string) => {
+    if (!user) { navigate("/auth"); return; }
+    const current = [...userPosts, ...bookmarkedPosts, ...likedPosts, ...repostedPosts].find(p => p.id === postId);
+    const wasBookmarked = !!current?.is_bookmarked;
+    const { error } = await bookmarkPost(postId, wasBookmarked);
+    if (error) return;
+    const patch = (list: UserPost[]) => list.map(p => p.id === postId ? { ...p, is_bookmarked: !wasBookmarked } : p);
+    setUserPosts(patch);
+    setLikedPosts(patch);
+    setRepostedPosts(patch);
+    // Un-bookmarking removes it from this tab's list entirely instead of just flipping a flag on a post that's no longer bookmarked
+    setBookmarkedPosts(prev => wasBookmarked ? prev.filter(p => p.id !== postId) : patch(prev));
+    toast({ title: wasBookmarked ? "Removed from bookmarks" : "Saved to bookmarks" });
+  };
+  const handlePostShare = async (post: Post) => {
+    const url = `${window.location.origin}/traders-hub/post/${post.id}`;
+    const result = await shareLink(url, { title: "AfriFinance TradersHub", text: post.content.slice(0, 120) });
+    if (result.method === "clipboard") toast({ title: "Link copied" });
+    else if (result.method === "failed") toast({ title: "Couldn't share this post", variant: "destructive" });
+  };
   const handleDelete = async (postId: string) => { await deletePost(postId); fetchUserPosts(); };
+  const handleReport = async (postId: string) => { await reportPost(postId); };
+  const handleHide = async (postId: string) => {
+    await hidePost(postId);
+    const drop = (list: UserPost[]) => list.filter(p => p.id !== postId);
+    setUserPosts(drop); setLikedPosts(drop); setRepostedPosts(drop); setBookmarkedPosts(drop);
+  };
 
   const openComments = async (post: Post) => {
     setSelectedPost(post); setCommentSheetOpen(true); setLoadingComments(true);
@@ -327,6 +364,12 @@ export default function UserProfile() {
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={handleShare}><Share className="h-4 w-4 mr-2" />Share Profile</DropdownMenuItem>
                 {isOwnProfile && <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setTimeout(() => setSettingsOpen(true), 50); }}><Settings className="h-4 w-4 mr-2" />Settings</DropdownMenuItem>}
+                {!isOwnProfile && (
+                  <>
+                    <DropdownMenuItem onClick={handleMuteUser}><VolumeX className="h-4 w-4 mr-2" />Mute {atHandle(profileData)}</DropdownMenuItem>
+                    <DropdownMenuItem className="text-destructive" onClick={handleBlockUser}><UserX className="h-4 w-4 mr-2" />Block {atHandle(profileData)}</DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -430,6 +473,8 @@ export default function UserProfile() {
                     onShare={handlePostShare}
                     onDelete={isOwnProfile ? handleDelete : undefined}
                     onReact={handleReact}
+                    onReport={handleReport}
+                    onHide={handleHide}
                   />
                 </div>
               )}
@@ -446,6 +491,8 @@ export default function UserProfile() {
                   onShare={handlePostShare}
                   onDelete={isOwnProfile ? handleDelete : undefined}
                   onReact={handleReact}
+                  onReport={handleReport}
+                  onHide={handleHide}
                 />
               ))}
             </div>
@@ -519,6 +566,8 @@ export default function UserProfile() {
                   onBookmark={handleBookmark}
                   onShare={handlePostShare}
                   onReact={handleReact}
+                  onReport={handleReport}
+                  onHide={handleHide}
                 />
               ))}
             </div>
