@@ -8,6 +8,8 @@ import { TopBar } from "@/components/shared/TopBar";
 import { SparklineChart } from "@/components/shared/SparklineChart";
 import { MarketStatusIndicator } from "@/components/shared/MarketStatusIndicator";
 import { AllStocksList } from "@/components/markets/AllStocksList";
+import { StockHeatmap } from "@/components/home/StockHeatmap";
+import { STOCK_META, getPrice, getDayChange } from "@/lib/stockPrices";
 import { EconomicCalendar } from "@/components/home/EconomicCalendar";
 import {
   TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Search, Clock,
@@ -33,21 +35,16 @@ const commodities = [
   { name: "Avocado (export)", value: "KES 95/kg", change: 0.9, isUp: true },
 ];
 
-const topGainers = [
-  { symbol: "EQTY", name: "Equity Group", price: 62.50, change: 13.12, volume: "2.4M", sector: "Banking" },
-  { symbol: "KPLC", name: "Kenya Power", price: 1.95, change: 4.2, volume: "15.2M", sector: "Energy" },
-  { symbol: "NCBA", name: "NCBA Group", price: 38.75, change: 3.45, volume: "890K", sector: "Banking" },
-  { symbol: "SAFCOM", name: "Safaricom PLC", price: 12.85, change: 2.4, volume: "8.1M", sector: "Telecom" },
-  { symbol: "COOP", name: "Co-operative Bank", price: 15.40, change: 2.10, volume: "1.5M", sector: "Banking" },
-];
-
-const topLosers = [
-  { symbol: "TOTL", name: "TotalEnergies", price: 22.10, change: -4.1, volume: "95K", sector: "Energy" },
-  { symbol: "BAMB", name: "Bamburi Cement", price: 85.30, change: -2.8, volume: "340K", sector: "Manufacturing" },
-  { symbol: "EABL", name: "EABL", price: 142.00, change: -1.8, volume: "520K", sector: "Consumer" },
-  { symbol: "BAT", name: "BAT Kenya", price: 320.00, change: -1.5, volume: "45K", sector: "Consumer" },
-  { symbol: "BRIT", name: "Britam Holdings", price: 6.85, change: -1.2, volume: "1.8M", sector: "Insurance" },
-];
+// topGainers/topLosers are computed dynamically below from the shared stock universe —
+// no separate hardcoded array to drift out of sync with real prices.
+const nseUniverse = Object.keys(STOCK_META)
+  .filter(symbol => symbol !== "SCOM")
+  .map(symbol => {
+    const { pct } = getDayChange(symbol);
+    return { symbol, name: STOCK_META[symbol].name, sector: STOCK_META[symbol].sector, price: getPrice(symbol), change: pct };
+  });
+const topGainers = [...nseUniverse].sort((a, b) => b.change - a.change).slice(0, 5);
+const topLosers = [...nseUniverse].sort((a, b) => a.change - b.change).slice(0, 5);
 
 const sectors = [
   { name: "Banking", change: 2.4, isUp: true, stocks: 12, topStock: "EQTY" },
@@ -58,20 +55,8 @@ const sectors = [
   { name: "Agriculture", change: 1.1, isUp: true, stocks: 7, topStock: "SASN" },
 ];
 
-const allNseStocks = [
-  { symbol: "SAFCOM", name: "Safaricom PLC", price: 12.85, change: 2.4, pe: 14.2, divYield: 5.8, mcap: "1.2T", sector: "Telecom" },
-  { symbol: "EQTY", name: "Equity Group", price: 62.50, change: 13.12, pe: 8.5, divYield: 4.2, mcap: "285B", sector: "Banking" },
-  { symbol: "KCB", name: "KCB Group", price: 45.30, change: -0.8, pe: 7.8, divYield: 3.9, mcap: "145B", sector: "Banking" },
-  { symbol: "SCBK", name: "Standard Chartered", price: 185.00, change: 1.1, pe: 11.2, divYield: 6.2, mcap: "125B", sector: "Banking" },
-  { symbol: "COOP", name: "Co-operative Bank", price: 15.20, change: -1.5, pe: 9.1, divYield: 4.8, mcap: "89B", sector: "Banking" },
-  { symbol: "EABL", name: "EABL", price: 142.00, change: -1.8, pe: 18.5, divYield: 7.1, mcap: "112B", sector: "Consumer" },
-  { symbol: "BAMB", name: "Bamburi Cement", price: 89.75, change: -2.8, pe: 12.3, divYield: 2.5, mcap: "32B", sector: "Manufacturing" },
-  { symbol: "ABSA", name: "ABSA Bank Kenya", price: 13.85, change: 1.9, pe: 7.2, divYield: 5.1, mcap: "75B", sector: "Banking" },
-  { symbol: "NCBA", name: "NCBA Group", price: 42.50, change: 3.45, pe: 8.9, divYield: 4.5, mcap: "68B", sector: "Banking" },
-  { symbol: "BRIT", name: "Britam Holdings", price: 6.85, change: -1.2, pe: 15.6, divYield: 1.2, mcap: "17B", sector: "Insurance" },
-  { symbol: "KPLC", name: "Kenya Power", price: 1.95, change: 4.2, pe: 6.5, divYield: 0, mcap: "3.8B", sector: "Energy" },
-  { symbol: "JUB", name: "Jubilee Holdings", price: 245.00, change: -0.9, pe: 11.8, divYield: 3.8, mcap: "17B", sector: "Insurance" },
-];
+// allNseStocks removed — the "All Stocks" tab now renders <AllStocksList/>, which derives
+// its data from the shared stockPrices.ts source instead of a separate hardcoded array.
 
 const ipos = [
   { name: "TechPay Africa", sector: "Fintech", issuePrice: 20.00, status: "Open", closeDate: "Mar 20, 2026", subscriptionRate: "340%", minShares: 100 },
@@ -93,18 +78,18 @@ const dividendCalendar = [
 ];
 
 const highDividendStocks = [
-  { symbol: "EABL", name: "EABL", yield: 7.1, amount: 11.00, price: 142.00, frequency: "Semi-annual" },
-  { symbol: "SCBK", name: "Std Chartered", yield: 6.2, amount: 17.00, price: 185.00, frequency: "Annual" },
-  { symbol: "SAFCOM", name: "Safaricom", yield: 5.8, amount: 0.64, price: 12.85, frequency: "Annual" },
-  { symbol: "ABSA", name: "ABSA Bank", yield: 5.1, amount: 1.10, price: 13.85, frequency: "Annual" },
-  { symbol: "COOP", name: "Co-op Bank", yield: 4.8, amount: 1.00, price: 15.20, frequency: "Annual" },
+  { symbol: "EABL", name: "EABL", yield: 7.1, amount: 11.00, price: getPrice("EABL"), frequency: "Semi-annual" },
+  { symbol: "SCBK", name: "Std Chartered", yield: 6.2, amount: 17.00, price: getPrice("SCBK"), frequency: "Annual" },
+  { symbol: "SAFCOM", name: "Safaricom", yield: 5.8, amount: 0.64, price: getPrice("SAFCOM"), frequency: "Annual" },
+  { symbol: "ABSA", name: "ABSA Bank", yield: 5.1, amount: 1.10, price: getPrice("ABSA"), frequency: "Annual" },
+  { symbol: "COOP", name: "Co-op Bank", yield: 4.8, amount: 1.00, price: getPrice("COOP"), frequency: "Annual" },
 ];
 
 const featuredLists = [
-  { title: "Blue Chip NSE", desc: "Largest & most stable", icon: Star, count: 8, color: "bg-primary/10 text-primary" },
-  { title: "High Dividend", desc: "Yield > 5%", icon: DollarSign, count: 5, color: "bg-bull/10 text-bull" },
-  { title: "Top Movers", desc: "Biggest daily moves", icon: Flame, count: 10, color: "bg-accent/10 text-accent" },
-  { title: "Undervalued", desc: "P/B < 1.0", icon: Award, count: 6, color: "bg-chart-3/10 text-chart-3" },
+  { title: "Blue Chip NSE", desc: "Largest & most stable", icon: Star, symbols: ["SAFCOM", "EQTY", "KCB", "SCBK", "EABL", "BAT", "COOP", "NCBA"], color: "bg-primary/10 text-primary" },
+  { title: "High Dividend", desc: "Yield > 5%", icon: DollarSign, symbols: ["BAT", "SCBK", "ABSA", "KCB", "NCBA"], color: "bg-bull/10 text-bull" },
+  { title: "Top Movers", desc: "Biggest daily moves", icon: Flame, symbols: [...nseUniverse].sort((a, b) => Math.abs(b.change) - Math.abs(a.change)).slice(0, 10).map(s => s.symbol), color: "bg-accent/10 text-accent" },
+  { title: "Undervalued", desc: "Smaller-cap opportunities", icon: Award, symbols: ["KPLC", "EGAD", "TCL", "SAMR", "CIC", "ARM"], color: "bg-chart-3/10 text-chart-3" },
 ];
 
 const investmentThemes = [
@@ -150,18 +135,18 @@ const earningsCalendar = [
 ];
 
 const volumeLeaders = [
-  { symbol: "KPLC", name: "Kenya Power", volume: "15.2M", avgVolume: "8.5M", ratio: 1.79, price: 1.95, change: 4.2 },
-  { symbol: "SAFCOM", name: "Safaricom", volume: "8.1M", avgVolume: "6.2M", ratio: 1.31, price: 12.85, change: 2.4 },
-  { symbol: "EQTY", name: "Equity Group", volume: "2.4M", avgVolume: "1.8M", ratio: 1.33, price: 62.50, change: 13.12 },
-  { symbol: "BRIT", name: "Britam", volume: "1.8M", avgVolume: "950K", ratio: 1.89, price: 6.85, change: -1.2 },
+  { symbol: "KPLC", name: "Kenya Power", volume: "15.2M", avgVolume: "8.5M", ratio: 1.79, price: getPrice("KPLC"), change: getDayChange("KPLC").pct },
+  { symbol: "SAFCOM", name: "Safaricom", volume: "8.1M", avgVolume: "6.2M", ratio: 1.31, price: getPrice("SAFCOM"), change: getDayChange("SAFCOM").pct },
+  { symbol: "EQTY", name: "Equity Group", volume: "2.4M", avgVolume: "1.8M", ratio: 1.33, price: getPrice("EQTY"), change: getDayChange("EQTY").pct },
+  { symbol: "BRIT", name: "Britam", volume: "1.8M", avgVolume: "950K", ratio: 1.89, price: getPrice("BRIT"), change: getDayChange("BRIT").pct },
 ];
 
 const analystRatings = [
-  { symbol: "SAFCOM", rating: "Buy", target: 15.50, current: 12.85, upside: 20.6, firm: "Genghis Capital" },
-  { symbol: "EQTY", rating: "Strong Buy", target: 75.00, current: 62.50, upside: 20.0, firm: "SBG Securities" },
-  { symbol: "KCB", rating: "Hold", target: 48.00, current: 45.20, upside: 6.2, firm: "Dyer & Blair" },
-  { symbol: "SCBK", rating: "Sell", target: 155.00, current: 185.00, upside: -16.2, firm: "Standard Investment" },
-];
+  { symbol: "SAFCOM", rating: "Buy", target: 20.50, current: getPrice("SAFCOM"), firm: "Genghis Capital" },
+  { symbol: "EQTY", rating: "Strong Buy", target: 58.00, current: getPrice("EQTY"), firm: "SBG Securities" },
+  { symbol: "KCB", rating: "Hold", target: 42.00, current: getPrice("KCB"), firm: "Dyer & Blair" },
+  { symbol: "SCBK", rating: "Sell", target: 190.00, current: getPrice("SCBK"), firm: "Standard Investment" },
+].map(r => ({ ...r, upside: +(((r.target - r.current) / r.current) * 100).toFixed(1) }));
 
 function StockRow({ stock, onTap }: { stock: { symbol: string; name: string; price: number; change: number }; onTap: () => void }) {
   return (
@@ -192,17 +177,8 @@ export default function Markets() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<Tab>("Overview");
   const [nseFilter, setNseFilter] = useState<string>("All");
-  const [nseSortBy, setNseSortBy] = useState<string>("mcap");
+  const [listFilter, setListFilter] = useState<{ label: string; symbols: string[] } | null>(null);
   const [divSortBy, setDivSortBy] = useState<string>("yield");
-
-  const filteredNseStocks = allNseStocks
-    .filter(s => nseFilter === "All" || s.sector === nseFilter)
-    .sort((a, b) => {
-      if (nseSortBy === "change") return b.change - a.change;
-      if (nseSortBy === "pe") return a.pe - b.pe;
-      if (nseSortBy === "yield") return b.divYield - a.divYield;
-      return parseFloat(b.mcap) - parseFloat(a.mcap);
-    });
 
   const sortedDividendStocks = [...highDividendStocks].sort((a, b) => {
     if (divSortBy === "amount") return b.amount - a.amount;
@@ -308,7 +284,12 @@ export default function Markets() {
               </h2>
               <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-2">
                 {investmentThemes.map(theme => (
-                  <div key={theme.title} className="min-w-[210px] flex-shrink-0 border-l border-border/60 pl-3 cursor-pointer">
+                  <div
+                    key={theme.title}
+                    data-small-target
+                    onClick={() => { setListFilter({ label: theme.title, symbols: theme.stocks }); setNseFilter("All"); setActiveTab("All Stocks"); }}
+                    className="min-w-[210px] flex-shrink-0 border-l border-border/60 pl-3 cursor-pointer active:opacity-70 transition-opacity"
+                  >
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-2xl">{theme.icon}</span>
                       <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${theme.change >= 0 ? 'bg-bull/10 text-bull' : 'bg-bear/10 text-bear'}`}>
@@ -352,13 +333,17 @@ export default function Markets() {
               <h2 className="text-sm font-bold mb-3">Featured Lists</h2>
               <div className="grid grid-cols-2 gap-2.5">
                 {featuredLists.map(list => (
-                  <Card key={list.title} className="soft-card p-4 cursor-pointer active:scale-[0.97] transition-transform" onClick={() => setActiveTab("All Stocks")}>
+                  <Card
+                    key={list.title}
+                    className="soft-card p-4 cursor-pointer active:scale-[0.97] transition-transform"
+                    onClick={() => { setListFilter({ label: list.title, symbols: list.symbols }); setNseFilter("All"); setActiveTab("All Stocks"); }}
+                  >
                     <div className={`w-10 h-10 rounded-2xl ${list.color} flex items-center justify-center mb-3`}>
                       <list.icon className="h-5 w-5" />
                     </div>
                     <p className="text-sm font-bold">{list.title}</p>
                     <p className="text-xs text-muted-foreground">{list.desc}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{list.count} stocks</p>
+                    <p className="text-xs text-muted-foreground mt-1">{list.symbols.length} stocks</p>
                   </Card>
                 ))}
               </div>
@@ -489,7 +474,7 @@ export default function Markets() {
               </h2>
               <div className="grid grid-cols-2 gap-2">
                 {sectors.map(s => (
-                  <Card key={s.name} className="soft-card p-3 cursor-pointer active:scale-[0.97] transition-transform" onClick={() => { setNseFilter(s.name === "Telecom" ? "Telecom" : s.name); setActiveTab("All Stocks"); }}>
+                  <Card key={s.name} className="soft-card p-3 cursor-pointer active:scale-[0.97] transition-transform" onClick={() => { setNseFilter(s.name === "Telecom" ? "Telecom" : s.name); setListFilter(null); setActiveTab("All Stocks"); }}>
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-semibold">{s.name}</p>
                       <p className={`text-xs font-bold px-2 py-0.5 rounded-full ${s.isUp ? 'bg-bull/10 text-bull' : 'bg-bear/10 text-bear'}`}>
@@ -508,99 +493,16 @@ export default function Markets() {
         {/* ─── NSE TAB ─── */}
         {activeTab === "All Stocks" && (
           <>
-            {/* Filters */}
-            <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-              {["All", "Banking", "Telecom", "Energy", "Consumer", "Manufacturing", "Insurance"].map(f => (
-                <Badge
-                  key={f}
-                  variant={nseFilter === f ? "default" : "secondary"}
-                  className={`cursor-pointer whitespace-nowrap text-xs py-1.5 px-3 rounded-full transition-all ${
-                    nseFilter === f ? 'bg-primary text-primary-foreground' : ''
-                  }`}
-                  onClick={() => setNseFilter(f)}
-                >
-                  {f}
-                </Badge>
-              ))}
-            </div>
-
-            {/* Sort Options */}
-            <div className="flex gap-2">
-              {[
-                { key: "mcap", label: "Market Cap" },
-                { key: "change", label: "% Change" },
-                { key: "pe", label: "P/E Ratio" },
-                { key: "yield", label: "Div Yield" },
-              ].map(s => (
-                <Button
-                  key={s.key}
-                  variant={nseSortBy === s.key ? "default" : "outline"}
-                  size="sm"
-                  className={`text-xs rounded-full h-8 transition-all ${nseSortBy === s.key ? 'bg-primary text-primary-foreground' : ''}`}
-                  onClick={() => setNseSortBy(s.key)}
-                >
-                  {s.label}
-                </Button>
-              ))}
-            </div>
-
-            {/* Stock List */}
-            <Card className="soft-card overflow-hidden">
-              <div className="flex items-center justify-between py-2 px-4 border-b border-border/60 bg-muted/30">
-                <span className="text-xs font-semibold text-muted-foreground">Stock</span>
-                <div className="flex items-center gap-6">
-                  <span className="text-xs font-semibold text-muted-foreground w-12 text-right">P/E</span>
-                  <span className="text-xs font-semibold text-muted-foreground w-12 text-right">Yield</span>
-                  <span className="text-xs font-semibold text-muted-foreground w-20 text-right">Price</span>
-                </div>
+            {listFilter && (
+              <div className="flex items-center justify-between bg-primary/10 rounded-xl px-3 py-2">
+                <span className="text-xs font-semibold text-primary">Showing: {listFilter.label}</span>
+                <button data-small-target onClick={() => setListFilter(null)} className="text-xs font-semibold text-muted-foreground">Clear</button>
               </div>
-              <div className="divide-y divide-border/30">
-                {filteredNseStocks.map(stock => (
-                  <div key={stock.symbol} onClick={() => navigate(`/stock/${stock.symbol}`)} className="flex items-center justify-between py-3 px-4 cursor-pointer active:bg-muted/30 active:scale-[0.99] transition-all duration-150">
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className="w-9 h-9 rounded-xl bg-primary/8 flex items-center justify-center text-xs font-bold text-primary shrink-0">
-                        {stock.symbol.slice(0, 2)}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold">{stock.symbol}</p>
-                        <p className="text-xs text-muted-foreground truncate">{stock.name}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-6">
-                      <span className="text-xs text-muted-foreground w-12 text-right">{stock.pe}</span>
-                      <span className="text-xs text-muted-foreground w-12 text-right">{stock.divYield}%</span>
-                      <div className="text-right w-20">
-                        <p className="text-sm font-bold">{stock.price.toFixed(2)}</p>
-                        <p className={`text-xs font-semibold ${stock.change >= 0 ? 'text-bull' : 'text-bear'}`}>
-                          {stock.change >= 0 ? '+' : ''}{stock.change}%
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-
-            {/* Sector Heat Map */}
-            <div>
-              <h2 className="text-sm font-bold mb-3">Sector Heat Map</h2>
-              <div className="grid grid-cols-3 gap-2">
-                {sectors.map(s => (
-                  <div
-                    key={s.name}
-                    onClick={() => setNseFilter(s.name)}
-                    className={`rounded-2xl p-3 cursor-pointer text-center transition-all active:scale-95 ${
-                      s.isUp ? 'bg-bull/10 border border-bull/20' : 'bg-bear/10 border border-bear/20'
-                    }`}
-                  >
-                    <p className="text-xs font-bold">{s.name}</p>
-                    <p className={`text-lg font-bold ${s.isUp ? 'text-bull' : 'text-bear'}`}>
-                      {s.isUp ? '+' : ''}{s.change}%
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
+            )}
+            <AllStocksList
+              initialSector={nseFilter === "All" ? undefined : nseFilter}
+              onlySymbols={listFilter?.symbols}
+            />
           </>
         )}
 
@@ -733,6 +635,40 @@ export default function Markets() {
                 </div>
               ))}
             </Card>
+          </>
+        )}
+
+        {/* ─── HEATMAP TAB — previously rendered nothing at all ─── */}
+        {activeTab === "Heatmap" && (
+          <>
+            <h2 className="text-sm font-bold flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-primary" />
+              Sector &amp; Stock Heatmap
+            </h2>
+            <p className="text-xs text-muted-foreground -mt-3">Box size reflects market cap, colour reflects today's move.</p>
+            <StockHeatmap />
+
+            <h2 className="text-sm font-bold flex items-center gap-2 mt-2">
+              <Landmark className="h-4 w-4 text-accent" />
+              By Sector
+            </h2>
+            <div className="grid grid-cols-2 gap-2">
+              {sectors.map(s => (
+                <Card
+                  key={s.name}
+                  className="soft-card p-3 cursor-pointer active:scale-[0.97] transition-transform"
+                  onClick={() => { setNseFilter(s.name); setListFilter(null); setActiveTab("All Stocks"); }}
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold">{s.name}</p>
+                    <p className={`text-xs font-bold px-2 py-0.5 rounded-full ${s.isUp ? 'bg-bull/10 text-bull' : 'bg-bear/10 text-bear'}`}>
+                      {s.isUp ? '+' : ''}{s.change}%
+                    </p>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">{s.stocks} stocks · Top: {s.topStock}</p>
+                </Card>
+              ))}
+            </div>
           </>
         )}
       </div>

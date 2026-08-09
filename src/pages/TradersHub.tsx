@@ -1,9 +1,10 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Search, X, Bell, Feather, Users, Flame, MessageSquare, Hash, Building2, TrendingUp } from "lucide-react";
+import { Search, X, Bell, Feather, Users, Flame, MessageSquare, Hash, Building2, TrendingUp, ChevronDown, Newspaper, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { usePosts, Post } from "@/hooks/usePosts";
@@ -16,13 +17,19 @@ import { HubPostCard } from "@/components/social/HubPostCard";
 import { XComposeModal } from "@/components/social/XComposeModal";
 import { TradersHubDisclaimer } from "@/components/social/TradersHubDisclaimer";
 import { PostSkeletonList } from "@/components/social/PostSkeleton";
+import { MediaFeed } from "@/components/social/MediaFeed";
 import { supabase } from "@/integrations/supabase/client";
 import { atHandle, getInitials } from "@/lib/handle";
 import { CommunityReaction } from "@/components/social/CommunityReactionButton";
 import { getPrice } from "@/lib/stockPrices";
 import { shareLink } from "@/lib/share";
 
-type Tab = "for-you" | "following" | "trending";
+type FeedTab = "for-you" | "following" | "trending";
+type Tab = FeedTab | "media";
+
+function isFeedTab(t: Tab): t is FeedTab {
+  return t === "for-you" || t === "following" || t === "trending";
+}
 
 interface PeopleResult {
   user_id: string;
@@ -52,7 +59,17 @@ export default function TradersHub() {
   const { notifications } = useNotifications();
   const { toast } = useToast();
 
-  const [activeTab, setActiveTab] = useState<Tab>("for-you");
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    const t = searchParams.get("tab");
+    return t === "media" || t === "following" || t === "trending" ? (t as Tab) : "for-you";
+  });
+  // Remembers which feed tab (For You / Following / Trending) to return to
+  // when the person switches away from Media and back.
+  const [lastFeedTab, setLastFeedTab] = useState<FeedTab>(() => {
+    const t = searchParams.get("tab");
+    return t === "following" || t === "trending" ? t : "for-you";
+  });
+  const [deepLinkArticleId, setDeepLinkArticleId] = useState<string | null>(() => searchParams.get("article"));
   const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
   const [people, setPeople] = useState<PeopleResult[]>([]);
   const [composeOpen, setComposeOpen] = useState(false);
@@ -177,8 +194,26 @@ export default function TradersHub() {
     return result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }, [posts, searchQuery, activeTab, isFollowing, portfolioSymbols, watchlistSymbols, reactedTopics, bookmarkedIds, user]);
 
-  const setSearch = (q: string) => { setSearchQuery(q); setSearchParams(q ? { search: q } : {}); };
-  const clearSearch = () => { setSearchQuery(""); setSearchParams({}); };
+  // Merges into the current URL params instead of replacing them wholesale,
+  // so switching tabs, searching, and the notification deep-link param
+  // (?article=) never stomp on each other.
+  const updateParams = (patch: Record<string, string | null>) => {
+    const next = new URLSearchParams(searchParams);
+    Object.entries(patch).forEach(([key, value]) => {
+      if (value === null || value === "") next.delete(key);
+      else next.set(key, value);
+    });
+    setSearchParams(next, { replace: true });
+  };
+
+  const setSearch = (q: string) => { setSearchQuery(q); updateParams({ search: q || null }); };
+  const clearSearch = () => { setSearchQuery(""); updateParams({ search: null }); };
+
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    if (isFeedTab(tab)) setLastFeedTab(tab);
+    updateParams({ tab: tab === "for-you" ? null : tab, article: null });
+  };
 
   const handleReact = useCallback(async (postId: string, reaction: CommunityReaction) => {
     if (!user) { navigate("/auth"); return; }
@@ -204,11 +239,12 @@ export default function TradersHub() {
     else if (result.method === "failed") toast({ title: "Couldn't share this post", variant: "destructive" });
   };
 
-  const tabs: { id: Tab; label: string }[] = [
+  const feedTabs: { id: FeedTab; label: string }[] = [
     { id: "for-you", label: "For You" },
     { id: "following", label: "Following" },
     { id: "trending", label: "Trending" },
   ];
+  const currentFeedLabel = feedTabs.find(t => t.id === (isFeedTab(activeTab) ? activeTab : lastFeedTab))?.label;
 
   const searching = searchQuery.trim().length > 0;
   const q = searchQuery.trim().replace(/^[#$@]/, "").toUpperCase();
@@ -261,24 +297,47 @@ export default function TradersHub() {
           </button>
         </div>
 
-        {/* Compact top navigation — evenly split across the full width */}
-        <div className="grid grid-cols-3 px-1">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              data-small-target
-              onClick={() => setActiveTab(tab.id)}
-              className={`relative flex items-center justify-center pb-2 pt-0.5 text-[14px] transition-colors ${activeTab === tab.id ? "font-bold text-foreground" : "text-muted-foreground"}`}
-            >
-              {tab.label}
-              {activeTab === tab.id && <span className="absolute -bottom-px left-1/2 -translate-x-1/2 w-10 h-[3px] rounded-full bg-primary" />}
-            </button>
-          ))}
+        {/* Compact top navigation — feed picker (dropdown) on the left, Media on the right */}
+        <div className="grid grid-cols-2 px-1">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                data-small-target
+                className={`relative flex items-center justify-center gap-1 pb-2 pt-0.5 text-[14px] transition-colors ${isFeedTab(activeTab) ? "font-bold text-foreground" : "text-muted-foreground"}`}
+              >
+                {currentFeedLabel}
+                <ChevronDown className="h-3.5 w-3.5" />
+                {isFeedTab(activeTab) && <span className="absolute -bottom-px left-1/2 -translate-x-1/2 w-10 h-[3px] rounded-full bg-primary" />}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-44">
+              {feedTabs.map(tab => (
+                <DropdownMenuItem
+                  key={tab.id}
+                  onClick={() => handleTabChange(tab.id)}
+                  className="flex items-center justify-between text-[13px]"
+                >
+                  {tab.label}
+                  {activeTab === tab.id && <Check className="h-3.5 w-3.5 text-primary" />}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <button
+            data-small-target
+            onClick={() => handleTabChange("media")}
+            className={`relative flex items-center justify-center gap-1.5 pb-2 pt-0.5 text-[14px] transition-colors ${activeTab === "media" ? "font-bold text-foreground" : "text-muted-foreground"}`}
+          >
+            <Newspaper className="h-3.5 w-3.5" />
+            Media
+            {activeTab === "media" && <span className="absolute -bottom-px left-1/2 -translate-x-1/2 w-10 h-[3px] rounded-full bg-primary" />}
+          </button>
         </div>
       </header>
 
       {/* Ticker rail */}
-      {!searching && trendingTickers.length > 0 && (
+      {activeTab !== "media" && !searching && trendingTickers.length > 0 && (
         <div className="flex gap-2 overflow-x-auto no-scrollbar px-4 py-2 border-b border-border/40">
           {trendingTickers.map(t => (
             <button
@@ -295,7 +354,7 @@ export default function TradersHub() {
       )}
 
       {/* Search results */}
-      {searching && (
+      {activeTab !== "media" && searching && (
         <div className="border-b border-border/50">
           {people.length > 0 && (
             <div className="px-4 py-2">
@@ -338,7 +397,13 @@ export default function TradersHub() {
       )}
 
       {/* Feed */}
-      {loading || !disclaimerDone ? (
+      {activeTab === "media" ? (
+        <MediaFeed
+          searchQuery={searchQuery}
+          deepLinkArticleId={deepLinkArticleId}
+          onDeepLinkConsumed={() => { setDeepLinkArticleId(null); updateParams({ article: null }); }}
+        />
+      ) : loading || !disclaimerDone ? (
         <PostSkeletonList count={6} />
       ) : feed.length === 0 ? (
         <div className="px-10 py-16 text-center">
@@ -347,7 +412,7 @@ export default function TradersHub() {
               <Users className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
               <p className="text-sm font-bold">Nothing here yet</p>
               <p className="text-[12px] text-muted-foreground mt-1">Follow investors to build this timeline.</p>
-              <Button variant="outline" size="sm" className="mt-4 rounded-full" onClick={() => setActiveTab("for-you")}>Discover investors</Button>
+              <Button variant="outline" size="sm" className="mt-4 rounded-full" onClick={() => handleTabChange("for-you")}>Discover investors</Button>
             </>
           ) : activeTab === "trending" ? (
             <>
@@ -389,7 +454,7 @@ export default function TradersHub() {
         </div>
       )}
 
-      {user && (
+      {user && activeTab !== "media" && (
         <button
           aria-label="Create post"
           className="fixed bottom-24 right-4 z-40 h-12 w-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center active:scale-95 transition-transform"

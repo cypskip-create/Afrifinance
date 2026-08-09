@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Search, TrendingUp, TrendingDown, Filter, ChevronDown, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { SparklineChart } from "@/components/shared/SparklineChart";
+import { STOCK_META, getPrice, getDayChange } from "@/lib/stockPrices";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,50 +14,47 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const allStocks = [
-  { symbol: "SAFCOM", name: "Safaricom PLC", price: 12.85, change: 1.18, isUp: true, sector: "Telecommunications", marketCap: "515.2B" },
-  { symbol: "EQTY", name: "Equity Group", price: 62.50, change: 13.12, isUp: true, sector: "Banking", marketCap: "237.3B" },
-  { symbol: "KCB", name: "KCB Group", price: 45.20, change: 0.85, isUp: true, sector: "Banking", marketCap: "145.2B" },
-  { symbol: "SCBK", name: "Standard Chartered", price: 168.50, change: -0.9, isUp: false, sector: "Banking", marketCap: "89.4B" },
-  { symbol: "BAMB", name: "Bamburi Cement", price: 85.30, change: -2.4, isUp: false, sector: "Construction", marketCap: "30.8B" },
-  { symbol: "EABL", name: "EABL", price: 142.00, change: -1.8, isUp: false, sector: "Manufacturing", marketCap: "112.5B" },
-  { symbol: "COOP", name: "Co-operative Bank", price: 15.50, change: 2.3, isUp: true, sector: "Banking", marketCap: "91.2B" },
-  { symbol: "DTB", name: "Diamond Trust Bank", price: 58.75, change: 1.5, isUp: true, sector: "Banking", marketCap: "16.4B" },
-  { symbol: "ABSA", name: "ABSA Bank Kenya", price: 14.20, change: -0.7, isUp: false, sector: "Banking", marketCap: "77.1B" },
-  { symbol: "NCBA", name: "NCBA Group", price: 42.30, change: 3.2, isUp: true, sector: "Banking", marketCap: "71.5B" },
-  { symbol: "BRIT", name: "Britam Holdings", price: 5.45, change: 0.9, isUp: true, sector: "Insurance", marketCap: "13.8B" },
-  { symbol: "CARBACID", name: "Carbacid Investments", price: 11.85, change: -1.2, isUp: false, sector: "Manufacturing", marketCap: "3.0B" },
-  { symbol: "BAT", name: "BAT Kenya", price: 345.00, change: 0.8, isUp: true, sector: "Manufacturing", marketCap: "34.5B" },
-  { symbol: "TOTL", name: "TotalEnergies", price: 22.50, change: -4.1, isUp: false, sector: "Energy", marketCap: "8.1B" },
-  { symbol: "ARM", name: "ARM Cement", price: 4.25, change: 3.3, isUp: true, sector: "Construction", marketCap: "2.8B" },
-  { symbol: "SCOM", name: "Standard Group", price: 18.90, change: 1.9, isUp: true, sector: "Media", marketCap: "1.5B" },
-  { symbol: "NBK", name: "National Bank", price: 5.85, change: -0.5, isUp: false, sector: "Banking", marketCap: "6.3B" },
-  { symbol: "KPLC", name: "Kenya Power", price: 1.82, change: 5.2, isUp: true, sector: "Energy", marketCap: "8.9B" },
-  { symbol: "KEGN", name: "KenGen", price: 3.45, change: 2.1, isUp: true, sector: "Energy", marketCap: "22.6B" },
-  { symbol: "UMEME", name: "Umeme Ltd", price: 8.90, change: -1.8, isUp: false, sector: "Energy", marketCap: "12.4B" },
-  { symbol: "JUB", name: "Jubilee Holdings", price: 185.00, change: 0.5, isUp: true, sector: "Insurance", marketCap: "13.3B" },
-  { symbol: "CIC", name: "CIC Insurance", price: 2.15, change: -2.3, isUp: false, sector: "Insurance", marketCap: "5.6B" },
-  { symbol: "KENO", name: "Kenol Kobil", price: 12.40, change: 1.6, isUp: true, sector: "Energy", marketCap: "18.4B" },
-  { symbol: "WTK", name: "Williamson Tea", price: 145.00, change: -0.3, isUp: false, sector: "Agriculture", marketCap: "4.2B" },
-  { symbol: "KAKZ", name: "Kakuzi", price: 280.00, change: 4.5, isUp: true, sector: "Agriculture", marketCap: "5.5B" },
-  { symbol: "SASN", name: "Sasini", price: 18.50, change: 2.8, isUp: true, sector: "Agriculture", marketCap: "4.0B" },
-  { symbol: "EGAD", name: "Eaagads", price: 12.00, change: -1.5, isUp: false, sector: "Agriculture", marketCap: "0.9B" },
-  { symbol: "TCL", name: "Trans-Century", price: 1.85, change: 8.8, isUp: true, sector: "Industrials", marketCap: "0.5B" },
-  { symbol: "SAMR", name: "Sameer Africa", price: 3.20, change: -3.0, isUp: false, sector: "Industrials", marketCap: "0.8B" },
-  { symbol: "NSE", name: "NSE PLC", price: 8.50, change: 1.2, isUp: true, sector: "Financial Services", marketCap: "2.2B" },
-];
+// Derived from the shared price source — this list can never disagree with what
+// Home, Portfolio, Watchlist or a stock's own detail page show for the same ticker.
+const allStocks = Object.keys(STOCK_META)
+  .filter(symbol => symbol !== "SCOM") // SCOM is just an alias for SAFCOM; don't list it twice
+  .map(symbol => {
+    const { abs, pct } = getDayChange(symbol);
+    return {
+      symbol,
+      name: STOCK_META[symbol].name,
+      sector: STOCK_META[symbol].sector,
+      price: getPrice(symbol),
+      change: pct,
+      isUp: abs >= 0,
+    };
+  });
 
-const sectors = ["All Sectors", "Banking", "Telecommunications", "Manufacturing", "Energy", "Insurance", "Construction", "Agriculture", "Industrials", "Media", "Financial Services"];
+const sectors = ["All Sectors", ...Array.from(new Set(allStocks.map(s => s.sector))).sort()];
 
-export function AllStocksList() {
+interface AllStocksListProps {
+  /** Pre-applied sector filter, e.g. from tapping a sector card elsewhere on Markets. */
+  initialSector?: string;
+  /** Restrict the list to just these symbols, e.g. for a "Featured list" drill-down. */
+  onlySymbols?: string[];
+}
+
+export function AllStocksList({ initialSector, onlySymbols }: AllStocksListProps = {}) {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedSector, setSelectedSector] = useState("All Sectors");
+  const [selectedSector, setSelectedSector] = useState(initialSector || "All Sectors");
   const [sortBy, setSortBy] = useState<"name" | "change" | "price">("name");
   const [favorites, setFavorites] = useState<string[]>([]);
 
+  useEffect(() => { if (initialSector) setSelectedSector(initialSector); }, [initialSector]);
+
+  const baseStocks = useMemo(
+    () => onlySymbols ? allStocks.filter(s => onlySymbols.includes(s.symbol)) : allStocks,
+    [onlySymbols]
+  );
+
   const filteredStocks = useMemo(() => {
-    let stocks = allStocks.filter(stock => {
+    let stocks = baseStocks.filter(stock => {
       const matchesSearch = stock.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            stock.name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesSector = selectedSector === "All Sectors" || stock.sector === selectedSector;
@@ -73,7 +71,7 @@ export function AllStocksList() {
           return a.symbol.localeCompare(b.symbol);
       }
     });
-  }, [searchQuery, selectedSector, sortBy]);
+  }, [baseStocks, searchQuery, selectedSector, sortBy]);
 
   // Infinite scroll: reveal 20 more each time sentinel enters view
   const PAGE = 20;
@@ -142,7 +140,7 @@ export function AllStocksList() {
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input 
+          <Input
             placeholder="Search stocks..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -183,12 +181,15 @@ export function AllStocksList() {
                   <div className="text-sm font-medium">KES {stock.price.toFixed(2)}</div>
                   <div className={`flex items-center justify-end text-xs ${stock.isUp ? 'text-bull' : 'text-bear'}`}>
                     {stock.isUp ? <TrendingUp className="h-3 w-3 mr-0.5" /> : <TrendingDown className="h-3 w-3 mr-0.5" />}
-                    {stock.isUp ? '+' : ''}{stock.change}%
+                    {stock.isUp ? '+' : ''}{stock.change.toFixed(2)}%
                   </div>
                 </div>
               </div>
             </div>
           ))}
+          {filteredStocks.length === 0 && (
+            <p className="text-center text-sm text-muted-foreground py-8">No stocks match this filter</p>
+          )}
           {visible < filteredStocks.length && (
             <div ref={sentinelRef} className="py-4 text-center text-xs text-muted-foreground">
               Loading more…
