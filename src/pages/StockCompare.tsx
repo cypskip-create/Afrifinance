@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { ArrowLeft, GitCompare, Plus, X, TrendingUp, TrendingDown, Search, BarChart3, PieChart, Activity, DollarSign, Percent, Scale, ChevronRight } from "lucide-react";
 import { SparklineChart } from "@/components/shared/SparklineChart";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { STOCK_META, getPrice, getDayChange, DIV_YIELD } from "@/lib/stockPrices";
 
 interface Stock {
   symbol: string;
@@ -24,16 +25,38 @@ interface Stock {
   sector: string;
 }
 
-const stocksDatabase: Stock[] = [
-  { symbol: "SAFCOM", name: "Safaricom PLC", price: 12.85, change: 2.4, marketCap: "1.2T", pe: 14.2, eps: 0.91, dividendYield: 4.8, roe: 25.3, debtToEquity: 0.42, beta: 0.85, high52: 14.20, low52: 10.80, volume: "12.5M", sector: "Telecommunications" },
-  { symbol: "EQTY", name: "Equity Group Holdings", price: 62.50, change: 3.8, marketCap: "285B", pe: 8.5, eps: 7.35, dividendYield: 4.0, roe: 22.1, debtToEquity: 0.85, beta: 1.12, high52: 68.00, low52: 45.25, volume: "8.2M", sector: "Banking" },
-  { symbol: "SCBK", name: "Standard Chartered Bank", price: 185.00, change: 1.1, marketCap: "125B", pe: 11.2, eps: 16.52, dividendYield: 6.7, roe: 18.5, debtToEquity: 0.92, beta: 0.78, high52: 195.00, low52: 165.25, volume: "1.5M", sector: "Banking" },
-  { symbol: "KCB", name: "KCB Group PLC", price: 45.30, change: -0.8, marketCap: "145B", pe: 7.8, eps: 5.81, dividendYield: 5.5, roe: 19.8, debtToEquity: 0.78, beta: 1.05, high52: 52.00, low52: 38.50, volume: "6.8M", sector: "Banking" },
-  { symbol: "COOP", name: "Co-operative Bank", price: 15.20, change: -1.5, marketCap: "89B", pe: 9.1, eps: 1.67, dividendYield: 6.6, roe: 16.2, debtToEquity: 0.65, beta: 0.92, high52: 17.50, low52: 12.80, volume: "4.2M", sector: "Banking" },
-  { symbol: "EABL", name: "East African Breweries", price: 142.00, change: 2.1, marketCap: "112B", pe: 18.5, eps: 7.68, dividendYield: 3.5, roe: 28.5, debtToEquity: 0.55, beta: 0.68, high52: 158.00, low52: 125.00, volume: "850K", sector: "Consumer Goods" },
-  { symbol: "BAMB", name: "Bamburi Cement", price: 89.75, change: -2.8, marketCap: "32B", pe: 12.3, eps: 7.30, dividendYield: 2.2, roe: 12.5, debtToEquity: 0.32, beta: 0.55, high52: 105.00, low52: 78.00, volume: "320K", sector: "Manufacturing" },
-  { symbol: "ABSA", name: "ABSA Bank Kenya", price: 13.85, change: 1.9, marketCap: "75B", pe: 7.2, eps: 1.92, dividendYield: 7.2, roe: 21.5, debtToEquity: 0.72, beta: 1.08, high52: 15.50, low52: 11.20, volume: "5.5M", sector: "Banking" },
-];
+const seedNum = (s: string) => s.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+const marketCapBySymbol: Record<string, string> = {
+  SAFCOM: "1.2T", EQTY: "285B", SCBK: "125B", KCB: "145B", COOP: "89B", EABL: "112B",
+  BAMB: "32B", ABSA: "75B", NCBA: "68B", BRIT: "17B", KPLC: "3.8B", BAT: "34.5B",
+  JUB: "17B", DTK: "32B", SBIC: "52B",
+};
+
+const stocksDatabase: Stock[] = Object.keys(STOCK_META)
+  .filter(symbol => symbol !== "SCOM")
+  .map(symbol => {
+    const price = getPrice(symbol);
+    const { pct } = getDayChange(symbol);
+    const seed = seedNum(symbol);
+    const pe = 6 + (seed % 16); // 6–22
+    return {
+      symbol,
+      name: STOCK_META[symbol].name,
+      sector: STOCK_META[symbol].sector,
+      price,
+      change: +pct.toFixed(2),
+      marketCap: marketCapBySymbol[symbol] ?? `${(1 + (seed % 20)).toFixed(1)}B`,
+      pe,
+      eps: +(price / pe).toFixed(2),
+      dividendYield: DIV_YIELD[symbol] ?? 0,
+      roe: +(10 + (seed % 20)).toFixed(1),
+      debtToEquity: +(0.3 + (seed % 70) / 100).toFixed(2),
+      beta: +(0.6 + (seed % 90) / 100).toFixed(2),
+      high52: +(price * 1.12).toFixed(2),
+      low52: +(price * 0.85).toFixed(2),
+      volume: `${(0.2 + (seed % 150) / 10).toFixed(1)}M`,
+    };
+  });
 
 const comparisonMetrics = [
   { key: "price", label: "Price", icon: DollarSign, format: (v: number) => `KES ${v.toFixed(2)}` },

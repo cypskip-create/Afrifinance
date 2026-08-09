@@ -10,6 +10,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useNavigate } from "react-router-dom";
 import { EditProfileDialog } from "@/components/profile/EditProfileDialog";
+import { ProfileSettingsDialog, Section } from "@/components/profile/ProfileSettingsDialog";
+import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 import { useToast } from "@/hooks/use-toast";
 
 // Benchmarked against Simply Wall St (~$10/mo), Moomoo (freemium+tiered),
@@ -33,9 +35,12 @@ const PREMIUM = [
 
 export default function Account() {
   const [editProfileOpen, setEditProfileOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsSection, setSettingsSection] = useState<Section>("menu");
   const [annual, setAnnual] = useState(false);
   const { user, signOut } = useAuth();
-  const { profile, updateProfile } = useProfile();
+  const { profile, updateProfile, refetch: refetchProfile } = useProfile();
+  const { methods: paymentMethods } = usePaymentMethods();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [portfolioPublic, setPortfolioPublic] = useState(true);
@@ -47,28 +52,51 @@ export default function Account() {
   }, [fontScale]);
 
   useEffect(() => {
-    const pp = (profile as any)?.portfolio_public;
+    const pp = profile?.portfolio_public;
     if (pp !== undefined && pp !== null) setPortfolioPublic(!!pp);
   }, [profile]);
 
   const handleSignOut = async () => { await signOut(); navigate('/auth'); };
-  const comingSoon = (label: string) => toast({ title: label, description: "Coming soon." });
+  const openSettings = (section: Section) => { setSettingsSection(section); setSettingsOpen(true); };
   const getInitials = (name: string) => name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
   const isPremium = profile?.subscription_plan === 'premium' || profile?.subscription_plan === 'premium+';
 
   const menuItems = [
     { icon: Bell, label: "Notifications", action: () => navigate('/notifications') },
-    { icon: CreditCard, label: "Payment methods", action: () => comingSoon("Payment methods") },
-    { icon: Shield, label: "Privacy & security", action: () => comingSoon("Privacy & security") },
-    { icon: Globe, label: "Language & region", action: () => comingSoon("Language & region") },
-    { icon: HelpCircle, label: "Help & support", action: () => comingSoon("Help & support") },
-    { icon: FileText, label: "Terms & privacy", action: () => comingSoon("Terms & privacy") },
+    { icon: CreditCard, label: "Payment methods", action: () => openSettings("payment") },
+    { icon: Shield, label: "Privacy & security", action: () => openSettings("privacy") },
+    { icon: Globe, label: "Language & region", action: () => openSettings("language") },
+    { icon: HelpCircle, label: "Help & support", action: () => openSettings("help") },
+    { icon: FileText, label: "Terms & privacy", action: () => openSettings("legal") },
   ];
 
+  // Monthly is KES 800. Yearly is billed as a single KES 7,980 charge, which works out
+  // to KES 665/mo — a 17% discount off the monthly rate (matches the "save 17%" pill).
   const monthly = 800;
-  const yearly = 8000; // two months free
+  const yearlyMonthlyEquivalent = 665;
+  const yearly = yearlyMonthlyEquivalent * 12; // 7,980
+  const savingsPct = Math.round((1 - yearlyMonthlyEquivalent / monthly) * 100);
   const priceLabel = annual ? `KES ${yearly.toLocaleString()}` : `KES ${monthly.toLocaleString()}`;
   const periodLabel = annual ? "/year" : "/month";
+  const subLabel = annual ? `KES ${yearlyMonthlyEquivalent}/mo, billed yearly` : "Cancel anytime";
+
+  const handleUpgrade = async () => {
+    if (!user) return;
+    if (paymentMethods.length === 0) {
+      toast({ title: "Add a payment method first", description: "Add M-Pesa or a card to complete your upgrade." });
+      openSettings("payment");
+      return;
+    }
+    const { error } = await updateProfile({ subscription_plan: 'premium' });
+    if (error) {
+      toast({ title: "Upgrade failed", description: "Please try again.", variant: "destructive" });
+      return;
+    }
+    toast({
+      title: "Welcome to Premium",
+      description: annual ? `You're billed KES ${yearly.toLocaleString()}/year.` : `You're billed KES ${monthly.toLocaleString()}/month.`,
+    });
+  };
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -100,6 +128,14 @@ export default function Account() {
         </div>
 
         <EditProfileDialog open={editProfileOpen} onOpenChange={setEditProfileOpen} />
+        <ProfileSettingsDialog
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          initialSection={settingsSection}
+          currentHandle={profile?.handle}
+          portfolioPublic={portfolioPublic}
+          onSaved={refetchProfile}
+        />
 
         {/* ── SUBSCRIPTION — short, editorial, one clear CTA ── */}
         <section>
@@ -115,7 +151,7 @@ export default function Account() {
                 data-small-target
                 onClick={() => setAnnual(true)}
                 className={`text-[10px] font-semibold rounded-full px-2.5 py-1 transition-colors ${annual ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'}`}
-              >Yearly · save 17%</button>
+              >Yearly · save {savingsPct}%</button>
             </div>
           </div>
 
@@ -141,7 +177,7 @@ export default function Account() {
                   <Sparkles className="h-3 w-3 text-foreground" />
                 </div>
                 <p className="mt-1 text-lg font-semibold tabular">{priceLabel}<span className="text-[10px] text-muted-foreground font-normal">{periodLabel}</span></p>
-                <p className="text-[10px] text-muted-foreground">{annual ? "KES 1,000/mo equiv." : "Cancel anytime"}</p>
+                <p className="text-[10px] text-muted-foreground">{subLabel}</p>
                 <ul className="mt-3 space-y-1.5">
                   {PREMIUM.map(f => (
                     <li key={f} className="flex items-start gap-1.5 text-[11px] text-foreground">
@@ -153,7 +189,7 @@ export default function Account() {
             </div>
             {!isPremium && (
               <div className="p-3 border-t border-border/60 bg-background">
-                <Button className="btn-primary w-full h-10 text-sm">Upgrade to Premium</Button>
+                <Button className="btn-primary w-full h-10 text-sm" onClick={handleUpgrade}>Upgrade to Premium</Button>
               </div>
             )}
           </div>
@@ -207,7 +243,7 @@ export default function Account() {
             </div>
             <Switch checked={portfolioPublic} onCheckedChange={async (checked) => {
               setPortfolioPublic(checked);
-              await updateProfile({ portfolio_public: checked } as any);
+              await updateProfile({ portfolio_public: checked });
               toast({ title: checked ? "Portfolio public" : "Portfolio private" });
             }} />
           </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
@@ -10,12 +10,29 @@ export interface Profile {
   avatar_url: string | null;
   banner_url: string | null;
   bio: string | null;
+  handle: string | null;
+  portfolio_public: boolean | null;
+  followers_count: number | null;
+  following_count: number | null;
   subscription_plan: string;
+  tradershub_onboarded: boolean;
   created_at: string;
   updated_at: string;
 }
 
-export function useProfile() {
+interface ProfileContextType {
+  profile: Profile | null;
+  loading: boolean;
+  updateProfile: (updates: Partial<Profile>) => Promise<{ data?: Profile; error?: any }>;
+  refetch: () => Promise<void>;
+}
+
+const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
+
+// Shared across every screen that reads the profile (Account, TopBar, BottomNavigation,
+// Home, TradersHub, EditProfileDialog, ...) so a save in one place shows up everywhere
+// else immediately instead of only after a full remount.
+export function ProfileProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -27,6 +44,7 @@ export function useProfile() {
       setProfile(null);
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const fetchProfile = async () => {
@@ -42,7 +60,7 @@ export function useProfile() {
       if (error && error.code !== 'PGRST116') {
         console.error('Error fetching profile:', error);
       } else {
-        setProfile(data);
+        setProfile(data as Profile);
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -52,14 +70,14 @@ export function useProfile() {
   };
 
   const updateProfile = async (updates: Partial<Profile>) => {
-    if (!user || !profile) return;
+    if (!user) return { error: 'Not signed in' };
 
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .update(updates)
+        .update(updates as any)
         .eq('user_id', user.id)
-        .select()
+        .select('id, user_id, full_name, avatar_url, banner_url, bio, handle, portfolio_public, followers_count, following_count, subscription_plan, tradershub_onboarded, created_at, updated_at')
         .single();
 
       if (error) {
@@ -67,18 +85,28 @@ export function useProfile() {
         return { error };
       }
 
-      setProfile(data);
-      return { data };
+      setProfile(data as Profile);
+      return { data: data as Profile };
     } catch (error) {
       console.error('Error updating profile:', error);
       return { error };
     }
   };
 
-  return {
+  const value: ProfileContextType = {
     profile,
     loading,
     updateProfile,
     refetch: fetchProfile,
   };
+
+  return <ProfileContext.Provider value={value}>{children}</ProfileContext.Provider>;
+}
+
+export function useProfile() {
+  const context = useContext(ProfileContext);
+  if (context === undefined) {
+    throw new Error('useProfile must be used within a ProfileProvider');
+  }
+  return context;
 }

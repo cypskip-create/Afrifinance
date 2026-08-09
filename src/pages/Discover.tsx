@@ -13,6 +13,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { SparklineChart } from "@/components/shared/SparklineChart";
+import { StockHeatmap } from "@/components/home/StockHeatmap";
+import { usePortfolio } from "@/hooks/usePortfolio";
+import { STOCK_META, getPrice, getDayChange, computePortfolioStats } from "@/lib/stockPrices";
+import { shareLink } from "@/lib/share";
 
 interface TopTrader {
   id: string;
@@ -22,33 +26,32 @@ interface TopTrader {
   posts_count: number;
 }
 
-const trendingStocks = [
-  { symbol: "SAFCOM", price: 12.85, change: "+1.18%", isUp: true },
-  { symbol: "EQTY", price: 62.50, change: "+13.12%", isUp: true },
-  { symbol: "KCB", price: 45.75, change: "+2.81%", isUp: true },
-  { symbol: "COOP", price: 17.25, change: "+2.68%", isUp: true },
-  { symbol: "SCBK", price: 185.00, change: "+3.18%", isUp: true },
-  { symbol: "BAT", price: 425.00, change: "+1.19%", isUp: true },
-  { symbol: "NCBA", price: 52.25, change: "-1.42%", isUp: false },
-  { symbol: "EABL", price: 178.50, change: "+1.85%", isUp: true },
-];
+// Trending = today's biggest movers, computed from the shared price source — never a
+// separate hand-typed list that can disagree with what every other page shows.
+const trendingStocks = Object.keys(STOCK_META)
+  .filter(symbol => symbol !== "SCOM")
+  .map(symbol => {
+    const { pct } = getDayChange(symbol);
+    return { symbol, price: getPrice(symbol), pct, isUp: pct >= 0 };
+  })
+  .sort((a, b) => Math.abs(b.pct) - Math.abs(a.pct))
+  .slice(0, 10)
+  .map(s => ({ symbol: s.symbol, price: s.price, change: `${s.isUp ? '+' : ''}${s.pct.toFixed(2)}%`, isUp: s.isUp }));
 
 export default function Discover() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const { posts, loading: postsLoading, likePost } = usePosts();
+  const { posts, loading: postsLoading, likePost, repostPost, bookmarkPost } = usePosts();
   const { isFollowing, toggleFollow } = useFollows();
   const [feedTab, setFeedTab] = useState("latest");
   const [topTraders, setTopTraders] = useState<TopTrader[]>([]);
   const tickerRef = useRef<HTMLDivElement>(null);
 
-  const portfolioInsights = {
-    totalReturn: "+24.5%",
-    holdings: ["SAFCOM", "EQTY", "KCB"],
-    topGainer: "EQTY",
-    gainPercent: "+13.2%"
-  };
+  const { portfolio, loading: portfolioLoading } = usePortfolio();
+  const portfolioStats = computePortfolioStats(portfolio);
+  const portfolioWithLive = portfolio.map(h => ({ ...h, gainPct: (() => { const price = getPrice(h.symbol, h.avg_cost); return h.avg_cost > 0 ? ((price - h.avg_cost) / h.avg_cost) * 100 : 0; })() }));
+  const topGainerHolding = portfolioWithLive.length > 0 ? [...portfolioWithLive].sort((a, b) => b.gainPct - a.gainPct)[0] : null;
 
   const courses = [
     { title: "Stock Market Basics", progress: 0, lessons: 12, duration: "2 hours", level: "Beginner", type: "video" },
@@ -102,6 +105,28 @@ export default function Discover() {
     e.stopPropagation();
     if (!user) { navigate('/auth'); return; }
     await likePost(postId);
+  };
+
+  const handleRepost = async (e: React.MouseEvent, postId: string) => {
+    e.stopPropagation();
+    if (!user) { navigate('/auth'); return; }
+    const { error } = await repostPost(postId);
+    if (!error) toast({ title: "Reposted to your profile" });
+  };
+
+  const handleBookmark = async (e: React.MouseEvent, post: Post) => {
+    e.stopPropagation();
+    if (!user) { navigate('/auth'); return; }
+    const { error } = await bookmarkPost(post.id, !!post.is_bookmarked);
+    if (!error) toast({ title: post.is_bookmarked ? "Removed from bookmarks" : "Saved to bookmarks" });
+  };
+
+  const handleShare = async (e: React.MouseEvent, post: Post) => {
+    e.stopPropagation();
+    const url = `${window.location.origin}/traders-hub/post/${post.id}`;
+    const result = await shareLink(url, { title: "AfriFinance TradersHub", text: post.content.slice(0, 120) });
+    if (result.method === "clipboard") toast({ title: "Link copied" });
+    else if (result.method === "failed") toast({ title: "Couldn't share this post", variant: "destructive" });
   };
 
   const handleFollow = async (targetUserId: string) => {
@@ -176,39 +201,57 @@ export default function Discover() {
       </div>
 
       <div className="p-4 space-y-5 stagger-children">
-        {/* Portfolio Insights Card */}
-        <Card className="card-hero cursor-pointer" onClick={() => navigate('/track-investments')}>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center space-x-2">
-                <Trophy className="h-5 w-5 text-accent" />
-                <h3 className="font-semibold text-sm">Portfolio Insights</h3>
-              </div>
-              <Badge variant="secondary" className="text-xs">
-                {portfolioInsights.totalReturn}
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="text-xs text-muted-foreground mb-1">Top Holdings</div>
-                <div className="flex space-x-1">
-                  {portfolioInsights.holdings.map((stock) => (
-                    <Badge key={stock} variant="outline" className="text-xs px-1">{stock}</Badge>
-                  ))}
+        {/* Discover Stocks — heatmap for spotting movers at a glance */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-semibold text-sm flex items-center gap-2">
+              <Flame className="h-4 w-4 text-accent" />
+              Discover Stocks
+            </h3>
+            <Button variant="ghost" size="sm" className="text-xs h-7 px-2" onClick={() => navigate('/markets')}>
+              See all <ChevronRight className="h-3 w-3 ml-0.5" />
+            </Button>
+          </div>
+          <StockHeatmap />
+        </div>
+
+        {/* Portfolio Insights Card — real data, only shown if the user actually holds something */}
+        {!portfolioLoading && portfolio.length > 0 && (
+          <Card className="card-hero cursor-pointer" onClick={() => navigate('/track-investments')}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center space-x-2">
+                  <Trophy className="h-5 w-5 text-accent" />
+                  <h3 className="font-semibold text-sm">Portfolio Insights</h3>
                 </div>
-                <div className="mt-2 text-xs">
-                  <span className="text-muted-foreground">Best: </span>
-                  <span className="text-bull font-medium">
-                    {portfolioInsights.topGainer} {portfolioInsights.gainPercent}
-                  </span>
+                <Badge variant="secondary" className={`text-xs ${portfolioStats.gainPct >= 0 ? 'text-bull' : 'text-bear'}`}>
+                  {portfolioStats.gainPct >= 0 ? '+' : ''}{portfolioStats.gainPct.toFixed(1)}%
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="text-xs text-muted-foreground mb-1">Top Holdings</div>
+                  <div className="flex space-x-1">
+                    {portfolio.slice(0, 3).map((h) => (
+                      <Badge key={h.symbol} variant="outline" className="text-xs px-1">{h.symbol}</Badge>
+                    ))}
+                  </div>
+                  {topGainerHolding && (
+                    <div className="mt-2 text-xs">
+                      <span className="text-muted-foreground">Best: </span>
+                      <span className={`font-medium ${topGainerHolding.gainPct >= 0 ? 'text-bull' : 'text-bear'}`}>
+                        {topGainerHolding.symbol} {topGainerHolding.gainPct >= 0 ? '+' : ''}{topGainerHolding.gainPct.toFixed(1)}%
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div className="w-12 h-12 rounded-full bg-gradient-primary flex items-center justify-center">
+                  <PieChart className="h-6 w-6 text-white" />
                 </div>
               </div>
-              <div className="w-12 h-12 rounded-full bg-gradient-primary flex items-center justify-center">
-                <PieChart className="h-6 w-6 text-white" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         {/* 2-Column Grid of Main Cards */}
         <div className="grid grid-cols-2 gap-3">
@@ -322,7 +365,7 @@ export default function Discover() {
                   <div 
                     key={post.id} 
                     className="py-3 cursor-pointer active:bg-muted/20 transition-colors"
-                    onClick={() => navigate(`/traders-hub?post=${post.id}`)}
+                    onClick={() => navigate(`/traders-hub/post/${post.id}`)}
                   >
                     <div className="flex items-start space-x-3">
                       <Avatar 
@@ -350,36 +393,36 @@ export default function Discover() {
                         
                         {/* X-style interaction bar */}
                         <div className="flex items-center justify-between max-w-[280px] text-muted-foreground">
-                          <button 
+                          <button
                             className="flex items-center gap-1 text-xs hover:text-primary transition-colors group"
-                            onClick={(e) => { e.stopPropagation(); navigate('/traders-hub'); }}
+                            onClick={(e) => { e.stopPropagation(); navigate(`/traders-hub/post/${post.id}`); }}
                           >
                             <MessageCircle className="h-3.5 w-3.5 group-hover:bg-primary/10 rounded-full p-0" />
                             <span>{post.comments_count}</span>
                           </button>
-                          <button 
-                            className="flex items-center gap-1 text-xs hover:text-bull transition-colors group"
-                            onClick={(e) => e.stopPropagation()}
+                          <button
+                            className={`flex items-center gap-1 text-xs transition-colors group ${post.is_reposted ? 'text-bull' : 'hover:text-bull'}`}
+                            onClick={(e) => handleRepost(e, post.id)}
                           >
                             <Repeat2 className="h-3.5 w-3.5" />
                             <span>{post.reposts_count}</span>
                           </button>
-                          <button 
+                          <button
                             className={`flex items-center gap-1 text-xs transition-colors group ${post.is_liked ? 'text-red-500' : 'hover:text-red-500'}`}
                             onClick={(e) => handleLike(e, post.id)}
                           >
                             <Heart className={`h-3.5 w-3.5 transition-transform ${post.is_liked ? 'fill-current scale-110' : 'group-hover:scale-110'}`} />
                             <span>{post.likes_count}</span>
                           </button>
-                          <button 
-                            className="flex items-center gap-1 text-xs hover:text-primary transition-colors"
-                            onClick={(e) => e.stopPropagation()}
+                          <button
+                            className={`flex items-center gap-1 text-xs transition-colors ${post.is_bookmarked ? 'text-primary' : 'hover:text-primary'}`}
+                            onClick={(e) => handleBookmark(e, post)}
                           >
-                            <Bookmark className="h-3.5 w-3.5" />
+                            <Bookmark className={`h-3.5 w-3.5 ${post.is_bookmarked ? 'fill-current' : ''}`} />
                           </button>
-                          <button 
+                          <button
                             className="flex items-center gap-1 text-xs hover:text-primary transition-colors"
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e) => handleShare(e, post)}
                           >
                             <Share2 className="h-3.5 w-3.5" />
                           </button>

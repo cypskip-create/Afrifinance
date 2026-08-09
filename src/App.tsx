@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { MainLayout } from "./components/layout/MainLayout";
 import { AuthProvider } from "./hooks/useAuth";
+import { ProfileProvider } from "./hooks/useProfile";
 import Home from "./pages/Home";
 import Markets from "./pages/Markets";
 import Discover from "./pages/Discover";
@@ -37,38 +38,40 @@ const App = () => (
     <ThemeProvider defaultTheme="light" storageKey="kenyan-stocks-theme">
       <TooltipProvider>
         <AuthProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/landing" element={<Landing />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/*" element={<MainLayout />}>
-                <Route index element={<Home />} />
-                <Route path="markets" element={<Markets />} />
-                <Route path="discover" element={<Discover />} />
+          <ProfileProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route path="/landing" element={<Landing />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/*" element={<MainLayout />}>
+                  <Route index element={<Home />} />
+                  <Route path="markets" element={<Markets />} />
+                  <Route path="discover" element={<Discover />} />
 
-                <Route path="account" element={<Account />} />
-                <Route path="stock/:symbol" element={<StockDetail />} />
-                <Route path="watchlist" element={<Watchlist />} />
-                <Route path="sector/:sector" element={<SectorDetail />} />
-                <Route path="learn" element={<Learn />} />
-                <Route path="notifications" element={<Notifications />} />
-                <Route path="alerts" element={<Notifications />} />
-                <Route path="sector-heatmap" element={<SectorHeatmap />} />
-                <Route path="market-brief" element={<SectorHeatmap />} />
-                <Route path="track-investments" element={<TrackInvestments />} />
-                <Route path="traders-hub" element={<TradersHub />} />
-                <Route path="traders-hub/post/:postId" element={<PostDetail />} />
-                <Route path="rooms" element={<Rooms />} />
-                <Route path="screener" element={<StockScreener />} />
-                <Route path="compare" element={<StockCompare />} />
-                <Route path="profile/:userId" element={<UserProfile />} />
-                <Route path="*" element={<NotFound />} />
-              </Route>
-            </Routes>
-          </BrowserRouter>
+                  <Route path="account" element={<Account />} />
+                  <Route path="stock/:symbol" element={<StockDetail />} />
+                  <Route path="watchlist" element={<Watchlist />} />
+                  <Route path="sector/:sector" element={<SectorDetail />} />
+                  <Route path="learn" element={<Learn />} />
+                  <Route path="notifications" element={<Notifications />} />
+                  <Route path="alerts" element={<Notifications />} />
+                  <Route path="sector-heatmap" element={<SectorHeatmap />} />
+                  <Route path="market-brief" element={<SectorHeatmap />} />
+                  <Route path="track-investments" element={<TrackInvestments />} />
+                  <Route path="traders-hub" element={<TradersHub />} />
+                  <Route path="traders-hub/post/:postId" element={<PostDetail />} />
+                  <Route path="rooms" element={<Rooms />} />
+                  <Route path="screener" element={<StockScreener />} />
+                  <Route path="compare" element={<StockCompare />} />
+                  <Route path="profile/:userId" element={<UserProfile />} />
+                  <Route path="*" element={<NotFound />} />
+                </Route>
+              </Routes>
+            </BrowserRouter>
+          </ProfileProvider>
         </AuthProvider>
       </TooltipProvider>
     </ThemeProvider>

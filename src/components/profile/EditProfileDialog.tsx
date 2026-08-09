@@ -34,12 +34,12 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
   type HandleState = "idle" | "checking" | "available" | "taken" | "invalid" | "current";
   const [handleState, setHandleState] = useState<HandleState>("idle");
   const [suggestions, setSuggestions] = useState<string[]>([]);
-  const originalHandle = ((profile as any)?.handle || "").toLowerCase();
+  const originalHandle = (profile?.handle || "").toLowerCase();
 
   useEffect(() => {
     if (open && profile) {
       setFullName(profile.full_name || "");
-      setHandle((profile as any).handle || "");
+      setHandle(profile.handle || "");
       setBio(profile.bio || "");
       setAvatarUrl(profile.avatar_url || "");
       setPreviewUrl(profile.avatar_url || "");
@@ -195,11 +195,12 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-md h-[100dvh] sm:h-auto sm:max-h-[85vh] p-0 gap-0 flex flex-col overflow-hidden rounded-none sm:rounded-lg">
+        <DialogHeader className="shrink-0 px-6 pt-6 pb-2">
           <DialogTitle className="text-center text-xl">Edit Profile</DialogTitle>
         </DialogHeader>
-        
+
+        <div className="flex-1 min-h-0 overflow-y-auto px-6">
         <div className="space-y-6 py-4">
           {/* Avatar Section */}
           <div className="flex flex-col items-center gap-4">
@@ -356,25 +357,26 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
               </p>
             </div>
           </div>
+        </div>
+        </div>
 
-          {/* Actions */}
-          <div className="flex gap-3 pt-2">
-            <Button 
-              variant="outline" 
-              className="flex-1 h-11"
-              onClick={() => onOpenChange(false)}
-            >
-              Cancel
-            </Button>
-            <Button 
-              className="flex-1 h-11 btn-primary"
-              onClick={handleSave}
-              disabled={loading || uploading || handleState === "checking" || handleState === "taken" || handleState === "invalid"}
-            >
-              {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Save Changes
-            </Button>
-          </div>
+        {/* Actions — pinned outside the scroll area so they're always reachable, even on short phone screens */}
+        <div className="shrink-0 flex gap-3 px-6 py-4 border-t border-border bg-background pb-[calc(1rem+env(safe-area-inset-bottom))]">
+          <Button 
+            variant="outline" 
+            className="flex-1 h-11"
+            onClick={() => onOpenChange(false)}
+          >
+            Cancel
+          </Button>
+          <Button 
+            className="flex-1 h-11 btn-primary"
+            onClick={handleSave}
+            disabled={loading || uploading || handleState === "checking" || handleState === "taken" || handleState === "invalid"}
+          >
+            {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Save Changes
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
