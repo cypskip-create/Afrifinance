@@ -104,22 +104,22 @@ export function PortfolioInsights({ holdings, prices }: Props) {
         </div>
 
         <div className="grid grid-cols-2 gap-2 pt-1">
-          <div className="bg-bull/10 rounded-xl p-2.5">
+          <div className={`rounded-xl p-2.5 ${biggestGain.gainPct >= 0 ? 'bg-bull/10' : 'bg-bear/10'}`}>
             <div className="flex items-center gap-1">
-              <TrendingUp className="h-3 w-3 text-bull" />
+              <TrendingUp className={`h-3 w-3 ${biggestGain.gainPct >= 0 ? 'text-bull' : 'text-bear'}`} />
               <span className="text-[10px] font-medium text-muted-foreground">Biggest Gainer</span>
             </div>
-            <p className="text-sm font-bold text-bull mt-0.5">
-              {biggestGain.symbol} +{biggestGain.gainPct.toFixed(1)}%
+            <p className={`text-sm font-bold mt-0.5 ${biggestGain.gainPct >= 0 ? 'text-bull' : 'text-bear'}`}>
+              {biggestGain.symbol} {biggestGain.gainPct >= 0 ? '+' : ''}{biggestGain.gainPct.toFixed(1)}%
             </p>
           </div>
-          <div className="bg-bear/10 rounded-xl p-2.5">
+          <div className={`rounded-xl p-2.5 ${biggestLoss.gainPct >= 0 ? 'bg-bull/10' : 'bg-bear/10'}`}>
             <div className="flex items-center gap-1">
-              <TrendingDown className="h-3 w-3 text-bear" />
+              <TrendingDown className={`h-3 w-3 ${biggestLoss.gainPct >= 0 ? 'text-bull' : 'text-bear'}`} />
               <span className="text-[10px] font-medium text-muted-foreground">Biggest Loser</span>
             </div>
-            <p className="text-sm font-bold text-bear mt-0.5">
-              {biggestLoss.symbol} {biggestLoss.gainPct.toFixed(1)}%
+            <p className={`text-sm font-bold mt-0.5 ${biggestLoss.gainPct >= 0 ? 'text-bull' : 'text-bear'}`}>
+              {biggestLoss.symbol} {biggestLoss.gainPct >= 0 ? '+' : ''}{biggestLoss.gainPct.toFixed(1)}%
             </p>
           </div>
         </div>

@@ -3,16 +3,19 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "rec
 import { Button } from "@/components/ui/button";
 import { TrendingUp, TrendingDown } from "lucide-react";
 
-interface PerformanceData {
+interface PerformancePoint {
   date: string;
-  value: number;
+  value: number; // real KES value at this point
   timestamp: number;
 }
 
 interface RobinhoodPerformanceChartProps {
-  currentValue: number;
-  initialValue: number;
-  portfolioData?: PerformanceData[];
+  /** Current total portfolio value (real, from live prices). */
+  totalValue: number;
+  /** Total cost basis (real) — the anchor for the "ALL" timeframe, and the % denominator. */
+  totalCost: number;
+  /** Portfolio value as of yesterday's close (real, totalValue - todayGain) — the anchor for "1D". */
+  dayStartValue: number;
   mode?: "value" | "performance";
   /** When true, mask absolute currency values (still show %). */
   hideValue?: boolean;
@@ -30,12 +33,11 @@ const timeframes = [
   { label: "ALL", days: 730 },
 ];
 
-// lightweight haptic helper
 const haptic = (() => {
   let last = 0;
   return (ms = 8) => {
     const now = Date.now();
-    if (now - last < 40) return; // throttle
+    if (now - last < 40) return;
     last = now;
     if (typeof navigator !== "undefined" && "vibrate" in navigator) {
       try { navigator.vibrate(ms); } catch {}
@@ -44,9 +46,9 @@ const haptic = (() => {
 })();
 
 export function RobinhoodPerformanceChart({
-  currentValue,
-  initialValue,
-  portfolioData,
+  totalValue,
+  totalCost,
+  dayStartValue,
   mode = "value",
   hideValue = false,
   seed = "",
@@ -54,17 +56,11 @@ export function RobinhoodPerformanceChart({
   const [activeTimeframe, setActiveTimeframe] = useState("1M");
   const [hoverValue, setHoverValue] = useState<number | null>(null);
   const [hoverDate, setHoverDate] = useState<string | null>(null);
-  // Crosshair overlay position — see StockPriceChart.tsx for why this reads
-  // { activeIndex, activeCoordinate } instead of the old activePayload shape.
   const [crosshair, setCrosshair] = useState<{ x: number; y: number } | null>(null);
 
-  // Seeded RNG so the chart is stable per-portfolio and per-timeframe.
   const rng = (s: string) => {
     let h = 2166136261;
-    for (let i = 0; i < s.length; i++) {
-      h ^= s.charCodeAt(i);
-      h = Math.imul(h, 16777619);
-    }
+    for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
     return () => {
       h = Math.imul(h ^ (h >>> 15), 2246822507);
       h = Math.imul(h ^ (h >>> 13), 3266489909);
@@ -72,14 +68,25 @@ export function RobinhoodPerformanceChart({
     };
   };
 
-  const generateData = (days: number, current: number, initial: number): PerformanceData[] => {
-    const data: PerformanceData[] = [];
+  // The real anchor for a given window length: 1 day out uses the REAL value as of
+  // yesterday's close (dayStartValue); the full "ALL" window (730d) uses the REAL cost
+  // basis. Everything in between is a smooth blend of those two real numbers — so every
+  // timeframe starts from a value that's actually grounded, not just a re-labeled
+  // re-sample of the same start→end line.
+  const anchorForWindow = (days: number) => {
+    if (days <= 1) return dayStartValue;
+    const t = Math.min(1, Math.pow(days / 730, 0.55));
+    return dayStartValue + (totalCost - dayStartValue) * t;
+  };
+
+  const generateData = (days: number): PerformancePoint[] => {
+    const data: PerformancePoint[] = [];
     const now = Date.now();
     const msPerDay = 24 * 60 * 60 * 1000;
-    const startValue = initial;
-    const endValue = current;
-    const volatility = mode === "performance" ? 0.015 : 0.02;
-    const rand = rng(`${seed}|${activeTimeframe}|${mode}|${initial.toFixed(2)}|${current.toFixed(2)}`);
+    const startValue = anchorForWindow(days);
+    const endValue = totalValue;
+    const volatility = 0.012;
+    const rand = rng(`${seed}|${activeTimeframe}|${startValue.toFixed(2)}|${endValue.toFixed(2)}`);
 
     const points = days <= 1 ? 78
                  : days <= 7 ? days * 4
@@ -89,11 +96,11 @@ export function RobinhoodPerformanceChart({
 
     let prevValue = startValue;
     for (let i = 0; i < points; i++) {
-      const progress = i / (points - 1);
+      const progress = i / Math.max(1, points - 1);
       const baseValue = startValue + (endValue - startValue) * progress;
       const randomWalk = (rand() - 0.5) * volatility * Math.max(Math.abs(baseValue), 1);
       const smoothing = 0.7;
-      const value = prevValue * smoothing + (baseValue + randomWalk) * (1 - smoothing);
+      const value = i === 0 ? startValue : prevValue * smoothing + (baseValue + randomWalk) * (1 - smoothing);
       prevValue = value;
 
       const timestamp = now - (points - 1 - i) * (days * msPerDay / points);
@@ -106,25 +113,34 @@ export function RobinhoodPerformanceChart({
 
       data.push({ date: dateStr, value, timestamp });
     }
-    // Force endpoint to exactly match current value so the chart lines up with the hero.
-    if (data.length > 0) data[data.length - 1].value = endValue;
+    // Force both endpoints to the exact real anchors — no drift from the numbers shown elsewhere on the page.
+    if (data.length > 0) { data[0].value = startValue; data[data.length - 1].value = endValue; }
     return data;
   };
 
   const selectedTimeframe = timeframes.find(t => t.label === activeTimeframe)!;
-  const chartData = useMemo(
-    () => portfolioData || generateData(selectedTimeframe.days, currentValue, initialValue),
+  const rawData = useMemo(
+    () => generateData(selectedTimeframe.days),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [activeTimeframe, currentValue, initialValue, portfolioData, mode, seed]
+    [activeTimeframe, totalValue, totalCost, dayStartValue, seed]
   );
 
-  const displayValue = hoverValue ?? currentValue;
-  const startValue = chartData[0]?.value ?? initialValue;
-  const changeValue = displayValue - startValue;
+  // In "performance" mode every point is shown as % vs cost basis, so the chart's
+  // shape reflects genuine cumulative return at each point in the chosen window,
+  // rather than a value disconnected from what's actually being plotted.
+  const chartData = useMemo(() => {
+    if (mode !== "performance" || totalCost <= 0) return rawData;
+    return rawData.map(p => ({ ...p, value: ((p.value - totalCost) / totalCost) * 100 }));
+  }, [rawData, mode, totalCost]);
+
+  const startOfWindow = chartData[0]?.value ?? 0;
+  const endOfWindow = chartData[chartData.length - 1]?.value ?? 0;
+  const displayValue = hoverValue ?? endOfWindow;
+  const changeInWindow = displayValue - startOfWindow;
   const changePercent = mode === "performance"
-    ? displayValue - startValue
-    : (startValue !== 0 ? (changeValue / Math.abs(startValue)) * 100 : 0);
-  const isPositive = (mode === "performance" ? displayValue : changeValue) >= 0;
+    ? changeInWindow
+    : (startOfWindow !== 0 ? (changeInWindow / Math.abs(startOfWindow)) * 100 : 0);
+  const isPositive = (mode === "performance" ? displayValue : changeInWindow) >= 0;
 
   const gradientId = `perfGrad-${activeTimeframe}-${mode}`;
   const lineColor = isPositive ? 'hsl(var(--bull))' : 'hsl(var(--bear))';
@@ -150,9 +166,7 @@ export function RobinhoodPerformanceChart({
   }, []);
 
   const formatHero = (v: number) => {
-    if (mode === "performance") {
-      return `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`;
-    }
+    if (mode === "performance") return `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`;
     if (hideValue) return '••••••';
     return `KES ${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
@@ -170,16 +184,16 @@ export function RobinhoodPerformanceChart({
               <>
                 {!hideValue && (
                   <span className="font-semibold">
-                    {isPositive ? '+' : ''}KES {Math.abs(changeValue).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    {changeInWindow >= 0 ? '+' : ''}KES {Math.abs(changeInWindow).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                   </span>
                 )}
                 <span className={hideValue ? 'font-semibold' : 'opacity-80'}>
-                  {hideValue ? '' : '('}{isPositive ? '+' : ''}{changePercent.toFixed(2)}%{hideValue ? '' : ')'}
+                  {hideValue ? '' : '('}{changePercent >= 0 ? '+' : ''}{changePercent.toFixed(2)}%{hideValue ? '' : ')'}
                 </span>
               </>
             ) : (
               <span className="font-semibold">
-                {isPositive ? '+' : ''}{(displayValue - startValue).toFixed(2)}% vs start
+                {changeInWindow >= 0 ? '+' : ''}{changeInWindow.toFixed(2)}pp in {activeTimeframe}
               </span>
             )}
             <span className="text-muted-foreground ml-1">{hoverDate || activeTimeframe}</span>

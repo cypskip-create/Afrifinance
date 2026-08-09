@@ -5,8 +5,9 @@ import { AddInvestmentDialog } from "@/components/portfolio/AddInvestmentDialog"
 import { RobinhoodPerformanceChart } from "@/components/portfolio/RobinhoodPerformanceChart";
 import { PortfolioSnowflake } from "@/components/portfolio/PortfolioSnowflake";
 import { PortfolioInsights } from "@/components/portfolio/PortfolioInsights";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
-  ArrowUpRight, ArrowDownRight, Eye, EyeOff, RefreshCw, Newspaper,
+  ArrowUpRight, ArrowDownRight, Eye, EyeOff, RefreshCw, Newspaper, ChevronDown,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -38,6 +39,8 @@ export default function TrackInvestments() {
   const [sortAsc, setSortAsc] = useState(false);
   const [chartPeriod, setChartPeriod] = useState("1M");
   const [chartMode, setChartMode] = useState<"value" | "performance">("value");
+  const [allocationMode, setAllocationMode] = useState<"asset" | "sector">("sector");
+  const [selectedSlice, setSelectedSlice] = useState<string | null>(null);
 
   const getPrice = (symbol: string) => getSharedPrice(symbol);
 
@@ -54,10 +57,9 @@ export default function TrackInvestments() {
       return { ...h, price, value, cost, gain, gainPct, weight };
     });
     items.sort((a, b) => {
-      const mul = sortAsc ? 1 : -1;
-      if (sortBy === "value") return (b.value - a.value) * mul;
-      if (sortBy === "gain") return (b.gainPct - a.gainPct) * mul;
-      return a.symbol.localeCompare(b.symbol) * mul;
+      if (sortBy === "value") return sortAsc ? a.value - b.value : b.value - a.value;
+      if (sortBy === "gain") return sortAsc ? a.gainPct - b.gainPct : b.gainPct - a.gainPct;
+      return sortAsc ? a.symbol.localeCompare(b.symbol) : b.symbol.localeCompare(a.symbol);
     });
     return items;
   }, [portfolio, sortBy, sortAsc, stats.totalValue]);
@@ -73,6 +75,14 @@ export default function TrackInvestments() {
       .map(([name, value], i) => ({ name, value, pct: stats.totalValue > 0 ? (value / stats.totalValue) * 100 : 0, color: colors[i % colors.length] }))
       .sort((a, b) => b.value - a.value);
   }, [holdings, stats.totalValue]);
+
+  const assetAlloc = useMemo(() => {
+    return holdings
+      .map(h => ({ name: h.symbol, value: h.value, pct: stats.totalValue > 0 ? (h.value / stats.totalValue) * 100 : 0 }))
+      .sort((a, b) => b.value - a.value);
+  }, [holdings, stats.totalValue]);
+
+  const activeAlloc = allocationMode === "asset" ? assetAlloc : sectorAlloc;
 
   const topMovers = useMemo(() => {
     const sorted = [...holdings].sort((a, b) => Math.abs(b.gainPct) - Math.abs(a.gainPct));
@@ -106,8 +116,9 @@ export default function TrackInvestments() {
   };
 
   const toggleSort = (key: SortKey) => {
-    if (sortBy === key) setSortAsc(!sortAsc);
-    else { setSortBy(key); setSortAsc(false); }
+    if (sortBy === key) { setSortAsc(!sortAsc); return; }
+    setSortBy(key);
+    setSortAsc(key === "name"); // A–Z starts ascending; Value/P&L start highest-first
   };
 
 
@@ -194,8 +205,9 @@ export default function TrackInvestments() {
           </div>
           <div className="-mx-4">
             <RobinhoodPerformanceChart
-              currentValue={chartMode === 'value' ? stats.totalValue : stats.gainPct}
-              initialValue={chartMode === 'value' ? stats.totalCost : 0}
+              totalValue={stats.totalValue}
+              totalCost={stats.totalCost}
+              dayStartValue={stats.totalValue - stats.todayGain}
               mode={chartMode}
               hideValue={!showBalance}
               seed={holdings.map(h => h.symbol).join(',')}
@@ -230,25 +242,71 @@ export default function TrackInvestments() {
         )}
 
         {/* ── ALLOCATION ── */}
-        {sectorAlloc.length > 0 && (
+        {activeAlloc.length > 0 && (
           <div>
-            <p className="section-eyebrow">Asset allocation</p>
+            <div className="flex items-center justify-between">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button data-small-target className="flex items-center gap-1 section-eyebrow">
+                    {allocationMode === "asset" ? "Asset allocation" : "Sector allocation"}
+                    <ChevronDown className="h-3 w-3" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuItem onClick={() => { setAllocationMode("asset"); setSelectedSlice(null); }}>Asset allocation</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => { setAllocationMode("sector"); setSelectedSlice(null); }}>Sector allocation</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
             <div className="h-52 mt-2">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={sectorAlloc.map((s, i) => ({ ...s, fill: ALLOC_COLORS[i % ALLOC_COLORS.length] }))}
+                    data={activeAlloc}
                     dataKey="value"
                     nameKey="name"
                     innerRadius="55%"
                     outerRadius="82%"
                     paddingAngle={2}
                     stroke="none"
+                    onClick={(_, i) => setSelectedSlice(prev => prev === activeAlloc[i].name ? null : activeAlloc[i].name)}
                   >
-                    {sectorAlloc.map((s, i) => (
-                      <Cell key={s.name} fill={ALLOC_COLORS[i % ALLOC_COLORS.length]} />
-                    ))}
+                    {activeAlloc.map((s, i) => {
+                      const color = ALLOC_COLORS[i % ALLOC_COLORS.length];
+                      const isSelected = selectedSlice === s.name;
+                      const dimmed = selectedSlice !== null && !isSelected;
+                      return (
+                        <Cell
+                          key={s.name}
+                          fill={color}
+                          opacity={dimmed ? 0.3 : 1}
+                          style={isSelected ? { filter: `drop-shadow(0 0 7px ${color})`, cursor: "pointer" } : { cursor: "pointer" }}
+                        />
+                      );
+                    })}
                   </Pie>
+                  {/* Outer ring segment — only the selected slice renders here, giving the
+                      "pops outward" effect. Same data/values as the base Pie above, so its
+                      angular position lines up exactly; only its fill differs per-cell. */}
+                  {selectedSlice && (
+                    <Pie
+                      data={activeAlloc}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius="83%"
+                      outerRadius="92%"
+                      paddingAngle={2}
+                      stroke="none"
+                      isAnimationActive
+                    >
+                      {activeAlloc.map((s, i) => {
+                        const color = ALLOC_COLORS[i % ALLOC_COLORS.length];
+                        const isSelected = selectedSlice === s.name;
+                        return <Cell key={s.name} fill={isSelected ? color : "transparent"} style={isSelected ? { filter: `drop-shadow(0 0 6px ${color})` } : undefined} />;
+                      })}
+                    </Pie>
+                  )}
                   <Tooltip
                     content={
                       <ColorTooltip
@@ -264,16 +322,27 @@ export default function TrackInvestments() {
               </ResponsiveContainer>
             </div>
             <div className="mt-1">
-              {sectorAlloc.map((s, i) => (
-                <div key={s.name} className="flex items-center gap-2.5 py-2.5 border-b border-border/50 last:border-0">
-                  <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: ALLOC_COLORS[i % ALLOC_COLORS.length] }} />
-                  <span className="text-[12px] flex-1 truncate">{s.name}</span>
-                  <span className="text-[11px] text-muted-foreground tabular">
-                    {showBalance ? `KES ${s.value.toLocaleString('en-US', { maximumFractionDigits: 0 })}` : '••••'}
-                  </span>
-                  <span className="text-[12px] font-semibold tabular w-14 text-right">{s.pct.toFixed(1)}%</span>
-                </div>
-              ))}
+              {activeAlloc.map((s, i) => {
+                const isSelected = selectedSlice === s.name;
+                return (
+                  <button
+                    key={s.name}
+                    data-small-target
+                    onClick={() => setSelectedSlice(prev => prev === s.name ? null : s.name)}
+                    className={`w-full flex items-center gap-2.5 py-2.5 border-b border-border/50 last:border-0 text-left transition-colors ${isSelected ? "bg-muted/40 -mx-1 px-1 rounded-lg" : ""}`}
+                  >
+                    <span
+                      className="w-2.5 h-2.5 rounded-sm shrink-0"
+                      style={{ background: ALLOC_COLORS[i % ALLOC_COLORS.length], boxShadow: isSelected ? `0 0 6px ${ALLOC_COLORS[i % ALLOC_COLORS.length]}` : undefined }}
+                    />
+                    <span className={`text-[12px] flex-1 truncate ${isSelected ? "font-semibold" : ""}`}>{s.name}</span>
+                    <span className="text-[11px] text-muted-foreground tabular">
+                      {showBalance ? `KES ${s.value.toLocaleString('en-US', { maximumFractionDigits: 0 })}` : '••••'}
+                    </span>
+                    <span className="text-[12px] font-semibold tabular w-14 text-right">{s.pct.toFixed(1)}%</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
