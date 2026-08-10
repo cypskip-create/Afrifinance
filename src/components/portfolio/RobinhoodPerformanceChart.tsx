@@ -166,7 +166,7 @@ export function RobinhoodPerformanceChart({
   }, []);
 
   const formatHero = (v: number) => {
-    if (mode === "performance") return `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`;
+    if (mode === "performance") return `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`;
     if (hideValue) return '••••••';
     return `KES ${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
@@ -188,12 +188,12 @@ export function RobinhoodPerformanceChart({
                   </span>
                 )}
                 <span className={hideValue ? 'font-semibold' : 'opacity-80'}>
-                  {hideValue ? '' : '('}{changePercent >= 0 ? '+' : ''}{changePercent.toFixed(2)}%{hideValue ? '' : ')'}
+                  {hideValue ? '' : '('}{changePercent >= 0 ? '+' : ''}{changePercent.toFixed(1)}%{hideValue ? '' : ')'}
                 </span>
               </>
             ) : (
               <span className="font-semibold">
-                {changeInWindow >= 0 ? '+' : ''}{changeInWindow.toFixed(2)}pp in {activeTimeframe}
+                {changeInWindow >= 0 ? '+' : ''}{changeInWindow.toFixed(1)}% in {activeTimeframe}
               </span>
             )}
             <span className="text-muted-foreground ml-1">{hoverDate || activeTimeframe}</span>

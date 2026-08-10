@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Crown, MessageCircle, ChevronRight, Wallet, Eye, EyeOff, ArrowUpRight, ArrowDownRight, LogIn, TrendingUp, Search, Sparkles, Coins, Shield, BarChart3, Bell } from "lucide-react";
+import { Crown, MessageCircle, ChevronRight, Wallet, Eye, EyeOff, ArrowUpRight, ArrowDownRight, LogIn, TrendingUp, Search, Sparkles, Coins, Shield, BarChart3, Bell, Binoculars } from "lucide-react";
 import { QuickTradeWidget } from "@/components/home/QuickTradeWidget";
 import { CommandCenterSections } from "@/components/home/CommandCenterSections";
 import { TopBar } from "@/components/shared/TopBar";
@@ -9,10 +9,11 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { usePortfolio } from "@/hooks/usePortfolio";
+import { useWatchlist } from "@/hooks/useWatchlist";
 import { usePosts } from "@/hooks/usePosts";
 import { getTimeBasedGreeting } from "@/utils/timeGreeting";
 import { MarketStatusIndicator } from "@/components/shared/MarketStatusIndicator";
-import { computePortfolioStats } from "@/lib/stockPrices";
+import { computePortfolioStats, getPrice, getDayChange } from "@/lib/stockPrices";
 import { formatPostDate } from "@/lib/formatTimestamp";
 
 
@@ -31,6 +32,7 @@ export default function Home() {
   const { user } = useAuth();
   const { profile } = useProfile();
   const { portfolio } = usePortfolio();
+  const { watchlist } = useWatchlist();
   const { posts } = usePosts();
   const navigate = useNavigate();
   const { greeting } = getTimeBasedGreeting();
@@ -40,18 +42,20 @@ export default function Home() {
   const hasPortfolio = user && portfolio.length > 0;
   const { totalValue: portfolioValue, totalGain: portfolioGain, gainPct: portfolioGainPct } = computePortfolioStats(portfolio);
 
-  const nseIndices = [
-    { name: "NSE 20",  value: "1,847",  change: 1.2, isUp: true  },
-    { name: "NSE 25",  value: "3,542",  change: 0.8, isUp: true  },
-    { name: "NASI",    value: "112.4",  change: -0.3, isUp: false },
-  ];
+  // Real watchlist, ranked by today's biggest movers — no more standing in
+  // for a fixed demo list regardless of what the person actually watches.
+  const watchlistMovers = [...watchlist]
+    .map(w => {
+      const day = getDayChange(w.symbol);
+      return { symbol: w.symbol, name: w.name, price: getPrice(w.symbol), changePct: day.pct };
+    })
+    .sort((a, b) => Math.abs(b.changePct) - Math.abs(a.changePct))
+    .slice(0, 5);
 
-  const watchlistMovers = [
-    { symbol: "SCOM",  name: "Safaricom", price: 12.85, change: 2.4 },
-    { symbol: "EQTY",  name: "Equity",    price: 62.50, change: -1.2 },
-    { symbol: "KCB",   name: "KCB",       price: 45.30, change: 0.8 },
-    { symbol: "EABL",  name: "EABL",      price: 155.00, change: -2.1 },
-    { symbol: "BAMB",  name: "Bamburi",   price: 89.75, change: 3.2 },
+  const nseIndices = [
+    { name: "NSE 20",  value: "1,847.23",  change: 1.2, isUp: true  },
+    { name: "NSE 25",  value: "3,542.87",  change: 0.8, isUp: true  },
+    { name: "NASI",    value: "112.45",  change: -0.3, isUp: false },
   ];
 
   const opportunities = [
@@ -168,31 +172,42 @@ export default function Home() {
           </div>
         </div>
 
-        {/* WATCHLIST MOVERS — plain hairline table */}
+        {/* WATCHLIST MOVERS — real watchlist, ranked by today's biggest move */}
         {user && (
           <div>
             <Eyebrow action="Watchlist" onAction={() => navigate('/watchlist')}>Watchlist Movers</Eyebrow>
-            <div className="border-t border-border/60">
-              {watchlistMovers.map(s => (
-                <button
-                  key={s.symbol}
-                  data-small-target
-                  onClick={() => navigate(`/stock/${s.symbol}`)}
-                  className="w-full flex items-center justify-between py-2.5 border-b border-border/40 hover:bg-muted/30 -mx-4 px-4 transition-colors"
-                >
-                  <div className="text-left">
-                    <p className="text-xs font-semibold">{s.symbol}</p>
-                    <p className="text-[10px] text-muted-foreground">{s.name}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs font-semibold tabular">KES {s.price.toFixed(2)}</p>
-                    <p className={`text-[10px] font-semibold tabular ${s.change >= 0 ? 'text-bull' : 'text-bear'}`}>
-                      {s.change >= 0 ? '+' : ''}{s.change}%
-                    </p>
-                  </div>
-                </button>
-              ))}
-            </div>
+            {watchlistMovers.length === 0 ? (
+              <div className="border-t border-border/60 py-6 text-center">
+                <Binoculars className="h-7 w-7 mx-auto mb-2 text-muted-foreground/30" />
+                <p className="text-xs font-semibold">Your watchlist is empty</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5 mb-3">Add stocks to track their moves here.</p>
+                <Button variant="outline" size="sm" className="h-8 rounded-full text-xs" onClick={() => navigate('/markets')}>
+                  Browse stocks
+                </Button>
+              </div>
+            ) : (
+              <div className="border-t border-border/60">
+                {watchlistMovers.map(s => (
+                  <button
+                    key={s.symbol}
+                    data-small-target
+                    onClick={() => navigate(`/stock/${s.symbol}`)}
+                    className="w-full flex items-center justify-between py-2.5 border-b border-border/40 hover:bg-muted/30 -mx-4 px-4 transition-colors"
+                  >
+                    <div className="text-left">
+                      <p className="text-xs font-semibold">{s.symbol}</p>
+                      <p className="text-[10px] text-muted-foreground">{s.name}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs font-semibold tabular">KES {s.price.toFixed(2)}</p>
+                      <p className={`text-[10px] font-semibold tabular ${s.changePct >= 0 ? 'text-bull' : 'text-bear'}`}>
+                        {s.changePct >= 0 ? '+' : ''}{s.changePct.toFixed(2)}%
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

@@ -2,33 +2,52 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { TrendingUp, Sparkles, Calendar, Coins, ArrowUpRight, ChevronRight } from "lucide-react";
 import { AIThesisCard } from "@/components/stock/AIThesisCard";
+import { getPrice, getDivYield, getStockName } from "@/lib/stockPrices";
+import { getFundamentals } from "@/data/stockFundamentals";
 
-const undervalued = [
-  { symbol: "KCB",  name: "KCB Group",   upside: 18.5, price: 45.75 },
-  { symbol: "COOP", name: "Co-op Bank",  upside: 14.2, price: 17.25 },
-  { symbol: "EQTY", name: "Equity",      upside:  9.7, price: 62.50 },
-];
-
-const highGrowth = [
-  { symbol: "SAFCOM", name: "Safaricom", growth: 22.4 },
-  { symbol: "EABL",   name: "EABL",      growth: 14.8 },
-  { symbol: "EQTY",   name: "Equity",    growth: 12.3 },
-];
-
-const dividendStars = [
-  { symbol: "BAT",     name: "BAT Kenya",  yield: 12.2 },
-  { symbol: "SCBK",    name: "Stanchart",  yield: 6.8 },
-  { symbol: "STANBIC", name: "Stanbic",    yield: 6.4 },
-];
+// A canonical pool of tradable symbols (matches StockDetail's own dataset)
+// to rank "picks" from — so each section surfaces whichever stocks the
+// underlying data actually supports today, instead of hand-picked symbols
+// that might not even qualify (e.g. an "undervalued" pick with no upside).
+const STOCK_POOL = ["SAFCOM", "EQTY", "KCB", "SCBK", "COOP", "EABL", "ABSA", "NCBA", "BAMB", "BRIT", "KPLC", "BAT", "JUB", "DTB", "STANBIC"];
 
 const upcomingEarnings = [
-  { symbol: "SAFCOM", name: "Safaricom",    date: "Tomorrow", time: "9:00 AM" },
-  { symbol: "EQTY",   name: "Equity Group", date: "Fri",      time: "Pre-market" },
-  { symbol: "KCB",    name: "KCB Group",    date: "Next Mon", time: "Post-market" },
+  { symbol: "SAFCOM", date: "Tomorrow", time: "9:00 AM" },
+  { symbol: "EQTY",   date: "Fri",      time: "Pre-market" },
+  { symbol: "KCB",    date: "Next Mon", time: "Post-market" },
 ];
 
 export function CommandCenterSections() {
   const navigate = useNavigate();
+
+  // Derive every displayed number — and which stocks even qualify — from the
+  // shared price/fundamentals data, then rank and take the top few. Nothing
+  // here is hand-picked, so a section simply won't show a stock that the
+  // underlying data doesn't actually support (e.g. no fake "upside" on a
+  // stock trading above its analyst target).
+  const undervalued = STOCK_POOL.map((symbol) => {
+    const price = getPrice(symbol);
+    const targetAvg = getFundamentals(symbol, price).analystTargets.avg;
+    const upside = price > 0 ? ((targetAvg - price) / price) * 100 : 0;
+    return { symbol, name: getStockName(symbol), price, upside };
+  })
+    .filter(s => s.upside > 0)
+    .sort((a, b) => b.upside - a.upside)
+    .slice(0, 3);
+
+  const highGrowth = STOCK_POOL.map((symbol) => {
+    const price = getPrice(symbol);
+    const growth = getFundamentals(symbol, price)
+      .growthMetrics.find(g => g.label === "Revenue (3yr CAGR)")?.value ?? 0;
+    return { symbol, name: getStockName(symbol), growth };
+  })
+    .sort((a, b) => b.growth - a.growth)
+    .slice(0, 3);
+
+  const dividendStars = STOCK_POOL
+    .map((symbol) => ({ symbol, name: getStockName(symbol), yield: getDivYield(symbol) }))
+    .sort((a, b) => b.yield - a.yield)
+    .slice(0, 3);
 
   const Section = ({ title, icon: Icon, iconClass, children, actionLabel, onAction }: any) => (
     <div>
@@ -59,20 +78,22 @@ export function CommandCenterSections() {
 
   return (
     <div className="space-y-6">
-      <Section title="Undervalued Picks" icon={Coins} iconClass="text-bull" actionLabel="More" onAction={() => navigate("/screener")}>
-        {undervalued.map(s => (
-          <Row key={s.symbol} onClick={() => navigate(`/stock/${s.symbol}`)}
-            left={<div><p className="text-xs font-semibold">{s.symbol} <span className="font-normal text-muted-foreground">· {s.name}</span></p><p className="text-[10px] text-muted-foreground tabular">KES {s.price.toFixed(2)}</p></div>}
-            right={<div className="text-right"><p className="text-xs font-semibold text-bull tabular flex items-center gap-0.5 justify-end"><ArrowUpRight className="h-3 w-3" />+{s.upside}%</p><p className="text-[10px] text-muted-foreground">upside</p></div>}
-          />
-        ))}
-      </Section>
+      {undervalued.length > 0 && (
+        <Section title="Undervalued Picks" icon={Coins} iconClass="text-bull" actionLabel="More" onAction={() => navigate("/screener")}>
+          {undervalued.map(s => (
+            <Row key={s.symbol} onClick={() => navigate(`/stock/${s.symbol}`)}
+              left={<div><p className="text-xs font-semibold">{s.symbol} <span className="font-normal text-muted-foreground">· {s.name}</span></p><p className="text-[10px] text-muted-foreground tabular">KES {s.price.toFixed(2)}</p></div>}
+              right={<div className="text-right"><p className="text-xs font-semibold text-bull tabular flex items-center gap-0.5 justify-end"><ArrowUpRight className="h-3 w-3" />+{s.upside.toFixed(1)}%</p><p className="text-[10px] text-muted-foreground">upside</p></div>}
+            />
+          ))}
+        </Section>
+      )}
 
       <Section title="High-Growth Stocks" icon={TrendingUp} iconClass="text-accent">
         {highGrowth.map(s => (
           <Row key={s.symbol} onClick={() => navigate(`/stock/${s.symbol}`)}
             left={<div><p className="text-xs font-semibold">{s.symbol} <span className="font-normal text-muted-foreground">· {s.name}</span></p><p className="text-[10px] text-muted-foreground">3-yr revenue</p></div>}
-            right={<p className="text-xs font-semibold text-accent tabular">+{s.growth}%</p>}
+            right={<p className="text-xs font-semibold text-accent tabular">+{s.growth.toFixed(1)}%</p>}
           />
         ))}
       </Section>
@@ -81,7 +102,7 @@ export function CommandCenterSections() {
         {dividendStars.map(s => (
           <Row key={s.symbol} onClick={() => navigate(`/stock/${s.symbol}`)}
             left={<div><p className="text-xs font-semibold">{s.symbol} <span className="font-normal text-muted-foreground">· {s.name}</span></p><p className="text-[10px] text-muted-foreground">forward yield</p></div>}
-            right={<p className="text-xs font-semibold text-chart-3 tabular">{s.yield}%</p>}
+            right={<p className="text-xs font-semibold text-chart-3 tabular">{s.yield.toFixed(1)}%</p>}
           />
         ))}
       </Section>
@@ -89,7 +110,7 @@ export function CommandCenterSections() {
       <Section title="Upcoming Earnings" icon={Calendar} iconClass="text-primary">
         {upcomingEarnings.map(e => (
           <Row key={e.symbol} onClick={() => navigate(`/stock/${e.symbol}`)}
-            left={<div><p className="text-xs font-semibold">{e.symbol} <span className="font-normal text-muted-foreground">· {e.name}</span></p><p className="text-[10px] text-muted-foreground">{e.time}</p></div>}
+            left={<div><p className="text-xs font-semibold">{e.symbol} <span className="font-normal text-muted-foreground">· {getStockName(e.symbol)}</span></p><p className="text-[10px] text-muted-foreground">{e.time}</p></div>}
             right={<p className="text-xs font-semibold text-primary tabular">{e.date}</p>}
           />
         ))}

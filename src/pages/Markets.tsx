@@ -165,7 +165,7 @@ function StockRow({ stock, onTap }: { stock: { symbol: string; name: string; pri
         <div className="text-right min-w-[72px]">
           <p className="text-sm font-bold">KES {stock.price.toFixed(2)}</p>
           <p className={`text-xs font-semibold ${stock.change >= 0 ? 'text-bull' : 'text-bear'}`}>
-            {stock.change >= 0 ? '+' : ''}{stock.change}%
+            {stock.change >= 0 ? '+' : ''}{stock.change.toFixed(1)}%
           </p>
         </div>
       </div>
@@ -265,7 +265,7 @@ export default function Markets() {
                         {idx.points}
                       </span>
                       <span className={`text-xs ${idx.isUp ? 'text-bull' : 'text-bear'}`}>
-                        ({idx.isUp ? '+' : ''}{idx.change}%)
+                        ({idx.isUp ? '+' : ''}{idx.change.toFixed(1)}%)
                       </span>
                     </div>
                     <div className="mt-2">
@@ -293,7 +293,7 @@ export default function Markets() {
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-2xl">{theme.icon}</span>
                       <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${theme.change >= 0 ? 'bg-bull/10 text-bull' : 'bg-bear/10 text-bear'}`}>
-                        {theme.change >= 0 ? '+' : ''}{theme.change}%
+                        {theme.change >= 0 ? '+' : ''}{theme.change.toFixed(1)}%
                       </span>
                     </div>
                     <p className="text-sm font-bold">{theme.title}</p>
@@ -321,7 +321,7 @@ export default function Markets() {
                     <p className="text-xs text-muted-foreground font-medium">{c.name}</p>
                     <p className="text-sm font-bold mt-0.5">{c.value}</p>
                     <p className={`text-xs font-semibold mt-0.5 ${c.isUp ? 'text-bull' : 'text-bear'}`}>
-                      {c.isUp ? '+' : ''}{c.change}%
+                      {c.isUp ? '+' : ''}{c.change.toFixed(1)}%
                     </p>
                   </Card>
                 ))}
@@ -395,7 +395,7 @@ export default function Markets() {
                     <div className="text-right">
                       <p className="text-sm font-bold">{v.ratio.toFixed(1)}x</p>
                       <p className={`text-xs font-semibold ${v.change >= 0 ? 'text-bull' : 'text-bear'}`}>
-                        {v.change >= 0 ? '+' : ''}{v.change}%
+                        {v.change >= 0 ? '+' : ''}{v.change.toFixed(1)}%
                       </p>
                     </div>
                   </div>
@@ -478,7 +478,7 @@ export default function Markets() {
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-semibold">{s.name}</p>
                       <p className={`text-xs font-bold px-2 py-0.5 rounded-full ${s.isUp ? 'bg-bull/10 text-bull' : 'bg-bear/10 text-bear'}`}>
-                        {s.isUp ? '+' : ''}{s.change}%
+                        {s.isUp ? '+' : ''}{s.change.toFixed(1)}%
                       </p>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">{s.stocks} stocks · Top: {s.topStock}</p>
@@ -566,7 +566,7 @@ export default function Markets() {
                   <div className="text-right">
                     <p className="text-sm font-bold">KES {ipo.currentPrice.toFixed(2)}</p>
                     <p className={`text-xs font-semibold ${ipo.change >= 0 ? 'text-bull' : 'text-bear'}`}>
-                      {ipo.change >= 0 ? '+' : ''}{ipo.change}% from IPO
+                      {ipo.change >= 0 ? '+' : ''}{ipo.change.toFixed(1)}% from IPO
                     </p>
                   </div>
                 </div>
@@ -662,7 +662,7 @@ export default function Markets() {
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-semibold">{s.name}</p>
                     <p className={`text-xs font-bold px-2 py-0.5 rounded-full ${s.isUp ? 'bg-bull/10 text-bull' : 'bg-bear/10 text-bear'}`}>
-                      {s.isUp ? '+' : ''}{s.change}%
+                      {s.isUp ? '+' : ''}{s.change.toFixed(1)}%
                     </p>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">{s.stocks} stocks · Top: {s.topStock}</p>

@@ -1,6 +1,12 @@
 // Single source of truth for mock NSE prices used across Home, Portfolio, TradersHub,
 // Markets, and Watchlist. Keeping these in sync prevents any surface from disagreeing
 // with another for the same stock.
+//
+// NOTE: some pages (e.g. StockDetail) key their own display data by a different
+// ticker alias for the same company (STANBIC vs SBIC, DTB vs DTK). Both aliases
+// are kept in sync below so getPrice()/getDivYield() never silently return the
+// "not found" fallback just because a different part of the app used the other
+// spelling of the symbol.
 
 export const MOCK_PRICES: Record<string, number> = {
   SAFCOM: 17.85, SCOM: 17.85,
@@ -16,8 +22,8 @@ export const MOCK_PRICES: Record<string, number> = {
   KPLC: 4.18,
   BAT: 320.00,
   JUB: 380.00,
-  DTK: 82.00,
-  SBIC: 8.90,
+  DTK: 82.00, DTB: 82.00,
+  SBIC: 8.90, STANBIC: 8.90,
   // Additional NSE-listed companies
   TOTL: 22.50, ARM: 4.25, NBK: 5.85, KEGN: 3.45, UMEME: 8.90,
   CIC: 2.15, KENO: 12.40, WTK: 145.00, KAKZ: 280.00, SASN: 18.50,
@@ -39,14 +45,29 @@ export const PREV_CLOSE: Record<string, number> = {
   KPLC: 4.25,
   BAT: 316.50,
   JUB: 384.00,
-  DTK: 81.20,
-  SBIC: 8.72,
+  DTK: 81.20, DTB: 81.20,
+  SBIC: 8.72, STANBIC: 8.72,
   TOTL: 23.47, ARM: 4.12, NBK: 5.88, KEGN: 3.38, UMEME: 9.06,
   CIC: 2.20, KENO: 12.20, WTK: 145.45, KAKZ: 267.90, SASN: 18.00,
   EGAD: 12.18, TCL: 1.70, SAMR: 3.30, NSE: 8.40, CARBACID: 12.00,
 };
 
-// Sector + display name — the shared metadata behind every "All Stocks" / screener / heatmap surface.
+// Trailing dividend yield (%) — used for portfolio income estimates.
+export const DIV_YIELD: Record<string, number> = {
+  SAFCOM: 6.4, SCOM: 6.4,
+  EQTY: 8.2, KCB: 9.1, SCBK: 10.4, COOP: 6.1,
+  EABL: 5.2, ABSA: 9.6, NCBA: 8.4, BAMB: 3.1,
+  BRIT: 1.8, KPLC: 0.0, BAT: 11.2, JUB: 3.4,
+  DTK: 4.6, DTB: 4.6,
+  SBIC: 7.5, STANBIC: 7.5,
+  TOTL: 4.0, ARM: 0.0, NBK: 0.0, KEGN: 2.8, UMEME: 3.5,
+  CIC: 2.5, KENO: 3.2, WTK: 4.8, KAKZ: 5.5, SASN: 4.1,
+  EGAD: 0.0, TCL: 0.0, SAMR: 0.0, NSE: 3.0, CARBACID: 6.5,
+};
+
+// Sector + display name — the shared metadata behind every "All Stocks" /
+// screener / heatmap surface, and the canonical source for STOCK_NAMES below
+// so a company's name is only ever typed out in one place.
 export const STOCK_META: Record<string, { name: string; sector: string }> = {
   SAFCOM: { name: "Safaricom PLC", sector: "Telecommunications" },
   SCOM: { name: "Safaricom PLC", sector: "Telecommunications" },
@@ -63,7 +84,9 @@ export const STOCK_META: Record<string, { name: string; sector: string }> = {
   BAT: { name: "BAT Kenya", sector: "Manufacturing" },
   JUB: { name: "Jubilee Holdings", sector: "Insurance" },
   DTK: { name: "Diamond Trust Bank", sector: "Banking" },
+  DTB: { name: "Diamond Trust Bank", sector: "Banking" },
   SBIC: { name: "Stanbic Holdings", sector: "Banking" },
+  STANBIC: { name: "Stanbic Holdings", sector: "Banking" },
   TOTL: { name: "TotalEnergies Marketing Kenya", sector: "Energy" },
   ARM: { name: "ARM Cement", sector: "Construction" },
   NBK: { name: "National Bank of Kenya", sector: "Banking" },
@@ -81,16 +104,21 @@ export const STOCK_META: Record<string, { name: string; sector: string }> = {
   CARBACID: { name: "Carbacid Investments", sector: "Manufacturing" },
 };
 
-// Trailing dividend yield (%) — used for portfolio income estimates.
-export const DIV_YIELD: Record<string, number> = {
-  SAFCOM: 6.4, SCOM: 6.4,
-  EQTY: 8.2, KCB: 9.1, SCBK: 10.4, COOP: 6.1,
-  EABL: 5.2, ABSA: 9.6, NCBA: 8.4, BAMB: 3.1,
-  BRIT: 1.8, KPLC: 0.0, BAT: 11.2, JUB: 3.4,
-  DTK: 4.6, SBIC: 7.5,
-  TOTL: 4.0, ARM: 0.0, NBK: 0.0, KEGN: 2.8, UMEME: 3.5,
-  CIC: 2.5, KENO: 3.2, WTK: 4.8, KAKZ: 5.5, SASN: 4.1,
-  EGAD: 0.0, TCL: 0.0, SAMR: 0.0, NSE: 3.0, CARBACID: 6.5,
+// Thin, name-only view over STOCK_META — kept so existing call sites that
+// just want a label (quick-watch marquee, home widgets, etc.) don't need to
+// know about sectors too. Derived, not hand-typed, so it can't drift.
+export const STOCK_NAMES: Record<string, string> = Object.fromEntries(
+  Object.entries(STOCK_META).map(([symbol, meta]) => [symbol, meta.name])
+);
+
+export const getStockName = (symbol: string, fallback?: string): string => {
+  const key = symbol?.toUpperCase();
+  return (key && STOCK_NAMES[key]) || fallback || symbol;
+};
+
+export const getStockSector = (symbol: string, fallback?: string): string => {
+  const key = symbol?.toUpperCase();
+  return (key && STOCK_META[key]?.sector) || fallback || "Other";
 };
 
 export const getPrice = (symbol: string, fallback?: number): number => {
