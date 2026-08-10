@@ -2,11 +2,11 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Heart, TrendingUp, TrendingDown, AlarmClock, GitCompare, MessageSquare, Plus, Pencil, Maximize2, Minimize2, CandlestickChart, LineChart as LineChartIcon, AreaChart as AreaChartIcon, ChevronRight, FileText, Users2, Briefcase, Download, Building2, Eye, Bell } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { StockPriceChart, type ChartType } from "@/components/stock/StockPriceChart";
+import { StockPriceChart, generateMockData, type ChartType } from "@/components/stock/StockPriceChart";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { PriceAlertsManager } from "@/components/alerts/PriceAlertsManager";
 import { StockAlertDialog } from "@/components/alerts/StockAlertDialog";
 import { usePortfolio } from "@/hooks/usePortfolio";
@@ -25,6 +25,8 @@ import { NewsEventsTab } from "@/components/stock/tabs/NewsEventsTab";
 import { CommunityTab } from "@/components/stock/tabs/CommunityTab";
 import { PerformanceTab } from "@/components/stock/tabs/PerformanceTab";
 import { ScoresTab } from "@/components/stock/tabs/ScoresTab";
+import { getMediaItemsForSymbol, MediaItem } from "@/data/mediaItems";
+import { formatTimestamp } from "@/lib/formatTimestamp";
 
 
 const stockData: Record<string, {
@@ -57,13 +59,6 @@ const companyInfo: Record<string, { description: string; headquarters: string; c
   KCB:    { description: "KCB Group is the largest commercial bank in East Africa by assets, serving retail, corporate and government clients across the region.", headquarters: "Nairobi, Kenya", ceo: "Paul Russo", employees: "10,000+", founded: "1896" },
   EABL:   { description: "East African Breweries produces and distributes beer and spirits including Tusker, Guinness and Bell across East Africa.", headquarters: "Nairobi, Kenya", ceo: "Jane Karuku", employees: "4,000+", founded: "1922" },
 };
-
-const stockNews = [
-  { id: 1, title: "Strong quarterly earnings beat expectations", source: "Business Daily", time: "2h ago", sentiment: "bullish" as const },
-  { id: 2, title: "Analyst raises price target amid sector rally", source: "The Standard", time: "4h ago", sentiment: "bullish" as const },
-  { id: 3, title: "New regulatory framework may impact margins", source: "Reuters Africa", time: "6h ago", sentiment: "bearish" as const },
-  { id: 4, title: "Board announces share buyback program", source: "NSE Filings", time: "1d ago", sentiment: "bullish" as const },
-];
 
 type SubSection = "overview" | "research" | "news" | "community" | "more";
 
@@ -115,20 +110,42 @@ export default function StockDetail() {
     }
   };
 
-  const handleChartHover = useCallback((price: number | null, date: string | null) => {
+  const [hoverChangePercent, setHoverChangePercent] = useState<number | null>(null);
+  const [hoverIsUp, setHoverIsUp] = useState<boolean | null>(null);
+
+  const handleChartHover = useCallback((price: number | null, date: string | null, changePercent?: number | null, isUp?: boolean | null) => {
     setHoverPrice(price);
     setHoverDate(date);
+    setHoverChangePercent(changePercent ?? null);
+    setHoverIsUp(isUp ?? null);
   }, []);
 
   const timeframes = ["1D", "1W", "1M", "3M", "YTD", "1Y", "ALL"];
+  const timeframeLabels: Record<string, string> = {
+    "1D": "Today", "1W": "Past week", "1M": "Past month", "3M": "Past 3 months",
+    "YTD": "Year to date", "1Y": "Past year", "ALL": "All time",
+  };
   const divYield = stock.pe !== "N/A" ? ((parseFloat(stock.dividend) / stock.price) * 100).toFixed(1) : "0.0";
 
-  const displayPrice = hoverPrice ?? stock.price;
-  const priceChange = hoverPrice ? hoverPrice - stock.price : stock.change;
-  const priceChangePercent = hoverPrice
-    ? ((hoverPrice - stock.price) / stock.price * 100).toFixed(2)
-    : stock.changePercent;
-  const displayIsUp = hoverPrice ? hoverPrice >= stock.price : stock.isUp;
+  // Gain/loss for the whole selected timeframe — first vs. last point of that period's
+  // series. This is the same series the chart itself renders, so the header numbers and
+  // the chart's red/green always agree, and both update when the timeframe pill changes.
+  const periodData = useMemo(() => generateMockData(selectedTimeframe, symbol || "STK"), [selectedTimeframe, symbol]);
+  const periodFirstPrice = periodData[0]?.price || stock.price;
+  const periodLastPrice = periodData[periodData.length - 1]?.price || stock.price;
+  const periodChangePercent = periodFirstPrice ? ((periodLastPrice - periodFirstPrice) / periodFirstPrice) * 100 : 0;
+  const periodIsUp = periodLastPrice >= periodFirstPrice;
+
+  // While scrubbing the chart, show change vs. the start of the selected period instead;
+  // otherwise show the full period's change. Percent is scaled onto the real quoted price
+  // (mock series lives on its own price scale) so the KES amount shown stays consistent
+  // with the price displayed elsewhere on the page.
+  const activeChangePercent = hoverPrice !== null && hoverChangePercent !== null ? hoverChangePercent : periodChangePercent;
+  const activeIsUp = hoverPrice !== null && hoverIsUp !== null ? hoverIsUp : periodIsUp;
+  const priceChange = stock.price * (activeChangePercent / 100);
+  const priceChangePercent = activeChangePercent.toFixed(2);
+  const displayIsUp = activeIsUp;
+  const displayPrice = stock.price + priceChange;
 
   const scoreInputs = {
     price: stock.price, pe: stock.pe, eps: stock.eps, dividend: stock.dividend,
@@ -137,6 +154,9 @@ export default function StockDetail() {
   };
   const scores = computeScores(scoreInputs);
   const fundamentals = getFundamentals(symbol || "", stock.price);
+  const stockNews = getMediaItemsForSymbol(symbol || "");
+  // Opens the full story on the TradersHub Media tab.
+  const openNewsItem = (item: MediaItem) => navigate(`/traders-hub?tab=media&article=${item.id}`);
 
   // Section refs — sticky sub-nav scrolls to them
   const refs = {
@@ -220,7 +240,7 @@ export default function StockDetail() {
         <div className={`text-sm font-semibold flex items-center gap-1 mt-1 tabular ${displayIsUp ? 'text-bull' : 'text-bear'}`}>
           {displayIsUp ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
           <span>{priceChange >= 0 ? '+' : ''}KES {Math.abs(priceChange).toFixed(2)} · {priceChange >= 0 ? '+' : ''}{priceChangePercent}%</span>
-          <span className="text-muted-foreground font-normal text-xs ml-1">{hoverDate || "Today"}</span>
+          <span className="text-muted-foreground font-normal text-xs ml-1">{hoverDate || timeframeLabels[selectedTimeframe] || selectedTimeframe}</span>
         </div>
       </div>
 
@@ -402,25 +422,34 @@ export default function StockDetail() {
             <AfriFinanceScoreCard scores={scores} />
           </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <p className="section-eyebrow">Recent News</p>
-              <button data-small-target onClick={() => scrollTo("news")} className="text-[11px] text-primary font-semibold flex items-center">More <ChevronRight className="h-3 w-3" /></button>
+          {stockNews.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="section-eyebrow">Recent News</p>
+                <button data-small-target onClick={() => scrollTo("news")} className="text-[11px] text-primary font-semibold flex items-center">More <ChevronRight className="h-3 w-3" /></button>
+              </div>
+              <div className="border-t border-border/60">
+                {stockNews.slice(0, 3).map(n => (
+                  <button
+                    key={n.id}
+                    data-small-target
+                    onClick={() => openNewsItem(n)}
+                    className="w-full flex items-start justify-between py-3 border-b border-border/40 gap-3 text-left active:opacity-70 transition-opacity"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium leading-snug">{n.title}</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">{n.source} · {formatTimestamp(n.publishedAt)}</p>
+                    </div>
+                    {n.sentiment && n.sentiment !== "neutral" && (
+                      <Badge variant="outline" className={`text-[9px] shrink-0 ${n.sentiment === 'bullish' ? 'text-bull border-bull/40' : 'text-bear border-bear/40'}`}>
+                        {n.sentiment}
+                      </Badge>
+                    )}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="border-t border-border/60">
-              {stockNews.slice(0, 3).map(n => (
-                <div key={n.id} className="flex items-start justify-between py-3 border-b border-border/40 gap-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium leading-snug">{n.title}</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">{n.source} · {n.time}</p>
-                  </div>
-                  <Badge variant="outline" className={`text-[9px] shrink-0 ${n.sentiment === 'bullish' ? 'text-bull border-bull/40' : 'text-bear border-bear/40'}`}>
-                    {n.sentiment}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </div>
+          )}
         </section>
 
         {/* RESEARCH */}
@@ -461,6 +490,7 @@ export default function StockDetail() {
             price={stock.price} changePercent={stock.changePercent}
             pe={stock.pe} eps={stock.eps} dividend={stock.dividend}
             news={stockNews} fundamentals={fundamentals}
+            onSelectNews={openNewsItem}
           />
         </section>
 

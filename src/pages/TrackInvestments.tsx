@@ -17,14 +17,10 @@ import { HoldingsList } from "@/components/portfolio/HoldingsList";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
 import { ColorTooltip } from "@/components/charts/ChartTooltip";
 import { fx } from "@/lib/chartPalette";
+import { getMediaItemsForSymbols } from "@/data/mediaItems";
+import { formatTimestamp } from "@/lib/formatTimestamp";
 
 const ALLOC_COLORS = [fx.revenue, fx.netIncome, fx.assets, fx.foreign, fx.liabilities, fx.operatingIncome, fx.eps, fx.retail];
-const PORTFOLIO_NEWS = [
-  { id: 1, symbols: ["SAFCOM", "SCOM"], title: "Safaricom services revenue rises as M-Pesa activity expands", source: "Business Daily", time: "2h" },
-  { id: 2, symbols: ["EQTY"], title: "Equity Group outlines regional growth and asset-quality priorities", source: "NSE Update", time: "4h" },
-  { id: 3, symbols: ["KCB"], title: "KCB investors assess earnings outlook ahead of the next filing", source: "Capital Markets", time: "6h" },
-  { id: 4, symbols: ["COOP", "ABSA", "NCBA"], title: "Kenyan banks gain as sector liquidity indicators improve", source: "Market Desk", time: "8h" },
-];
 
 type SortKey = "value" | "gain" | "name";
 
@@ -89,8 +85,7 @@ export default function TrackInvestments() {
     return sorted.slice(0, 3);
   }, [holdings]);
   const portfolioUpdates = useMemo(() => {
-    const symbols = new Set(holdings.map(h => h.symbol.toUpperCase()));
-    return PORTFOLIO_NEWS.filter(item => item.symbols.some(symbol => symbols.has(symbol)));
+    return getMediaItemsForSymbols(holdings.map(h => h.symbol)).slice(0, 6);
   }, [holdings]);
 
   const diversificationScore = useMemo(() => {
@@ -232,10 +227,15 @@ export default function TrackInvestments() {
             </div>
             <div className="border-t border-border/60">
               {portfolioUpdates.map(item => (
-                <div key={item.id} className="w-full flex items-start gap-3 py-3 border-b border-border/40 text-left">
+                <button
+                  key={item.id}
+                  data-small-target
+                  onClick={() => navigate(`/traders-hub?tab=media&article=${item.id}`)}
+                  className="w-full flex items-start gap-3 py-3 border-b border-border/40 text-left active:opacity-70 transition-opacity"
+                >
                   <Newspaper className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
-                  <div className="min-w-0 flex-1"><p className="text-[12px] font-medium leading-snug">{item.title}</p><p className="mt-1 text-[10px] text-muted-foreground">{item.source} · {item.time}</p></div>
-                </div>
+                  <div className="min-w-0 flex-1"><p className="text-[12px] font-medium leading-snug">{item.title}</p><p className="mt-1 text-[10px] text-muted-foreground">{item.source} · {formatTimestamp(item.publishedAt)}</p></div>
+                </button>
               ))}
             </div>
           </section>

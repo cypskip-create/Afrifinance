@@ -17,10 +17,13 @@ interface StockPriceChartProps {
   symbol?: string;
   timeframe: string;
   chartType?: ChartType;
-  onHoverPrice?: (price: number | null, date: string | null) => void;
+  // changePercent/isUp are computed relative to the start of the SELECTED timeframe
+  // (i.e. the first point on screen), not relative to some fixed "today" price. This
+  // lets the caller show gain/loss for whichever period the user is scrubbing through.
+  onHoverPrice?: (price: number | null, date: string | null, changePercent?: number | null, isUp?: boolean | null) => void;
 }
 
-const generateMockData = (timeframe: string, symbol: string = "STK") => {
+export const generateMockData = (timeframe: string, symbol: string = "STK") => {
   let seed = 0;
   for (let i = 0; i < symbol.length; i++) seed += symbol.charCodeAt(i);
   const rand = (() => { let s = seed; return () => { s = (s * 9301 + 49297) % 233280; return s / 233280; }; })();
@@ -105,14 +108,18 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
     if (Number.isFinite(idx) && data[idx] && coord) {
       const point = data[idx];
       setCrosshair({ x: coord.x, y: coord.y });
-      onHoverPrice?.(point.price, point.date);
+      // Change is always relative to the first point of the currently selected
+      // timeframe, so scrubbing a 1M chart shows gain/loss vs. a month ago, not vs. today.
+      const pointChangePercent = firstPrice ? ((point.price - firstPrice) / firstPrice) * 100 : 0;
+      const pointIsUp = point.price >= firstPrice;
+      onHoverPrice?.(point.price, point.date, pointChangePercent, pointIsUp);
       chartHaptic();
     }
-  }, [data, onHoverPrice]);
+  }, [data, onHoverPrice, firstPrice]);
 
   const handleLeave = useCallback(() => {
     setCrosshair(null);
-    onHoverPrice?.(null, null);
+    onHoverPrice?.(null, null, null, null);
   }, [onHoverPrice]);
 
   const domain: [number, number] = [minPrice - padding, maxPrice + padding];
