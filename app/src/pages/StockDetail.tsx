@@ -25,7 +25,7 @@ import { NewsEventsTab } from "@/components/stock/tabs/NewsEventsTab";
 import { CommunityTab } from "@/components/stock/tabs/CommunityTab";
 import { PerformanceTab } from "@/components/stock/tabs/PerformanceTab";
 import { ScoresTab } from "@/components/stock/tabs/ScoresTab";
-import { getMediaItemsForSymbol, MediaItem } from "@/data/mediaItems";
+import { getMediaItemsForSymbol, MediaItem } from "../data/mediaItems";
 import { formatTimestamp } from "@/lib/formatTimestamp";
 
 
