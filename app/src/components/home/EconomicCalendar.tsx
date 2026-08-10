@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Bell, TrendingUp, Clock, AlertCircle } from "lucide-react";
+import { relativeDate } from "@/lib/stockPrices";
 
 interface EconomicEvent {
   id: string;
@@ -14,11 +15,16 @@ interface EconomicEvent {
   previous?: string;
 }
 
+// Dates are offsets from "today" (via relativeDate) rather than fixed calendar strings, so
+// this list always reads as genuinely upcoming instead of drifting into the past as real
+// time moves on.
+const isoDate = (daysOffset: number) => relativeDate(daysOffset).toISOString().slice(0, 10);
+
 const UPCOMING_EVENTS: EconomicEvent[] = [
   {
     id: '1',
     title: 'CBK Interest Rate Decision',
-    date: '2026-01-15',
+    date: isoDate(4),
     time: '14:00',
     impact: 'high',
     country: 'KE',
@@ -28,7 +34,7 @@ const UPCOMING_EVENTS: EconomicEvent[] = [
   {
     id: '2',
     title: 'Kenya CPI (YoY)',
-    date: '2026-01-20',
+    date: isoDate(9),
     time: '10:00',
     impact: 'high',
     country: 'KE',
@@ -38,7 +44,7 @@ const UPCOMING_EVENTS: EconomicEvent[] = [
   {
     id: '3',
     title: 'US Fed Interest Rate',
-    date: '2026-01-29',
+    date: isoDate(18),
     time: '21:00',
     impact: 'high',
     country: 'US',
@@ -48,7 +54,7 @@ const UPCOMING_EVENTS: EconomicEvent[] = [
   {
     id: '4',
     title: 'Kenya GDP Growth',
-    date: '2026-02-05',
+    date: isoDate(26),
     time: '09:00',
     impact: 'medium',
     country: 'KE',
@@ -71,9 +77,11 @@ export function EconomicCalendar() {
     const date = new Date(dateStr);
     const now = new Date();
     const diffDays = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 0) return 'Today';
     if (diffDays === 1) return 'Tomorrow';
+    if (diffDays === -1) return 'Yesterday';
+    if (diffDays < 0) return `${Math.abs(diffDays)} days ago`;
     if (diffDays < 7) return `${diffDays} days`;
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };

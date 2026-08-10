@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { ArrowLeft, GitCompare, Plus, X, TrendingUp, TrendingDown, Search, BarChart3, PieChart, Activity, DollarSign, Percent, Scale, ChevronRight } from "lucide-react";
 import { SparklineChart } from "@/components/shared/SparklineChart";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { STOCK_META, getPrice, getDayChange, DIV_YIELD } from "@/lib/stockPrices";
+import { CANONICAL_SYMBOLS, STOCK_META, getPrice, getDayChange, DIV_YIELD, getStockFundamentals, parseMagnitude, tickerSeed } from "@/lib/stockPrices";
 
 interface Stock {
   symbol: string;
@@ -25,38 +25,33 @@ interface Stock {
   sector: string;
 }
 
-const seedNum = (s: string) => s.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
-const marketCapBySymbol: Record<string, string> = {
-  SAFCOM: "1.2T", EQTY: "285B", SCBK: "125B", KCB: "145B", COOP: "89B", EABL: "112B",
-  BAMB: "32B", ABSA: "75B", NCBA: "68B", BRIT: "17B", KPLC: "3.8B", BAT: "34.5B",
-  JUB: "17B", DTK: "32B", SBIC: "52B",
-};
-
-const stocksDatabase: Stock[] = Object.keys(STOCK_META)
-  .filter(symbol => symbol !== "SCOM")
-  .map(symbol => {
-    const price = getPrice(symbol);
-    const { pct } = getDayChange(symbol);
-    const seed = seedNum(symbol);
-    const pe = 6 + (seed % 16); // 6–22
-    return {
-      symbol,
-      name: STOCK_META[symbol].name,
-      sector: STOCK_META[symbol].sector,
-      price,
-      change: +pct.toFixed(2),
-      marketCap: marketCapBySymbol[symbol] ?? `${(1 + (seed % 20)).toFixed(1)}B`,
-      pe,
-      eps: +(price / pe).toFixed(2),
-      dividendYield: DIV_YIELD[symbol] ?? 0,
-      roe: +(10 + (seed % 20)).toFixed(1),
-      debtToEquity: +(0.3 + (seed % 70) / 100).toFixed(2),
-      beta: +(0.6 + (seed % 90) / 100).toFixed(2),
-      high52: +(price * 1.12).toFixed(2),
-      low52: +(price * 0.85).toFixed(2),
-      volume: `${(0.2 + (seed % 150) / 10).toFixed(1)}M`,
-    };
-  });
+// Market cap, P/E, beta and volume come from the same shared fundamentals table used by
+// StockDetail and the Screener, so a stock's stats here can never disagree with its own
+// detail page. ROE and debt/equity aren't tracked elsewhere, so they're derived here
+// deterministically per symbol (stable across reloads, but compare-only).
+const stocksDatabase: Stock[] = CANONICAL_SYMBOLS.map(symbol => {
+  const price = getPrice(symbol);
+  const { pct } = getDayChange(symbol);
+  const seed = tickerSeed(symbol);
+  const meta = getStockFundamentals(symbol);
+  return {
+    symbol,
+    name: STOCK_META[symbol].name,
+    sector: STOCK_META[symbol].sector,
+    price,
+    change: +pct.toFixed(2),
+    marketCap: meta.marketCap,
+    pe: meta.pe,
+    eps: meta.pe > 0 ? +(price / meta.pe).toFixed(2) : 0,
+    dividendYield: DIV_YIELD[symbol] ?? 0,
+    roe: +(10 + (seed % 20)).toFixed(1),
+    debtToEquity: +(0.3 + (seed % 70) / 100).toFixed(2),
+    beta: meta.beta,
+    high52: +(price * 1.12).toFixed(2),
+    low52: +(price * 0.85).toFixed(2),
+    volume: meta.volume,
+  };
+});
 
 const comparisonMetrics = [
   { key: "price", label: "Price", icon: DollarSign, format: (v: number) => `KES ${v.toFixed(2)}` },
@@ -102,7 +97,7 @@ export default function StockCompare() {
     if (selectedStocks.length < 2) return null;
     const values = selectedStocks.map(s => {
       const val = s[key as keyof Stock];
-      return typeof val === 'number' ? val : parseFloat(String(val)) || 0;
+      return typeof val === 'number' ? val : parseMagnitude(String(val));
     });
     const bestIdx = isHigherBetter
       ? values.indexOf(Math.max(...values))

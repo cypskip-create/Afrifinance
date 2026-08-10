@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { TrendingUp, TrendingDown } from "lucide-react";
+import { CANONICAL_SYMBOLS, STOCK_META, getDayChange, getStockFundamentals, parseMagnitude } from "@/lib/stockPrices";
 
 interface HeatmapStock {
   symbol: string;
@@ -13,23 +14,26 @@ interface StockHeatmapProps {
   stocks?: HeatmapStock[];
 }
 
+// Derived from the shared price/fundamentals source (same one Markets, the Screener, and
+// Compare use) so the heatmap can't show a change% or list a ticker that disagrees with the
+// rest of the app. Limited to the dozen largest-cap names so the treemap stays legible.
+const defaultStocks: HeatmapStock[] = CANONICAL_SYMBOLS
+  .map(symbol => {
+    const { pct } = getDayChange(symbol);
+    const f = getStockFundamentals(symbol);
+    return {
+      symbol,
+      name: STOCK_META[symbol].name,
+      change: +pct.toFixed(1),
+      marketCap: parseMagnitude(f.marketCap) / 1e9, // billions, for relative sizing only
+      sector: STOCK_META[symbol].sector,
+    };
+  })
+  .sort((a, b) => b.marketCap - a.marketCap)
+  .slice(0, 12);
+
 export function StockHeatmap({ stocks }: StockHeatmapProps) {
   const navigate = useNavigate();
-
-  const defaultStocks: HeatmapStock[] = [
-    { symbol: 'SAFCOM', name: 'Safaricom', change: 2.4, marketCap: 1200, sector: 'Telecom' },
-    { symbol: 'EQTY', name: 'Equity Group', change: 3.8, marketCap: 950, sector: 'Banking' },
-    { symbol: 'SCBK', name: 'StanChart', change: 1.1, marketCap: 680, sector: 'Banking' },
-    { symbol: 'KCB', name: 'KCB Group', change: -0.8, marketCap: 520, sector: 'Banking' },
-    { symbol: 'COOP', name: 'Co-op Bank', change: -1.5, marketCap: 380, sector: 'Banking' },
-    { symbol: 'EABL', name: 'EABL', change: 2.1, marketCap: 420, sector: 'Consumer' },
-    { symbol: 'BAMB', name: 'Bamburi', change: -2.8, marketCap: 290, sector: 'Industrial' },
-    { symbol: 'DTB', name: 'DTB Kenya', change: 0.5, marketCap: 240, sector: 'Banking' },
-    { symbol: 'ABSA', name: 'ABSA Kenya', change: 1.9, marketCap: 350, sector: 'Banking' },
-    { symbol: 'NMG', name: 'Nation Media', change: -0.3, marketCap: 180, sector: 'Media' },
-    { symbol: 'NCBA', name: 'NCBA Group', change: 0.7, marketCap: 310, sector: 'Banking' },
-    { symbol: 'BRIT', name: 'Britam', change: -1.2, marketCap: 150, sector: 'Insurance' },
-  ];
 
   const stockData = stocks || defaultStocks;
   

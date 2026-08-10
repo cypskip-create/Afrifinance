@@ -29,6 +29,7 @@ import StockScreener from "./pages/StockScreener";
 import StockCompare from "./pages/StockCompare";
 import UserProfile from "./pages/UserProfile";
 import PostDetail from "./pages/PostDetail";
+import ThemeDetail from "./pages/ThemeDetail";
 
 const queryClient = new QueryClient();
 
@@ -55,6 +56,7 @@ const App = () => (
                   <Route path="stock/:symbol" element={<StockDetail />} />
                   <Route path="watchlist" element={<Watchlist />} />
                   <Route path="sector/:sector" element={<SectorDetail />} />
+                  <Route path="theme/:themeId" element={<ThemeDetail />} />
                   <Route path="learn" element={<Learn />} />
                   <Route path="notifications" element={<Notifications />} />
                   <Route path="alerts" element={<Notifications />} />

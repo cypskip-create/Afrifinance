@@ -3,33 +3,25 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, TrendingUp, TrendingDown, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StockHeatmap } from "@/components/home/StockHeatmap";
+import { CANONICAL_SYMBOLS, STOCK_META, getDayChange, getStockFundamentals, parseMagnitude } from "@/lib/stockPrices";
 
-const ALL_STOCKS = [
-  { symbol: 'SAFCOM', name: 'Safaricom', change: 2.4, marketCap: 1200, sector: 'Telecom' },
-  { symbol: 'EQTY', name: 'Equity Group', change: 3.8, marketCap: 950, sector: 'Banking' },
-  { symbol: 'KCB', name: 'KCB Group', change: -0.8, marketCap: 520, sector: 'Banking' },
-  { symbol: 'SCBK', name: 'StanChart', change: 1.1, marketCap: 680, sector: 'Banking' },
-  { symbol: 'COOP', name: 'Co-op Bank', change: -1.5, marketCap: 380, sector: 'Banking' },
-  { symbol: 'ABSA', name: 'ABSA Kenya', change: 1.9, marketCap: 350, sector: 'Banking' },
-  { symbol: 'NCBA', name: 'NCBA Group', change: 0.7, marketCap: 310, sector: 'Banking' },
-  { symbol: 'DTB', name: 'DTB Kenya', change: 0.5, marketCap: 240, sector: 'Banking' },
-  { symbol: 'EABL', name: 'EABL', change: 2.1, marketCap: 420, sector: 'Consumer' },
-  { symbol: 'BAT', name: 'BAT Kenya', change: 0.3, marketCap: 280, sector: 'Consumer' },
-  { symbol: 'BAMB', name: 'Bamburi', change: -2.8, marketCap: 290, sector: 'Industrial' },
-  { symbol: 'ARM', name: 'ARM Cement', change: 3.3, marketCap: 90, sector: 'Industrial' },
-  { symbol: 'KPLC', name: 'Kenya Power', change: 4.2, marketCap: 180, sector: 'Energy' },
-  { symbol: 'KEGN', name: 'KenGen', change: 2.1, marketCap: 220, sector: 'Energy' },
-  { symbol: 'TOTL', name: 'TotalEnergies', change: -4.1, marketCap: 130, sector: 'Energy' },
-  { symbol: 'BRIT', name: 'Britam', change: -1.2, marketCap: 150, sector: 'Insurance' },
-  { symbol: 'JUB', name: 'Jubilee', change: 0.5, marketCap: 170, sector: 'Insurance' },
-  { symbol: 'CIC', name: 'CIC Insurance', change: -2.3, marketCap: 56, sector: 'Insurance' },
-  { symbol: 'NMG', name: 'Nation Media', change: -0.3, marketCap: 180, sector: 'Media' },
-  { symbol: 'SASN', name: 'Sasini', change: 2.8, marketCap: 40, sector: 'Agriculture' },
-  { symbol: 'KAKZ', name: 'Kakuzi', change: 4.5, marketCap: 55, sector: 'Agriculture' },
-  { symbol: 'WTK', name: 'Williamson Tea', change: -0.3, marketCap: 42, sector: 'Agriculture' },
-];
+// Derived from the shared price/fundamentals source — same list AllStocks, the Screener,
+// and Compare use — so this heatmap can't show a stock (or a change%) that disagrees with
+// the rest of the app, and can't include a ticker (like the old placeholder "NMG") that
+// isn't actually part of the app's real NSE universe.
+const ALL_STOCKS = CANONICAL_SYMBOLS.map(symbol => {
+  const { pct } = getDayChange(symbol);
+  const f = getStockFundamentals(symbol);
+  return {
+    symbol,
+    name: STOCK_META[symbol].name,
+    change: +pct.toFixed(1),
+    marketCap: parseMagnitude(f.marketCap) / 1e9, // billions, for relative sizing only
+    sector: STOCK_META[symbol].sector,
+  };
+});
 
-const SECTORS = ["All", "Banking", "Telecom", "Consumer", "Energy", "Insurance", "Industrial", "Media", "Agriculture"];
+const SECTORS = ["All", ...Array.from(new Set(ALL_STOCKS.map(s => s.sector))).sort()];
 const RANGES = ["1D", "1W", "1M", "YTD"] as const;
 
 export default function SectorHeatmap() {

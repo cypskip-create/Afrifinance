@@ -6,7 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Search, TrendingUp, TrendingDown, Filter, ChevronDown, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { SparklineChart } from "@/components/shared/SparklineChart";
-import { STOCK_META, getPrice, getDayChange } from "@/lib/stockPrices";
+import { CANONICAL_SYMBOLS, STOCK_META, getPrice, getDayChange } from "@/lib/stockPrices";
+import { useWatchlist } from "@/hooks/useWatchlist";
+import { useToast } from "@/hooks/use-toast";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,10 +16,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-// Derived from the shared price source — this list can never disagree with what
-// Home, Portfolio, Watchlist or a stock's own detail page show for the same ticker.
-const allStocks = Object.keys(STOCK_META)
-  .filter(symbol => symbol !== "SCOM") // SCOM is just an alias for SAFCOM; don't list it twice
+// Derived from the shared price source (canonical symbols only, so a company with two
+// ticker aliases — e.g. Diamond Trust Bank, Stanbic — never appears twice) — this list can
+// never disagree with what Home, Portfolio, Watchlist or a stock's own detail page show.
+const allStocks = CANONICAL_SYMBOLS
   .map(symbol => {
     const { abs, pct } = getDayChange(symbol);
     return {
@@ -44,7 +46,8 @@ export function AllStocksList({ initialSector, onlySymbols }: AllStocksListProps
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSector, setSelectedSector] = useState(initialSector || "All Sectors");
   const [sortBy, setSortBy] = useState<"name" | "change" | "price">("name");
-  const [favorites, setFavorites] = useState<string[]>([]);
+  const { isInWatchlist, addToWatchlist, removeFromWatchlist } = useWatchlist();
+  const { toast } = useToast();
 
   useEffect(() => { if (initialSector) setSelectedSector(initialSector); }, [initialSector]);
 
@@ -91,11 +94,15 @@ export function AllStocksList({ initialSector, onlySymbols }: AllStocksListProps
     return () => io.disconnect();
   }, [filteredStocks.length]);
 
-  const toggleFavorite = (symbol: string, e: React.MouseEvent) => {
+  const toggleFavorite = async (symbol: string, name: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setFavorites(prev =>
-      prev.includes(symbol) ? prev.filter(s => s !== symbol) : [...prev, symbol]
-    );
+    if (isInWatchlist(symbol)) {
+      await removeFromWatchlist(symbol);
+      toast({ title: "Removed from watchlist" });
+    } else {
+      const { error } = await addToWatchlist(symbol, name) || {};
+      if (!error) toast({ title: "Added to watchlist" });
+    }
   };
 
   return (
@@ -161,9 +168,9 @@ export function AllStocksList({ initialSector, onlySymbols }: AllStocksListProps
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6"
-                  onClick={(e) => toggleFavorite(stock.symbol, e)}
+                  onClick={(e) => toggleFavorite(stock.symbol, stock.name, e)}
                 >
-                  <Star className={`h-4 w-4 ${favorites.includes(stock.symbol) ? 'fill-yellow-500 text-yellow-500' : 'text-muted-foreground'}`} />
+                  <Star className={`h-4 w-4 ${isInWatchlist(stock.symbol) ? 'fill-yellow-500 text-yellow-500' : 'text-muted-foreground'}`} />
                 </Button>
                 <div>
                   <div className="flex items-center gap-2">

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { ArrowLeft, Filter, TrendingUp, TrendingDown, ChevronRight, RotateCcw, Sparkles, Search, ArrowUpDown, SlidersHorizontal, BarChart3, LineChart } from "lucide-react";
 import { SparklineChart } from "@/components/shared/SparklineChart";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { STOCK_META, getPrice, getDayChange, DIV_YIELD } from "@/lib/stockPrices";
+import { CANONICAL_SYMBOLS, STOCK_META, getPrice, getDayChange, DIV_YIELD, getStockFundamentals, parseMagnitude, tickerSeed } from "@/lib/stockPrices";
 
 interface ScreenerFilters {
   sector: string;
@@ -27,58 +27,27 @@ interface ScreenerFilters {
 
 const sectors = ["All Sectors", ...Array.from(new Set(Object.values(STOCK_META).map(m => m.sector))).sort()];
 
-// Supplementary screener-only stats (volume, market cap, P/E, beta, RSI) — these aren't
-// tracked anywhere else in the app, so they're kept here as authored data. Price, day
-// change, sector and dividend yield all come from the shared source below, so this
-// screener can never show a different price than the rest of the app for the same stock.
-const screenerMeta: Record<string, { volume: string; marketCap: string; pe: number; beta: number; rsi: number }> = {
-  SAFCOM: { volume: "12.5M", marketCap: "1.2T", pe: 14.2, beta: 0.85, rsi: 62 },
-  EQTY: { volume: "8.2M", marketCap: "285B", pe: 8.5, beta: 1.12, rsi: 58 },
-  SCBK: { volume: "1.5M", marketCap: "125B", pe: 11.2, beta: 0.78, rsi: 55 },
-  KCB: { volume: "6.8M", marketCap: "145B", pe: 7.8, beta: 1.05, rsi: 48 },
-  COOP: { volume: "4.2M", marketCap: "89B", pe: 9.1, beta: 0.92, rsi: 42 },
-  EABL: { volume: "850K", marketCap: "112B", pe: 18.5, beta: 0.68, rsi: 65 },
-  BAMB: { volume: "320K", marketCap: "32B", pe: 12.3, beta: 0.55, rsi: 38 },
-  DTK: { volume: "180K", marketCap: "32B", pe: 10.4, beta: 0.82, rsi: 51 },
-  ABSA: { volume: "5.5M", marketCap: "75B", pe: 7.2, beta: 1.08, rsi: 56 },
-  NCBA: { volume: "2.1M", marketCap: "68B", pe: 8.9, beta: 0.95, rsi: 52 },
-  BRIT: { volume: "1.8M", marketCap: "17B", pe: 15.6, beta: 1.25, rsi: 44 },
-  KPLC: { volume: "15.2M", marketCap: "3.8B", pe: 6.5, beta: 1.35, rsi: 71 },
-  TOTL: { volume: "280K", marketCap: "4.5B", pe: 13.2, beta: 0.65, rsi: 54 },
-  JUB: { volume: "45K", marketCap: "17B", pe: 11.8, beta: 0.88, rsi: 46 },
-  BAT: { volume: "45K", marketCap: "34.5B", pe: 16.0, beta: 0.6, rsi: 57 },
-  SBIC: { volume: "320K", marketCap: "52B", pe: 9.5, beta: 0.9, rsi: 59 },
-  ARM: { volume: "410K", marketCap: "2.8B", pe: 5.4, beta: 1.4, rsi: 61 },
-  NBK: { volume: "190K", marketCap: "6.3B", pe: 6.1, beta: 1.1, rsi: 45 },
-  KEGN: { volume: "3.1M", marketCap: "22.6B", pe: 5.9, beta: 1.15, rsi: 63 },
-  UMEME: { volume: "260K", marketCap: "12.4B", pe: 8.0, beta: 0.7, rsi: 47 },
-  CIC: { volume: "1.2M", marketCap: "5.6B", pe: 7.5, beta: 1.05, rsi: 43 },
-  KENO: { volume: "540K", marketCap: "18.4B", pe: 9.8, beta: 0.75, rsi: 60 },
-  WTK: { volume: "35K", marketCap: "4.2B", pe: 12.0, beta: 0.5, rsi: 49 },
-  KAKZ: { volume: "28K", marketCap: "5.5B", pe: 10.5, beta: 0.55, rsi: 66 },
-  SASN: { volume: "95K", marketCap: "4.0B", pe: 9.2, beta: 0.6, rsi: 64 },
-  EGAD: { volume: "12K", marketCap: "0.9B", pe: 14.5, beta: 0.65, rsi: 41 },
-  TCL: { volume: "610K", marketCap: "0.5B", pe: 4.2, beta: 1.6, rsi: 69 },
-  SAMR: { volume: "88K", marketCap: "0.8B", pe: 6.8, beta: 1.3, rsi: 39 },
-  NSE: { volume: "150K", marketCap: "2.2B", pe: 11.0, beta: 0.8, rsi: 53 },
-  CARBACID: { volume: "40K", marketCap: "3.0B", pe: 8.8, beta: 0.5, rsi: 50 },
-};
-
-const allStocks = Object.keys(STOCK_META)
-  .filter(symbol => symbol !== "SCOM")
-  .map(symbol => {
-    const { pct } = getDayChange(symbol);
-    const meta = screenerMeta[symbol] ?? { volume: "—", marketCap: "—", pe: 0, beta: 1, rsi: 50 };
-    return {
-      symbol,
-      name: STOCK_META[symbol].name,
-      sector: STOCK_META[symbol].sector,
-      price: getPrice(symbol),
-      change: +pct.toFixed(2),
-      dividendYield: DIV_YIELD[symbol] ?? 0,
-      ...meta,
-    };
-  });
+// Volume, market cap, P/E and beta come from the same shared fundamentals table used by
+// StockDetail and Compare, so this screener can never show different stats for a stock than
+// its own detail page does. RSI isn't tracked elsewhere in the app, so it's derived here
+// deterministically per symbol (stable across reloads, but screener-only).
+const allStocks = CANONICAL_SYMBOLS.map(symbol => {
+  const { pct } = getDayChange(symbol);
+  const meta = getStockFundamentals(symbol);
+  return {
+    symbol,
+    name: STOCK_META[symbol].name,
+    sector: STOCK_META[symbol].sector,
+    price: getPrice(symbol),
+    change: +pct.toFixed(2),
+    dividendYield: DIV_YIELD[symbol] ?? 0,
+    volume: meta.volume,
+    marketCap: meta.marketCap,
+    pe: meta.pe,
+    beta: meta.beta,
+    rsi: 30 + (tickerSeed(symbol) % 45),
+  };
+});
 
 const presetFilters = [
   { name: "🔥 Top Gainers", icon: TrendingUp, filters: { sector: "All Sectors", minChange: 1, maxChange: 100, sortBy: "change", sortOrder: "desc" as const } },
@@ -143,11 +112,11 @@ export default function StockScreenerPage() {
       switch (filters.sortBy) {
         case 'change': aVal = a.change; bVal = b.change; break;
         case 'price': aVal = a.price; bVal = b.price; break;
-        case 'volume': aVal = parseFloat(a.volume); bVal = parseFloat(b.volume); break;
+        case 'volume': aVal = parseMagnitude(a.volume); bVal = parseMagnitude(b.volume); break;
         case 'pe': aVal = a.pe; bVal = b.pe; break;
         case 'dividendYield': aVal = a.dividendYield; bVal = b.dividendYield; break;
         case 'rsi': aVal = a.rsi; bVal = b.rsi; break;
-        default: aVal = parseFloat(a.marketCap); bVal = parseFloat(b.marketCap);
+        default: aVal = parseMagnitude(a.marketCap); bVal = parseMagnitude(b.marketCap);
       }
       return filters.sortOrder === 'desc' ? bVal - aVal : aVal - bVal;
     });

@@ -15,6 +15,7 @@ import { AddInvestmentDialog } from "@/components/portfolio/AddInvestmentDialog"
 import { AfriFinanceScoreCard, computeScores } from "@/components/stock/AfriFinanceScore";
 import { AIThesisCard } from "@/components/stock/AIThesisCard";
 import { getFundamentals } from "@/data/stockFundamentals";
+import { STOCK_META, getPrice, getDayChange, DIV_YIELD, getStockFundamentals } from "@/lib/stockPrices";
 import { ValuationTab } from "@/components/stock/tabs/ValuationTab";
 import { GrowthTab } from "@/components/stock/tabs/GrowthTab";
 import { HealthTab } from "@/components/stock/tabs/HealthTab";
@@ -27,31 +28,6 @@ import { PerformanceTab } from "@/components/stock/tabs/PerformanceTab";
 import { ScoresTab } from "@/components/stock/tabs/ScoresTab";
 import { getMediaItemsForSymbol, MediaItem } from "../data/mediaItems";
 import { formatTimestamp } from "@/lib/formatTimestamp";
-
-
-const stockData: Record<string, {
-  name: string; price: number; change: number; changePercent: string; isUp: boolean;
-  marketCap: string; pe: string; eps: string; dividend: string; high52: string; low52: string;
-  exchange: string; sector: string; volume?: string; beta?: string; avgVolume?: string; open?: string;
-}> = {
-  SAFCOM: { name: "Safaricom PLC", price: 12.85, change: 0.15, changePercent: "1.18", isUp: true, marketCap: "515.2B", pe: "12.4", eps: "1.04", dividend: "0.62", high52: "14.20", low52: "10.80", exchange: "NSE", sector: "Telecommunications", volume: "8.1M", beta: "0.85", avgVolume: "6.2M" },
-  EQTY: { name: "Equity Group Holdings PLC", price: 62.50, change: 7.25, changePercent: "13.12", isUp: true, marketCap: "237.3B", pe: "8.2", eps: "7.62", dividend: "2.50", high52: "68.00", low52: "45.25", exchange: "NSE", sector: "Banking", volume: "2.4M", beta: "1.12", avgVolume: "1.8M" },
-  KCB: { name: "KCB Group PLC", price: 45.75, change: 1.25, changePercent: "2.81", isUp: true, marketCap: "147.2B", pe: "6.5", eps: "7.04", dividend: "1.50", high52: "52.00", low52: "38.00", exchange: "NSE", sector: "Banking", volume: "1.2M", beta: "1.05", avgVolume: "980K" },
-  COOP: { name: "Co-operative Bank of Kenya", price: 17.25, change: 0.45, changePercent: "2.68", isUp: true, marketCap: "101.5B", pe: "5.8", eps: "2.97", dividend: "1.00", high52: "19.50", low52: "14.00", exchange: "NSE", sector: "Banking", volume: "1.5M", beta: "0.92", avgVolume: "1.1M" },
-  SCBK: { name: "Standard Chartered Bank Kenya", price: 185.00, change: 5.70, changePercent: "3.18", isUp: true, marketCap: "145.8B", pe: "10.5", eps: "17.62", dividend: "12.50", high52: "195.00", low52: "165.25", exchange: "NSE", sector: "Banking", volume: "450K", beta: "0.78", avgVolume: "380K" },
-  ABSA: { name: "ABSA Bank Kenya PLC", price: 14.80, change: 0.35, changePercent: "2.42", isUp: true, marketCap: "80.5B", pe: "5.2", eps: "2.85", dividend: "1.10", high52: "16.00", low52: "12.50", exchange: "NSE", sector: "Banking", volume: "890K", beta: "0.95", avgVolume: "720K" },
-  NCBA: { name: "NCBA Group PLC", price: 52.25, change: -0.75, changePercent: "-1.42", isUp: false, marketCap: "86.2B", pe: "6.8", eps: "7.68", dividend: "3.00", high52: "58.00", low52: "45.00", exchange: "NSE", sector: "Banking", volume: "890K", beta: "0.88", avgVolume: "650K" },
-  DTB: { name: "Diamond Trust Bank Kenya", price: 68.50, change: 1.00, changePercent: "1.48", isUp: true, marketCap: "19.2B", pe: "4.8", eps: "14.27", dividend: "4.00", high52: "75.00", low52: "58.00", exchange: "NSE", sector: "Banking", volume: "120K", beta: "0.72", avgVolume: "95K" },
-  STANBIC: { name: "Stanbic Holdings PLC", price: 125.00, change: 2.50, changePercent: "2.04", isUp: true, marketCap: "49.5B", pe: "7.2", eps: "17.36", dividend: "8.00", high52: "135.00", low52: "105.00", exchange: "NSE", sector: "Banking", volume: "85K", beta: "0.82", avgVolume: "68K" },
-  BRIT: { name: "Britam Holdings PLC", price: 6.80, change: 0.15, changePercent: "2.26", isUp: true, marketCap: "17.2B", pe: "8.5", eps: "0.80", dividend: "0.25", high52: "8.00", low52: "5.50", exchange: "NSE", sector: "Insurance", volume: "1.8M", beta: "1.25", avgVolume: "950K" },
-  JUB: { name: "Jubilee Holdings Ltd", price: 245.00, change: -5.00, changePercent: "-2.00", isUp: false, marketCap: "17.7B", pe: "6.2", eps: "39.52", dividend: "9.00", high52: "280.00", low52: "220.00", exchange: "NSE", sector: "Insurance", volume: "45K", beta: "0.68", avgVolume: "38K" },
-  EABL: { name: "East African Breweries Ltd", price: 178.50, change: 3.25, changePercent: "1.85", isUp: true, marketCap: "141.3B", pe: "18.5", eps: "9.65", dividend: "6.50", high52: "195.00", low52: "155.00", exchange: "NSE", sector: "Manufacturing & Allied", volume: "520K", beta: "0.75", avgVolume: "420K" },
-  BAT: { name: "British American Tobacco Kenya", price: 425.00, change: 5.00, changePercent: "1.19", isUp: true, marketCap: "42.5B", pe: "9.8", eps: "43.37", dividend: "52.00", high52: "480.00", low52: "380.00", exchange: "NSE", sector: "Manufacturing & Allied", volume: "45K", beta: "0.55", avgVolume: "35K" },
-  KPLC: { name: "Kenya Power & Lighting Co.", price: 2.85, change: 0.05, changePercent: "1.79", isUp: true, marketCap: "5.5B", pe: "N/A", eps: "-1.25", dividend: "0.00", high52: "3.50", low52: "2.00", exchange: "NSE", sector: "Energy & Petroleum", volume: "15.2M", beta: "1.45", avgVolume: "8.5M" },
-  KEGN: { name: "KenGen PLC", price: 4.25, change: 0.10, changePercent: "2.41", isUp: true, marketCap: "28.0B", pe: "5.2", eps: "0.82", dividend: "0.30", high52: "5.00", low52: "3.50", exchange: "NSE", sector: "Energy & Petroleum", volume: "2.1M", beta: "1.15", avgVolume: "1.6M" },
-  TOTL: { name: "TotalEnergies Marketing Kenya", price: 28.50, change: 0.50, changePercent: "1.79", isUp: true, marketCap: "5.1B", pe: "12.5", eps: "2.28", dividend: "1.50", high52: "32.00", low52: "24.00", exchange: "NSE", sector: "Energy & Petroleum", volume: "95K", beta: "0.65", avgVolume: "78K" },
-  BAMB: { name: "Bamburi Cement PLC", price: 32.75, change: 0.75, changePercent: "2.34", isUp: true, marketCap: "11.9B", pe: "15.2", eps: "2.15", dividend: "0.00", high52: "38.00", low52: "28.00", exchange: "NSE", sector: "Construction & Allied", volume: "340K", beta: "0.92", avgVolume: "280K" },
-};
 
 const companyInfo: Record<string, { description: string; headquarters: string; ceo: string; employees: string; founded: string }> = {
   SAFCOM: { description: "Safaricom PLC is Kenya's largest mobile network operator, best known for M-Pesa mobile money, voice, data and fibre.", headquarters: "Nairobi, Kenya", ceo: "Peter Ndegwa", employees: "6,500+", founded: "1997" },
@@ -88,7 +64,22 @@ export default function StockDetail() {
 
   const myHolding = portfolio.find(p => p.symbol.toUpperCase() === (symbol || "").toUpperCase());
 
-  const stock = stockData[symbol as keyof typeof stockData] || {
+  const upperSymbol = (symbol || "").toUpperCase();
+  const stockMeta = STOCK_META[upperSymbol];
+
+  const stock = stockMeta ? (() => {
+    const price = getPrice(upperSymbol);
+    const { abs: change, pct } = getDayChange(upperSymbol);
+    const f = getStockFundamentals(upperSymbol);
+    const dividend = +(price * ((DIV_YIELD[upperSymbol] ?? 0) / 100)).toFixed(2);
+    const eps = f.pe > 0 ? +(price / f.pe).toFixed(2) : 0;
+    return {
+      name: stockMeta.name, price, change, changePercent: pct.toFixed(2), isUp: change >= 0,
+      marketCap: f.marketCap, pe: f.pe.toFixed(1), eps: eps.toFixed(2), dividend: dividend.toFixed(2),
+      high52: (price * 1.12).toFixed(2), low52: (price * 0.85).toFixed(2),
+      exchange: "NSE", sector: stockMeta.sector, volume: f.volume, beta: f.beta.toFixed(2), avgVolume: f.avgVolume,
+    };
+  })() : {
     name: symbol || "Unknown Stock", price: 0, change: 0, changePercent: "0.00", isUp: true,
     marketCap: "N/A", pe: "N/A", eps: "N/A", dividend: "N/A", high52: "N/A", low52: "N/A",
     exchange: "NSE", sector: "Unknown", volume: "N/A", beta: "N/A", avgVolume: "N/A"
@@ -110,9 +101,11 @@ export default function StockDetail() {
     }
   };
 
+  // Hover state for period change calculations
   const [hoverChangePercent, setHoverChangePercent] = useState<number | null>(null);
   const [hoverIsUp, setHoverIsUp] = useState<boolean | null>(null);
 
+  // Enhanced hover handler that also captures change % relative to period start
   const handleChartHover = useCallback((price: number | null, date: string | null, changePercent?: number | null, isUp?: boolean | null) => {
     setHoverPrice(price);
     setHoverDate(date);
@@ -125,21 +118,16 @@ export default function StockDetail() {
     "1D": "Today", "1W": "Past week", "1M": "Past month", "3M": "Past 3 months",
     "YTD": "Year to date", "1Y": "Past year", "ALL": "All time",
   };
+
   const divYield = stock.pe !== "N/A" ? ((parseFloat(stock.dividend) / stock.price) * 100).toFixed(1) : "0.0";
 
-  // Gain/loss for the whole selected timeframe — first vs. last point of that period's
-  // series. This is the same series the chart itself renders, so the header numbers and
-  // the chart's red/green always agree, and both update when the timeframe pill changes.
+  // Period data for the selected timeframe (used to compute change vs. start of period)
   const periodData = useMemo(() => generateMockData(selectedTimeframe, symbol || "STK"), [selectedTimeframe, symbol]);
   const periodFirstPrice = periodData[0]?.price || stock.price;
   const periodLastPrice = periodData[periodData.length - 1]?.price || stock.price;
   const periodChangePercent = periodFirstPrice ? ((periodLastPrice - periodFirstPrice) / periodFirstPrice) * 100 : 0;
   const periodIsUp = periodLastPrice >= periodFirstPrice;
 
-  // While scrubbing the chart, show change vs. the start of the selected period instead;
-  // otherwise show the full period's change. Percent is scaled onto the real quoted price
-  // (mock series lives on its own price scale) so the KES amount shown stays consistent
-  // with the price displayed elsewhere on the page.
   const activeChangePercent = hoverPrice !== null && hoverChangePercent !== null ? hoverChangePercent : periodChangePercent;
   const activeIsUp = hoverPrice !== null && hoverIsUp !== null ? hoverIsUp : periodIsUp;
   const priceChange = stock.price * (activeChangePercent / 100);
@@ -154,7 +142,10 @@ export default function StockDetail() {
   };
   const scores = computeScores(scoreInputs);
   const fundamentals = getFundamentals(symbol || "", stock.price);
+
+  // Fetch news items from the shared media source
   const stockNews = getMediaItemsForSymbol(symbol || "");
+
   // Opens the full story on the TradersHub Media tab.
   const openNewsItem = (item: MediaItem) => navigate(`/traders-hub?tab=media&article=${item.id}`);
 
@@ -548,7 +539,6 @@ export default function StockDetail() {
           }
         />
       </div>
-
 
       {showAlertsDialog && <PriceAlertsManager />}
       <StockAlertDialog open={stockAlertOpen} onOpenChange={setStockAlertOpen} symbol={symbol || ""} currentPrice={stock.price} />

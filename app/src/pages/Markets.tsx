@@ -9,8 +9,9 @@ import { SparklineChart } from "@/components/shared/SparklineChart";
 import { MarketStatusIndicator } from "@/components/shared/MarketStatusIndicator";
 import { AllStocksList } from "@/components/markets/AllStocksList";
 import { StockHeatmap } from "@/components/home/StockHeatmap";
-import { STOCK_META, getPrice, getDayChange } from "@/lib/stockPrices";
+import { CANONICAL_SYMBOLS, STOCK_META, getPrice, getDayChange, relativeDate } from "@/lib/stockPrices";
 import { EconomicCalendar } from "@/components/home/EconomicCalendar";
+import { investmentThemes } from "@/data/investmentThemes";
 import {
   TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Search, Clock,
   BarChart3, Globe, Calendar, Star, ChevronRight, Flame, Filter,
@@ -35,46 +36,58 @@ const commodities = [
   { name: "Avocado (export)", value: "KES 95/kg", change: 0.9, isUp: true },
 ];
 
-// topGainers/topLosers are computed dynamically below from the shared stock universe —
-// no separate hardcoded array to drift out of sync with real prices.
-const nseUniverse = Object.keys(STOCK_META)
-  .filter(symbol => symbol !== "SCOM")
-  .map(symbol => {
-    const { pct } = getDayChange(symbol);
-    return { symbol, name: STOCK_META[symbol].name, sector: STOCK_META[symbol].sector, price: getPrice(symbol), change: pct };
-  });
+// topGainers/topLosers/sectors are all computed dynamically from the shared, deduplicated
+// stock universe below — no separate hardcoded arrays that can drift out of sync with real
+// prices, or list a stock under the wrong sector.
+const nseUniverse = CANONICAL_SYMBOLS.map(symbol => {
+  const { pct } = getDayChange(symbol);
+  return { symbol, name: STOCK_META[symbol].name, sector: STOCK_META[symbol].sector, price: getPrice(symbol), change: pct };
+});
 const topGainers = [...nseUniverse].sort((a, b) => b.change - a.change).slice(0, 5);
 const topLosers = [...nseUniverse].sort((a, b) => a.change - b.change).slice(0, 5);
 
-const sectors = [
-  { name: "Banking", change: 2.4, isUp: true, stocks: 12, topStock: "EQTY" },
-  { name: "Telecom", change: 1.8, isUp: true, stocks: 3, topStock: "SAFCOM" },
-  { name: "Energy", change: -1.2, isUp: false, stocks: 5, topStock: "KPLC" },
-  { name: "Manufacturing", change: 0.7, isUp: true, stocks: 8, topStock: "BAMB" },
-  { name: "Insurance", change: -0.4, isUp: false, stocks: 6, topStock: "BRIT" },
-  { name: "Agriculture", change: 1.1, isUp: true, stocks: 7, topStock: "SASN" },
-];
+const sectors = (() => {
+  const map = new Map<string, { sum: number; count: number; topSymbol: string; topChange: number }>();
+  nseUniverse.forEach(s => {
+    const cur = map.get(s.sector) || { sum: 0, count: 0, topSymbol: s.symbol, topChange: -Infinity };
+    map.set(s.sector, {
+      sum: cur.sum + s.change,
+      count: cur.count + 1,
+      topSymbol: s.change > cur.topChange ? s.symbol : cur.topSymbol,
+      topChange: Math.max(cur.topChange, s.change),
+    });
+  });
+  return Array.from(map.entries())
+    .map(([name, v]) => ({ name, change: v.sum / v.count, isUp: v.sum >= 0, stocks: v.count, topStock: v.topSymbol }))
+    .sort((a, b) => b.change - a.change);
+})();
 
 // allNseStocks removed — the "All Stocks" tab now renders <AllStocksList/>, which derives
 // its data from the shared stockPrices.ts source instead of a separate hardcoded array.
 
+// Calendar/IPO dates below are all expressed as offsets from "today" via fmtDate() rather
+// than fixed calendar strings, so Upcoming Earnings/Dividends/IPOs always read as genuinely
+// upcoming (and Recently Listed as genuinely recent) no matter when the app is opened.
+const fmtDate = (daysOffset: number) =>
+  relativeDate(daysOffset).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
 const ipos = [
-  { name: "TechPay Africa", sector: "Fintech", issuePrice: 20.00, status: "Open", closeDate: "Mar 20, 2026", subscriptionRate: "340%", minShares: 100 },
-  { name: "SafeInsure Ltd", sector: "Insurance", issuePrice: 15.50, status: "Upcoming", closeDate: "Apr 5, 2026", subscriptionRate: "-", minShares: 200 },
-  { name: "AgroTech Kenya", sector: "Agriculture", issuePrice: 8.00, status: "Upcoming", closeDate: "Apr 15, 2026", subscriptionRate: "-", minShares: 500 },
+  { name: "TechPay Africa", sector: "Fintech", issuePrice: 20.00, status: "Open", closeDate: fmtDate(10), subscriptionRate: "340%", minShares: 100 },
+  { name: "SafeInsure Ltd", sector: "Insurance", issuePrice: 15.50, status: "Upcoming", closeDate: fmtDate(25), subscriptionRate: "-", minShares: 200 },
+  { name: "AgroTech Kenya", sector: "Agriculture", issuePrice: 8.00, status: "Upcoming", closeDate: fmtDate(35), subscriptionRate: "-", minShares: 500 },
 ];
 
 const recentIPOs = [
-  { name: "DigitalPay PLC", symbol: "DPAY", listingPrice: 12.00, currentPrice: 18.50, change: 54.2, listDate: "Jan 15, 2026" },
-  { name: "GreenEnergy Co", symbol: "GREN", listingPrice: 25.00, currentPrice: 22.30, change: -10.8, listDate: "Feb 8, 2026" },
+  { name: "DigitalPay PLC", symbol: "DPAY", listingPrice: 12.00, currentPrice: 18.50, change: 54.2, listDate: fmtDate(-20) },
+  { name: "GreenEnergy Co", symbol: "GREN", listingPrice: 25.00, currentPrice: 22.30, change: -10.8, listDate: fmtDate(-45) },
 ];
 
 const dividendCalendar = [
-  { symbol: "SAFCOM", name: "Safaricom", exDate: "Mar 10, 2026", payDate: "Apr 5, 2026", amount: 0.64, yield: 5.8, type: "Final" },
-  { symbol: "EQTY", name: "Equity Group", exDate: "Mar 22, 2026", payDate: "Apr 15, 2026", amount: 4.00, yield: 4.2, type: "Final" },
-  { symbol: "SCBK", name: "Std Chartered", exDate: "Apr 1, 2026", payDate: "Apr 28, 2026", amount: 17.00, yield: 6.2, type: "Final" },
-  { symbol: "EABL", name: "EABL", exDate: "Apr 10, 2026", payDate: "May 5, 2026", amount: 11.00, yield: 7.1, type: "Interim" },
-  { symbol: "KCB", name: "KCB Group", exDate: "Apr 18, 2026", payDate: "May 12, 2026", amount: 2.50, yield: 3.9, type: "Final" },
+  { symbol: "SAFCOM", name: "Safaricom", exDate: fmtDate(15), payDate: fmtDate(40), amount: 0.64, yield: 5.8, type: "Final" },
+  { symbol: "EQTY", name: "Equity Group", exDate: fmtDate(20), payDate: fmtDate(45), amount: 4.00, yield: 4.2, type: "Final" },
+  { symbol: "SCBK", name: "Std Chartered", exDate: fmtDate(25), payDate: fmtDate(50), amount: 17.00, yield: 6.2, type: "Final" },
+  { symbol: "EABL", name: "EABL", exDate: fmtDate(32), payDate: fmtDate(57), amount: 11.00, yield: 7.1, type: "Interim" },
+  { symbol: "KCB", name: "KCB Group", exDate: fmtDate(38), payDate: fmtDate(63), amount: 2.50, yield: 3.9, type: "Final" },
 ];
 
 const highDividendStocks = [
@@ -92,46 +105,20 @@ const featuredLists = [
   { title: "Undervalued", desc: "Smaller-cap opportunities", icon: Award, symbols: ["KPLC", "EGAD", "TCL", "SAMR", "CIC", "ARM"], color: "bg-chart-3/10 text-chart-3" },
 ];
 
-const investmentThemes = [
-  {
-    title: "Digital Banking",
-    desc: "Lenders growing non-funded income from mobile channels",
-    stocks: ["EQTY", "KCB", "COOP"],
-    change: 8.2,
-    icon: "🏦",
-    why: "Agency & mobile lending now drive >40% of group revenue",
-  },
-  {
-    title: "Mobile Money",
-    desc: "M-Pesa ecosystem and payment rails",
-    stocks: ["SAFCOM", "NCBA", "ABSA"],
-    change: 5.4,
-    icon: "💳",
-    why: "Transaction volumes compounding at double digits",
-  },
-  {
-    title: "Power & Infrastructure",
-    desc: "Grid, generation and construction inputs",
-    stocks: ["KPLC", "BAMB"],
-    change: -1.8,
-    icon: "⚡",
-    why: "Tariff review and public works pipeline drive earnings",
-  },
-  {
-    title: "Dividend Income",
-    desc: "Consistent payers with covered distributions",
-    stocks: ["BAT", "SCBK", "EABL"],
-    change: 3.1,
-    icon: "💰",
-    why: "Yields of 5–11% with multi-year payout track records",
-  },
-];
+// Theme change % is computed live from its member stocks below (via themesWithChange),
+// instead of a hardcoded number that would drift from real prices.
+const priceMap = new Map(nseUniverse.map(s => [s.symbol, s]));
+const themesWithChange = investmentThemes.map(theme => {
+  const memberChanges = theme.stocks.map(s => priceMap.get(s)?.change ?? 0);
+  const change = memberChanges.length > 0 ? memberChanges.reduce((a, b) => a + b, 0) / memberChanges.length : 0;
+  return { ...theme, change };
+});
 
 const earningsCalendar = [
-  { symbol: "EABL", name: "EABL", date: "Mar 8, 2026", time: "2:00 PM EAT", expected: "KES 9.80", impact: "high" as const },
-  { symbol: "SAFCOM", name: "Safaricom", date: "Mar 15, 2026", time: "10:00 AM EAT", expected: "KES 1.08", impact: "high" as const },
-  { symbol: "KCB", name: "KCB Group", date: "Mar 22, 2026", time: "11:00 AM EAT", expected: "KES 7.20", impact: "medium" as const },
-  { symbol: "BAMB", name: "Bamburi", date: "Apr 2, 2026", time: "3:00 PM EAT", expected: "KES 2.30", impact: "low" as const },
+  { symbol: "EABL", name: "EABL", date: fmtDate(5), time: "2:00 PM EAT", expected: "KES 9.80", impact: "high" as const },
+  { symbol: "SAFCOM", name: "Safaricom", date: fmtDate(12), time: "10:00 AM EAT", expected: "KES 1.08", impact: "high" as const },
+  { symbol: "KCB", name: "KCB Group", date: fmtDate(19), time: "11:00 AM EAT", expected: "KES 7.20", impact: "medium" as const },
+  { symbol: "BAMB", name: "Bamburi", date: fmtDate(30), time: "3:00 PM EAT", expected: "KES 2.30", impact: "low" as const },
 ];
 
 const volumeLeaders = [
@@ -283,11 +270,11 @@ export default function Markets() {
                 Investment Themes
               </h2>
               <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-2">
-                {investmentThemes.map(theme => (
+                {themesWithChange.map(theme => (
                   <div
-                    key={theme.title}
+                    key={theme.slug}
                     data-small-target
-                    onClick={() => { setListFilter({ label: theme.title, symbols: theme.stocks }); setNseFilter("All"); setActiveTab("All Stocks"); }}
+                    onClick={() => navigate(`/theme/${theme.slug}`)}
                     className="min-w-[210px] flex-shrink-0 border-l border-border/60 pl-3 cursor-pointer active:opacity-70 transition-opacity"
                   >
                     <div className="flex items-center justify-between mb-2">
@@ -474,7 +461,7 @@ export default function Markets() {
               </h2>
               <div className="grid grid-cols-2 gap-2">
                 {sectors.map(s => (
-                  <Card key={s.name} className="soft-card p-3 cursor-pointer active:scale-[0.97] transition-transform" onClick={() => { setNseFilter(s.name === "Telecom" ? "Telecom" : s.name); setListFilter(null); setActiveTab("All Stocks"); }}>
+                  <Card key={s.name} className="soft-card p-3 cursor-pointer active:scale-[0.97] transition-transform" onClick={() => { setNseFilter(s.name); setListFilter(null); setActiveTab("All Stocks"); }}>
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-semibold">{s.name}</p>
                       <p className={`text-xs font-bold px-2 py-0.5 rounded-full ${s.isUp ? 'bg-bull/10 text-bull' : 'bg-bear/10 text-bear'}`}>
