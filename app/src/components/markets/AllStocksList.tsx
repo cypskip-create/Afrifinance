@@ -1,8 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Search, TrendingUp, TrendingDown, Filter, ChevronDown, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { SparklineChart } from "@/components/shared/SparklineChart";
@@ -106,104 +105,96 @@ export function AllStocksList({ initialSector, onlySymbols }: AllStocksListProps
   };
 
   return (
-    <Card className="card-gradient">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center justify-between">
-          <span>All Stocks ({filteredStocks.length})</span>
-          <div className="flex gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 text-xs">
-                  <Filter className="h-3 w-3 mr-1" />
-                  {selectedSector === "All Sectors" ? "Sector" : selectedSector}
-                  <ChevronDown className="h-3 w-3 ml-1" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                {sectors.map(sector => (
-                  <DropdownMenuItem key={sector} onClick={() => setSelectedSector(sector)}>
-                    {sector}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 text-xs">
-                  Sort
-                  <ChevronDown className="h-3 w-3 ml-1" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => setSortBy("name")}>Name A-Z</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSortBy("change")}>Top Gainers</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSortBy("price")}>Highest Price</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search stocks..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
+    <Card className="soft-card overflow-hidden">
+      <div className="flex items-center justify-between px-4 pt-4 pb-3">
+        <span className="text-sm font-bold">All Stocks ({filteredStocks.length})</span>
+        <div className="flex gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 text-xs rounded-full">
+                <Filter className="h-3 w-3 mr-1" />
+                {selectedSector === "All Sectors" ? "Sector" : selectedSector}
+                <ChevronDown className="h-3 w-3 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              {sectors.map(sector => (
+                <DropdownMenuItem key={sector} onClick={() => setSelectedSector(sector)}>
+                  {sector}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 text-xs rounded-full">
+                Sort
+                <ChevronDown className="h-3 w-3 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => setSortBy("name")}>Name A-Z</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("change")}>Top Gainers</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("price")}>Highest Price</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
+      </div>
 
-        {/* Stocks List — infinite scroll */}
-        <div className="space-y-2">
-          {filteredStocks.slice(0, visible).map((stock) => (
-            <div
-              key={stock.symbol}
-              onClick={() => navigate(`/stock/${stock.symbol}`)}
-              className="flex items-center justify-between p-3 rounded-lg bg-muted/20 cursor-pointer hover:bg-muted/30 transition-colors"
+      {/* Search */}
+      <div className="relative px-4 pb-3">
+        <Search className="absolute left-7 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search stocks..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9 rounded-full h-9"
+        />
+      </div>
+
+      {/* Stocks List — same flat, bordered-row style as the Watchlist page, plus the
+          sector filter/sort/search/star-to-watchlist features All Stocks needs on top. */}
+      <div>
+        {filteredStocks.slice(0, visible).map((stock) => (
+          <div
+            key={stock.symbol}
+            onClick={() => navigate(`/stock/${stock.symbol}`)}
+            data-small-target
+            className="flex items-center gap-3 px-4 py-3 border-b border-border/40 last:border-0 cursor-pointer active:bg-muted/30 transition-colors"
+          >
+            <button
+              onClick={(e) => toggleFavorite(stock.symbol, stock.name, e)}
+              className="shrink-0 -ml-1 p-1"
+              aria-label="Toggle watchlist"
             >
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={(e) => toggleFavorite(stock.symbol, stock.name, e)}
-                >
-                  <Star className={`h-4 w-4 ${isInWatchlist(stock.symbol) ? 'fill-yellow-500 text-yellow-500' : 'text-muted-foreground'}`} />
-                </Button>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">{stock.symbol}</span>
-                    <Badge variant="outline" className="text-[10px] px-1 py-0">
-                      {stock.sector}
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground">{stock.name}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <SparklineChart isPositive={stock.isUp} width={50} height={20} />
-                <div className="text-right min-w-[70px]">
-                  <div className="text-sm font-medium">KES {stock.price.toFixed(2)}</div>
-                  <div className={`flex items-center justify-end text-xs ${stock.isUp ? 'text-bull' : 'text-bear'}`}>
-                    {stock.isUp ? <TrendingUp className="h-3 w-3 mr-0.5" /> : <TrendingDown className="h-3 w-3 mr-0.5" />}
-                    {stock.isUp ? '+' : ''}{stock.change.toFixed(2)}%
-                  </div>
-                </div>
+              <Star className={`h-4 w-4 ${isInWatchlist(stock.symbol) ? 'fill-yellow-500 text-yellow-500' : 'text-muted-foreground'}`} />
+            </button>
+
+            <div className="min-w-0 flex-1">
+              <p className="text-[13.5px] font-bold leading-tight">{stock.symbol}</p>
+              <p className="text-[11px] text-muted-foreground truncate leading-tight mt-0.5">{stock.name} · {stock.sector}</p>
+            </div>
+
+            <SparklineChart isPositive={stock.isUp} width={48} height={20} />
+
+            <div className="text-right shrink-0 w-[84px]">
+              <p className="text-[13.5px] font-bold tabular-nums leading-tight">KES {stock.price.toFixed(2)}</p>
+              <div className={`flex items-center justify-end gap-0.5 mt-0.5 ${stock.isUp ? 'text-bull' : 'text-bear'}`}>
+                {stock.isUp ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                <span className="text-[11px] font-semibold tabular-nums">{stock.isUp ? '+' : ''}{stock.change.toFixed(2)}%</span>
               </div>
             </div>
-          ))}
-          {filteredStocks.length === 0 && (
-            <p className="text-center text-sm text-muted-foreground py-8">No stocks match this filter</p>
-          )}
-          {visible < filteredStocks.length && (
-            <div ref={sentinelRef} className="py-4 text-center text-xs text-muted-foreground">
-              Loading more…
-            </div>
-          )}
-        </div>
-      </CardContent>
+          </div>
+        ))}
+        {filteredStocks.length === 0 && (
+          <p className="text-center text-sm text-muted-foreground py-8">No stocks match this filter</p>
+        )}
+        {visible < filteredStocks.length && (
+          <div ref={sentinelRef} className="py-4 text-center text-xs text-muted-foreground">
+            Loading more…
+          </div>
+        )}
+      </div>
     </Card>
   );
 }

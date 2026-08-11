@@ -30,6 +30,7 @@ import StockCompare from "./pages/StockCompare";
 import UserProfile from "./pages/UserProfile";
 import PostDetail from "./pages/PostDetail";
 import ThemeDetail from "./pages/ThemeDetail";
+import FeaturedListDetail from "./pages/FeaturedListDetail";
 
 const queryClient = new QueryClient();
 
@@ -57,6 +58,7 @@ const App = () => (
                   <Route path="watchlist" element={<Watchlist />} />
                   <Route path="sector/:sector" element={<SectorDetail />} />
                   <Route path="theme/:themeId" element={<ThemeDetail />} />
+                  <Route path="featured/:slug" element={<FeaturedListDetail />} />
                   <Route path="learn" element={<Learn />} />
                   <Route path="notifications" element={<Notifications />} />
                   <Route path="alerts" element={<Notifications />} />

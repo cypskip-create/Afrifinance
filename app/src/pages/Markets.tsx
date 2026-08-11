@@ -12,11 +12,12 @@ import { StockHeatmap } from "@/components/home/StockHeatmap";
 import { CANONICAL_SYMBOLS, STOCK_META, getPrice, getDayChange, relativeDate } from "@/lib/stockPrices";
 import { EconomicCalendar } from "@/components/home/EconomicCalendar";
 import { investmentThemes } from "@/data/investmentThemes";
+import { featuredLists } from"@/data/featuredLists";
 import {
   TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Search, Clock,
   BarChart3, Globe, Calendar, Star, ChevronRight, Flame, Filter,
   Building2, Zap, Award, DollarSign, Percent, Activity, Bell, Landmark,
-  Lightbulb, Volume2, BarChart2
+  Lightbulb, Volume2, BarChart2, SlidersHorizontal, GitCompare, Layers
 } from "lucide-react";
 
 const tabs = ["Overview", "Discover", "Calendars", "Heatmap", "All Stocks"] as const;
@@ -98,12 +99,14 @@ const highDividendStocks = [
   { symbol: "COOP", name: "Co-op Bank", yield: 4.8, amount: 1.00, price: getPrice("COOP"), frequency: "Annual" },
 ];
 
-const featuredLists = [
-  { title: "Blue Chip NSE", desc: "Largest & most stable", icon: Star, symbols: ["SAFCOM", "EQTY", "KCB", "SCBK", "EABL", "BAT", "COOP", "NCBA"], color: "bg-primary/10 text-primary" },
-  { title: "High Dividend", desc: "Yield > 5%", icon: DollarSign, symbols: ["BAT", "SCBK", "ABSA", "KCB", "NCBA"], color: "bg-bull/10 text-bull" },
-  { title: "Top Movers", desc: "Biggest daily moves", icon: Flame, symbols: [...nseUniverse].sort((a, b) => Math.abs(b.change) - Math.abs(a.change)).slice(0, 10).map(s => s.symbol), color: "bg-accent/10 text-accent" },
-  { title: "Undervalued", desc: "Smaller-cap opportunities", icon: Award, symbols: ["KPLC", "EGAD", "TCL", "SAMR", "CIC", "ARM"], color: "bg-chart-3/10 text-chart-3" },
-];
+// featuredLists now comes from the shared data/featuredLists.ts module (imported above) so
+// the Overview cards and the list's own detail page can't show different member stocks.
+// Icons are looked up here by slug since the shared data module stays icon-free/serializable.
+const FEATURED_LIST_ICONS: Record<string, typeof Star> = {
+  "blue-chip-nse": Star,
+  "high-dividend": DollarSign,
+  "undervalued": Award,
+};
 
 // Theme change % is computed live from its member stocks below (via themesWithChange),
 // instead of a hardcoded number that would drift from real prices.
@@ -319,20 +322,23 @@ export default function Markets() {
             <div>
               <h2 className="text-sm font-bold mb-3">Featured Lists</h2>
               <div className="grid grid-cols-2 gap-2.5">
-                {featuredLists.map(list => (
-                  <Card
-                    key={list.title}
-                    className="soft-card p-4 cursor-pointer active:scale-[0.97] transition-transform"
-                    onClick={() => { setListFilter({ label: list.title, symbols: list.symbols }); setNseFilter("All"); setActiveTab("All Stocks"); }}
-                  >
-                    <div className={`w-10 h-10 rounded-2xl ${list.color} flex items-center justify-center mb-3`}>
-                      <list.icon className="h-5 w-5" />
-                    </div>
-                    <p className="text-sm font-bold">{list.title}</p>
-                    <p className="text-xs text-muted-foreground">{list.desc}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{list.symbols.length} stocks</p>
-                  </Card>
-                ))}
+                {featuredLists.map(list => {
+                  const Icon = FEATURED_LIST_ICONS[list.slug] || Star;
+                  return (
+                    <Card
+                      key={list.slug}
+                      className="soft-card p-4 cursor-pointer active:scale-[0.97] transition-transform"
+                      onClick={() => navigate(`/featured/${list.slug}`)}
+                    >
+                      <div className={`w-10 h-10 rounded-2xl ${list.color} flex items-center justify-center mb-3`}>
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <p className="text-sm font-bold">{list.title}</p>
+                      <p className="text-xs text-muted-foreground">{list.desc}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{list.symbols.length} stocks</p>
+                    </Card>
+                  );
+                })}
               </div>
             </div>
 
@@ -461,7 +467,7 @@ export default function Markets() {
               </h2>
               <div className="grid grid-cols-2 gap-2">
                 {sectors.map(s => (
-                  <Card key={s.name} className="soft-card p-3 cursor-pointer active:scale-[0.97] transition-transform" onClick={() => { setNseFilter(s.name); setListFilter(null); setActiveTab("All Stocks"); }}>
+                  <Card key={s.name} className="soft-card p-3 cursor-pointer active:scale-[0.97] transition-transform" onClick={() => navigate(`/sector/${encodeURIComponent(s.name)}`)}>
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-semibold">{s.name}</p>
                       <p className={`text-xs font-bold px-2 py-0.5 rounded-full ${s.isUp ? 'bg-bull/10 text-bull' : 'bg-bear/10 text-bear'}`}>
@@ -498,6 +504,49 @@ export default function Markets() {
         {/* ─── IPOs TAB ─── */}
         {activeTab === "Discover" && (
           <>
+            {/* Discovery Tools — the actual "find a stock/company" toolkit: screener, compare,
+                sector explorer and themes, plus quick jumps into gainers/losers and dividend yield. */}
+            <div>
+              <h2 className="text-sm font-bold mb-3 flex items-center gap-2">
+                <Search className="h-4 w-4 text-primary" />
+                Discovery Tools
+              </h2>
+              <div className="grid grid-cols-2 gap-2.5">
+                {[
+                  { title: "Stock Screener", desc: "Filter by P/E, yield, sector & more", icon: SlidersHorizontal, color: "bg-primary/10 text-primary", action: () => navigate("/screener") },
+                  { title: "Compare Stocks", desc: "Benchmark up to 4 side by side", icon: GitCompare, color: "bg-accent/10 text-accent", action: () => navigate("/compare") },
+                  { title: "Sector Explorer", desc: "Heatmap of every NSE sector", icon: Layers, color: "bg-chart-3/10 text-chart-3", action: () => setActiveTab("Heatmap") },
+                  { title: "Investment Themes", desc: "Stocks grouped by what's driving them", icon: Lightbulb, color: "bg-bull/10 text-bull", action: () => setActiveTab("Overview") },
+                ].map(tool => (
+                  <Card
+                    key={tool.title}
+                    className="soft-card p-4 cursor-pointer active:scale-[0.97] transition-transform"
+                    onClick={tool.action}
+                  >
+                    <div className={`w-10 h-10 rounded-2xl ${tool.color} flex items-center justify-center mb-3`}>
+                      <tool.icon className="h-5 w-5" />
+                    </div>
+                    <p className="text-sm font-bold">{tool.title}</p>
+                    <p className="text-xs text-muted-foreground leading-snug">{tool.desc}</p>
+                  </Card>
+                ))}
+              </div>
+            </div>
+
+            {/* Quick jumps into curated slices of the market — same underlying live data as
+                Overview/All Stocks, just one tap away from here. */}
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4">
+              <Button variant="outline" size="sm" className="h-8 rounded-full text-xs shrink-0 gap-1.5" onClick={() => { setListFilter({ label: "Top Gainers", symbols: topGainers.map(s => s.symbol) }); setActiveTab("All Stocks"); }}>
+                <TrendingUp className="h-3.5 w-3.5 text-bull" /> Top Gainers
+              </Button>
+              <Button variant="outline" size="sm" className="h-8 rounded-full text-xs shrink-0 gap-1.5" onClick={() => { setListFilter({ label: "Top Losers", symbols: topLosers.map(s => s.symbol) }); setActiveTab("All Stocks"); }}>
+                <TrendingDown className="h-3.5 w-3.5 text-bear" /> Top Losers
+              </Button>
+              <Button variant="outline" size="sm" className="h-8 rounded-full text-xs shrink-0 gap-1.5" onClick={() => setActiveTab("Calendars")}>
+                <DollarSign className="h-3.5 w-3.5 text-bull" /> High Dividend
+              </Button>
+            </div>
+
             <h2 className="text-sm font-bold flex items-center gap-2">
               <Flame className="h-4 w-4 text-accent" />
               Listing Soon
@@ -644,7 +693,7 @@ export default function Markets() {
                 <Card
                   key={s.name}
                   className="soft-card p-3 cursor-pointer active:scale-[0.97] transition-transform"
-                  onClick={() => { setNseFilter(s.name); setListFilter(null); setActiveTab("All Stocks"); }}
+                  onClick={() => navigate(`/sector/${encodeURIComponent(s.name)}`)}
                 >
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-semibold">{s.name}</p>

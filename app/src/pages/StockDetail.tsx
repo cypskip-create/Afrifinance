@@ -29,6 +29,12 @@ import { ScoresTab } from "@/components/stock/tabs/ScoresTab";
 import { getMediaItemsForSymbol, MediaItem } from "../data/mediaItems";
 import { formatTimestamp } from "@/lib/formatTimestamp";
 
+
+// Price, change, sector, and key stats all come from the shared stockPrices.ts source
+// (the same one Markets, the Screener, Compare, and AllStocksList read from) so this page
+// can never show a different number than the list the person tapped through from — and
+// every NSE symbol in STOCK_META gets real stats here instead of falling back to "N/A".
+
 const companyInfo: Record<string, { description: string; headquarters: string; ceo: string; employees: string; founded: string }> = {
   SAFCOM: { description: "Safaricom PLC is Kenya's largest mobile network operator, best known for M-Pesa mobile money, voice, data and fibre.", headquarters: "Nairobi, Kenya", ceo: "Peter Ndegwa", employees: "6,500+", founded: "1997" },
   EQTY:   { description: "Equity Group Holdings is a leading pan-African financial services group offering banking, insurance and investment products across seven markets.", headquarters: "Nairobi, Kenya", ceo: "James Mwangi", employees: "15,000+", founded: "1984" },
@@ -118,16 +124,21 @@ export default function StockDetail() {
     "1D": "Today", "1W": "Past week", "1M": "Past month", "3M": "Past 3 months",
     "YTD": "Year to date", "1Y": "Past year", "ALL": "All time",
   };
-
   const divYield = stock.pe !== "N/A" ? ((parseFloat(stock.dividend) / stock.price) * 100).toFixed(1) : "0.0";
 
-  // Period data for the selected timeframe (used to compute change vs. start of period)
+  // Gain/loss for the whole selected timeframe — first vs. last point of that period's
+  // series. This is the same series the chart itself renders, so the header numbers and
+  // the chart's red/green always agree, and both update when the timeframe pill changes.
   const periodData = useMemo(() => generateMockData(selectedTimeframe, symbol || "STK"), [selectedTimeframe, symbol]);
   const periodFirstPrice = periodData[0]?.price || stock.price;
   const periodLastPrice = periodData[periodData.length - 1]?.price || stock.price;
   const periodChangePercent = periodFirstPrice ? ((periodLastPrice - periodFirstPrice) / periodFirstPrice) * 100 : 0;
   const periodIsUp = periodLastPrice >= periodFirstPrice;
 
+  // While scrubbing the chart, show change vs. the start of the selected period instead;
+  // otherwise show the full period's change. Percent is scaled onto the real quoted price
+  // (mock series lives on its own price scale) so the KES amount shown stays consistent
+  // with the price displayed elsewhere on the page.
   const activeChangePercent = hoverPrice !== null && hoverChangePercent !== null ? hoverChangePercent : periodChangePercent;
   const activeIsUp = hoverPrice !== null && hoverIsUp !== null ? hoverIsUp : periodIsUp;
   const priceChange = stock.price * (activeChangePercent / 100);
@@ -142,10 +153,7 @@ export default function StockDetail() {
   };
   const scores = computeScores(scoreInputs);
   const fundamentals = getFundamentals(symbol || "", stock.price);
-
-  // Fetch news items from the shared media source
   const stockNews = getMediaItemsForSymbol(symbol || "");
-
   // Opens the full story on the TradersHub Media tab.
   const openNewsItem = (item: MediaItem) => navigate(`/traders-hub?tab=media&article=${item.id}`);
 
@@ -539,6 +547,7 @@ export default function StockDetail() {
           }
         />
       </div>
+
 
       {showAlertsDialog && <PriceAlertsManager />}
       <StockAlertDialog open={stockAlertOpen} onOpenChange={setStockAlertOpen} symbol={symbol || ""} currentPrice={stock.price} />
