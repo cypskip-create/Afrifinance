@@ -1,7 +1,7 @@
 {
   "name": "afrifinance-data",
   "version": "0.1.0",
-  "description": "AfriFinance Data \u2014 core market data infrastructure layer (NSE-first, multi-exchange ready)",
+  "description": "AfriFinance Data — core market data infrastructure layer (NSE-first, multi-exchange ready)",
   "private": true,
   "type": "module",
   "main": "dist/index.js",
@@ -23,10 +23,12 @@
     "express": "^4.19.2",
     "helmet": "^7.1.0",
     "lru-cache": "^10.4.3",
+    "nanoid": "^6.0.1",
     "node-cron": "^3.0.3",
     "pg": "^8.12.0",
     "pino": "^9.3.2",
     "pino-pretty": "^11.2.2",
+    "uuid": "^14.0.1",
     "ws": "^8.18.0",
     "zod": "^3.23.8"
   },
@@ -37,8 +39,11 @@
     "@types/node-cron": "^3.0.11",
     "@types/pg": "^8.11.6",
     "@types/ws": "^8.5.12",
+    "esbuild": "^0.28.2",
+    "launch-editor": "^2.14.1",
     "tsx": "^4.16.5",
     "typescript": "^5.5.4",
-    "vitest": "^2.0.5"
+    "vite": "^8.2.1",
+    "vitest": "^4.1.10"
   }
 }
