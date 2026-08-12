@@ -8,8 +8,16 @@ export interface ApiKeyRecord {
   rateLimitPerMin: number;
 }
 
+// Deterministic KDF parameters for API-key lookup hashes.
+// NOTE: Changing these values invalidates previously stored key_hash values.
+const API_KEY_HASH_SALT = "market.api_keys.v1";
+const API_KEY_HASH_KEYLEN = 32;
+const API_KEY_HASH_PARAMS = { N: 1 << 14, r: 8, p: 1 };
+
 export function hashApiKey(plaintextKey: string): string {
-  return crypto.createHash("sha256").update(plaintextKey).digest("hex");
+  return crypto
+    .scryptSync(plaintextKey, API_KEY_HASH_SALT, API_KEY_HASH_KEYLEN, API_KEY_HASH_PARAMS)
+    .toString("hex");
 }
 
 export const apiKeyRepository = {
