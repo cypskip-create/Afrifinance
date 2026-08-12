@@ -70,6 +70,8 @@ columns/types/constraints.
 | Table | Purpose |
 |---|---|
 | `ingestion_logs` | One row per pipeline run: dataset, status (success/partial/failed), record/error counts, timing, first 20 errors. This is what `docs/architecture/DATA_FLOW.md`'s pipelines all write to — the audit trail the spec asks for. |
+| `dead_letters` | One row per record that failed validation or exhausted its retries — full payload + error preserved for manual review, not just a truncated string inside `ingestion_logs.errors`. |
+| `api_keys` | API keys for authenticating requests to the REST/WebSocket layer. `key_hash` (SHA-256) only — the plaintext is shown once, at creation time, and never stored. `rate_limit_per_min` lets a given key have its own tier. |
 
 ## Indexing notes
 
@@ -87,6 +89,8 @@ columns/types/constraints.
 ## Migration numbering
 
 The app's existing migrations run `001`–`029` (as of this writing).
-AfriFinance Data's schema is `030_market_schema.sql` — continue this
-numbering for any future changes to the `market` schema so migration order
-stays unambiguous across both the app's and this layer's history.
+AfriFinance Data's schema is `030_market_schema.sql`, with
+`031_production_readiness.sql` adding `dead_letters` and `api_keys`.
+Continue this numbering for any future changes to the `market` schema so
+migration order stays unambiguous across both the app's and this layer's
+history.

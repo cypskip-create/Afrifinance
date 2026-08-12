@@ -1,11 +1,29 @@
 import type { IExchangeAdapter, FundamentalsBundle } from "../../adapters/types.js";
+import { withRetry } from "../retry.js";
+
+export interface FundamentalsCollectionResult {
+  bundles: FundamentalsBundle[];
+  failures: { symbol: string; error: string }[];
+}
 
 export const fundamentalsCollector = {
-  async collectForSymbols(adapter: IExchangeAdapter, symbols: string[]): Promise<FundamentalsBundle[]> {
-    const results = await Promise.allSettled(symbols.map((s) => adapter.getFundamentals(s)));
-    return results
-      .filter((r): r is PromiseFulfilledResult<FundamentalsBundle | null> => r.status === "fulfilled")
-      .map((r) => r.value)
-      .filter((v): v is FundamentalsBundle => v !== null);
+  /** Per-symbol failures are returned, not swallowed — Promise.allSettled
+   *  alone would silently drop a symbol that failed every retry. The
+   *  pipeline dead-letters these so a persistently-failing symbol is
+   *  visible instead of just quietly missing from the next screener run. */
+  async collectForSymbols(adapter: IExchangeAdapter, symbols: string[]): Promise<FundamentalsCollectionResult> {
+    const results = await Promise.allSettled(
+      symbols.map((s) => withRetry(() => adapter.getFundamentals(s), { label: `${adapter.exchange}.getFundamentals(${s})` }))
+    );
+    const bundles: FundamentalsBundle[] = [];
+    const failures: { symbol: string; error: string }[] = [];
+    results.forEach((r, i) => {
+      if (r.status === "fulfilled") {
+        if (r.value) bundles.push(r.value);
+      } else {
+        failures.push({ symbol: symbols[i]!, error: String(r.reason) });
+      }
+    });
+    return { bundles, failures };
   },
 };

@@ -25,7 +25,10 @@ export const screeningService = {
     const params: unknown[] = [filters.exchange];
     let p = 2;
 
-    if (filters.sector) { conditions.push(`c.sector_id = $${p++}`); params.push(filters.sector); }
+    // Filters by the sector's stable id/slug (e.g. "banking"), matching what
+    // GET /sectors returns as `id` — NOT `sectors.name`, and NOT a
+    // nonexistent `sectors.sector_id` column (sectors.id IS the id).
+    if (filters.sector) { conditions.push(`LOWER(c.id) = LOWER($${p++})`); params.push(filters.sector); }
     if (filters.minMarketCap != null) { conditions.push(`q.market_cap >= $${p++}`); params.push(filters.minMarketCap); }
     if (filters.maxPe != null) { conditions.push(`r.pe <= $${p++}`); params.push(filters.maxPe); }
     if (filters.minDividendYield != null) { conditions.push(`r.dividend_yield >= $${p++}`); params.push(filters.minDividendYield); }

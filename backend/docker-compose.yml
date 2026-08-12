@@ -1,0 +1,50 @@
+# One-command local setup: `docker compose up` gives you Postgres (with the
+# market schema pre-applied) + the backend, both networked together, no
+# manual `psql` steps. This is what the sandbox verification during
+# development had to do by hand (install Postgres, apply migrations,
+# start the server) — this file makes that reproducible for anyone else
+# picking this up.
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: afrifinance
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Applied in filename order on first container start only. If you add
+      # a migration after the volume already exists, apply it manually
+      # (`docker compose exec postgres psql -U postgres -d afrifinance -f ...`)
+      # or drop the volume to re-init from scratch in dev.
+      - ../supabase/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: 4000
+      WS_PORT: 4001
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/afrifinance
+      CACHE_DRIVER: memory
+      NSE_CLIENT_MODE: mock
+      API_KEY_AUTH_ENABLED: "true"
+      DEV_API_KEY: dev-local-only-key
+      PRICE_POLL_INTERVAL_MS: "5000"
+      IGNORE_TRADING_CALENDAR: "true"  # so the mock feed "trades" regardless of when you spin this up
+    ports:
+      - "4000:4000"
+      - "4001:4001"
+
+volumes:
+  pgdata:

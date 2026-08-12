@@ -1,7 +1,7 @@
 {
   "name": "afrifinance-data",
   "version": "0.1.0",
-  "description": "AfriFinance Data — core market data infrastructure layer (NSE-first, multi-exchange ready)",
+  "description": "AfriFinance Data \u2014 core market data infrastructure layer (NSE-first, multi-exchange ready)",
   "private": true,
   "type": "module",
   "main": "dist/index.js",
@@ -15,20 +15,22 @@
     "worker:price": "tsx src/workers/priceWorker.ts",
     "worker:financials": "tsx src/workers/financialsWorker.ts",
     "worker:corporate-actions": "tsx src/workers/corporateActionsWorker.ts",
-    "worker:candles": "tsx src/workers/candlesWorker.ts"
+    "worker:candles": "tsx src/workers/candlesWorker.ts",
+    "apikey:create": "tsx scripts/generateApiKey.ts",
+    "apikey:revoke": "tsx scripts/revokeApiKey.ts"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "express-rate-limit": "^8.6.2",
     "helmet": "^7.1.0",
+    "ioredis": "^6.0.0",
     "lru-cache": "^10.4.3",
-    "nanoid": "^6.0.1",
-    "node-cron": "^4.6.0",
+    "node-cron": "^3.0.3",
     "pg": "^8.12.0",
     "pino": "^9.3.2",
     "pino-pretty": "^11.2.2",
-    "uuid": "^14.0.1",
     "ws": "^8.18.0",
     "zod": "^3.23.8"
   },
@@ -39,11 +41,8 @@
     "@types/node-cron": "^3.0.11",
     "@types/pg": "^8.11.6",
     "@types/ws": "^8.5.12",
-    "esbuild": "^0.28.2",
-    "launch-editor": "^2.14.1",
     "tsx": "^4.16.5",
     "typescript": "^5.5.4",
-    "vite": "^8.2.1",
-    "vitest": "^4.1.10"
+    "vitest": "^2.0.5"
   }
 }

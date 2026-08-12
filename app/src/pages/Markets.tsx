@@ -12,12 +12,12 @@ import { StockHeatmap } from "@/components/home/StockHeatmap";
 import { CANONICAL_SYMBOLS, STOCK_META, getPrice, getDayChange, relativeDate } from "@/lib/stockPrices";
 import { EconomicCalendar } from "@/components/home/EconomicCalendar";
 import { investmentThemes } from "@/data/investmentThemes";
-import { featuredLists } from"@/data/featuredLists";
+import { featuredLists } from "@/data/featuredLists";
 import {
   TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Search, Clock,
   BarChart3, Globe, Calendar, Star, ChevronRight, Flame, Filter,
   Building2, Zap, Award, DollarSign, Percent, Activity, Bell, Landmark,
-  Lightbulb, Volume2, BarChart2, SlidersHorizontal, GitCompare, Layers
+  Lightbulb, Volume2, BarChart2, Layers
 } from "lucide-react";
 
 const tabs = ["Overview", "Discover", "Calendars", "Heatmap", "All Stocks"] as const;
@@ -202,27 +202,23 @@ export default function Markets() {
             <Filter className="h-4 w-4 text-primary" />
             Analysis Tools
           </h2>
-          <div className="grid grid-cols-2 gap-2.5">
-            <Card className="soft-card p-3 cursor-pointer active:scale-[0.97] transition-transform" onClick={() => navigate('/screener')}>
-              <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-2"><Filter className="h-4 w-4" /></div>
-              <p className="text-sm font-bold">Stock Screener</p>
-              <p className="text-[10px] text-muted-foreground">Filter by P/E, yield, sector</p>
-            </Card>
-            <Card className="soft-card p-3 cursor-pointer active:scale-[0.97] transition-transform" onClick={() => navigate('/compare')}>
-              <div className="w-9 h-9 rounded-xl bg-accent/10 text-accent flex items-center justify-center mb-2"><BarChart2 className="h-4 w-4" /></div>
-              <p className="text-sm font-bold">Compare Stocks</p>
-              <p className="text-[10px] text-muted-foreground">Side-by-side metrics</p>
-            </Card>
-            <Card className="soft-card p-3 cursor-pointer active:scale-[0.97] transition-transform" onClick={() => navigate('/sector-heatmap')}>
-              <div className="w-9 h-9 rounded-xl bg-bull/10 text-bull flex items-center justify-center mb-2"><Activity className="h-4 w-4" /></div>
-              <p className="text-sm font-bold">Sector Heatmap</p>
-              <p className="text-[10px] text-muted-foreground">See what's hot today</p>
-            </Card>
-            <Card className="soft-card p-3 cursor-pointer active:scale-[0.97] transition-transform" onClick={() => navigate('/watchlist')}>
-              <div className="w-9 h-9 rounded-xl bg-chart-3/10 text-chart-3 flex items-center justify-center mb-2"><Star className="h-4 w-4" /></div>
-              <p className="text-sm font-bold">My Watchlist</p>
-              <p className="text-[10px] text-muted-foreground">Track favourite stocks</p>
-            </Card>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { title: "Stock Screener", desc: "Filter by P/E, yield, sector", icon: Filter, color: "bg-primary/10 text-primary", action: () => navigate('/screener') },
+              { title: "Compare Stocks", desc: "Side-by-side metrics", icon: BarChart2, color: "bg-accent/10 text-accent", action: () => navigate('/compare') },
+              { title: "Sector Heatmap", desc: "See what's hot today", icon: Activity, color: "bg-bull/10 text-bull", action: () => navigate('/sector-heatmap') },
+              { title: "Sector Explorer", desc: "Browse every NSE sector", icon: Layers, color: "bg-chart-3/10 text-chart-3", action: () => setActiveTab("Heatmap") },
+              { title: "Investment Themes", desc: "Stocks by what's driving them", icon: Lightbulb, color: "bg-chart-4/10 text-chart-4", action: () => setActiveTab("Overview") },
+              { title: "My Watchlist", desc: "Track favourite stocks", icon: Star, color: "bg-chart-2/10 text-chart-2", action: () => navigate('/watchlist') },
+            ].map(tool => (
+              <Card key={tool.title} className="soft-card p-2 cursor-pointer active:scale-[0.97] transition-transform" onClick={tool.action}>
+                <div className={`w-7 h-7 rounded-lg ${tool.color} flex items-center justify-center mb-1.5`}>
+                  <tool.icon className="h-3.5 w-3.5" />
+                </div>
+                <p className="text-xs font-bold leading-tight">{tool.title}</p>
+                <p className="text-[9px] text-muted-foreground leading-tight mt-0.5">{tool.desc}</p>
+              </Card>
+            ))}
           </div>
         </div>
 
@@ -504,35 +500,6 @@ export default function Markets() {
         {/* ─── IPOs TAB ─── */}
         {activeTab === "Discover" && (
           <>
-            {/* Discovery Tools — the actual "find a stock/company" toolkit: screener, compare,
-                sector explorer and themes, plus quick jumps into gainers/losers and dividend yield. */}
-            <div>
-              <h2 className="text-sm font-bold mb-3 flex items-center gap-2">
-                <Search className="h-4 w-4 text-primary" />
-                Discovery Tools
-              </h2>
-              <div className="grid grid-cols-2 gap-2.5">
-                {[
-                  { title: "Stock Screener", desc: "Filter by P/E, yield, sector & more", icon: SlidersHorizontal, color: "bg-primary/10 text-primary", action: () => navigate("/screener") },
-                  { title: "Compare Stocks", desc: "Benchmark up to 4 side by side", icon: GitCompare, color: "bg-accent/10 text-accent", action: () => navigate("/compare") },
-                  { title: "Sector Explorer", desc: "Heatmap of every NSE sector", icon: Layers, color: "bg-chart-3/10 text-chart-3", action: () => setActiveTab("Heatmap") },
-                  { title: "Investment Themes", desc: "Stocks grouped by what's driving them", icon: Lightbulb, color: "bg-bull/10 text-bull", action: () => setActiveTab("Overview") },
-                ].map(tool => (
-                  <Card
-                    key={tool.title}
-                    className="soft-card p-4 cursor-pointer active:scale-[0.97] transition-transform"
-                    onClick={tool.action}
-                  >
-                    <div className={`w-10 h-10 rounded-2xl ${tool.color} flex items-center justify-center mb-3`}>
-                      <tool.icon className="h-5 w-5" />
-                    </div>
-                    <p className="text-sm font-bold">{tool.title}</p>
-                    <p className="text-xs text-muted-foreground leading-snug">{tool.desc}</p>
-                  </Card>
-                ))}
-              </div>
-            </div>
-
             {/* Quick jumps into curated slices of the market — same underlying live data as
                 Overview/All Stocks, just one tap away from here. */}
             <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4">

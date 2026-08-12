@@ -5,7 +5,7 @@
  * then registering it in adapters/registry.ts. Nothing else changes.
  */
 import type {
-  Quote, Candle, Company, Security, FinancialPeriod,
+  Quote, Candle, Company, Security, Sector, FinancialPeriod,
   IncomeStatement, BalanceSheet, CashFlowStatement,
   CorporateAction, EarningsEvent, OwnershipRecord,
 } from "../types/market.js";
@@ -14,6 +14,7 @@ import type { ExchangeCode } from "../config/index.js";
 export interface FundamentalsBundle {
   security: Security;
   company: Company;
+  sector: Sector;
   period: FinancialPeriod;
   income: IncomeStatement;
   balance: BalanceSheet;

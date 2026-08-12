@@ -25,7 +25,12 @@ export async function startAllWorkers(): Promise<() => void> {
   await runCandlesBackfillOnce();
 
   logger.info("Running first price pass so every symbol has a live quote…");
-  await runPriceIngestionOnce();
+  // respectTradingCalendar: false — bootstrap needs at least one quote to
+  // exist regardless of whether NSE happens to be open at deploy time
+  // (e.g. deploying at night, or in mock mode where "trading hours" don't
+  // reflect anything real anyway). The recurring interval below DOES
+  // respect market hours.
+  await runPriceIngestionOnce({ respectTradingCalendar: false });
 
   logger.info("Computing research (ratios + AfriScore) for the full universe…");
   for (const exchange of ACTIVE_EXCHANGES) {

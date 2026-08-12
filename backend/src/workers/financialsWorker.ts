@@ -3,9 +3,9 @@
  * for every symbol on every registered exchange. Financials don't change
  * intraday, so this runs on a cron, not a poll loop — see FINANCIALS_SYNC_CRON.
  */
-import cron from "node-cron";
+import cron, { type ScheduledTask } from "node-cron";
 import { getAllAdapters } from "../adapters/registry.js";
-import { runFundamentalsIngestion } from "../ingestion/pipelines/fundamentalIngestionPipeline.js";
+import { runFundamentalsIngestion } from "../ingestion/pipelines/fundamentalsIngestionPipeline.js";
 import { env } from "../config/index.js";
 import { logger } from "../monitoring/logger.js";
 
@@ -21,7 +21,7 @@ export async function runFinancialsSyncOnce(): Promise<void> {
   }
 }
 
-export function startFinancialsWorker(): cron.ScheduledTask {
+export function startFinancialsWorker(): ScheduledTask {
   logger.info({ cron: env.FINANCIALS_SYNC_CRON }, "Scheduling financials worker");
   return cron.schedule(env.FINANCIALS_SYNC_CRON, () => { void runFinancialsSyncOnce(); });
 }

@@ -5,6 +5,7 @@
  * Callers only ever depend on ICache — swapping drivers touches this file only.
  */
 import { LRUCache } from "lru-cache";
+import { Redis } from "ioredis";
 import { env } from "../config/index.js";
 import { logger } from "../monitoring/logger.js";
 
@@ -39,19 +40,52 @@ class InMemoryCache implements ICache {
   }
 }
 
-/** Stub — implement with `ioredis` when you actually run multi-instance.
- *  Kept out of dependencies until then so `npm install` stays lean. */
+/** Shares cache state across every API instance via a real Redis server —
+ *  what CACHE_DRIVER=redis needs once there's more than one process serving
+ *  traffic (the in-memory driver above is strictly per-process). Values are
+ *  JSON-serialized; TTL is enforced by Redis itself (`PX` on SET) rather
+ *  than tracked client-side. */
 class RedisCache implements ICache {
+  private client: Redis;
+
   constructor() {
-    throw new Error(
-      "RedisCache is a scaffold only. Install ioredis, implement get/set/del " +
-      "against REDIS_URL, then remove this guard. Until then use CACHE_DRIVER=memory."
-    );
+    if (!env.REDIS_URL) {
+      throw new Error("CACHE_DRIVER=redis requires REDIS_URL to be set.");
+    }
+    this.client = new Redis(env.REDIS_URL, {
+      maxRetriesPerRequest: 3,
+      lazyConnect: false,
+    });
+    this.client.on("error", (err: Error) => logger.error({ err }, "Redis cache connection error"));
+    this.client.on("connect", () => logger.info("Redis cache connected"));
   }
-  get<T>(): Promise<T | null> { throw new Error("not implemented"); }
-  set(): Promise<void> { throw new Error("not implemented"); }
-  del(): Promise<void> { throw new Error("not implemented"); }
-  getOrSet<T>(): Promise<T> { throw new Error("not implemented"); }
+
+  async get<T>(key: string): Promise<T | null> {
+    const raw = await this.client.get(key);
+    if (raw == null) return null;
+    try {
+      return JSON.parse(raw) as T;
+    } catch (err) {
+      logger.warn({ err, key }, "Failed to parse cached value — treating as a miss");
+      return null;
+    }
+  }
+
+  async set<T>(key: string, value: T, ttlMs = 60_000): Promise<void> {
+    await this.client.set(key, JSON.stringify(value), "PX", Math.max(1, ttlMs));
+  }
+
+  async del(key: string): Promise<void> {
+    await this.client.del(key);
+  }
+
+  async getOrSet<T>(key: string, ttlMs: number, fn: () => Promise<T>): Promise<T> {
+    const cached = await this.get<T>(key);
+    if (cached !== null) return cached;
+    const value = await fn();
+    await this.set(key, value, ttlMs);
+    return value;
+  }
 }
 
 function createCache(): ICache {

@@ -12,6 +12,7 @@ import { securitiesRepository } from "../../storage/repositories/securitiesRepos
 import { financialsRepository } from "../../storage/repositories/financialsRepository.js";
 import { pricesRepository } from "../../storage/repositories/pricesRepository.js";
 import { ingestionLogRepository } from "../../storage/repositories/ingestionLogRepository.js";
+import { deadLetterRepository } from "../../storage/repositories/deadLetterRepository.js";
 import { researchService } from "../../services/research/researchService.js";
 import { cache, CacheKeys } from "../../storage/cache.js";
 import { logger } from "../../monitoring/logger.js";
@@ -21,7 +22,18 @@ export async function runFundamentalsIngestion(adapter: IExchangeAdapter, symbol
   const errors: string[] = [];
   let stored = 0;
 
-  const bundles = await fundamentalsCollector.collectForSymbols(adapter, symbols);
+  const { bundles, failures } = await fundamentalsCollector.collectForSymbols(adapter, symbols);
+
+  // Symbols that failed collection even after retries — dead-lettered so
+  // a persistently-broken symbol is visible, not just quietly absent from
+  // the screener until someone notices.
+  for (const failure of failures) {
+    errors.push(`${failure.symbol}: collection failed — ${failure.error}`);
+    await deadLetterRepository.record({
+      exchange: adapter.exchange, dataset: "financials", symbol: failure.symbol,
+      payload: { symbol: failure.symbol }, error: failure.error,
+    });
+  }
 
   for (const bundle of bundles) {
     try {
@@ -36,6 +48,10 @@ export async function runFundamentalsIngestion(adapter: IExchangeAdapter, symbol
         logger.warn({ symbol: security.symbol, deltaPercent: balanceCheck.deltaPercent }, "Balance sheet integrity check failed — stored anyway, flagged for review");
       }
 
+      // FK chain: sector must exist before company (company.sector_id
+      // references it), and company before security — same lesson as the
+      // earlier company/security ordering bug, one link further up the chain.
+      await securitiesRepository.upsertSector(bundle.sector);
       await securitiesRepository.upsertCompany(company);
       await securitiesRepository.upsertSecurity(security);
       await financialsRepository.upsertPeriodBundle(bundle.period, income, bundle.balance, cashFlow);
@@ -52,6 +68,10 @@ export async function runFundamentalsIngestion(adapter: IExchangeAdapter, symbol
       }
     } catch (err) {
       errors.push(`${bundle.security.symbol}: ${String(err)}`);
+      await deadLetterRepository.record({
+        exchange: adapter.exchange, dataset: "financials", symbol: bundle.security.symbol,
+        payload: bundle, error: String(err),
+      });
     }
   }
 

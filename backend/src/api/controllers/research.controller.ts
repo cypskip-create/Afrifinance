@@ -1,15 +1,17 @@
 import type { Request, Response } from "express";
+import { z } from "zod";
 import { securitiesRepository } from "../../storage/repositories/securitiesRepository.js";
 import { pricesRepository } from "../../storage/repositories/pricesRepository.js";
 import { researchService } from "../../services/research/researchService.js";
 import { cache, CacheKeys } from "../../storage/cache.js";
 import { ApiError } from "../middleware/errorHandler.js";
-import type { ExchangeCode } from "../../config/index.js";
+import { getQuery } from "../middleware/validateQuery.js";
+import type { ExchangeQuery } from "../validators/querySchemas.js";
 
 export const researchController = {
   async getResearch(req: Request, res: Response) {
     const { symbol } = req.params;
-    const exchange = (req.query.exchange as ExchangeCode) || "NSE";
+    const { exchange } = getQuery<z.infer<typeof ExchangeQuery>>(req);
     const upperSymbol = symbol!.toUpperCase();
     const security = await securitiesRepository.getBySymbol(exchange, upperSymbol);
     if (!security) throw new ApiError(404, `Unknown symbol ${symbol}`);

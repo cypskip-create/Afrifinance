@@ -4,10 +4,12 @@
  * immediately), then a shallow daily top-up so each new trading day's
  * candle gets appended without re-pulling the entire history every time.
  */
-import cron from "node-cron";
+import cron, { type ScheduledTask } from "node-cron";
 import { getAllAdapters } from "../adapters/registry.js";
 import { securitiesRepository } from "../storage/repositories/securitiesRepository.js";
-import { ingestDailyCandles } from "../ingestion/pipelines/candleIngestionPipeline.js";
+import { ingestDailyCandles } from "../ingestion/pipelines/candlesIngestionPipeline.js";
+import { isTradingDay } from "../config/tradingCalendar.js";
+import { env } from "../config/index.js";
 import { logger } from "../monitoring/logger.js";
 
 const BACKFILL_DAYS = 400;   // enough for 1Y charts plus a little buffer
@@ -24,6 +26,14 @@ export async function runCandlesBackfillOnce(): Promise<void> {
 
 export async function runCandlesTopUpOnce(): Promise<void> {
   for (const adapter of getAllAdapters()) {
+    // The cron schedule already restricts this to weekdays; this catches
+    // the public holidays a weekday-only cron expression can't express —
+    // no point re-pulling "today's" candle for a day the market never
+    // opened.
+    if (!env.IGNORE_TRADING_CALENDAR && !isTradingDay(adapter.exchange)) {
+      logger.debug({ exchange: adapter.exchange }, "Not a trading day — skipping candle top-up");
+      continue;
+    }
     const securities = await securitiesRepository.listByExchange(adapter.exchange);
     if (securities.length === 0) continue;
     await ingestDailyCandles(adapter, securities.map((s) => s.symbol), TOPUP_DAYS);
@@ -31,7 +41,7 @@ export async function runCandlesTopUpOnce(): Promise<void> {
 }
 
 /** Runs shortly after market close on trading days. */
-export function startCandlesWorker(): cron.ScheduledTask {
+export function startCandlesWorker(): ScheduledTask {
   return cron.schedule("30 16 * * 1-5", () => { void runCandlesTopUpOnce(); });
 }
 

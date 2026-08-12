@@ -3,6 +3,9 @@
  * Clients subscribe to specific symbols/channels so we only ever send them
  * data they asked for — not the whole exchange's tape on every tick.
  *
+ * Connect with an API key as a query param: ws://host:port?apiKey=<key>
+ * (same keys issued via `npm run apikey:create`, or DEV_API_KEY locally).
+ *
  * Client protocol (JSON messages over the WS connection):
  *   → { "action": "subscribe",   "symbols": ["SAFCOM", "EQTY"] }
  *   → { "action": "unsubscribe", "symbols": ["EQTY"] }
@@ -13,14 +16,40 @@ import { WebSocketServer, WebSocket } from "ws";
 import { marketEventBus, type MarketEvent } from "./pubsub.js";
 import { logger } from "../monitoring/logger.js";
 import { env } from "../config/index.js";
+import { apiKeyRepository, hashApiKey } from "../storage/repositories/apiKeyRepository.js";
+import { cache } from "../storage/cache.js";
 
 interface ClientState {
   socket: WebSocket;
   symbols: Set<string>;
 }
 
+/** Same key check as the REST API's apiKeyAuth middleware, applied at the
+ *  WebSocket upgrade instead of per-message — a socket either gets
+ *  established or it doesn't, there's no per-frame auth in this protocol. */
+async function isAuthorized(presentedKey: string | null): Promise<boolean> {
+  if (!env.API_KEY_AUTH_ENABLED) return true;
+  if (!presentedKey) return false;
+  if (env.DEV_API_KEY && presentedKey === env.DEV_API_KEY) return true;
+  const keyHash = hashApiKey(presentedKey);
+  const record = await cache.getOrSet(`apikey:${keyHash}`, 30_000, () => apiKeyRepository.findActiveByHash(keyHash));
+  return record !== null;
+}
+
 export function startWebSocketServer(): WebSocketServer {
-  const wss = new WebSocketServer({ port: env.WS_PORT });
+  const wss = new WebSocketServer({
+    port: env.WS_PORT,
+    verifyClient: (info, callback) => {
+      const url = new URL(info.req.url ?? "", "http://localhost");
+      const presented = url.searchParams.get("apiKey");
+      isAuthorized(presented)
+        .then((ok) => callback(ok, ok ? undefined : 401, ok ? undefined : "Missing or invalid API key — connect with ?apiKey=<key>"))
+        .catch((err) => {
+          logger.error({ err }, "WebSocket auth check failed");
+          callback(false, 500, "Internal error during auth check");
+        });
+    },
+  });
   const clients = new Set<ClientState>();
 
   wss.on("connection", (socket) => {

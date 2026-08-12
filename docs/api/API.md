@@ -4,9 +4,25 @@ Base URL: `http://localhost:4000/api/v1` (configure `PORT` in `.env`).
 All responses are JSON, wrapped as `{ "data": ... }` on success or
 `{ "error": "message" }` on failure (see status codes per endpoint).
 
-Every endpoint accepts an optional `?exchange=NSE` query param (defaults to
-`NSE`) — this is what makes the same API surface work for every future
-exchange without new routes.
+## Authentication
+
+Every endpoint below requires an API key, **except `/health`**. Supply it as
+either:
+```
+Authorization: Bearer <key>
+X-API-Key: <key>
+```
+Get a key via `npm run apikey:create -- "Name"` (see the backend README).
+Missing/invalid keys get `401`. Requests are also rate-limited per key
+(`429` when exceeded) — see `RATE_LIMIT_WINDOW_MS`/`RATE_LIMIT_MAX_DEFAULT`
+in `.env`, or a key's own `rate_limit_per_min` if it was issued with a
+custom tier.
+
+Every endpoint also accepts an optional `?exchange=NSE` query param
+(defaults to `NSE`) — this is what makes the same API surface work for
+every future exchange without new routes. All query params are validated;
+an invalid or out-of-range value returns `400` with a specific reason
+rather than an ad-hoc error.
 
 ## Health
 
@@ -101,7 +117,9 @@ All filters optional. `sortBy` ∈ `afriScore,changePercent,marketCap,dividendYi
 
 ## WebSocket streaming
 
-Connect to `ws://localhost:4001` (configure `WS_PORT`).
+Connect to `ws://localhost:4001?apiKey=<key>` (configure `WS_PORT`). The key
+is checked at connection time (`verifyClient`) — an invalid/missing key
+gets the connection rejected with a 401 before the upgrade completes.
 
 **Subscribe:**
 ```json
@@ -125,5 +143,7 @@ complexity yet).
 ## Error format
 
 Every non-2xx response: `{ "error": "human-readable message" }`. Common
-codes: `400` (bad/missing query param), `404` (unknown symbol/exchange),
-`500` (unhandled server error, logged server-side with full context).
+codes: `400` (invalid/missing query param — validated by zod, see
+`api/validators/querySchemas.ts`), `401` (missing/invalid API key), `404`
+(unknown symbol/exchange), `429` (rate limit exceeded), `500` (unhandled
+server error, logged server-side with full context).

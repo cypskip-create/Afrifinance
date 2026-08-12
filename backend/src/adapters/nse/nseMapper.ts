@@ -10,7 +10,7 @@ import type {
   NseRawFinancialPeriod, NseRawCorporateAction, NseRawEarningsEvent, NseRawOwnership,
 } from "./nseRawTypes.js";
 import type {
-  Security, Company, Quote, Candle, FinancialPeriod, IncomeStatement,
+  Security, Company, Sector, Quote, Candle, FinancialPeriod, IncomeStatement,
   BalanceSheet, CashFlowStatement, CorporateAction, CorporateActionDetails,
   EarningsEvent, OwnershipRecord, SecurityStatus, CandleInterval, Currency,
 } from "../../types/market.js";
@@ -24,6 +24,14 @@ export const securityId = (symbol: string) => `${EXCHANGE}:${symbol}`;
 export const companyId = (symbol: string) => `${EXCHANGE}:company:${symbol}`;
 const periodId = (symbol: string, fy: number, fq?: number) =>
   `${EXCHANGE}:period:${symbol}:${fy}${fq ? `Q${fq}` : ""}`;
+/** Slug used as the sector's stable id — deliberately mechanical (trim,
+ *  lowercase, hyphenate) rather than a judgment call about canonical naming.
+ *  Cross-exchange canonicalization of sector NAMES (e.g. reconciling minor
+ *  spelling/casing drift between providers) belongs in the normalization
+ *  layer, not here — this only needs to be a consistent id for NSE's own
+ *  sector strings. */
+const sectorId = (rawSectorName: string) =>
+  rawSectorName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
 function mapStatus(s: NseRawSecurity["TradingStatus"]): SecurityStatus {
   switch (s) {
@@ -65,11 +73,16 @@ export function mapSecurity(raw: NseRawSecurity): Security {
   };
 }
 
+export function mapSector(raw: NseRawSecurity): Sector {
+  return { id: sectorId(raw.Sector), name: raw.Sector.trim() };
+}
+
 export function mapCompany(raw: NseRawSecurity, profile: NseRawCompanyProfile | null): Company {
   return {
     id: companyId(raw.Symbol),
     name: raw.CompanyName,
     description: profile?.Description,
+    sectorId: sectorId(raw.Sector),
     headquarters: profile?.Headquarters,
     ceo: profile?.ChiefExecutive,
     employees: profile?.EmployeeCount,
@@ -142,7 +155,10 @@ export function mapFundamentalsBundle(
   security: NseRawSecurity, profile: NseRawCompanyProfile | null, financials: NseRawFinancialPeriod
 ): FundamentalsBundle {
   const { period, income, balance, cashFlow } = mapFinancials(financials);
-  return { security: mapSecurity(security), company: mapCompany(security, profile), period, income, balance, cashFlow };
+  return {
+    security: mapSecurity(security), company: mapCompany(security, profile),
+    sector: mapSector(security), period, income, balance, cashFlow,
+  };
 }
 
 function mapActionType(t: NseRawCorporateAction["ActionType"]): CorporateAction["type"] {

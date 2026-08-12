@@ -8,13 +8,16 @@ import { moversRoutes } from "./movers.routes.js";
 import { sectorsRoutes } from "./sectors.routes.js";
 import { researchRoutes } from "./research.routes.js";
 import { screenerRoutes } from "./screener.routes.js";
-import { healthRoutes } from "./health.routes.js";
 
 /** Every route is mounted under /api/v1. Versioning from day one — the app,
  *  TradersHub, and Media all consume this same v1 contract; a v2 later can
- *  be added alongside it without breaking existing clients. */
+ *  be added alongside it without breaking existing clients.
+ *
+ *  NOTE: health.routes.ts is intentionally NOT included here — it's mounted
+ *  separately in server.ts, ahead of the auth/rate-limit middleware, so
+ *  infra probes (load balancer health checks, uptime monitors) never need
+ *  an API key and never count against anyone's rate limit. */
 export const apiRouter = Router();
-apiRouter.use(healthRoutes);
 apiRouter.use(quotesRoutes);
 apiRouter.use(historicalRoutes);
 apiRouter.use(companiesRoutes);

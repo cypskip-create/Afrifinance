@@ -9,6 +9,23 @@ import pg from "pg";
 import { env } from "../config/index.js";
 import { logger } from "../monitoring/logger.js";
 
+// node-postgres returns NUMERIC and BIGINT columns as STRINGS by default —
+// a well-known pg gotcha, because a numeric/bigint value can exceed what a
+// JS number can represent exactly. Every price, ratio, market cap, and
+// volume in this schema is a `numeric` or `bigint` column, so left as the
+// default, EVERY repository read would silently hand callers strings
+// instead of numbers: `"1"+"2"` concatenates to `"12"` instead of adding to
+// `3`, comparisons like `pe < 100` behave unpredictably, etc.
+//
+// The values in this domain (prices, market caps in KES, share counts,
+// ratios, ingestion log ids) never approach Number.MAX_SAFE_INTEGER
+// (2^53), so parsing them as floats/ints here is safe and correct for
+// AfriFinance Data specifically — this would need reconsidering only if a
+// numeric column were ever used to hold something like a cryptographic
+// value or an ID space larger than 2^53.
+pg.types.setTypeParser(pg.types.builtins.NUMERIC, (val: string) => parseFloat(val));
+pg.types.setTypeParser(pg.types.builtins.INT8, (val: string) => parseInt(val, 10));
+
 export const pool = new pg.Pool({
   connectionString: env.DATABASE_URL,
   max: 10,

@@ -13,6 +13,9 @@ import { CandleSchema } from "../validators/schemas.js";
 import { candlesRepository } from "../../storage/repositories/candlesRepository.js";
 import { aggregateCandles } from "../../services/analytics/candleAggregator.js";
 import { ingestionLogRepository } from "../../storage/repositories/ingestionLogRepository.js";
+import { deadLetterRepository } from "../../storage/repositories/deadLetterRepository.js";
+import { checkDuplicateCandle } from "../../monitoring/dataQuality.js";
+import { withRetry } from "../retry.js";
 import { logger } from "../../monitoring/logger.js";
 import type { Candle } from "../../types/market.js";
 
@@ -20,17 +23,34 @@ export async function ingestDailyCandles(adapter: IExchangeAdapter, symbols: str
   const startedAt = new Date().toISOString();
   const errors: string[] = [];
   let stored = 0;
+  let duplicatesDropped = 0;
 
   const to = new Date();
   const from = new Date(to.getTime() - days * 86_400_000);
 
   for (const symbol of symbols) {
     try {
-      const raw = await adapter.getCandles(symbol, "1d", from.toISOString(), to.toISOString());
+      const raw = await withRetry(
+        () => adapter.getCandles(symbol, "1d", from.toISOString(), to.toISOString()),
+        { label: `${adapter.exchange}.getCandles(${symbol})` }
+      );
       const { valid: validShapes, rejected } = validateBatch(CandleSchema, raw);
       rejected.forEach((r) => errors.push(`${symbol}: candle rejected: ${JSON.stringify(r.issues)}`));
       const validIds = new Set(validShapes.map((v) => `${v.securityId}:${v.timestamp}`));
-      const daily = raw.filter((c) => validIds.has(`${c.securityId}:${c.timestamp}`));
+
+      // A well-behaved feed shouldn't send the same bar twice in one
+      // response, but a paginated/retried provider call sometimes does —
+      // drop repeats before they hit an upsert (which would silently mask
+      // it) so it's visible in the ingestion log instead.
+      const seen = new Set<string>();
+      const daily = raw.filter((c) => {
+        if (!validIds.has(`${c.securityId}:${c.timestamp}`)) return false;
+        if (checkDuplicateCandle(seen, `${c.securityId}:${c.interval}:${c.timestamp}`)) {
+          duplicatesDropped++;
+          return false;
+        }
+        return true;
+      });
 
       if (daily.length === 0) continue;
       await candlesRepository.upsertCandlesBatch(daily);
@@ -49,6 +69,10 @@ export async function ingestDailyCandles(adapter: IExchangeAdapter, symbols: str
       }
     } catch (err) {
       errors.push(`${symbol}: ${String(err)}`);
+      await deadLetterRepository.record({
+        exchange: adapter.exchange, dataset: "candle", symbol,
+        payload: { symbol, days }, error: String(err),
+      });
     }
   }
 
@@ -60,5 +84,6 @@ export async function ingestDailyCandles(adapter: IExchangeAdapter, symbols: str
     errors: errors.length ? errors.slice(0, 20) : undefined,
   });
 
+  if (duplicatesDropped) logger.warn({ exchange: adapter.exchange, duplicatesDropped }, "Candle ingestion dropped duplicate bars");
   if (errors.length) logger.warn({ exchange: adapter.exchange, errorCount: errors.length }, "Candle ingestion completed with errors");
 }
