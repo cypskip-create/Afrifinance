@@ -161,14 +161,20 @@ export interface PortfolioLike {
   avg_cost: number;
 }
 
-export function computePortfolioStats(portfolio: PortfolioLike[]) {
+export function computePortfolioStats(
+  portfolio: PortfolioLike[],
+  liveQuotes?: Record<string, { price: number; dayChangeAbs: number }>
+) {
   let totalValue = 0;
   let totalCost = 0;
   let todayGain = 0;
   portfolio.forEach((h) => {
-    totalValue += getPrice(h.symbol, h.avg_cost) * h.shares;
+    const quote = liveQuotes?.[h.symbol.toUpperCase()];
+    const price = quote?.price ?? getPrice(h.symbol, h.avg_cost);
+    const dayChangeAbs = quote?.dayChangeAbs ?? getDayChange(h.symbol).abs;
+    totalValue += price * h.shares;
     totalCost += h.avg_cost * h.shares;
-    todayGain += getDayChange(h.symbol).abs * h.shares;
+    todayGain += dayChangeAbs * h.shares;
   });
   const totalGain = totalValue - totalCost;
   const gainPct = totalCost > 0 ? (totalGain / totalCost) * 100 : 0;

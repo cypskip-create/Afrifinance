@@ -5,24 +5,36 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SparklineChart } from "@/components/shared/SparklineChart";
 import { CANONICAL_SYMBOLS, STOCK_META, getPrice, getDayChange } from "@/lib/stockPrices";
+import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 
 export default function SectorDetail() {
   const navigate = useNavigate();
   const { sector } = useParams();
   const sectorName = decodeURIComponent(sector || "");
 
+  const sectorSymbols = useMemo(
+    () => CANONICAL_SYMBOLS.filter(symbol => STOCK_META[symbol].sector === sectorName),
+    [sectorName]
+  );
+  const { quotes } = useLiveQuotes(sectorSymbols);
+
   // Live-computed from the same shared source as Markets/Screener/Compare/AllStocksList —
   // so a sector's member count, top mover, and average change here can never disagree
   // with the "Sector Performance" card the person tapped through from.
   const stocks = useMemo(() => {
-    return CANONICAL_SYMBOLS
-      .filter(symbol => STOCK_META[symbol].sector === sectorName)
+    return sectorSymbols
       .map(symbol => {
+        const quote = quotes[symbol];
         const { pct } = getDayChange(symbol);
-        return { symbol, name: STOCK_META[symbol].name, price: getPrice(symbol), change: pct };
+        return {
+          symbol,
+          name: STOCK_META[symbol].name,
+          price: quote?.lastPrice ?? getPrice(symbol),
+          change: quote?.changePercent ?? pct,
+        };
       })
       .sort((a, b) => b.change - a.change);
-  }, [sectorName]);
+  }, [sectorSymbols, quotes]);
 
   const avgChange = stocks.length > 0 ? stocks.reduce((sum, s) => sum + s.change, 0) / stocks.length : 0;
   const isUp = avgChange >= 0;

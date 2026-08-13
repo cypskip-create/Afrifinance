@@ -14,6 +14,7 @@ import { usePosts } from "@/hooks/usePosts";
 import { getTimeBasedGreeting } from "@/utils/timeGreeting";
 import { MarketStatusIndicator } from "@/components/shared/MarketStatusIndicator";
 import { computePortfolioStats, getPrice, getDayChange } from "@/lib/stockPrices";
+import { useLivePortfolioQuotes, useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { formatPostDate } from "@/lib/formatTimestamp";
 
 
@@ -40,14 +41,18 @@ export default function Home() {
 
   const firstName = profile?.full_name ? profile.full_name.split(' ')[0] : 'Investor';
   const hasPortfolio = user && portfolio.length > 0;
-  const { totalValue: portfolioValue, totalGain: portfolioGain, gainPct: portfolioGainPct } = computePortfolioStats(portfolio);
+  const { liveQuotes: livePortfolioQuotes } = useLivePortfolioQuotes(portfolio.map(h => h.symbol));
+  const { totalValue: portfolioValue, totalGain: portfolioGain, gainPct: portfolioGainPct } = computePortfolioStats(portfolio, livePortfolioQuotes);
 
   // Real watchlist, ranked by today's biggest movers — no more standing in
   // for a fixed demo list regardless of what the person actually watches.
+  // Overlaid with live AfriFinance Data Layer quotes wherever available.
+  const { quotes: watchlistQuotes } = useLiveQuotes(watchlist.map(w => w.symbol));
   const watchlistMovers = [...watchlist]
     .map(w => {
+      const q = watchlistQuotes[w.symbol.toUpperCase()];
       const day = getDayChange(w.symbol);
-      return { symbol: w.symbol, name: w.name, price: getPrice(w.symbol), changePct: day.pct };
+      return { symbol: w.symbol, name: w.name, price: q?.lastPrice ?? getPrice(w.symbol), changePct: q?.changePercent ?? day.pct };
     })
     .sort((a, b) => Math.abs(b.changePct) - Math.abs(a.changePct))
     .slice(0, 5);

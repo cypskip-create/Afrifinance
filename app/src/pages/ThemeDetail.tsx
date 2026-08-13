@@ -7,25 +7,28 @@ import { Badge } from "@/components/ui/badge";
 import { SparklineChart } from "@/components/shared/SparklineChart";
 import { getThemeBySlug } from "@/data/investmentThemes";
 import { getStockName, getStockSector, getPrice, getDayChange } from "@/lib/stockPrices";
+import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 
 export default function ThemeDetail() {
   const navigate = useNavigate();
   const { themeId } = useParams();
   const theme = getThemeBySlug(themeId || "");
 
+  const { quotes } = useLiveQuotes(theme?.stocks ?? []);
   const stocks = useMemo(() => {
     if (!theme) return [];
     return theme.stocks.map(symbol => {
+      const q = quotes[symbol];
       const { pct } = getDayChange(symbol);
       return {
         symbol,
         name: getStockName(symbol),
         sector: getStockSector(symbol),
-        price: getPrice(symbol),
-        change: pct,
+        price: q?.lastPrice ?? getPrice(symbol),
+        change: q?.changePercent ?? pct,
       };
     });
-  }, [theme]);
+  }, [theme, quotes]);
 
   const avgChange = stocks.length > 0 ? stocks.reduce((sum, s) => sum + s.change, 0) / stocks.length : 0;
   const isUp = avgChange >= 0;

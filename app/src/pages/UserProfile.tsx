@@ -22,6 +22,7 @@ import { XCommentSheet } from "@/components/social/XCommentSheet";
 import { ProfileSettingsDialog } from "@/components/profile/ProfileSettingsDialog";
 import { PortfolioPrivacyDialog } from "@/components/profile/PortfolioPrivacyDialog";
 import { getPrice } from "@/lib/stockPrices";
+import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { atHandle } from "@/lib/handle";
 import { shareLink } from "@/lib/share";
 
@@ -292,18 +293,20 @@ export default function UserProfile() {
   const getInitials = (name: string | null) => name ? name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) : "U";
   const formatDate = (date: string) => new Date(date).toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
+  const { quotes: publicPortfolioQuotes } = useLiveQuotes(publicPortfolio.map(h => h.symbol));
   const portfolioSummary = useMemo(() => {
     if (!publicPortfolio.length) return null;
-    // Same price source & maths as the Portfolio page, so both always agree.
+    // Same price source & maths as the Portfolio page, so both always agree
+    // — including HoldingsList just below, which reads the same live quotes.
     const holdings = publicPortfolio.map(h => {
-      const cp = getPrice(h.symbol, h.avg_cost);
+      const cp = publicPortfolioQuotes[h.symbol.toUpperCase()]?.lastPrice ?? getPrice(h.symbol, h.avg_cost);
       const gain = ((cp - h.avg_cost) / h.avg_cost) * 100;
       return { ...h, currentPrice: cp, gain };
     });
     const totalValue = holdings.reduce((s, h) => s + h.currentPrice * h.shares, 0);
     const totalCost = holdings.reduce((s, h) => s + h.avg_cost * h.shares, 0);
     return { totalValue, totalGain: totalValue - totalCost, gainPercent: totalCost > 0 ? ((totalValue - totalCost) / totalCost) * 100 : 0, holdings };
-  }, [publicPortfolio]);
+  }, [publicPortfolio, publicPortfolioQuotes]);
 
 
   const castToPost = (p: UserPost): Post => ({

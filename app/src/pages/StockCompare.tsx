@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,6 +6,7 @@ import { ArrowLeft, GitCompare, Plus, X, TrendingUp, TrendingDown, Search, BarCh
 import { SparklineChart } from "@/components/shared/SparklineChart";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { CANONICAL_SYMBOLS, STOCK_META, getPrice, getDayChange, DIV_YIELD, getStockFundamentals, parseMagnitude, tickerSeed } from "@/lib/stockPrices";
+import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 
 interface Stock {
   symbol: string;
@@ -28,30 +29,33 @@ interface Stock {
 // Market cap, P/E, beta and volume come from the same shared fundamentals table used by
 // StockDetail and the Screener, so a stock's stats here can never disagree with its own
 // detail page. ROE and debt/equity aren't tracked elsewhere, so they're derived here
-// deterministically per symbol (stable across reloads, but compare-only).
-const stocksDatabase: Stock[] = CANONICAL_SYMBOLS.map(symbol => {
-  const price = getPrice(symbol);
-  const { pct } = getDayChange(symbol);
-  const seed = tickerSeed(symbol);
-  const meta = getStockFundamentals(symbol);
-  return {
-    symbol,
-    name: STOCK_META[symbol].name,
-    sector: STOCK_META[symbol].sector,
-    price,
-    change: +pct.toFixed(2),
-    marketCap: meta.marketCap,
-    pe: meta.pe,
-    eps: meta.pe > 0 ? +(price / meta.pe).toFixed(2) : 0,
-    dividendYield: DIV_YIELD[symbol] ?? 0,
-    roe: +(10 + (seed % 20)).toFixed(1),
-    debtToEquity: +(0.3 + (seed % 70) / 100).toFixed(2),
-    beta: meta.beta,
-    high52: +(price * 1.12).toFixed(2),
-    low52: +(price * 0.85).toFixed(2),
-    volume: meta.volume,
-  };
-});
+// deterministically per symbol (stable across reloads, but compare-only). Price/change are
+// overlaid live below (useLiveQuotes) wherever the Data Layer covers a symbol.
+function buildStaticStocks(): Stock[] {
+  return CANONICAL_SYMBOLS.map(symbol => {
+    const price = getPrice(symbol);
+    const { pct } = getDayChange(symbol);
+    const seed = tickerSeed(symbol);
+    const meta = getStockFundamentals(symbol);
+    return {
+      symbol,
+      name: STOCK_META[symbol].name,
+      sector: STOCK_META[symbol].sector,
+      price,
+      change: +pct.toFixed(2),
+      marketCap: meta.marketCap,
+      pe: meta.pe,
+      eps: meta.pe > 0 ? +(price / meta.pe).toFixed(2) : 0,
+      dividendYield: DIV_YIELD[symbol] ?? 0,
+      roe: +(10 + (seed % 20)).toFixed(1),
+      debtToEquity: +(0.3 + (seed % 70) / 100).toFixed(2),
+      beta: meta.beta,
+      high52: +(price * 1.12).toFixed(2),
+      low52: +(price * 0.85).toFixed(2),
+      volume: meta.volume,
+    };
+  });
+}
 
 const comparisonMetrics = [
   { key: "price", label: "Price", icon: DollarSign, format: (v: number) => `KES ${v.toFixed(2)}` },
@@ -70,27 +74,45 @@ const comparisonMetrics = [
 
 export default function StockCompare() {
   const navigate = useNavigate();
-  const [selectedStocks, setSelectedStocks] = useState<Stock[]>([]);
+  const [selectedSymbols, setSelectedSymbols] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
 
+  // Live AfriFinance Data Layer quotes overlaid onto the static comparison table — same
+  // pattern as Screener/SectorDetail/AllStocksList. Keeping selection as symbols (not
+  // snapshotted Stock objects) means an already-added stock's price/change keeps updating
+  // live instead of freezing at whatever it was when it was added to the comparison.
+  const { quotes } = useLiveQuotes(CANONICAL_SYMBOLS);
+  const stocksDatabase = useMemo(() => {
+    const base = buildStaticStocks();
+    return base.map(s => {
+      const q = quotes[s.symbol];
+      return q ? { ...s, price: q.lastPrice, change: +q.changePercent.toFixed(2) } : s;
+    });
+  }, [quotes]);
+
+  const selectedStocks = useMemo(
+    () => selectedSymbols.map(sym => stocksDatabase.find(s => s.symbol === sym)).filter((s): s is Stock => !!s),
+    [selectedSymbols, stocksDatabase]
+  );
+
   const filteredStocks = stocksDatabase.filter(
     stock =>
-      !selectedStocks.find(s => s.symbol === stock.symbol) &&
+      !selectedSymbols.includes(stock.symbol) &&
       (stock.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
         stock.name.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const addStock = (stock: Stock) => {
-    if (selectedStocks.length < 4) {
-      setSelectedStocks(prev => [...prev, stock]);
+    if (selectedSymbols.length < 4) {
+      setSelectedSymbols(prev => [...prev, stock.symbol]);
       setSearchQuery("");
       setShowSearch(false);
     }
   };
 
   const removeStock = (symbol: string) => {
-    setSelectedStocks(prev => prev.filter(s => s.symbol !== symbol));
+    setSelectedSymbols(prev => prev.filter(s => s !== symbol));
   };
 
   const getBestValue = (key: string, isHigherBetter: boolean = true) => {
@@ -123,7 +145,7 @@ export default function StockCompare() {
             </div>
           </div>
           {selectedStocks.length > 0 && (
-            <Button variant="ghost" size="sm" onClick={() => setSelectedStocks([])} className="text-xs text-muted-foreground">
+            <Button variant="ghost" size="sm" onClick={() => setSelectedSymbols([])} className="text-xs text-muted-foreground">
               Clear
             </Button>
           )}

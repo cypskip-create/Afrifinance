@@ -37,10 +37,24 @@ already called for:
 - `useLiveQuotes` / `useLiveQuote` — the core hook: React Query for the REST
   snapshot + the shared WebSocket for live ticks. Everything else builds on
   this.
+- `useLivePortfolioQuotes` — shapes a set of holdings' live quotes for
+  `computePortfolioStats` (see below); used by every page showing
+  portfolio-level totals.
 - `useInstruments` — real tradable universe, static fallback if the API is
   unreachable.
 - `useMovers`, `useResearch`, `useCompanyProfile` — thin wrappers over their
   respective endpoints.
+- `useHistoricalCandles` — real daily candle history mapped to the price
+  chart's internal point shape.
+- `useDividendHistory`, `useOwnership` — real per-symbol dividend and
+  ownership history for StockDetail's research tabs.
+- `useAfriScreener` — one batched `/screener` call (marketCap/PE/dividend
+  yield/AfriScore) combined with live quotes, for the Screener page.
+
+`lib/stockPrices.ts`'s `computePortfolioStats(portfolio, liveQuotes?)` also
+gained an optional second parameter — pass a `useLivePortfolioQuotes` result
+and portfolio totals price off live quotes; omit it and behavior is
+unchanged (fully static, as before).
 
 ### Frontend hooks/pages rewired to use them
 - **`useRealtimePrices` / `useRealtimePrice`** — previously a client-side
@@ -65,12 +79,35 @@ already called for:
   income all price off live quotes, so a holding's value can't disagree with
   what Watchlist/Markets/the Stock Page show for the same symbol (the
   "single source of truth" requirement in `docs/architecture/ARCHITECTURE.md`).
-- **`StockScreener.tsx`** — price/day-change columns overlay live quotes on
-  the existing fundamentals table. The rest of the screener's filtering
-  (RSI, volume buckets, market-cap ranges, sliders) stays client-side for
-  now — the backend's `/screener` endpoint doesn't carry RSI, and a full
-  swap to server-side filtering would drop UI features it doesn't yet
-  support; `screenerApi.ts`/`GET /screener` is ready for that as a follow-up.
+- **`StockScreener.tsx`** — marketCap/P/E/dividend-yield/AfriScore/price/
+  change are all live via `useAfriScreener` (one batched `/screener` call +
+  live quotes). The rest of the filtering UI (RSI, volume buckets,
+  market-cap ranges, sliders) stays client-side — the backend's `/screener`
+  endpoint doesn't carry RSI or volume, and a full swap to server-side
+  filtering would drop working UI features rather than add value.
+- **`StockDetail.tsx` price chart & research tabs** — see the "Still on
+  static/mock data" section below for exactly which parts of StockDetail
+  are live vs. not; it's the one page split across both lists since it has
+  a lot of surface area.
+- **`StockCompare.tsx`** — live quotes overlay the comparison table; the
+  page now holds selected *symbols* rather than snapshotted stock objects,
+  so an open comparison keeps updating instead of freezing prices at the
+  moment a stock was added.
+- **`SectorDetail.tsx`**, **`SectorHeatmap.tsx`**, **`ThemeDetail.tsx`**,
+  **`FeaturedListDetail.tsx`** — live quotes overlaid on their respective
+  static symbol lists, same pattern as `AllStocksList`.
+- **`Discover.tsx`** — trending-stocks ticker, portfolio summary card, and
+  the embedded `StockHeatmap` all live.
+- **`Home.tsx`** — portfolio summary card and watchlist-movers section live;
+  its `CommandCenterSections` and `QuickTradeWidget` children also overlay
+  live prices (see the caveat on `CommandCenterSections`'s synthetic
+  "upside %" below).
+- **`TrackInvestments.tsx`** and **`UserProfile.tsx`** — portfolio summary
+  totals (value, gain, day change) now use the same
+  `computePortfolioStats(portfolio, liveQuotes)` overlay as `HoldingsList`
+  itself, closing a real inconsistency: previously the holding *rows*
+  (via `HoldingsList`) were already live, but the *summary numbers above
+  them* were still computed from static prices — the two could disagree.
 
 ### Fallback behavior (by design, not an oversight)
 Every hook above degrades gracefully instead of erroring or fabricating
@@ -98,10 +135,13 @@ mechanical once the real data source (or a wider mock seed) is decided.
 
 ## Still on static/mock data (not yet wired this pass)
 
-- **`StockScreener.tsx`** — has a real counterpart at `screenerApi.ts` /
-  `GET /screener` for server-side filtering/sorting; price/change columns
-  are already live (see above), full server-side filtering not yet wired
-  (see rationale above).
+- **`StockScreener.tsx`** — marketCap/P/E/dividend-yield/AfriScore/price/
+  change are all live (via `useAfriScreener.tsx`, one batched `/screener`
+  call). The actual filtering UI (sector, price/PE sliders, RSI, volume
+  buckets, market-cap ranges) still runs client-side rather than delegating
+  to `/screener`'s server-side filters — the backend's filter set is
+  coarser than the UI's (no RSI, no volume, no price range), so a full
+  swap would drop working UI features rather than add value.
 - **`StockDetail.tsx` price chart** — real daily candles from
   `GET /historical/:symbol` for every timeframe except "1D" (the backend
   only backfills daily bars — see `useHistoricalCandles.tsx` — so a 1-day
@@ -127,15 +167,30 @@ mechanical once the real data source (or a wider mock seed) is decided.
   names Piotroski/Altman Z as part of the intended RESEARCH surface, so
   those two are the most natural next backend additions if this gets
   picked up further.
-- **`StockCompare.tsx`**, **`Discover.tsx`**, **`Home.tsx`**'s smaller
-  widgets (`CommandCenterSections`, `QuickTradeWidget`, `StockHeatmap`),
-  **`SectorDetail.tsx`**, **`SectorHeatmap.tsx`**, **`ThemeDetail.tsx`**,
-  **`FeaturedListDetail.tsx`** — still read `lib/stockPrices.ts` directly.
+- **`CommandCenterSections.tsx`**'s "Undervalued Picks" and "High-Growth
+  Stocks" sections — current price is live where available, but the
+  *ranking itself* (upside vs. an analyst target, revenue CAGR) is computed
+  against synthetic target/growth numbers, since the backend has no analyst-
+  target or multi-year-growth data source. Real current price against a
+  fake target is still an improvement over an entirely fake price+target,
+  but the "upside %" itself isn't a real number — flagged here so it isn't
+  mistaken for one.
 - Indices (NSE 20/25, NASI), commodities, IPO/economic-calendar entries in
   `Markets.tsx` — the Data Layer doesn't have index/commodity/calendar data
   sources built yet; these remain illustrative placeholders until that's
   added upstream, not something the frontend integration layer can fix on
   its own.
+
+Every other page/component that reads stock prices — `Watchlist`,
+`Markets`, `AllStocksList`, `StockDetail`'s quote header, `HoldingsList`
+(Portfolio, Track Investments, public profiles), `StockScreener`'s
+price/change/marketCap/PE/dividend/AfriScore columns, `StockCompare`,
+`SectorDetail`, `SectorHeatmap`, `ThemeDetail`, `FeaturedListDetail`,
+`Discover` (trending stocks + portfolio summary + heatmap),
+`Home` (portfolio summary + watchlist movers + Command Center + Quick
+Trade), and `UserProfile`'s public portfolio summary — is now backed by
+live AfriFinance Data Layer quotes, with the existing static reference
+data as a graceful per-symbol fallback.
 
 None of the above were silently left as mock — they're listed here
 precisely so the gap is visible rather than assumed away.
@@ -149,19 +204,28 @@ precisely so the gap is visible rather than assumed away.
 - Booted the full backend (REST API :4000, WebSocket :4001, ingestion/
   calculation workers) and exercised it directly: `/health`, auth
   enforcement, `/quotes`, `/movers`, `/research`, `/screener`, `/financials`,
-  `/sectors`, the new `/instruments`, and a 404 for an unknown symbol.
-- Frontend: clean `tsc --noEmit` against `tsconfig.app.json`, clean
-  production `vite build`, and headless-browser (Playwright) runs against
-  the live dev server + live backend confirming the actual network calls:
-  `GET /instruments`, `GET /movers`, `GET /quotes` (batch, all 30 canonical
-  symbols), `GET /companies/SAFCOM`, `GET /quotes?symbols=SAFCOM`,
-  `GET /research/SAFCOM`, `GET /dividends/SAFCOM`, `GET /ownership/SAFCOM`,
-  and `GET /historical/SAFCOM` (fired on switching the chart to the "1Y"
-  timeframe pill) — all returning `200`.
-- (That Playwright run temporarily bypassed the Supabase auth guard
-  in-memory to reach the routes without a login flow; the real
-  `ProtectedRoute.tsx` was restored immediately after and is unchanged in
-  the final diff.)
+  `/sectors`, `/dividends`, `/ownership`, `/historical`, the added
+  `/instruments`, and a 404 for an unknown symbol.
+- Caught and fixed a real unit bug: the ratios engine's `dividendYield` and
+  `payoutRatio` are raw fractions (`0.0493`), not percentages — StockDetail
+  was displaying them un-multiplied.
+- Frontend: clean `tsc --noEmit` against `tsconfig.app.json` and clean
+  production `vite build` after every round of changes. ESLint scoped to
+  every file actually touched shows zero *new* errors — verified by
+  `git stash`-ing each round's diff and confirming the same `any`-type
+  errors exist at the same lines beforehand; the wider repo (files never
+  touched by this integration) carries ~100 pre-existing lint errors/warnings
+  of its own, unrelated to this work.
+- Headless-browser (Playwright) runs against the live dev server + live
+  backend across every round, confirming the actual network calls fire and
+  return `200`: `GET /instruments`, `GET /movers`, `GET /quotes` (batch, all
+  30 canonical symbols), `GET /companies/SAFCOM`, `GET /research/SAFCOM`,
+  `GET /dividends/SAFCOM`, `GET /ownership/SAFCOM`, `GET /historical/SAFCOM`
+  (on switching the chart's "1Y" pill), and `GET /screener` (Screener page).
+- (Those Playwright runs temporarily bypassed the Supabase auth guard
+  in-memory to reach routes without a login flow; the real
+  `ProtectedRoute.tsx` was restored immediately after each one and is
+  unchanged in the final diff — confirmed via `git status`.)
 
 ## Environment variables (new)
 

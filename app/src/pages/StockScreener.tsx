@@ -10,7 +10,7 @@ import { ArrowLeft, Filter, TrendingUp, TrendingDown, ChevronRight, RotateCcw, S
 import { SparklineChart } from "@/components/shared/SparklineChart";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CANONICAL_SYMBOLS, STOCK_META, getPrice, getDayChange, DIV_YIELD, getStockFundamentals, parseMagnitude, tickerSeed } from "@/lib/stockPrices";
-import { useLiveQuotes } from "@/hooks/useLiveQuotes";
+import { useAfriScreener } from "@/hooks/useAfriScreener";
 
 interface ScreenerFilters {
   sector: string;
@@ -28,12 +28,10 @@ interface ScreenerFilters {
 
 const sectors = ["All Sectors", ...Array.from(new Set(Object.values(STOCK_META).map(m => m.sector))).sort()];
 
-// Volume, market cap, P/E and beta come from the same shared fundamentals table used by
-// StockDetail and Compare, so this screener can never show different stats for a stock than
-// its own detail page does. RSI isn't tracked elsewhere in the app, so it's derived here
-// deterministically per symbol (stable across reloads, but screener-only).
-// Price/change are overlaid with live AfriFinance Data Layer quotes inside the component
-// below (useLiveQuotes) wherever the Data Layer covers a symbol.
+// Volume, beta and RSI come from the shared static fundamentals table used by StockDetail
+// and Compare (the Data Layer doesn't compute RSI). Price, market cap, P/E, dividend yield
+// and AfriScore are overlaid live below via useAfriScreener wherever the Data Layer covers
+// a symbol.
 function buildStaticStocks() {
   return CANONICAL_SYMBOLS.map(symbol => {
     const { pct } = getDayChange(symbol);
@@ -50,6 +48,7 @@ function buildStaticStocks() {
       pe: meta.pe,
       beta: meta.beta,
       rsi: 30 + (tickerSeed(symbol) % 45),
+      afriScore: undefined as number | undefined,
     };
   });
 }
@@ -61,6 +60,7 @@ const presetFilters = [
   { name: "📊 High Volume", icon: LineChart, filters: { sector: "All Sectors", minChange: -100, maxChange: 100, sortBy: "volume", sortOrder: "desc" as const } },
   { name: "🏦 Banking", icon: Filter, filters: { sector: "Banking", minChange: -100, maxChange: 100, sortBy: "marketCap", sortOrder: "desc" as const } },
   { name: "⚡ Oversold (RSI<40)", icon: Sparkles, filters: { sector: "All Sectors", minChange: -100, maxChange: 100, sortBy: "rsi", sortOrder: "asc" as const } },
+  { name: "🎯 Top AfriScore", icon: Sparkles, filters: { sector: "All Sectors", minChange: -100, maxChange: 100, sortBy: "afriScore", sortOrder: "desc" as const } },
 ];
 
 export default function StockScreenerPage() {
@@ -102,18 +102,28 @@ export default function StockScreenerPage() {
     setSearchQuery("");
   };
 
-  // Live AfriFinance Data Layer quotes overlaid onto the static fundamentals
-  // table — same pattern as AllStocksList/Markets. Sliders/RSI/volume-bucket
-  // filtering below stay client-side for now (the Data Layer's /screener
-  // endpoint doesn't carry RSI yet), but price/day-change reflect real quotes.
-  const { quotes } = useLiveQuotes(CANONICAL_SYMBOLS);
+  // Real marketCap/PE/dividendYield/AfriScore from the Data Layer's
+  // /screener endpoint (one batched call), plus live price/change from the
+  // same shared quote hook every other page uses. Volume, beta, and RSI
+  // stay on the static table below — the Data Layer doesn't compute those
+  // yet — so sliders for them keep working, just against static ranges.
+  const { bySymbol: liveScreener } = useAfriScreener(CANONICAL_SYMBOLS);
   const allStocks = useMemo(() => {
     const base = buildStaticStocks();
     return base.map(s => {
-      const q = quotes[s.symbol];
-      return q ? { ...s, price: q.lastPrice, change: +q.changePercent.toFixed(2) } : s;
+      const live = liveScreener[s.symbol];
+      if (!live) return s;
+      return {
+        ...s,
+        price: live.price ?? s.price,
+        change: live.changePercent != null ? +live.changePercent.toFixed(2) : s.change,
+        marketCap: live.marketCap,
+        pe: live.pe,
+        dividendYield: live.dividendYield,
+        afriScore: live.afriScore,
+      };
     });
-  }, [quotes]);
+  }, [liveScreener]);
 
   const filteredStocks = allStocks
     .filter(stock => {
@@ -134,6 +144,7 @@ export default function StockScreenerPage() {
         case 'pe': aVal = a.pe; bVal = b.pe; break;
         case 'dividendYield': aVal = a.dividendYield; bVal = b.dividendYield; break;
         case 'rsi': aVal = a.rsi; bVal = b.rsi; break;
+        case 'afriScore': aVal = a.afriScore ?? 0; bVal = b.afriScore ?? 0; break;
         default: aVal = parseMagnitude(a.marketCap); bVal = parseMagnitude(b.marketCap);
       }
       return filters.sortOrder === 'desc' ? bVal - aVal : aVal - bVal;
@@ -246,6 +257,7 @@ export default function StockScreenerPage() {
                     <SelectItem value="pe" className="text-xs">P/E Ratio</SelectItem>
                     <SelectItem value="dividendYield" className="text-xs">Dividend Yield</SelectItem>
                     <SelectItem value="rsi" className="text-xs">RSI</SelectItem>
+                    <SelectItem value="afriScore" className="text-xs">AfriScore</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

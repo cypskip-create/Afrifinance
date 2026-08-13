@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { SparklineChart } from "@/components/shared/SparklineChart";
 import { getFeaturedListBySlug } from "@/data/featuredLists";
 import { getStockName, getStockSector, getPrice, getDayChange } from "@/lib/stockPrices";
+import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 
 const ICONS: Record<string, typeof Star> = {
   "blue-chip-nse": Star,
@@ -20,19 +21,21 @@ export default function FeaturedListDetail() {
   const list = getFeaturedListBySlug(slug || "");
   const Icon = list ? (ICONS[list.slug] || Star) : Star;
 
+  const { quotes } = useLiveQuotes(list?.symbols ?? []);
   const stocks = useMemo(() => {
     if (!list) return [];
     return list.symbols.map(symbol => {
+      const q = quotes[symbol];
       const { pct } = getDayChange(symbol);
       return {
         symbol,
         name: getStockName(symbol),
         sector: getStockSector(symbol),
-        price: getPrice(symbol),
-        change: pct,
+        price: q?.lastPrice ?? getPrice(symbol),
+        change: q?.changePercent ?? pct,
       };
     });
-  }, [list]);
+  }, [list, quotes]);
 
   const avgChange = stocks.length > 0 ? stocks.reduce((sum, s) => sum + s.change, 0) / stocks.length : 0;
   const isUp = avgChange >= 0;

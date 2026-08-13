@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 
 import { getPrice as getSharedPrice, computePortfolioStats } from "@/lib/stockPrices";
+import { useLivePortfolioQuotes } from "@/hooks/useLiveQuotes";
 import { HoldingsList } from "@/components/portfolio/HoldingsList";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
 import { ColorTooltip } from "@/components/charts/ChartTooltip";
@@ -38,13 +39,17 @@ export default function TrackInvestments() {
   const [allocationMode, setAllocationMode] = useState<"asset" | "sector">("sector");
   const [selectedSlice, setSelectedSlice] = useState<string | null>(null);
 
-  const getPrice = (symbol: string) => getSharedPrice(symbol);
+  // Live AfriFinance Data Layer quotes — the SAME quotes HoldingsList (rendered further
+  // down) uses internally, so this page's total balance / allocation chart can't disagree
+  // with what the individual holding rows show.
+  const { liveQuotes } = useLivePortfolioQuotes(portfolio.map(h => h.symbol));
+  const getLivePrice = (symbol: string) => liveQuotes[symbol.toUpperCase()]?.price ?? getSharedPrice(symbol);
 
-  const stats = useMemo(() => computePortfolioStats(portfolio), [portfolio]);
+  const stats = useMemo(() => computePortfolioStats(portfolio, liveQuotes), [portfolio, liveQuotes]);
 
   const holdings = useMemo(() => {
     const items = portfolio.map(h => {
-      const price = getPrice(h.symbol);
+      const price = liveQuotes[h.symbol.toUpperCase()]?.price ?? getSharedPrice(h.symbol);
       const value = price * h.shares;
       const cost = h.avg_cost * h.shares;
       const gain = value - cost;
@@ -58,7 +63,7 @@ export default function TrackInvestments() {
       return sortAsc ? a.symbol.localeCompare(b.symbol) : b.symbol.localeCompare(a.symbol);
     });
     return items;
-  }, [portfolio, sortBy, sortAsc, stats.totalValue]);
+  }, [portfolio, sortBy, sortAsc, stats.totalValue, liveQuotes]);
 
   const sectorAlloc = useMemo(() => {
     const map: Record<string, number> = {};
@@ -218,7 +223,7 @@ export default function TrackInvestments() {
           gainPct={stats.gainPct}
         />
 
-        <PortfolioInsights holdings={portfolio} prices={Object.fromEntries(portfolio.map(h => [h.symbol, getPrice(h.symbol)]))} />
+        <PortfolioInsights holdings={portfolio} prices={Object.fromEntries(portfolio.map(h => [h.symbol, getLivePrice(h.symbol)]))} />
 
         {portfolioUpdates.length > 0 && (
           <section>

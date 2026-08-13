@@ -72,3 +72,20 @@ export function useLiveQuote(symbol: string | undefined) {
   const quote = symbol ? quotes[symbol.toUpperCase()] : undefined;
   return { quote, isLoading, isError, error, isConnected, refetch };
 }
+
+/** Shapes a set of holdings' live quotes for computePortfolioStats
+ *  (lib/stockPrices.ts) — {symbol -> {price, dayChangeAbs}}, keyed the same
+ *  way that function looks them up. Used by every page that shows
+ *  portfolio-level totals (Home, Discover, Track Investments) so they all
+ *  price a holding identically. */
+export function useLivePortfolioQuotes(symbols: string[]) {
+  const { quotes, isConnected } = useLiveQuotes(symbols);
+  const liveQuotes = useMemo(() => {
+    const map: Record<string, { price: number; dayChangeAbs: number }> = {};
+    Object.values(quotes).forEach((q) => {
+      map[q.symbol.toUpperCase()] = { price: q.lastPrice, dayChangeAbs: q.change };
+    });
+    return map;
+  }, [quotes]);
+  return { liveQuotes, isConnected };
+}

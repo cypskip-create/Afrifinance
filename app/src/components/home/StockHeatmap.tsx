@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { CANONICAL_SYMBOLS, STOCK_META, getDayChange, getStockFundamentals, parseMagnitude } from "@/lib/stockPrices";
+import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 
 interface HeatmapStock {
   symbol: string;
@@ -17,25 +18,36 @@ interface StockHeatmapProps {
 // Derived from the shared price/fundamentals source (same one Markets, the Screener, and
 // Compare use) so the heatmap can't show a change% or list a ticker that disagrees with the
 // rest of the app. Limited to the dozen largest-cap names so the treemap stays legible.
-const defaultStocks: HeatmapStock[] = CANONICAL_SYMBOLS
-  .map(symbol => {
-    const { pct } = getDayChange(symbol);
-    const f = getStockFundamentals(symbol);
-    return {
-      symbol,
-      name: STOCK_META[symbol].name,
-      change: +pct.toFixed(1),
-      marketCap: parseMagnitude(f.marketCap) / 1e9, // billions, for relative sizing only
-      sector: STOCK_META[symbol].sector,
-    };
-  })
-  .sort((a, b) => b.marketCap - a.marketCap)
-  .slice(0, 12);
+// Change% is overlaid with live AfriFinance Data Layer quotes inside the component below
+// (useLiveQuotes) when no explicit `stocks` prop is supplied.
+function buildDefaultStocks(): HeatmapStock[] {
+  return CANONICAL_SYMBOLS
+    .map(symbol => {
+      const { pct } = getDayChange(symbol);
+      const f = getStockFundamentals(symbol);
+      return {
+        symbol,
+        name: STOCK_META[symbol].name,
+        change: +pct.toFixed(1),
+        marketCap: parseMagnitude(f.marketCap) / 1e9, // billions, for relative sizing only
+        sector: STOCK_META[symbol].sector,
+      };
+    })
+    .sort((a, b) => b.marketCap - a.marketCap)
+    .slice(0, 12);
+}
 
 export function StockHeatmap({ stocks }: StockHeatmapProps) {
   const navigate = useNavigate();
 
-  const stockData = stocks || defaultStocks;
+  const staticDefaults = buildDefaultStocks();
+  const { quotes } = useLiveQuotes(stocks ? [] : staticDefaults.map(s => s.symbol));
+  const liveDefaults = staticDefaults.map(s => {
+    const q = quotes[s.symbol];
+    return q ? { ...s, change: +q.changePercent.toFixed(1) } : s;
+  });
+
+  const stockData = stocks || liveDefaults;
   
   // Calculate total market cap for sizing
   const totalMarketCap = stockData.reduce((sum, s) => sum + s.marketCap, 0);

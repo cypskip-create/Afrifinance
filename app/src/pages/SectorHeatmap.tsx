@@ -4,24 +4,29 @@ import { ArrowLeft, TrendingUp, TrendingDown, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StockHeatmap } from "@/components/home/StockHeatmap";
 import { CANONICAL_SYMBOLS, STOCK_META, getDayChange, getStockFundamentals, parseMagnitude } from "@/lib/stockPrices";
+import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 
 // Derived from the shared price/fundamentals source — same list AllStocks, the Screener,
 // and Compare use — so this heatmap can't show a stock (or a change%) that disagrees with
 // the rest of the app, and can't include a ticker (like the old placeholder "NMG") that
-// isn't actually part of the app's real NSE universe.
-const ALL_STOCKS = CANONICAL_SYMBOLS.map(symbol => {
-  const { pct } = getDayChange(symbol);
-  const f = getStockFundamentals(symbol);
-  return {
-    symbol,
-    name: STOCK_META[symbol].name,
-    change: +pct.toFixed(1),
-    marketCap: parseMagnitude(f.marketCap) / 1e9, // billions, for relative sizing only
-    sector: STOCK_META[symbol].sector,
-  };
-});
+// isn't actually part of the app's real NSE universe. Change% is overlaid with live
+// AfriFinance Data Layer quotes inside the component below wherever the Data Layer covers
+// a symbol; market cap (used only for relative bubble sizing) stays on the static table.
+function buildStaticStocks() {
+  return CANONICAL_SYMBOLS.map(symbol => {
+    const { pct } = getDayChange(symbol);
+    const f = getStockFundamentals(symbol);
+    return {
+      symbol,
+      name: STOCK_META[symbol].name,
+      change: +pct.toFixed(1),
+      marketCap: parseMagnitude(f.marketCap) / 1e9, // billions, for relative sizing only
+      sector: STOCK_META[symbol].sector,
+    };
+  });
+}
 
-const SECTORS = ["All", ...Array.from(new Set(ALL_STOCKS.map(s => s.sector))).sort()];
+const SECTORS = ["All", ...Array.from(new Set(CANONICAL_SYMBOLS.map(s => STOCK_META[s].sector))).sort()];
 const RANGES = ["1D", "1W", "1M", "YTD"] as const;
 
 export default function SectorHeatmap() {
@@ -29,9 +34,18 @@ export default function SectorHeatmap() {
   const [sector, setSector] = useState<string>("All");
   const [range, setRange] = useState<typeof RANGES[number]>("1D");
 
+  const { quotes } = useLiveQuotes(CANONICAL_SYMBOLS);
+  const ALL_STOCKS = useMemo(() => {
+    const base = buildStaticStocks();
+    return base.map(s => {
+      const q = quotes[s.symbol];
+      return q ? { ...s, change: +q.changePercent.toFixed(1) } : s;
+    });
+  }, [quotes]);
+
   const filtered = useMemo(
     () => sector === "All" ? ALL_STOCKS : ALL_STOCKS.filter(s => s.sector === sector),
-    [sector]
+    [sector, ALL_STOCKS]
   );
 
   const sectorRollup = useMemo(() => {
@@ -43,7 +57,7 @@ export default function SectorHeatmap() {
     return Array.from(map.entries())
       .map(([name, v]) => ({ name, change: v.cap > 0 ? v.sum / v.cap : 0, count: v.count }))
       .sort((a, b) => b.change - a.change);
-  }, []);
+  }, [ALL_STOCKS]);
 
   return (
     <div className="page-canvas min-h-screen bg-background pb-24">

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { TrendingUp, Sparkles, Calendar, Coins, ArrowUpRight, ChevronRight } from "lucide-react";
 import { AIThesisCard } from "@/components/stock/AIThesisCard";
 import { getPrice, getDivYield, getStockName } from "@/lib/stockPrices";
+import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { getFundamentals } from "@/data/stockFundamentals";
 
 // A canonical pool of tradable symbols (matches StockDetail's own dataset)
@@ -20,13 +21,19 @@ const upcomingEarnings = [
 export function CommandCenterSections() {
   const navigate = useNavigate();
 
+  // "Undervalued" upside is computed against a synthetic analyst target
+  // price (the Data Layer has no analyst-target data source yet — see
+  // docs/architecture/FRONTEND_INTEGRATION.md), but the CURRENT price used
+  // in that comparison, and shown on the row, is live where available.
+  const { quotes } = useLiveQuotes(STOCK_POOL);
+
   // Derive every displayed number — and which stocks even qualify — from the
   // shared price/fundamentals data, then rank and take the top few. Nothing
   // here is hand-picked, so a section simply won't show a stock that the
   // underlying data doesn't actually support (e.g. no fake "upside" on a
   // stock trading above its analyst target).
   const undervalued = STOCK_POOL.map((symbol) => {
-    const price = getPrice(symbol);
+    const price = quotes[symbol]?.lastPrice ?? getPrice(symbol);
     const targetAvg = getFundamentals(symbol, price).analystTargets.avg;
     const upside = price > 0 ? ((targetAvg - price) / price) * 100 : 0;
     return { symbol, name: getStockName(symbol), price, upside };

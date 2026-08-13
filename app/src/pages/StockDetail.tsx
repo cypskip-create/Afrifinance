@@ -152,8 +152,10 @@ export default function StockDetail() {
     "1D": "Today", "1W": "Past week", "1M": "Past month", "3M": "Past 3 months",
     "YTD": "Year to date", "1Y": "Past year", "ALL": "All time",
   };
+  // dividendYield from the Data Layer's ratios engine is a raw fraction
+  // (e.g. 0.0493), not a percentage — see backend/src/services/research/ratiosEngine.ts.
   const divYield = liveResearch?.ratios.dividendYield != null
-    ? liveResearch.ratios.dividendYield.toFixed(1)
+    ? (liveResearch.ratios.dividendYield * 100).toFixed(1)
     : stock.pe !== "N/A" ? ((parseFloat(stock.dividend) / stock.price) * 100).toFixed(1) : "0.0";
 
   // Gain/loss for the whole selected timeframe — first vs. last point of that period's
@@ -216,7 +218,10 @@ export default function StockDetail() {
   const liveFundamentals = {
     ...fundamentals,
     dividendHistory: liveDividendHistory.length > 0 ? liveDividendHistory : fundamentals.dividendHistory,
-    payoutRatio: liveResearch?.ratios.payoutRatio ?? fundamentals.payoutRatio,
+    // ratios.payoutRatio from the Data Layer is a raw fraction (e.g. 0.42),
+    // but Fundamentals.payoutRatio is a whole-number percent — same unit
+    // mismatch as dividendYield above.
+    payoutRatio: liveResearch?.ratios.payoutRatio != null ? liveResearch.ratios.payoutRatio * 100 : fundamentals.payoutRatio,
     ownership: liveOwnership.length > 0 ? liveOwnership : fundamentals.ownership,
     topShareholders: liveTopShareholders.length > 0 ? liveTopShareholders : fundamentals.topShareholders,
   };

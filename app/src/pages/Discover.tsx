@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Users, Trophy, MessageCircle, BookOpen, TrendingUp, Hash, Play, PieChart, Coffee, Heart, Repeat2, UserPlus, Flame, ChevronRight, Share2, Bookmark, MoreHorizontal } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import { SparklineChart } from "@/components/shared/SparklineChart";
 import { StockHeatmap } from "@/components/home/StockHeatmap";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { STOCK_META, getPrice, getDayChange, computePortfolioStats } from "@/lib/stockPrices";
+import { useLivePortfolioQuotes, useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { shareLink } from "@/lib/share";
 
 interface TopTrader {
@@ -26,17 +27,7 @@ interface TopTrader {
   posts_count: number;
 }
 
-// Trending = today's biggest movers, computed from the shared price source — never a
-// separate hand-typed list that can disagree with what every other page shows.
-const trendingStocks = Object.keys(STOCK_META)
-  .filter(symbol => symbol !== "SCOM")
-  .map(symbol => {
-    const { pct } = getDayChange(symbol);
-    return { symbol, price: getPrice(symbol), pct, isUp: pct >= 0 };
-  })
-  .sort((a, b) => Math.abs(b.pct) - Math.abs(a.pct))
-  .slice(0, 10)
-  .map(s => ({ symbol: s.symbol, price: s.price, change: `${s.isUp ? '+' : ''}${s.pct.toFixed(2)}%`, isUp: s.isUp }));
+const TRENDING_SYMBOLS = Object.keys(STOCK_META).filter(symbol => symbol !== "SCOM");
 
 export default function Discover() {
   const navigate = useNavigate();
@@ -49,9 +40,31 @@ export default function Discover() {
   const tickerRef = useRef<HTMLDivElement>(null);
 
   const { portfolio, loading: portfolioLoading } = usePortfolio();
-  const portfolioStats = computePortfolioStats(portfolio);
-  const portfolioWithLive = portfolio.map(h => ({ ...h, gainPct: (() => { const price = getPrice(h.symbol, h.avg_cost); return h.avg_cost > 0 ? ((price - h.avg_cost) / h.avg_cost) * 100 : 0; })() }));
+  const { liveQuotes } = useLivePortfolioQuotes(portfolio.map(h => h.symbol));
+  const portfolioStats = computePortfolioStats(portfolio, liveQuotes);
+  const portfolioWithLive = portfolio.map(h => {
+    const live = liveQuotes[h.symbol.toUpperCase()];
+    const price = live?.price ?? getPrice(h.symbol, h.avg_cost);
+    return { ...h, gainPct: h.avg_cost > 0 ? ((price - h.avg_cost) / h.avg_cost) * 100 : 0 };
+  });
   const topGainerHolding = portfolioWithLive.length > 0 ? [...portfolioWithLive].sort((a, b) => b.gainPct - a.gainPct)[0] : null;
+
+  // Trending = today's biggest movers, computed from the shared price source (and, when
+  // available, live AfriFinance Data Layer quotes) — never a separate hand-typed list that
+  // can disagree with what every other page shows.
+  const { quotes: trendingQuotes } = useLiveQuotes(TRENDING_SYMBOLS);
+  const trendingStocks = useMemo(() => {
+    return TRENDING_SYMBOLS
+      .map(symbol => {
+        const q = trendingQuotes[symbol];
+        const { pct } = getDayChange(symbol);
+        const changePct = q?.changePercent ?? pct;
+        return { symbol, price: q?.lastPrice ?? getPrice(symbol), pct: changePct, isUp: changePct >= 0 };
+      })
+      .sort((a, b) => Math.abs(b.pct) - Math.abs(a.pct))
+      .slice(0, 10)
+      .map(s => ({ symbol: s.symbol, price: s.price, change: `${s.isUp ? '+' : ''}${s.pct.toFixed(2)}%`, isUp: s.isUp }));
+  }, [trendingQuotes]);
 
   const courses = [
     { title: "Stock Market Basics", progress: 0, lessons: 12, duration: "2 hours", level: "Beginner", type: "video" },
