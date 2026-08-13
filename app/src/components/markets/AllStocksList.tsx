@@ -6,6 +6,7 @@ import { Search, TrendingUp, TrendingDown, Filter, ChevronDown, Star } from "luc
 import { useNavigate } from "react-router-dom";
 import { SparklineChart } from "@/components/shared/SparklineChart";
 import { CANONICAL_SYMBOLS, STOCK_META, getPrice, getDayChange } from "@/lib/stockPrices";
+import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -15,23 +16,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-// Derived from the shared price source (canonical symbols only, so a company with two
-// ticker aliases — e.g. Diamond Trust Bank, Stanbic — never appears twice) — this list can
-// never disagree with what Home, Portfolio, Watchlist or a stock's own detail page show.
-const allStocks = CANONICAL_SYMBOLS
-  .map(symbol => {
-    const { abs, pct } = getDayChange(symbol);
-    return {
-      symbol,
-      name: STOCK_META[symbol].name,
-      sector: STOCK_META[symbol].sector,
-      price: getPrice(symbol),
-      change: pct,
-      isUp: abs >= 0,
-    };
-  });
-
-const sectors = ["All Sectors", ...Array.from(new Set(allStocks.map(s => s.sector))).sort()];
+// Canonical symbols only, so a company with two ticker aliases — e.g.
+// Diamond Trust Bank, Stanbic — never appears twice.
+const sectors = ["All Sectors", ...Array.from(new Set(CANONICAL_SYMBOLS.map(s => STOCK_META[s].sector))).sort()];
 
 interface AllStocksListProps {
   /** Pre-applied sector filter, e.g. from tapping a sector card elsewhere on Markets. */
@@ -50,9 +37,32 @@ export function AllStocksList({ initialSector, onlySymbols }: AllStocksListProps
 
   useEffect(() => { if (initialSector) setSelectedSector(initialSector); }, [initialSector]);
 
+  // Live AfriFinance Data Layer quotes overlaid on top of the static
+  // reference list below — symbols the Data Layer's current NSE universe
+  // doesn't have yet (see docs/api/API.md / instruments endpoint) simply
+  // keep showing the static reference price instead of breaking.
+  const { quotes } = useLiveQuotes(CANONICAL_SYMBOLS);
+
+  const allStocks = useMemo(
+    () => CANONICAL_SYMBOLS.map(symbol => {
+      const quote = quotes[symbol];
+      const { abs, pct } = getDayChange(symbol);
+      return {
+        symbol,
+        name: STOCK_META[symbol].name,
+        sector: STOCK_META[symbol].sector,
+        price: quote?.lastPrice ?? getPrice(symbol),
+        change: quote?.changePercent ?? pct,
+        isUp: (quote?.change ?? abs) >= 0,
+        isLive: !!quote,
+      };
+    }),
+    [quotes]
+  );
+
   const baseStocks = useMemo(
     () => onlySymbols ? allStocks.filter(s => onlySymbols.includes(s.symbol)) : allStocks,
-    [onlySymbols]
+    [onlySymbols, allStocks]
   );
 
   const filteredStocks = useMemo(() => {

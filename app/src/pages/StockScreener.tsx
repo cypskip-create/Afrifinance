@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { ArrowLeft, Filter, TrendingUp, TrendingDown, ChevronRight, RotateCcw, S
 import { SparklineChart } from "@/components/shared/SparklineChart";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CANONICAL_SYMBOLS, STOCK_META, getPrice, getDayChange, DIV_YIELD, getStockFundamentals, parseMagnitude, tickerSeed } from "@/lib/stockPrices";
+import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 
 interface ScreenerFilters {
   sector: string;
@@ -31,23 +32,27 @@ const sectors = ["All Sectors", ...Array.from(new Set(Object.values(STOCK_META).
 // StockDetail and Compare, so this screener can never show different stats for a stock than
 // its own detail page does. RSI isn't tracked elsewhere in the app, so it's derived here
 // deterministically per symbol (stable across reloads, but screener-only).
-const allStocks = CANONICAL_SYMBOLS.map(symbol => {
-  const { pct } = getDayChange(symbol);
-  const meta = getStockFundamentals(symbol);
-  return {
-    symbol,
-    name: STOCK_META[symbol].name,
-    sector: STOCK_META[symbol].sector,
-    price: getPrice(symbol),
-    change: +pct.toFixed(2),
-    dividendYield: DIV_YIELD[symbol] ?? 0,
-    volume: meta.volume,
-    marketCap: meta.marketCap,
-    pe: meta.pe,
-    beta: meta.beta,
-    rsi: 30 + (tickerSeed(symbol) % 45),
-  };
-});
+// Price/change are overlaid with live AfriFinance Data Layer quotes inside the component
+// below (useLiveQuotes) wherever the Data Layer covers a symbol.
+function buildStaticStocks() {
+  return CANONICAL_SYMBOLS.map(symbol => {
+    const { pct } = getDayChange(symbol);
+    const meta = getStockFundamentals(symbol);
+    return {
+      symbol,
+      name: STOCK_META[symbol].name,
+      sector: STOCK_META[symbol].sector,
+      price: getPrice(symbol),
+      change: +pct.toFixed(2),
+      dividendYield: DIV_YIELD[symbol] ?? 0,
+      volume: meta.volume,
+      marketCap: meta.marketCap,
+      pe: meta.pe,
+      beta: meta.beta,
+      rsi: 30 + (tickerSeed(symbol) % 45),
+    };
+  });
+}
 
 const presetFilters = [
   { name: "🔥 Top Gainers", icon: TrendingUp, filters: { sector: "All Sectors", minChange: 1, maxChange: 100, sortBy: "change", sortOrder: "desc" as const } },
@@ -96,6 +101,19 @@ export default function StockScreenerPage() {
     });
     setSearchQuery("");
   };
+
+  // Live AfriFinance Data Layer quotes overlaid onto the static fundamentals
+  // table — same pattern as AllStocksList/Markets. Sliders/RSI/volume-bucket
+  // filtering below stay client-side for now (the Data Layer's /screener
+  // endpoint doesn't carry RSI yet), but price/day-change reflect real quotes.
+  const { quotes } = useLiveQuotes(CANONICAL_SYMBOLS);
+  const allStocks = useMemo(() => {
+    const base = buildStaticStocks();
+    return base.map(s => {
+      const q = quotes[s.symbol];
+      return q ? { ...s, price: q.lastPrice, change: +q.changePercent.toFixed(2) } : s;
+    });
+  }, [quotes]);
 
   const filteredStocks = allStocks
     .filter(stock => {

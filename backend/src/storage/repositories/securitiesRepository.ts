@@ -79,4 +79,25 @@ export const securitiesRepository = {
     const res = await query<any>(`SELECT id, name FROM market.sectors ORDER BY name`);
     return res.rows;
   },
+
+  /** Full tradable-instrument universe for an exchange, with company name +
+   *  sector attached — this is what lets a frontend build its symbol list
+   *  (watchlist pickers, screener sector filter, "all stocks" pages) from
+   *  the Data Layer instead of a hand-maintained, easily-stale local array. */
+  async listInstruments(exchange: string): Promise<{
+    symbol: string; securityId: string; companyName: string; sector: string | null;
+    currency: string; status: string; isin: string | null;
+  }[]> {
+    const res = await query<any>(
+      `SELECT s.symbol, s.id as "securityId", c.name as "companyName", sec.name as sector,
+              s.currency, s.status, s.isin
+       FROM market.securities s
+       JOIN market.companies c ON c.id = s.company_id
+       LEFT JOIN market.sectors sec ON sec.id = c.sector_id
+       WHERE s.exchange = $1
+       ORDER BY s.symbol`,
+      [exchange]
+    );
+    return res.rows;
+  },
 };

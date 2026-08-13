@@ -7,26 +7,9 @@ import { useNavigate } from "react-router-dom";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useToast } from "@/hooks/use-toast";
 import { getPrice, getDayChange } from "@/lib/stockPrices";
+import { useLiveQuotes } from "@/hooks/useLiveQuotes";
+import { useInstruments } from "@/hooks/useInstruments";
 import { SparklineChart } from "@/components/shared/SparklineChart";
-
-// Master list used for the "Add to watchlist" search — mirrors the app's full ticker list.
-const ALL_LISTED_STOCKS = [
-  { symbol: "SAFCOM", name: "Safaricom PLC" },
-  { symbol: "EQTY", name: "Equity Group Holdings" },
-  { symbol: "KCB", name: "KCB Group" },
-  { symbol: "SCBK", name: "Standard Chartered Bank Kenya" },
-  { symbol: "COOP", name: "Co-operative Bank of Kenya" },
-  { symbol: "EABL", name: "East African Breweries" },
-  { symbol: "ABSA", name: "ABSA Bank Kenya" },
-  { symbol: "NCBA", name: "NCBA Group" },
-  { symbol: "BAMB", name: "Bamburi Cement" },
-  { symbol: "BRIT", name: "Britam Holdings" },
-  { symbol: "KPLC", name: "Kenya Power" },
-  { symbol: "BAT", name: "BAT Kenya" },
-  { symbol: "JUB", name: "Jubilee Holdings" },
-  { symbol: "DTK", name: "Diamond Trust Bank" },
-  { symbol: "SBIC", name: "Stanbic Holdings" },
-];
 
 export default function Watchlist() {
   const navigate = useNavigate();
@@ -35,22 +18,31 @@ export default function Watchlist() {
   const [addOpen, setAddOpen] = useState(false);
   const [query, setQuery] = useState("");
 
+  const watchlistSymbols = useMemo(() => watchlist.map((item) => item.symbol), [watchlist]);
+  const { quotes } = useLiveQuotes(watchlistSymbols);
+  const { instruments } = useInstruments();
+
   const rows = useMemo(() => {
     return watchlist.map(item => {
-      const price = getPrice(item.symbol);
-      const { abs, pct } = getDayChange(item.symbol);
-      return { ...item, price, change: abs, changePercent: pct, isUp: abs >= 0 };
+      const quote = quotes[item.symbol.toUpperCase()];
+      // Live AfriFinance Data Layer quote when this symbol is in its
+      // current universe; otherwise fall back to the static reference
+      // price so a stock not covered yet still renders sensibly.
+      const price = quote?.lastPrice ?? getPrice(item.symbol);
+      const abs = quote?.change ?? getDayChange(item.symbol).abs;
+      const pct = quote?.changePercent ?? getDayChange(item.symbol).pct;
+      return { ...item, price, change: abs, changePercent: pct, isUp: abs >= 0, isLive: !!quote };
     });
-  }, [watchlist]);
+  }, [watchlist, quotes]);
 
   const gainers = rows.filter(r => r.isUp).length;
   const losers = rows.length - gainers;
 
   const searchResults = useMemo(() => {
-    if (!query.trim()) return ALL_LISTED_STOCKS;
+    if (!query.trim()) return instruments;
     const q = query.trim().toLowerCase();
-    return ALL_LISTED_STOCKS.filter(s => s.symbol.toLowerCase().includes(q) || s.name.toLowerCase().includes(q));
-  }, [query]);
+    return instruments.filter(s => s.symbol.toLowerCase().includes(q) || s.name.toLowerCase().includes(q));
+  }, [query, instruments]);
 
   const handleAdd = async (symbol: string, name: string) => {
     const result = await addToWatchlist(symbol, name);

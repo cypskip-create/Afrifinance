@@ -108,4 +108,5 @@ export const CacheKeys = {
   ratios: (symbol: string) => `ratios:${symbol}`,
   afriScore: (symbol: string) => `afriscore:${symbol}`,
   sectors: () => "sectors:all",
+  instruments: (exchange: string) => `instruments:${exchange}`,
 };

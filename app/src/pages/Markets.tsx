@@ -10,6 +10,8 @@ import { MarketStatusIndicator } from "@/components/shared/MarketStatusIndicator
 import { AllStocksList } from "@/components/markets/AllStocksList";
 import { StockHeatmap } from "@/components/home/StockHeatmap";
 import { CANONICAL_SYMBOLS, STOCK_META, getPrice, getDayChange, relativeDate } from "@/lib/stockPrices";
+import { useMovers } from "@/hooks/useMovers";
+import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { EconomicCalendar } from "@/components/home/EconomicCalendar";
 import { investmentThemes } from "@/data/investmentThemes";
 import { featuredLists } from "@/data/featuredLists";
@@ -37,19 +39,20 @@ const commodities = [
   { name: "Avocado (export)", value: "KES 95/kg", change: 0.9, isUp: true },
 ];
 
-// topGainers/topLosers/sectors are all computed dynamically from the shared, deduplicated
-// stock universe below — no separate hardcoded arrays that can drift out of sync with real
-// prices, or list a stock under the wrong sector.
+// Static fallback (used only while live data is loading, or if the
+// AfriFinance Data API is unreachable) — Overview normally renders live
+// topGainers/topLosers/sectors computed inside the component below from
+// useMovers()/useLiveQuotes(), which come straight from the Data Layer.
 const nseUniverse = CANONICAL_SYMBOLS.map(symbol => {
   const { pct } = getDayChange(symbol);
   return { symbol, name: STOCK_META[symbol].name, sector: STOCK_META[symbol].sector, price: getPrice(symbol), change: pct };
 });
-const topGainers = [...nseUniverse].sort((a, b) => b.change - a.change).slice(0, 5);
-const topLosers = [...nseUniverse].sort((a, b) => a.change - b.change).slice(0, 5);
+const staticTopGainers = [...nseUniverse].sort((a, b) => b.change - a.change).slice(0, 5);
+const staticTopLosers = [...nseUniverse].sort((a, b) => a.change - b.change).slice(0, 5);
 
-const sectors = (() => {
+function computeSectors(universe: typeof nseUniverse) {
   const map = new Map<string, { sum: number; count: number; topSymbol: string; topChange: number }>();
-  nseUniverse.forEach(s => {
+  universe.forEach(s => {
     const cur = map.get(s.sector) || { sum: 0, count: 0, topSymbol: s.symbol, topChange: -Infinity };
     map.set(s.sector, {
       sum: cur.sum + s.change,
@@ -61,7 +64,7 @@ const sectors = (() => {
   return Array.from(map.entries())
     .map(([name, v]) => ({ name, change: v.sum / v.count, isUp: v.sum >= 0, stocks: v.count, topStock: v.topSymbol }))
     .sort((a, b) => b.change - a.change);
-})();
+}
 
 // allNseStocks removed — the "All Stocks" tab now renders <AllStocksList/>, which derives
 // its data from the shared stockPrices.ts source instead of a separate hardcoded array.
@@ -169,6 +172,29 @@ export default function Markets() {
   const [nseFilter, setNseFilter] = useState<string>("All");
   const [listFilter, setListFilter] = useState<{ label: string; symbols: string[] } | null>(null);
   const [divSortBy, setDivSortBy] = useState<string>("yield");
+
+  // Live from the AfriFinance Data Layer (backend/src/services/marketData/moversService.ts) —
+  // falls back to the static, client-derived list above only while loading or if unreachable.
+  const { gainers: liveGainers, losers: liveLosers, isLoading: moversLoading } = useMovers(5);
+  const { quotes: liveQuotes } = useLiveQuotes(CANONICAL_SYMBOLS);
+
+  const topGainers = liveGainers.length > 0
+    ? liveGainers.map(q => ({ symbol: q.symbol, name: STOCK_META[q.symbol]?.name ?? q.symbol, sector: STOCK_META[q.symbol]?.sector ?? "Other", price: q.lastPrice, change: q.changePercent }))
+    : staticTopGainers;
+  const topLosers = liveLosers.length > 0
+    ? liveLosers.map(q => ({ symbol: q.symbol, name: STOCK_META[q.symbol]?.name ?? q.symbol, sector: STOCK_META[q.symbol]?.sector ?? "Other", price: q.lastPrice, change: q.changePercent }))
+    : staticTopLosers;
+
+  // Sector rollup, overlaying live quotes onto the static universe wherever the
+  // Data Layer has coverage for a symbol (see docs/api/API.md /instruments).
+  const liveUniverse = useMemo(
+    () => nseUniverse.map(s => {
+      const q = liveQuotes[s.symbol];
+      return q ? { ...s, price: q.lastPrice, change: q.changePercent } : s;
+    }),
+    [liveQuotes]
+  );
+  const sectors = useMemo(() => computeSectors(liveUniverse), [liveUniverse]);
 
   const sortedDividendStocks = [...highDividendStocks].sort((a, b) => {
     if (divSortBy === "amount") return b.amount - a.amount;

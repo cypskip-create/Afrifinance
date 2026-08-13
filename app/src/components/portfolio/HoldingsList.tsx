@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronDown, Trash2 } from "lucide-react";
 import { getPrice, getDayChange, getDivYield } from "@/lib/stockPrices";
+import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { cn } from "@/lib/utils";
 
 export interface HoldingInput {
@@ -34,17 +35,26 @@ export function HoldingsList({ holdings, showValues = true, showGains = true, on
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState<string | null>(null);
 
+  // Live AfriFinance Data Layer quotes — the SAME quotes Watchlist, Markets
+  // and the Stock Page read, so a position's value here can never disagree
+  // with what those surfaces show for the same symbol (see docs/api/API.md
+  // §21 "single source of truth"). Falls back to the static reference
+  // price per-symbol if the Data Layer doesn't cover it yet.
+  const symbols = useMemo(() => holdings.map(h => h.symbol), [holdings]);
+  const { quotes } = useLiveQuotes(symbols);
+
   const rows = holdings.map((h) => {
-    const price = getPrice(h.symbol, h.avg_cost);
+    const quote = quotes[h.symbol.toUpperCase()];
+    const price = quote?.lastPrice ?? getPrice(h.symbol, h.avg_cost);
     const value = price * h.shares;
     const cost = h.avg_cost * h.shares;
     const gain = value - cost;
     const gainPct = cost > 0 ? (gain / cost) * 100 : 0;
-    const day = getDayChange(h.symbol);
+    const day = quote ? { abs: quote.change, pct: quote.changePercent } : getDayChange(h.symbol);
     const dayValue = day.abs * h.shares;
     const divYield = getDivYield(h.symbol);
     const income = (divYield / 100) * value;
-    return { ...h, price, value, cost, gain, gainPct, day, dayValue, divYield, income };
+    return { ...h, price, value, cost, gain, gainPct, day, dayValue, divYield, income, isLive: !!quote };
   });
 
   const total = rows.reduce((s, r) => s + r.value, 0);

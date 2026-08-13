@@ -21,6 +21,11 @@ interface StockPriceChartProps {
   // (i.e. the first point on screen), not relative to some fixed "today" price. This
   // lets the caller show gain/loss for whichever period the user is scrubbing through.
   onHoverPrice?: (price: number | null, date: string | null, changePercent?: number | null, isUp?: boolean | null) => void;
+  /** Real AfriFinance Data Layer candle data (app/src/hooks/useHistoricalCandles.tsx),
+   *  pre-shaped to match generateMockData's output. When omitted (or empty), the
+   *  chart falls back to its own generated series — this keeps the component
+   *  usable standalone while letting callers supply real data when they have it. */
+  data?: ReturnType<typeof generateMockData>;
 }
 
 export const generateMockData = (timeframe: string, symbol: string = "STK") => {
@@ -82,8 +87,9 @@ export const generateMockData = (timeframe: string, symbol: string = "STK") => {
   return dataPoints;
 };
 
-export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area", onHoverPrice }: StockPriceChartProps) => {
-  const data = useMemo(() => generateMockData(timeframe, symbol), [timeframe, symbol]);
+export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area", onHoverPrice, data: liveData }: StockPriceChartProps) => {
+  const mockData = useMemo(() => generateMockData(timeframe, symbol), [timeframe, symbol]);
+  const data = liveData && liveData.length > 1 ? liveData : mockData;
   const firstPrice = data[0]?.price || 0;
   const lastPrice = data[data.length - 1]?.price || 0;
   const isPositive = lastPrice >= firstPrice;

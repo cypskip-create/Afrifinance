@@ -28,6 +28,13 @@ import { PerformanceTab } from "@/components/stock/tabs/PerformanceTab";
 import { ScoresTab } from "@/components/stock/tabs/ScoresTab";
 import { getMediaItemsForSymbol, MediaItem } from "../data/mediaItems";
 import { formatTimestamp } from "@/lib/formatTimestamp";
+import { useLiveQuote } from "@/hooks/useLiveQuotes";
+import { useCompanyProfile } from "@/hooks/useCompanyProfile";
+import { useResearch } from "@/hooks/useResearch";
+import { useHistoricalCandles } from "@/hooks/useHistoricalCandles";
+import { useDividendHistory } from "@/hooks/useDividendHistory";
+import { useOwnership } from "@/hooks/useOwnership";
+import type { AfriFinanceScores } from "@/components/stock/AfriFinanceScore";
 
 
 // Price, change, sector, and key stats all come from the shared stockPrices.ts source
@@ -73,28 +80,49 @@ export default function StockDetail() {
   const upperSymbol = (symbol || "").toUpperCase();
   const stockMeta = STOCK_META[upperSymbol];
 
+  // Live AfriFinance Data Layer quote for this symbol, when it's in the
+  // Data Layer's current universe (see docs/api/API.md /instruments) —
+  // overlaid onto the static reference stats below so this page shows the
+  // same live price as Watchlist/Markets, and falls back gracefully
+  // (rather than erroring) for a symbol the backend doesn't cover yet.
+  const { quote: liveQuote } = useLiveQuote(upperSymbol || undefined);
+  const { profile: liveProfile } = useCompanyProfile(upperSymbol || undefined);
+  const { research: liveResearch } = useResearch(upperSymbol || undefined);
+
   const stock = stockMeta ? (() => {
-    const price = getPrice(upperSymbol);
-    const { abs: change, pct } = getDayChange(upperSymbol);
+    const price = liveQuote?.lastPrice ?? getPrice(upperSymbol);
+    const change = liveQuote?.change ?? getDayChange(upperSymbol).abs;
+    const pct = liveQuote?.changePercent ?? getDayChange(upperSymbol).pct;
     const f = getStockFundamentals(upperSymbol);
     const dividend = +(price * ((DIV_YIELD[upperSymbol] ?? 0) / 100)).toFixed(2);
     const eps = f.pe > 0 ? +(price / f.pe).toFixed(2) : 0;
     return {
       name: stockMeta.name, price, change, changePercent: pct.toFixed(2), isUp: change >= 0,
-      marketCap: f.marketCap, pe: f.pe.toFixed(1), eps: eps.toFixed(2), dividend: dividend.toFixed(2),
+      marketCap: liveQuote?.marketCap ? String(liveQuote.marketCap) : f.marketCap,
+      pe: f.pe.toFixed(1), eps: eps.toFixed(2), dividend: dividend.toFixed(2),
       high52: (price * 1.12).toFixed(2), low52: (price * 0.85).toFixed(2),
-      exchange: "NSE", sector: stockMeta.sector, volume: f.volume, beta: f.beta.toFixed(2), avgVolume: f.avgVolume,
+      exchange: "NSE", sector: stockMeta.sector,
+      volume: liveQuote?.volume ?? f.volume, beta: f.beta.toFixed(2), avgVolume: f.avgVolume,
+      isLive: !!liveQuote,
     };
   })() : {
     name: symbol || "Unknown Stock", price: 0, change: 0, changePercent: "0.00", isUp: true,
     marketCap: "N/A", pe: "N/A", eps: "N/A", dividend: "N/A", high52: "N/A", low52: "N/A",
-    exchange: "NSE", sector: "Unknown", volume: "N/A", beta: "N/A", avgVolume: "N/A"
+    exchange: "NSE", sector: "Unknown", volume: "N/A", beta: "N/A", avgVolume: "N/A", isLive: false
   };
 
-  const company = companyInfo[symbol as keyof typeof companyInfo] || {
-    description: `${stock.name} is listed on the Nairobi Securities Exchange in the ${stock.sector} sector.`,
-    headquarters: "Nairobi, Kenya", ceo: "N/A", employees: "N/A", founded: "N/A"
-  };
+  const company = liveProfile
+    ? {
+        description: liveProfile.company.description || `${stockMeta?.name ?? symbol} is listed on the Nairobi Securities Exchange.`,
+        headquarters: liveProfile.company.headquarters || "Nairobi, Kenya",
+        ceo: liveProfile.company.ceo || "N/A",
+        employees: liveProfile.company.employees || "N/A",
+        founded: liveProfile.company.founded || "N/A",
+      }
+    : companyInfo[symbol as keyof typeof companyInfo] || {
+        description: `${stock.name} is listed on the Nairobi Securities Exchange in the ${stock.sector} sector.`,
+        headquarters: "Nairobi, Kenya", ceo: "N/A", employees: "N/A", founded: "N/A"
+      };
 
   const handleWatchlistToggle = async () => {
     if (!symbol) return;
@@ -124,12 +152,19 @@ export default function StockDetail() {
     "1D": "Today", "1W": "Past week", "1M": "Past month", "3M": "Past 3 months",
     "YTD": "Year to date", "1Y": "Past year", "ALL": "All time",
   };
-  const divYield = stock.pe !== "N/A" ? ((parseFloat(stock.dividend) / stock.price) * 100).toFixed(1) : "0.0";
+  const divYield = liveResearch?.ratios.dividendYield != null
+    ? liveResearch.ratios.dividendYield.toFixed(1)
+    : stock.pe !== "N/A" ? ((parseFloat(stock.dividend) / stock.price) * 100).toFixed(1) : "0.0";
 
   // Gain/loss for the whole selected timeframe — first vs. last point of that period's
   // series. This is the same series the chart itself renders, so the header numbers and
   // the chart's red/green always agree, and both update when the timeframe pill changes.
-  const periodData = useMemo(() => generateMockData(selectedTimeframe, symbol || "STK"), [selectedTimeframe, symbol]);
+  // Real daily candles from the Data Layer when available (every timeframe except "1D" —
+  // see useHistoricalCandles for why); falls back to the existing generated series
+  // otherwise, so the chart never goes blank while data loads or for an uncovered symbol.
+  const { points: liveCandlePoints } = useHistoricalCandles(upperSymbol || undefined, selectedTimeframe);
+  const mockPeriodData = useMemo(() => generateMockData(selectedTimeframe, symbol || "STK"), [selectedTimeframe, symbol]);
+  const periodData = liveCandlePoints.length > 1 ? liveCandlePoints : mockPeriodData;
   const periodFirstPrice = periodData[0]?.price || stock.price;
   const periodLastPrice = periodData[periodData.length - 1]?.price || stock.price;
   const periodChangePercent = periodFirstPrice ? ((periodLastPrice - periodFirstPrice) / periodFirstPrice) * 100 : 0;
@@ -151,8 +186,40 @@ export default function StockDetail() {
     changePercent: stock.changePercent, beta: stock.beta,
     high52: stock.high52, low52: stock.low52, marketCap: stock.marketCap,
   };
-  const scores = computeScores(scoreInputs);
+  // Prefer the Data Layer's own AfriScore calculation
+  // (backend/src/services/research/afriScoreService.ts) when this symbol is
+  // covered; otherwise fall back to the client-side heuristic estimate so
+  // the card still renders something for symbols outside the current
+  // backend universe.
+  const scores: AfriFinanceScores = liveResearch
+    ? {
+        value: liveResearch.score.afriValue,
+        growth: liveResearch.score.afriGrowth,
+        health: liveResearch.score.afriHealth,
+        dividend: liveResearch.score.afriIncome,
+        risk: liveResearch.score.afriRisk,
+        position: liveResearch.score.afriMomentum,
+        overall: liveResearch.score.afriScore,
+      }
+    : computeScores(scoreInputs);
   const fundamentals = getFundamentals(symbol || "", stock.price);
+
+  // Overlay real Data Layer data onto specific fields of the (otherwise
+  // synthetic) fundamentals bundle, wherever the backend actually has a
+  // data source for that field. Fields the backend doesn't compute yet
+  // (analyst targets, insider trades, revenue segments, Piotroski/Altman Z,
+  // etc. — see docs/architecture/FRONTEND_INTEGRATION.md) are left as-is
+  // rather than fabricated, so the research tabs stay useful without
+  // silently mixing invented numbers into what looks like real disclosure.
+  const { history: liveDividendHistory } = useDividendHistory(upperSymbol || undefined);
+  const { ownership: liveOwnership, topShareholders: liveTopShareholders } = useOwnership(upperSymbol || undefined);
+  const liveFundamentals = {
+    ...fundamentals,
+    dividendHistory: liveDividendHistory.length > 0 ? liveDividendHistory : fundamentals.dividendHistory,
+    payoutRatio: liveResearch?.ratios.payoutRatio ?? fundamentals.payoutRatio,
+    ownership: liveOwnership.length > 0 ? liveOwnership : fundamentals.ownership,
+    topShareholders: liveTopShareholders.length > 0 ? liveTopShareholders : fundamentals.topShareholders,
+  };
   const stockNews = getMediaItemsForSymbol(symbol || "");
   // Opens the full story on the TradersHub Media tab.
   const openNewsItem = (item: MediaItem) => navigate(`/traders-hub?tab=media&article=${item.id}`);
@@ -246,7 +313,7 @@ export default function StockDetail() {
       {/* CHART — embedded, no card wrapper */}
       <div className="relative">
         <div className="h-[280px] px-1">
-          <StockPriceChart symbol={symbol} timeframe={selectedTimeframe} chartType={chartType} onHoverPrice={handleChartHover} />
+          <StockPriceChart symbol={symbol} timeframe={selectedTimeframe} chartType={chartType} onHoverPrice={handleChartHover} data={periodData} />
         </div>
         {/* Chart tool row */}
         <div className="absolute top-2 right-3 z-10 flex items-center gap-1">
@@ -332,7 +399,7 @@ export default function StockDetail() {
             </div>
           </div>
           <div className="flex-1 min-h-0 px-1 py-2">
-            <StockPriceChart symbol={symbol} timeframe={selectedTimeframe} chartType={chartType} onHoverPrice={handleChartHover} />
+            <StockPriceChart symbol={symbol} timeframe={selectedTimeframe} chartType={chartType} onHoverPrice={handleChartHover} data={periodData} />
           </div>
           <div className="flex items-center justify-between px-4 py-3 border-t border-border/60" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}>
             {timeframes.map(tf => (
@@ -470,14 +537,14 @@ export default function StockDetail() {
             </div>
           </div>
           <div className="research-flow pt-2">
-          {researchGroup === "valuation" && <ValuationTab price={stock.price} pe={stock.pe} fundamentals={fundamentals} onSeePerformance={() => setResearchGroup("performance")} />}
-          {researchGroup === "performance" && <PerformanceTab symbol={symbol || ""} price={stock.price} fundamentals={fundamentals} />}
-          {researchGroup === "growth" && <GrowthTab fundamentals={fundamentals} />}
-          {researchGroup === "health" && <HealthTab fundamentals={fundamentals} />}
-          {researchGroup === "dividends" && <DividendsTab divYield={divYield} annualDividend={stock.dividend} fundamentals={fundamentals} />}
-          {researchGroup === "scores" && <ScoresTab fundamentals={fundamentals} />}
-          {researchGroup === "ownership" && <OwnershipTab fundamentals={fundamentals} />}
-          {researchGroup === "risk" && <RiskTab fundamentals={fundamentals} />}
+          {researchGroup === "valuation" && <ValuationTab price={stock.price} pe={stock.pe} fundamentals={liveFundamentals} onSeePerformance={() => setResearchGroup("performance")} />}
+          {researchGroup === "performance" && <PerformanceTab symbol={symbol || ""} price={stock.price} fundamentals={liveFundamentals} />}
+          {researchGroup === "growth" && <GrowthTab fundamentals={liveFundamentals} />}
+          {researchGroup === "health" && <HealthTab fundamentals={liveFundamentals} />}
+          {researchGroup === "dividends" && <DividendsTab divYield={divYield} annualDividend={stock.dividend} fundamentals={liveFundamentals} />}
+          {researchGroup === "scores" && <ScoresTab fundamentals={liveFundamentals} />}
+          {researchGroup === "ownership" && <OwnershipTab fundamentals={liveFundamentals} />}
+          {researchGroup === "risk" && <RiskTab fundamentals={liveFundamentals} />}
           </div>
         </section>
 
@@ -488,7 +555,7 @@ export default function StockDetail() {
             symbol={symbol || ""} name={stock.name} sector={stock.sector}
             price={stock.price} changePercent={stock.changePercent}
             pe={stock.pe} eps={stock.eps} dividend={stock.dividend}
-            news={stockNews} fundamentals={fundamentals}
+            news={stockNews} fundamentals={liveFundamentals}
             onSelectNews={openNewsItem}
           />
         </section>
