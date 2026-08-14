@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { X, Image, BarChart3, DollarSign, TrendingUp, PieChart, Globe } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { readPostImage } from "@/lib/postImage";
+import { useToast } from "@/hooks/use-toast";
 
 interface PortfolioSnapshot {
   totalValue: number;
@@ -26,6 +28,7 @@ interface XComposeModalProps {
 
 export function XComposeModal({ open, onOpenChange, user, profile, onPost, portfolioSnapshot, prefillContent, quotedPost }: XComposeModalProps) {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [content, setContent] = useState("");
@@ -52,13 +55,16 @@ export function XComposeModal({ open, onOpenChange, user, profile, onPost, portf
     return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
   };
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setSelectedImage(reader.result as string);
-      reader.readAsDataURL(file);
+    if (!file) return;
+    const { dataUrl, error } = await readPostImage(file);
+    if (error) {
+      toast({ title: "Image too large", description: error, variant: "destructive" });
+      e.target.value = "";
+      return;
     }
+    setSelectedImage(dataUrl!);
   };
 
   const handlePost = async () => {

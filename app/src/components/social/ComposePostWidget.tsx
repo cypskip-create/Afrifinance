@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Image, Hash, BarChart3, X, Send, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { readPostImage } from "@/lib/postImage";
+import { useToast } from "@/hooks/use-toast";
 
 interface ComposePostWidgetProps {
   user: { id: string; email?: string } | null;
@@ -14,6 +16,7 @@ interface ComposePostWidgetProps {
 
 export function ComposePostWidget({ user, profile, onPost }: ComposePostWidgetProps) {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [newPost, setNewPost] = useState("");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -26,13 +29,14 @@ export function ComposePostWidget({ user, profile, onPost }: ComposePostWidgetPr
 
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setSelectedImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    const { dataUrl, error } = await readPostImage(file);
+    if (error) {
+      toast({ title: "Image too large", description: error, variant: "destructive" });
+      e.target.value = "";
+      return;
     }
+    setSelectedImage(dataUrl!);
   };
 
   const handlePost = async () => {

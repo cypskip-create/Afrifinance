@@ -38,6 +38,23 @@ const EnvSchema = z.object({
   FINANCIALS_SYNC_CRON: z.string().default("0 2 * * *"),
   CORPORATE_ACTIONS_SYNC_CRON: z.string().default("0 3 * * *"),
 
+  // ── CORS ────────────────────────────────────────────────────────────
+  // Comma-separated list of origins allowed to call this API from a browser
+  // (e.g. "https://afrifinance.lovable.app,https://app.afrifinance.co.ke").
+  // Falls back to the local Vite dev server origin so `npm run dev` keeps
+  // working out of the box. Requests with no Origin header (curl, mobile
+  // apps, server-to-server) are always allowed — CORS only governs browsers,
+  // and this API is separately protected by API keys either way.
+  ALLOWED_ORIGINS: z
+    .string()
+    .optional()
+    .transform((v) =>
+      (v ?? "http://localhost:8080,http://127.0.0.1:8080,https://afrifinance.lovable.app")
+        .split(",")
+        .map((o) => o.trim())
+        .filter(Boolean)
+    ),
+
   // ── API auth + rate limiting ──────────────────────────────────────────
   API_KEY_AUTH_ENABLED: booleanEnv(true),
   // A fixed dev key that bypasses the DB lookup entirely — lets local dev

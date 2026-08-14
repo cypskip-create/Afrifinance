@@ -15,8 +15,7 @@ import { useNavigate } from "react-router-dom";
 import { getPrice as getSharedPrice, computePortfolioStats } from "@/lib/stockPrices";
 import { useLivePortfolioQuotes } from "@/hooks/useLiveQuotes";
 import { HoldingsList } from "@/components/portfolio/HoldingsList";
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
-import { ColorTooltip } from "@/components/charts/ChartTooltip";
+import { ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { fx } from "@/lib/chartPalette";
 import { getMediaItemsForSymbols } from "@/data/mediaItems";
 import { formatTimestamp } from "@/lib/formatTimestamp";
@@ -264,7 +263,7 @@ export default function TrackInvestments() {
               </DropdownMenu>
             </div>
 
-            <div className="h-52 mt-2">
+            <div className="h-52 mt-2 relative">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -286,45 +285,48 @@ export default function TrackInvestments() {
                           key={s.name}
                           fill={color}
                           opacity={dimmed ? 0.3 : 1}
-                          style={isSelected ? { filter: `drop-shadow(0 0 7px ${color})`, cursor: "pointer" } : { cursor: "pointer" }}
+                          style={{
+                            cursor: "pointer",
+                            filter: isSelected ? `drop-shadow(0 0 8px ${color}) drop-shadow(0 0 3px ${color})` : undefined,
+                            transition: "opacity 150ms ease, filter 150ms ease",
+                          }}
                         />
                       );
                     })}
                   </Pie>
-                  {/* Outer ring segment — only the selected slice renders here, giving the
-                      "pops outward" effect. Same data/values as the base Pie above, so its
-                      angular position lines up exactly; only its fill differs per-cell. */}
-                  {selectedSlice && (
-                    <Pie
-                      data={activeAlloc}
-                      dataKey="value"
-                      nameKey="name"
-                      innerRadius="83%"
-                      outerRadius="92%"
-                      paddingAngle={2}
-                      stroke="none"
-                      isAnimationActive
-                    >
-                      {activeAlloc.map((s, i) => {
-                        const color = ALLOC_COLORS[i % ALLOC_COLORS.length];
-                        const isSelected = selectedSlice === s.name;
-                        return <Cell key={s.name} fill={isSelected ? color : "transparent"} style={isSelected ? { filter: `drop-shadow(0 0 6px ${color})` } : undefined} />;
-                      })}
-                    </Pie>
-                  )}
-                  <Tooltip
-                    content={
-                      <ColorTooltip
-                        format={(v: any) =>
-                          showBalance
-                            ? `KES ${Number(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`
-                            : "••••"
-                        }
-                      />
-                    }
-                  />
                 </PieChart>
               </ResponsiveContainer>
+
+              {/* Center readout — driven purely by `selectedSlice`, so tapping a
+                  slice on the chart or a row in the list below shows the exact
+                  same thing here. No reliance on Recharts' hover-only Tooltip,
+                  which is why list taps used to show nothing. */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="text-center px-6">
+                  {(() => {
+                    const sel = selectedSlice ? activeAlloc.find(s => s.name === selectedSlice) : null;
+                    if (sel) {
+                      return (
+                        <>
+                          <p className="text-[11px] font-medium text-muted-foreground truncate max-w-[130px] mx-auto">{sel.name}</p>
+                          <p className="mt-0.5 text-lg font-bold tabular">
+                            {showBalance ? `KES ${sel.value.toLocaleString('en-US', { maximumFractionDigits: 0 })}` : '••••'}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground tabular">{sel.pct.toFixed(1)}%</p>
+                        </>
+                      );
+                    }
+                    return (
+                      <>
+                        <p className="text-[11px] font-medium text-muted-foreground">Total</p>
+                        <p className="mt-0.5 text-lg font-bold tabular">
+                          {showBalance ? `KES ${stats.totalValue.toLocaleString('en-US', { maximumFractionDigits: 0 })}` : '••••'}
+                        </p>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
             </div>
             <div className="mt-1">
               {activeAlloc.map((s, i) => {
