@@ -273,17 +273,17 @@ export default function Home() {
         {user && profile?.subscription_plan !== 'premium' && (
           <button
             data-small-target
-            className="w-full flex items-center justify-between py-3 border-t border-b border-primary/25 bg-primary/5 -mx-4 px-4"
+            className="grouped-card w-full flex items-center justify-between gap-3 p-4 rounded-2xl border border-primary/25 bg-primary/5 text-left"
             onClick={() => navigate('/account')}
           >
-            <div className="flex items-center gap-2">
-              <Crown className="h-4 w-4 text-primary" />
-              <div className="text-left">
+            <div className="flex items-center gap-2 min-w-0">
+              <Crown className="h-4 w-4 text-primary shrink-0" />
+              <div className="min-w-0">
                 <p className="text-xs font-semibold">Unlock Premium</p>
-                <p className="text-[10px] text-muted-foreground">Advanced insights & real-time prices</p>
+                <p className="text-[10px] text-muted-foreground truncate">Advanced insights & real-time prices</p>
               </div>
             </div>
-            <span className="text-xs font-bold text-primary">KES 800/mo →</span>
+            <span className="text-xs font-bold text-primary shrink-0 whitespace-nowrap">KES 800/mo →</span>
           </button>
         )}
 
