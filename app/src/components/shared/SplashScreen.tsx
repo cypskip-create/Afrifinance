@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import logoImage from "@/assets/logo.jpeg";
+import { ContinuaMark } from "./ContinuaMark";
 
 /**
  * Premium app-launch splash — logo mark on brand canvas, minimal fade.
@@ -22,14 +22,13 @@ export function SplashScreen({ onDone }: { onDone: () => void }) {
       <div className="flex flex-col items-center gap-4">
         <div className="relative">
           <div className="absolute inset-0 rounded-2xl bg-primary/25 blur-xl splash-pulse" />
-          <img
-            src={logoImage}
-            alt="AfriFinance"
-            className="relative h-16 w-16 rounded-2xl object-cover shadow-lg splash-mark"
+          <ContinuaMark
+            size={64}
+            className="relative shadow-lg splash-mark"
           />
         </div>
         <div className="splash-word text-[15px] font-semibold tracking-tight text-foreground">
-          AfriFinance
+          Continua
         </div>
       </div>
     </div>

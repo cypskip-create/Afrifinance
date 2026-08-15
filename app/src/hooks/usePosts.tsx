@@ -115,6 +115,13 @@ export function usePosts() {
         supabase.from('post_reactions' as any).select('post_id, user_id, reaction').in('post_id', postIds),
       ]);
 
+      // If this query errors (e.g. profiles_public is missing a column a
+      // pending migration hasn't added yet), every post falls back to a
+      // generic author — surface it loudly instead of silently showing the
+      // same placeholder name/handle for every user.
+      if (profilesRes.error) {
+        console.error('Failed to load post authors — profiles_public query failed:', profilesRes.error);
+      }
       const profileMap = new Map(profilesRes.data?.map((p: any) => [p.user_id, p]));
       const tally = (rows: any[] | null | undefined) => {
         const m = new Map<string, number>();

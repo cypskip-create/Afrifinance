@@ -2,10 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
-/* AfriFinance — canvas-first design system.
+/* Continua — canvas-first design system.
    Light: Robinhood/Fidelity warm off-white.
    Dark: TradingView/X neutral gray.
-   AMOLED: pure black for OLED. */
+   AMOLED: pure black for OLED.
+   Brand: violet → coral gradient (see ContinuaMark). --primary carries the
+   violet, --accent carries the coral; --bull/--bear stay conventional
+   green/red for price direction and are intentionally NOT tied to the
+   brand palette. */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@500;600;700;800&display=swap');
 
@@ -21,7 +25,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 220 15% 10%;
 
-    --primary: 152 55% 38%;
+    --primary: 252 70% 52%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 40 14% 93%;
@@ -30,7 +34,7 @@
     --muted: 40 14% 94%;
     --muted-foreground: 220 8% 46%;
 
-    --accent: 152 55% 38%;
+    --accent: 17 85% 53%;
     --accent-foreground: 0 0% 100%;
 
     --bull: 152 60% 36%;
@@ -42,14 +46,14 @@
 
     --border: 36 12% 88%;
     --input: 36 12% 88%;
-    --ring: 152 55% 38%;
+    --ring: 252 70% 52%;
 
     --radius: 10px;
 
-    --gradient-hero: linear-gradient(160deg, hsl(152 45% 94%) 0%, hsl(40 22% 97%) 45%, hsl(40 22% 97%) 100%);
+    --gradient-hero: linear-gradient(160deg, hsl(252 45% 95%) 0%, hsl(40 22% 97%) 45%, hsl(40 22% 97%) 100%);
 
-    --chart-1: 152 55% 38%;
-    --chart-2: 32 92% 50%;
+    --chart-1: 252 70% 55%;
+    --chart-2: 17 85% 53%;
     --chart-3: 217 91% 55%;
     --chart-4: 280 55% 55%;
     --chart-5: 4 72% 50%;
@@ -59,18 +63,18 @@
 
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 220 15% 10%;
-    --sidebar-primary: 152 55% 38%;
+    --sidebar-primary: 252 70% 52%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 40 14% 93%;
     --sidebar-accent-foreground: 220 15% 15%;
     --sidebar-border: 36 12% 88%;
-    --sidebar-ring: 152 55% 38%;
+    --sidebar-ring: 252 70% 52%;
   }
 
   .dark {
     /* DARK — TradingView neutral gray */
     --background: 220 13% 8%;
-    --gradient-hero: linear-gradient(160deg, hsl(152 30% 13%) 0%, hsl(220 13% 8%) 45%, hsl(220 13% 8%) 100%);
+    --gradient-hero: linear-gradient(160deg, hsl(252 30% 15%) 0%, hsl(220 13% 8%) 45%, hsl(220 13% 8%) 100%);
     --foreground: 210 15% 92%;
 
     --card: 220 13% 11%;
@@ -79,7 +83,7 @@
     --popover: 220 13% 11%;
     --popover-foreground: 210 15% 92%;
 
-    --primary: 152 55% 48%;
+    --primary: 252 78% 68%;
     --primary-foreground: 220 13% 8%;
 
     --secondary: 220 12% 15%;
@@ -88,7 +92,7 @@
     --muted: 220 12% 15%;
     --muted-foreground: 220 8% 60%;
 
-    --accent: 152 55% 48%;
+    --accent: 17 90% 62%;
     --accent-foreground: 220 13% 8%;
 
     --bull: 152 55% 48%;
@@ -100,10 +104,10 @@
 
     --border: 220 12% 17%;
     --input: 220 12% 17%;
-    --ring: 152 55% 48%;
+    --ring: 252 78% 68%;
 
-    --chart-1: 152 55% 48%;
-    --chart-2: 32 92% 60%;
+    --chart-1: 252 78% 68%;
+    --chart-2: 17 90% 62%;
     --chart-3: 217 91% 65%;
     --chart-4: 280 55% 65%;
     --chart-5: 4 78% 58%;
@@ -113,12 +117,12 @@
 
     --sidebar-background: 220 13% 11%;
     --sidebar-foreground: 210 15% 92%;
-    --sidebar-primary: 152 55% 48%;
+    --sidebar-primary: 252 78% 68%;
     --sidebar-primary-foreground: 220 13% 8%;
     --sidebar-accent: 220 12% 15%;
     --sidebar-accent-foreground: 210 15% 92%;
     --sidebar-border: 220 12% 17%;
-    --sidebar-ring: 152 55% 48%;
+    --sidebar-ring: 252 78% 68%;
   }
 
   .amoled {
@@ -132,7 +136,7 @@
     --popover: 0 0% 4%;
     --popover-foreground: 0 0% 96%;
 
-    --primary: 152 60% 50%;
+    --primary: 252 82% 70%;
     --primary-foreground: 0 0% 0%;
 
     --secondary: 0 0% 8%;
@@ -141,7 +145,7 @@
     --muted: 0 0% 8%;
     --muted-foreground: 0 0% 60%;
 
-    --accent: 152 60% 50%;
+    --accent: 17 92% 64%;
     --accent-foreground: 0 0% 0%;
 
     --bull: 152 60% 50%;
@@ -153,10 +157,10 @@
 
     --border: 0 0% 12%;
     --input: 0 0% 12%;
-    --ring: 152 60% 50%;
+    --ring: 252 82% 70%;
 
-    --chart-1: 152 60% 50%;
-    --chart-2: 32 95% 60%;
+    --chart-1: 252 82% 70%;
+    --chart-2: 17 92% 64%;
     --chart-3: 217 95% 65%;
     --chart-4: 280 60% 65%;
     --chart-5: 4 80% 60%;
@@ -166,12 +170,12 @@
 
     --sidebar-background: 0 0% 0%;
     --sidebar-foreground: 0 0% 96%;
-    --sidebar-primary: 152 60% 50%;
+    --sidebar-primary: 252 82% 70%;
     --sidebar-primary-foreground: 0 0% 0%;
     --sidebar-accent: 0 0% 8%;
     --sidebar-accent-foreground: 0 0% 96%;
     --sidebar-border: 0 0% 12%;
-    --sidebar-ring: 152 60% 50%;
+    --sidebar-ring: 252 82% 70%;
   }
 }
 
@@ -366,7 +370,19 @@
   .refresh-spin { animation: spin 0.6s linear infinite; }
   @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-  /* Breathing glow used by pull-to-refresh (calmer than a spinner). */
+  /* Continua mark spin used by pull-to-refresh once a refresh is committed —
+     eased rather than linear so it feels purposeful, not like a loading
+     spinner, with a soft brand-colored glow trailing it. */
+  .continua-refresh-spin {
+    animation: continuaSpin 0.85s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  }
+  @keyframes continuaSpin {
+    0% { transform: rotate(0deg) scale(1); filter: drop-shadow(0 0 0 hsl(var(--primary) / 0)); }
+    50% { transform: rotate(180deg) scale(1.08); filter: drop-shadow(0 0 10px hsl(var(--primary) / 0.5)); }
+    100% { transform: rotate(360deg) scale(1); filter: drop-shadow(0 0 0 hsl(var(--primary) / 0)); }
+  }
+
+  /* Breathing glow — still used by the splash screen's static mark. */
   .refresh-breathe {
     animation: refreshBreathe 1.15s ease-in-out infinite;
   }
