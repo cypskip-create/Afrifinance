@@ -31,7 +31,7 @@ function formatMagnitude(n: number): string {
  *  (volume, beta, RSI) on their existing source. */
 export function useAfriScreener(symbols: string[]) {
   const screenerQuery = useQuery({
-    queryKey: ["afrifinance", "screener", "full"],
+    queryKey: ["continua", "screener", "full"],
     queryFn: () => screenerApi.run({ limit: 200, sortBy: "afriScore", sortDirection: "desc" }),
     staleTime: 60_000,
     retry: 1,

@@ -1,4 +1,4 @@
-import { afriFinanceFetch } from "./client";
+import { continuaFetch } from "./client";
 import type { ScreenerRow } from "./types";
 
 export interface ScreenerFilters {
@@ -15,7 +15,7 @@ export interface ScreenerFilters {
 
 export const screenerApi = {
   run(filters: ScreenerFilters = {}) {
-    return afriFinanceFetch<ScreenerRow[]>("/screener", {
+    return continuaFetch<ScreenerRow[]>("/screener", {
       params: { exchange: "NSE", ...filters },
     });
   },

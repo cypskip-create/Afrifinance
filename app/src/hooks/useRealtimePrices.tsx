@@ -12,14 +12,14 @@ interface PriceData {
   low: number;
   open: number;
   timestamp: number;
-  /** "live" = real AfriFinance Data Layer quote; "fallback" = this symbol
+  /** "live" = real Continua Data Layer quote; "fallback" = this symbol
    *  isn't in the Data Layer's current universe yet (e.g. a non-NSE ticker,
    *  or an exchange not onboarded), so a deterministic placeholder is used
    *  instead of silently showing nothing. */
   source: "live" | "fallback";
 }
 
-// Deterministic placeholder for symbols the AfriFinance Data Layer doesn't
+// Deterministic placeholder for symbols the Continua Data Layer doesn't
 // have yet (crypto tickers, symbols on exchanges not onboarded). Seeded so
 // re-renders don't make the number jump around — this is display filler,
 // not a simulation of live movement.
@@ -51,7 +51,7 @@ function buildFallback(symbol: string): PriceData {
   };
 }
 
-/** Live prices for a set of symbols, sourced from the AfriFinance Data
+/** Live prices for a set of symbols, sourced from the Continua Data
  *  Layer (REST snapshot + WebSocket ticks — see api/websocketClient.ts).
  *  Symbols outside the Data Layer's current universe fall back to a
  *  stable placeholder rather than breaking the UI; see `source` above.

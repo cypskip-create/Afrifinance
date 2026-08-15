@@ -44,7 +44,7 @@ export function AppLockGate({ children }: { children: React.ReactNode }) {
         <ShieldCheck className="h-8 w-8 text-foreground" />
       </div>
       <div>
-        <h2 className="text-lg font-semibold">AfriFinance is locked</h2>
+        <h2 className="text-lg font-semibold">Continua is locked</h2>
         <p className="text-sm text-muted-foreground mt-1">Verify with your device Face ID, fingerprint, or PIN to continue.</p>
       </div>
       <Button onClick={tryUnlock} disabled={verifying} className="btn-primary gap-2 mt-2">

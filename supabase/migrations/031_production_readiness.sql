@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════════════
--- AfriFinance Data — production-readiness additions
+-- Continua Data — production-readiness additions
 -- ═══════════════════════════════════════════════════════════════════════
 -- Adds: dead-letter storage for failed ingestion records, and API keys for
 -- authenticating requests to the API layer (internal app + future external

@@ -1,5 +1,5 @@
 /**
- * Institutional-grade semantic chart palette for AfriFinance.
+ * Institutional-grade semantic chart palette for Continua.
  * One color per concept — users understand every chart from color alone.
  * Values chosen to render cleanly on both light & dark canvases.
  */

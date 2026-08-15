@@ -1,7 +1,7 @@
-# Frontend ↔ AfriFinance Data Layer Integration
+# Frontend ↔ Continua Data Layer Integration
 
 Status as of this integration pass. This is the connection between `app/`
-(the React frontend) and `backend/` (the AfriFinance Data Layer) described
+(the React frontend) and `backend/` (the Continua Data Layer) described
 in `docs/architecture/ARCHITECTURE.md` and `docs/api/API.md`.
 
 ## What changed
@@ -28,7 +28,7 @@ already called for:
 
 | File | Purpose |
 |---|---|
-| `client.ts` | Base fetch wrapper — API key header, base URL, typed `AfriFinanceApiError` |
+| `client.ts` | Base fetch wrapper — API key header, base URL, typed `ContinuaApiError` |
 | `types.ts` | TS types mirroring the backend's standard schema (`backend/src/types/market.ts`) |
 | `quotesApi.ts`, `historicalApi.ts`, `companiesApi.ts`, `financialsApi.ts`, `corporateActionsApi.ts`, `moversApi.ts`, `sectorsApi.ts`, `researchApi.ts`, `screenerApi.ts`, `instrumentsApi.ts` | One thin module per backend resource |
 | `websocketClient.ts` | Single shared WebSocket connection with per-symbol ref-counted subscriptions — N components watching SAFCOM share one server subscription, matching `docs/architecture/DATA_FLOW.md`'s "shared real-time data layer" |
@@ -189,7 +189,7 @@ price/change/marketCap/PE/dividend/AfriScore columns, `StockCompare`,
 `Discover` (trending stocks + portfolio summary + heatmap),
 `Home` (portfolio summary + watchlist movers + Command Center + Quick
 Trade), and `UserProfile`'s public portfolio summary — is now backed by
-live AfriFinance Data Layer quotes, with the existing static reference
+live Continua Data Layer quotes, with the existing static reference
 data as a graceful per-symbol fallback.
 
 None of the above were silently left as mock — they're listed here
@@ -238,7 +238,7 @@ VITE_AFRIFINANCE_API_KEY="dev-local-only-key"   # matches backend's DEV_API_KEY
 ```
 
 **Production note:** `VITE_AFRIFINANCE_API_KEY` is a first-party key for
-AfriFinance's own backend (not an upstream NSE credential), but Vite still
+Continua's own backend (not an upstream NSE credential), but Vite still
 ships it in browser JS. Fine for local dev; before shipping to real users,
 replace `getApiKey()` in `app/src/api/client.ts` (and the matching spot in
 `websocketClient.ts`) with a short-lived token fetched from an authenticated
@@ -250,9 +250,9 @@ needs to change.
 
 ```bash
 # 1. Database (once)
-createdb afrifinance
-psql -d afrifinance -f supabase/migrations/030_market_schema.sql
-psql -d afrifinance -f supabase/migrations/031_production_readiness.sql
+createdb continua
+psql -d continua -f supabase/migrations/030_market_schema.sql
+psql -d continua -f supabase/migrations/031_production_readiness.sql
 
 # 2. Backend
 cd backend

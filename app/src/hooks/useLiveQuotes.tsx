@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { quotesApi } from "@/api/quotesApi";
-import { afriFinanceRealtime } from "@/api/websocketClient";
+import { continuaRealtime } from "@/api/websocketClient";
 import type { Quote } from "@/api/types";
 
 /**
- * The single hook every screen should use to get live AfriFinance quotes.
+ * The single hook every screen should use to get live Continua quotes.
  * REST gives the initial snapshot (and a periodic safety-net refetch);
  * the shared WebSocket connection (api/websocketClient.ts) layers live
  * ticks on top as they arrive. Multiple components calling this with
@@ -25,7 +25,7 @@ export function useLiveQuotes(symbols: string[]) {
   const key = normalized.join(",");
 
   const query = useQuery({
-    queryKey: ["afrifinance", "quotes", key],
+    queryKey: ["continua", "quotes", key],
     queryFn: () => quotesApi.getBatch(normalized),
     enabled: normalized.length > 0,
     staleTime: 15_000,
@@ -34,12 +34,12 @@ export function useLiveQuotes(symbols: string[]) {
   });
 
   const [liveTicks, setLiveTicks] = useState<Record<string, Quote>>({});
-  const [isConnected, setIsConnected] = useState(afriFinanceRealtime.isConnected());
+  const [isConnected, setIsConnected] = useState(continuaRealtime.isConnected());
 
   useEffect(() => {
     setLiveTicks({});
     const unsubscribers = normalized.map((symbol) =>
-      afriFinanceRealtime.subscribeQuote(symbol, (quote) => {
+      continuaRealtime.subscribeQuote(symbol, (quote) => {
         setLiveTicks((prev) => ({ ...prev, [symbol]: quote }));
       })
     );
@@ -47,7 +47,7 @@ export function useLiveQuotes(symbols: string[]) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
-  useEffect(() => afriFinanceRealtime.onConnectionChange(setIsConnected), []);
+  useEffect(() => continuaRealtime.onConnectionChange(setIsConnected), []);
 
   const quotes = useMemo(() => {
     const map: Record<string, Quote> = {};

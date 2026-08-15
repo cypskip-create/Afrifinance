@@ -2,7 +2,7 @@
  * Thin, deliberately small: the app's portfolio math (holdings, cost basis,
  * P/L) lives in the app itself against `public` schema tables. This service
  * exists only to hand the app the corporate-action data it needs to adjust
- * for splits/bonuses/dividends when computing returns — AfriFinance Data
+ * for splits/bonuses/dividends when computing returns — Continua Data
  * doesn't own portfolio state, it just supplies the facts.
  */
 import { corporateActionsRepository } from "../../storage/repositories/corporateActionsRepository.js";

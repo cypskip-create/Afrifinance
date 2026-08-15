@@ -7,7 +7,7 @@ import { moversApi } from "@/api/moversApi";
  *  re-derived client-side from a static list. */
 export function useMovers(limit = 10) {
   const query = useQuery({
-    queryKey: ["afrifinance", "movers", limit],
+    queryKey: ["continua", "movers", limit],
     queryFn: () => moversApi.getTopMovers({ limit }),
     staleTime: 15_000,
     refetchInterval: 30_000,

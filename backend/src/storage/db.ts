@@ -1,5 +1,5 @@
 /**
- * Single shared Postgres pool. AfriFinance Data writes into the `market`
+ * Single shared Postgres pool. Continua Data writes into the `market`
  * schema of the SAME Postgres instance the app's Supabase project already
  * uses — one database, two schemas (`public` for the app, `market` for this
  * layer), so there's no cross-project sync to maintain. See
@@ -20,7 +20,7 @@ import { logger } from "../monitoring/logger.js";
 // The values in this domain (prices, market caps in KES, share counts,
 // ratios, ingestion log ids) never approach Number.MAX_SAFE_INTEGER
 // (2^53), so parsing them as floats/ints here is safe and correct for
-// AfriFinance Data specifically — this would need reconsidering only if a
+// Continua Data specifically — this would need reconsidering only if a
 // numeric column were ever used to hold something like a cryptographic
 // value or an ID space larger than 2^53.
 pg.types.setTypeParser(pg.types.builtins.NUMERIC, (val: string) => parseFloat(val));

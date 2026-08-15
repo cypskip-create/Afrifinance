@@ -75,7 +75,7 @@ export function useHistoricalCandles(symbol: string | undefined, timeframe: stri
   }, [timeframe, days]);
 
   const query = useQuery({
-    queryKey: ["afrifinance", "historical", symbol, timeframe],
+    queryKey: ["continua", "historical", symbol, timeframe],
     queryFn: () => historicalApi.getCandles(symbol as string, { interval: "1d", from }),
     enabled: isSupported,
     staleTime: 5 * 60_000,

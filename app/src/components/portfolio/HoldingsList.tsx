@@ -35,7 +35,7 @@ export function HoldingsList({ holdings, showValues = true, showGains = true, on
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  // Live AfriFinance Data Layer quotes — the SAME quotes Watchlist, Markets
+  // Live Continua Data Layer quotes — the SAME quotes Watchlist, Markets
   // and the Stock Page read, so a position's value here can never disagree
   // with what those surfaces show for the same symbol (see docs/api/API.md
   // §21 "single source of truth"). Falls back to the static reference

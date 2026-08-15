@@ -1,6 +1,6 @@
 # Database Schema
 
-AfriFinance Data lives in a dedicated **`market` schema** inside the same
+Continua Data lives in a dedicated **`market` schema** inside the same
 Postgres database the app already uses via Supabase. DDL is in
 `supabase/migrations/030_market_schema.sql`. This doc explains the *why*
 behind the tables; the migration file is the source of truth for the exact
@@ -64,7 +64,7 @@ columns/types/constraints.
 | Table | Purpose |
 |---|---|
 | `computed_ratios` | PE, PB, EV/EBITDA, ROE, ROA, ROIC, margins, dividend yield, payout ratio, current ratio, debt-to-equity, interest coverage, 3-month momentum, 90-day volatility. One row per security. |
-| `afri_scores` | AfriFinance's proprietary composite score + seven sub-scores (Value/Growth/Health/Income/Risk/Quality/Momentum), plus a JSON snapshot of the raw inputs that produced them (`inputs`) for auditability — "why did this stock score 65?" is always answerable. |
+| `afri_scores` | Continua's proprietary composite score + seven sub-scores (Value/Growth/Health/Income/Risk/Quality/Momentum), plus a JSON snapshot of the raw inputs that produced them (`inputs`) for auditability — "why did this stock score 65?" is always answerable. |
 
 ### Operational
 | Table | Purpose |
@@ -89,7 +89,7 @@ columns/types/constraints.
 ## Migration numbering
 
 The app's existing migrations run `001`–`029` (as of this writing).
-AfriFinance Data's schema is `030_market_schema.sql`, with
+Continua Data's schema is `030_market_schema.sql`, with
 `031_production_readiness.sql` adding `dead_letters` and `api_keys`.
 Continue this numbering for any future changes to the `market` schema so
 migration order stays unambiguous across both the app's and this layer's

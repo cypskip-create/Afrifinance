@@ -1,6 +1,6 @@
-# AfriFinance Data
+# Continua Data
 
-The core market data infrastructure layer for AfriFinance. NSE-first,
+The core market data infrastructure layer for Continua. NSE-first,
 architected so every other African exchange can be added as a new adapter
 without touching the rest of the system. See `docs/` for full documentation:
 

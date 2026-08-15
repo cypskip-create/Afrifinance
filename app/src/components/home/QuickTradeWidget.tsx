@@ -6,7 +6,7 @@ import { getPrice, getDayChange, getStockName } from "@/lib/stockPrices";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 
 // Just the symbols to feature here — price and day-change come from live
-// AfriFinance Data Layer quotes wherever available (falling back to the
+// Continua Data Layer quotes wherever available (falling back to the
 // shared static price source, src/lib/stockPrices.ts, per-symbol), so this
 // marquee can never contradict the Portfolio page or a stock's own detail page.
 const QUICK_SYMBOLS = ["SAFCOM", "EQTY", "KCB", "SCBK", "EABL", "COOP", "ABSA", "NCBA", "BAMB", "BRIT", "KPLC"];

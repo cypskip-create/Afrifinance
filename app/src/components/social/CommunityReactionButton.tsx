@@ -4,7 +4,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 
 /**
- * AfriFinance reaction palette — finance-first, deliberately not a like button.
+ * Continua reaction palette — finance-first, deliberately not a like button.
  * Legacy ids are kept so historical reactions still render.
  */
 export type CommunityReaction =

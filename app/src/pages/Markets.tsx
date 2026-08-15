@@ -40,7 +40,7 @@ const commodities = [
 ];
 
 // Static fallback (used only while live data is loading, or if the
-// AfriFinance Data API is unreachable) — Overview normally renders live
+// Continua Data API is unreachable) — Overview normally renders live
 // topGainers/topLosers/sectors computed inside the component below from
 // useMovers()/useLiveQuotes(), which come straight from the Data Layer.
 const nseUniverse = CANONICAL_SYMBOLS.map(symbol => {
@@ -173,7 +173,7 @@ export default function Markets() {
   const [listFilter, setListFilter] = useState<{ label: string; symbols: string[] } | null>(null);
   const [divSortBy, setDivSortBy] = useState<string>("yield");
 
-  // Live from the AfriFinance Data Layer (backend/src/services/marketData/moversService.ts) —
+  // Live from the Continua Data Layer (backend/src/services/marketData/moversService.ts) —
   // falls back to the static, client-derived list above only while loading or if unreachable.
   const { gainers: liveGainers, losers: liveLosers, isLoading: moversLoading } = useMovers(5);
   const { quotes: liveQuotes } = useLiveQuotes(CANONICAL_SYMBOLS);

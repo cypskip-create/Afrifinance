@@ -1,6 +1,6 @@
 # Contribution Guidelines
 
-Thank you for considering contributing to the Afrifinance project! Your contributions help to enhance the project and its community. Here are some guidelines to help you get started:
+Thank you for considering contributing to the Continua project! Your contributions help to enhance the project and its community. Here are some guidelines to help you get started:
 
 ## 1. Getting Started
 - **Fork the repo:** Create your own copy of the repository by forking it.
@@ -23,4 +23,4 @@ Thank you for considering contributing to the Afrifinance project! Your contribu
 ## 5. Code of Conduct
 Please adhere to the project's [Code of Conduct](link-to-code-of-conduct) in all interactions.
 
-Thank you for your interest in contributing! Together we can make Afrifinance even better!
+Thank you for your interest in contributing! Together we can make Continua even better!

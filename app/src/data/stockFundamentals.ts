@@ -1,4 +1,4 @@
-// Mock fundamentals for AfriFinance — keyed by symbol.
+// Mock fundamentals for Continua — keyed by symbol.
 // Deterministic per-symbol data driving every interactive analysis tool.
 
 export interface Fundamentals {

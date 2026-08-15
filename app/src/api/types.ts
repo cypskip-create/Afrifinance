@@ -1,4 +1,4 @@
-// Types mirroring the AfriFinance Data Layer's standard schema
+// Types mirroring the Continua Data Layer's standard schema
 // (backend/src/types/market.ts) and its documented API response shapes
 // (docs/api/API.md). Kept as plain interfaces — no class instances, no
 // coupling to how the backend stores anything — so the frontend only ever

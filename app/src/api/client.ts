@@ -1,5 +1,5 @@
-// AfriFinance API client — the ONE place in the frontend that knows how to
-// talk to the AfriFinance Data Layer (backend/). Every api/*.ts module calls
+// Continua API client — the ONE place in the frontend that knows how to
+// talk to the Continua Data Layer (backend/). Every api/*.ts module calls
 // through this instead of using fetch() directly, so auth, base URL, and
 // error handling live in one spot rather than scattered across components.
 //
@@ -12,31 +12,31 @@ export const AFRIFINANCE_WS_URL =
   (import.meta.env.VITE_AFRIFINANCE_WS_URL as string | undefined) ?? "ws://localhost:4001";
 
 // DEV-ONLY key, read from Vite env (see app/.env). This is a first-party key
-// for AfriFinance's OWN backend, not an upstream NSE credential — but it is
+// for Continua's OWN backend, not an upstream NSE credential — but it is
 // still visible in shipped browser JS via import.meta.env. That's an
 // accepted tradeoff for local development only.
 //
 // PRODUCTION TODO: replace this constant with a short-lived token fetched
 // from an authenticated endpoint (e.g. a Supabase Edge Function that holds
-// the real AfriFinance Data API key server-side and mints a scoped,
+// the real Continua Data API key server-side and mints a scoped,
 // per-user, expiring token). Nothing else in this file or its callers needs
 // to change — swap what `getApiKey()` returns.
 function getApiKey(): string {
   return (import.meta.env.VITE_AFRIFINANCE_API_KEY as string | undefined) ?? "dev-local-only-key";
 }
 
-export class AfriFinanceApiError extends Error {
+export class ContinuaApiError extends Error {
   constructor(
     message: string,
     public readonly status: number,
     public readonly path: string
   ) {
     super(message);
-    this.name = "AfriFinanceApiError";
+    this.name = "ContinuaApiError";
   }
 }
 
-export interface AfriFinanceRequestOptions {
+export interface ContinuaRequestOptions {
   /** Query params. Undefined/null values are omitted; arrays are NOT joined
    *  here — pass a pre-joined string (e.g. symbols.join(",")) since a couple
    *  of endpoints want comma-separated values specifically. */
@@ -44,7 +44,7 @@ export interface AfriFinanceRequestOptions {
   signal?: AbortSignal;
 }
 
-function buildUrl(path: string, params?: AfriFinanceRequestOptions["params"]): string {
+function buildUrl(path: string, params?: ContinuaRequestOptions["params"]): string {
   const url = new URL(`${AFRIFINANCE_API_URL}${path}`);
   if (params) {
     for (const [key, value] of Object.entries(params)) {
@@ -59,7 +59,7 @@ function buildUrl(path: string, params?: AfriFinanceRequestOptions["params"]): s
  *  docs/api/API.md — this normalizes that (and network failures) into one
  *  typed error so callers can branch on `.status` (404 vs 401 vs 500 etc.)
  *  instead of re-parsing the response body everywhere. */
-export async function afriFinanceFetch<T>(path: string, options: AfriFinanceRequestOptions = {}): Promise<T> {
+export async function continuaFetch<T>(path: string, options: ContinuaRequestOptions = {}): Promise<T> {
   const url = buildUrl(path, options.params);
   let res: Response;
   try {
@@ -68,22 +68,22 @@ export async function afriFinanceFetch<T>(path: string, options: AfriFinanceRequ
       signal: options.signal,
     });
   } catch (err) {
-    throw new AfriFinanceApiError(
-      err instanceof Error ? `Network error reaching AfriFinance Data API: ${err.message}` : "Network error reaching AfriFinance Data API",
+    throw new ContinuaApiError(
+      err instanceof Error ? `Network error reaching Continua Data API: ${err.message}` : "Network error reaching Continua Data API",
       0,
       path
     );
   }
 
   if (!res.ok) {
-    let message = `AfriFinance Data API request failed (${res.status})`;
+    let message = `Continua Data API request failed (${res.status})`;
     try {
       const body = await res.json();
       if (body?.error) message = body.error;
     } catch {
       // response wasn't JSON — keep the generic message
     }
-    throw new AfriFinanceApiError(message, res.status, path);
+    throw new ContinuaApiError(message, res.status, path);
   }
 
   const body = await res.json();
@@ -94,5 +94,5 @@ export async function afriFinanceFetch<T>(path: string, options: AfriFinanceRequ
  *  universe", as opposed to a real failure. Callers use this to fall back
  *  to a "not covered yet" UI state rather than an error state. */
 export function isNotFound(err: unknown): boolean {
-  return err instanceof AfriFinanceApiError && err.status === 404;
+  return err instanceof ContinuaApiError && err.status === 404;
 }

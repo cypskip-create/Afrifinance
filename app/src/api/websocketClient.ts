@@ -1,4 +1,4 @@
-// Shared real-time connection to the AfriFinance Data Layer's WebSocket
+// Shared real-time connection to the Continua Data Layer's WebSocket
 // server (backend/src/streaming/websocketServer.ts). One socket for the
 // whole app — Stock Page, Watchlist, Portfolio, and Markets all subscribe
 // through this same manager instead of each opening its own connection.
@@ -18,7 +18,7 @@ type CorporateActionListener = (action: CorporateAction) => void;
 const RECONNECT_BASE_MS = 1000;
 const RECONNECT_MAX_MS = 15_000;
 
-class AfriFinanceRealtimeClient {
+class ContinuaRealtimeClient {
   private socket: WebSocket | null = null;
   private connecting = false;
   private reconnectAttempt = 0;
@@ -154,4 +154,4 @@ class AfriFinanceRealtimeClient {
 }
 
 /** One instance for the whole app — import this, don't construct your own. */
-export const afriFinanceRealtime = new AfriFinanceRealtimeClient();
+export const continuaRealtime = new ContinuaRealtimeClient();

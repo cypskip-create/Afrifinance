@@ -512,8 +512,8 @@ export function ProfileSettingsDialog({ open, onOpenChange, currentHandle, portf
                 </AccordionItem>
               </Accordion>
               <Separator />
-              <Button variant="outline" className="w-full rounded-full justify-start" onClick={() => { window.location.href = "mailto:support@afrifinance.app"; }}>
-                <Mail className="h-4 w-4 mr-2" />Email support@afrifinance.app
+              <Button variant="outline" className="w-full rounded-full justify-start" onClick={() => { window.location.href = "mailto:support@continua.app"; }}>
+                <Mail className="h-4 w-4 mr-2" />Email support@continua.app
               </Button>
               <Button variant="outline" className="w-full rounded-full justify-start" onClick={() => window.open("https://wa.me/254700000000", "_blank", "noopener,noreferrer")}>
                 <MessageSquare className="h-4 w-4 mr-2" />Chat on WhatsApp
@@ -526,7 +526,7 @@ export function ProfileSettingsDialog({ open, onOpenChange, currentHandle, portf
               <Header title="Terms & privacy" />
               <div>
                 <p className="text-xs font-semibold text-muted-foreground mb-1">TERMS OF SERVICE</p>
-                <p className="text-sm text-muted-foreground leading-relaxed">By using AfriFinance you agree that market data, AI theses, and community content are for informational purposes only — nothing in the app is financial advice. You're responsible for your own trading decisions and for keeping your account credentials secure. We may suspend accounts that violate our community guidelines, including spam, harassment, or market-manipulation talk.</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">By using Continua you agree that market data, AI theses, and community content are for informational purposes only — nothing in the app is financial advice. You're responsible for your own trading decisions and for keeping your account credentials secure. We may suspend accounts that violate our community guidelines, including spam, harassment, or market-manipulation talk.</p>
               </div>
               <Separator />
               <div>

@@ -1,8 +1,8 @@
-import { afriFinanceFetch } from "./client";
+import { continuaFetch } from "./client";
 import type { SectorRef } from "./types";
 
 export const sectorsApi = {
   list() {
-    return afriFinanceFetch<SectorRef[]>("/sectors");
+    return continuaFetch<SectorRef[]>("/sectors");
   },
 };

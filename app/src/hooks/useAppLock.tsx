@@ -13,7 +13,7 @@ export function useAppLock() {
 
   const enable = useCallback(async () => {
     if (!user) return { success: false, error: 'Sign in required' };
-    const res = await enableAppLock(user.id, user.email || 'AfriFinance user');
+    const res = await enableAppLock(user.id, user.email || 'Continua user');
     if (res.success) setEnabled(true);
     return res;
   }, [user]);

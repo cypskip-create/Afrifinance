@@ -78,7 +78,7 @@ export default function StockCompare() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
 
-  // Live AfriFinance Data Layer quotes overlaid onto the static comparison table — same
+  // Live Continua Data Layer quotes overlaid onto the static comparison table — same
   // pattern as Screener/SectorDetail/AllStocksList. Keeping selection as symbols (not
   // snapshotted Stock objects) means an already-added stock's price/change keeps updating
   // live instead of freezing at whatever it was when it was added to the comparison.

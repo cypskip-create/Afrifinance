@@ -37,7 +37,7 @@ export function AllStocksList({ initialSector, onlySymbols }: AllStocksListProps
 
   useEffect(() => { if (initialSector) setSelectedSector(initialSector); }, [initialSector]);
 
-  // Live AfriFinance Data Layer quotes overlaid on top of the static
+  // Live Continua Data Layer quotes overlaid on top of the static
   // reference list below — symbols the Data Layer's current NSE universe
   // doesn't have yet (see docs/api/API.md / instruments endpoint) simply
   // keep showing the static reference price instead of breaking.

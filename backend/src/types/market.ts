@@ -1,6 +1,6 @@
 /**
  * ─────────────────────────────────────────────────────────────────────────
- * AfriFinance Standard Schema
+ * Continua Standard Schema
  * ─────────────────────────────────────────────────────────────────────────
  * This is the ONE shape every exchange in the system must normalize into.
  * NSE speaks NSE. NGX will speak NGX. JSE will speak JSE. None of that
@@ -40,7 +40,7 @@ export interface Industry {
 }
 
 export interface Company {
-  id: string;                // AfriFinance-internal UUID
+  id: string;                // Continua-internal UUID
   name: string;
   description?: string;
   sectorId?: string;
@@ -53,7 +53,7 @@ export interface Company {
 }
 
 export interface Security {
-  id: string;                // AfriFinance-internal UUID, stable across renames
+  id: string;                // Continua-internal UUID, stable across renames
   symbol: string;             // exchange ticker, e.g. "SAFCOM"
   exchange: ExchangeCode;
   companyId: string;

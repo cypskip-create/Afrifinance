@@ -16,7 +16,7 @@ export interface DividendYear {
  *  confirmed fact. */
 export function useDividendHistory(symbol: string | undefined) {
   const query = useQuery({
-    queryKey: ["afrifinance", "dividends", symbol],
+    queryKey: ["continua", "dividends", symbol],
     queryFn: () => corporateActionsApi.getDividends(symbol as string),
     enabled: !!symbol,
     staleTime: 5 * 60_000,

@@ -10,14 +10,14 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: afrifinance
+      POSTGRES_DB: continua
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       # Applied in filename order on first container start only. If you add
       # a migration after the volume already exists, apply it manually
-      # (`docker compose exec postgres psql -U postgres -d afrifinance -f ...`)
+      # (`docker compose exec postgres psql -U postgres -d continua -f ...`)
       # or drop the volume to re-init from scratch in dev.
       - ../supabase/migrations:/docker-entrypoint-initdb.d:ro
     healthcheck:
@@ -35,7 +35,7 @@ services:
       NODE_ENV: development
       PORT: 4000
       WS_PORT: 4001
-      DATABASE_URL: postgresql://postgres:password@postgres:5432/afrifinance
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/continua
       CACHE_DRIVER: memory
       NSE_CLIENT_MODE: mock
       API_KEY_AUTH_ENABLED: "true"

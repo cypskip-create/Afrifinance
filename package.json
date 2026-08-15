@@ -1,5 +1,5 @@
 {
-  "name": "afrifinance-workspace",
+  "name": "continua-workspace",
   "private": true,
   "workspaces": [
     "app"

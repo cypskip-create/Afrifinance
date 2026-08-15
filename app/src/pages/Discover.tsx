@@ -50,7 +50,7 @@ export default function Discover() {
   const topGainerHolding = portfolioWithLive.length > 0 ? [...portfolioWithLive].sort((a, b) => b.gainPct - a.gainPct)[0] : null;
 
   // Trending = today's biggest movers, computed from the shared price source (and, when
-  // available, live AfriFinance Data Layer quotes) — never a separate hand-typed list that
+  // available, live Continua Data Layer quotes) — never a separate hand-typed list that
   // can disagree with what every other page shows.
   const { quotes: trendingQuotes } = useLiveQuotes(TRENDING_SYMBOLS);
   const trendingStocks = useMemo(() => {
@@ -137,7 +137,7 @@ export default function Discover() {
   const handleShare = async (e: React.MouseEvent, post: Post) => {
     e.stopPropagation();
     const url = `${window.location.origin}/traders-hub/post/${post.id}`;
-    const result = await shareLink(url, { title: "AfriFinance TradersHub", text: post.content.slice(0, 120) });
+    const result = await shareLink(url, { title: "Continua TradersHub", text: post.content.slice(0, 120) });
     if (result.method === "clipboard") toast({ title: "Link copied" });
     else if (result.method === "failed") toast({ title: "Couldn't share this post", variant: "destructive" });
   };

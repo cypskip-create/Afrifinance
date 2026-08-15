@@ -140,7 +140,14 @@ export function RobinhoodPerformanceChart({
   const changePercent = mode === "performance"
     ? changeInWindow
     : (startOfWindow !== 0 ? (changeInWindow / Math.abs(startOfWindow)) * 100 : 0);
-  const isPositive = (mode === "performance" ? displayValue : changeInWindow) >= 0;
+  // The up/down color and arrow always reflect the change *within the
+  // selected window* (today's move for 1D, this month's for 1M, etc.) —
+  // never the all-time cumulative return. changeInWindow's sign is the same
+  // in both modes regardless of unit (KES vs % of cost basis), since it's
+  // ultimately derived from the same underlying raw values — so this one
+  // line is what keeps the Value and Performance tabs from disagreeing with
+  // each other on the same timeframe.
+  const isPositive = changeInWindow >= 0;
 
   const gradientId = `perfGrad-${activeTimeframe}-${mode}`;
   const lineColor = isPositive ? 'hsl(var(--bull))' : 'hsl(var(--bear))';

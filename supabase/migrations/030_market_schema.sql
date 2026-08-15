@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════════════
--- AfriFinance Data — core market schema
+-- Continua Data — core market schema
 -- ═══════════════════════════════════════════════════════════════════════
 -- Lives in the SAME Postgres instance as the app (public schema), in its
 -- own `market` schema, so there's one project/one connection string, but a

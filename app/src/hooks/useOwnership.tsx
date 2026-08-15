@@ -24,7 +24,7 @@ function colorFor(name: string): string {
  *  records on file yet. */
 export function useOwnership(symbol: string | undefined) {
   const query = useQuery({
-    queryKey: ["afrifinance", "ownership", symbol],
+    queryKey: ["continua", "ownership", symbol],
     queryFn: () => corporateActionsApi.getOwnership(symbol as string),
     enabled: !!symbol,
     staleTime: 5 * 60_000,

@@ -1,5 +1,9 @@
 import { Helmet } from "react-helmet-async";
 
+// NOTE: intentionally left pointing at the current live domain rather than a
+// "continua..." placeholder — canonical/og:url tags need to match wherever
+// the app is actually deployed, or they actively hurt SEO. Update this the
+// moment a real Continua domain is live and DNS/hosting is pointed at it.
 const SITE = "https://afrifinance.lovable.app";
 
 interface SeoProps {

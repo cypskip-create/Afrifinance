@@ -18,7 +18,7 @@ interface StockHeatmapProps {
 // Derived from the shared price/fundamentals source (same one Markets, the Screener, and
 // Compare use) so the heatmap can't show a change% or list a ticker that disagrees with the
 // rest of the app. Limited to the dozen largest-cap names so the treemap stays legible.
-// Change% is overlaid with live AfriFinance Data Layer quotes inside the component below
+// Change% is overlaid with live Continua Data Layer quotes inside the component below
 // (useLiveQuotes) when no explicit `stocks` prop is supplied.
 function buildDefaultStocks(): HeatmapStock[] {
   return CANONICAL_SYMBOLS

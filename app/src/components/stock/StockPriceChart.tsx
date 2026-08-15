@@ -21,7 +21,7 @@ interface StockPriceChartProps {
   // (i.e. the first point on screen), not relative to some fixed "today" price. This
   // lets the caller show gain/loss for whichever period the user is scrubbing through.
   onHoverPrice?: (price: number | null, date: string | null, changePercent?: number | null, isUp?: boolean | null) => void;
-  /** Real AfriFinance Data Layer candle data (app/src/hooks/useHistoricalCandles.tsx),
+  /** Real Continua Data Layer candle data (app/src/hooks/useHistoricalCandles.tsx),
    *  pre-shaped to match generateMockData's output. When omitted (or empty), the
    *  chart falls back to its own generated series — this keeps the component
    *  usable standalone while letting callers supply real data when they have it. */

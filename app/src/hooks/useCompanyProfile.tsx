@@ -8,7 +8,7 @@ import { isNotFound } from "@/api/client";
  *  generic description rather than showing an error. */
 export function useCompanyProfile(symbol: string | undefined) {
   const query = useQuery({
-    queryKey: ["afrifinance", "company", symbol],
+    queryKey: ["continua", "company", symbol],
     queryFn: () => companiesApi.getProfile(symbol as string),
     enabled: !!symbol,
     staleTime: 5 * 60_000,

@@ -9,7 +9,7 @@ import { isNotFound } from "@/api/client";
  *  estimate in that case rather than showing an error. */
 export function useResearch(symbol: string | undefined) {
   const query = useQuery({
-    queryKey: ["afrifinance", "research", symbol],
+    queryKey: ["continua", "research", symbol],
     queryFn: () => researchApi.get(symbol as string),
     enabled: !!symbol,
     staleTime: 60_000,

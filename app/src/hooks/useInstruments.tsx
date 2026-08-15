@@ -9,7 +9,7 @@ export interface InstrumentOption {
 }
 
 /** Local fallback so "add to watchlist" / stock pickers still work if the
- *  AfriFinance Data API is unreachable — matches the shape instrumentsApi
+ *  Continua Data API is unreachable — matches the shape instrumentsApi
  *  returns, just without live coverage info. */
 const STATIC_FALLBACK: InstrumentOption[] = CANONICAL_SYMBOLS.map((symbol) => ({
   symbol,
@@ -23,7 +23,7 @@ const STATIC_FALLBACK: InstrumentOption[] = CANONICAL_SYMBOLS.map((symbol) => ({
  *  instead of a hand-maintained array that can silently drift out of sync. */
 export function useInstruments(exchange = "NSE") {
   const query = useQuery({
-    queryKey: ["afrifinance", "instruments", exchange],
+    queryKey: ["continua", "instruments", exchange],
     queryFn: () => instrumentsApi.list(exchange),
     staleTime: 5 * 60_000,
     retry: 1,

@@ -1,4 +1,4 @@
-import { afriFinanceFetch } from "./client";
+import { continuaFetch } from "./client";
 import type { Instrument } from "./types";
 
 /** The full tradable-instrument universe for an exchange. Use this instead
@@ -9,6 +9,6 @@ import type { Instrument } from "./types";
  *  eventually does. */
 export const instrumentsApi = {
   list(exchange = "NSE") {
-    return afriFinanceFetch<Instrument[]>("/instruments", { params: { exchange } });
+    return continuaFetch<Instrument[]>("/instruments", { params: { exchange } });
   },
 };

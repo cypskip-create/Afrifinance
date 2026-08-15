@@ -1,5 +1,5 @@
 /**
- * AfriFinance Data — entrypoint. Starts the REST API, the WebSocket
+ * Continua Data — entrypoint. Starts the REST API, the WebSocket
  * streaming server, and all background ingestion workers in one process.
  * At larger scale these three can be split into separate deployables
  * (they don't share in-process state except the pub/sub bus and the
@@ -16,7 +16,7 @@ import { logger } from "./monitoring/logger.js";
 async function main() {
   const app = createServer();
   const httpServer = app.listen(env.PORT, () => {
-    logger.info({ port: env.PORT }, "AfriFinance Data API listening");
+    logger.info({ port: env.PORT }, "Continua Data API listening");
   });
 
   startWebSocketServer();

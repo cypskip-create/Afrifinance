@@ -1,5 +1,5 @@
 /**
- * Pure functions: NSE raw shapes → AfriFinance standard schema. This is
+ * Pure functions: NSE raw shapes → Continua standard schema. This is
  * where provider-specific quirks get absorbed — field name differences,
  * enum casing, unit differences (e.g. market cap in millions vs. absolute),
  * timezone normalization (NSE feed times are EAT, we store UTC). Nothing
@@ -18,7 +18,7 @@ import type { FundamentalsBundle } from "../types.js";
 
 const EXCHANGE = "NSE" as const;
 
-/** Stable natural id — used as the AfriFinance-internal identifier
+/** Stable natural id — used as the Continua-internal identifier
  *  throughout the pipeline. Simple, deterministic, human-debuggable. */
 export const securityId = (symbol: string) => `${EXCHANGE}:${symbol}`;
 export const companyId = (symbol: string) => `${EXCHANGE}:company:${symbol}`;

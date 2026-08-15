@@ -3,8 +3,8 @@
 // This is intentionally device-local: the credential lives in the phone's secure
 // hardware, not our servers, so unlocking never depends on a network call.
 
-const enabledKey = (userId: string) => `afrifinance_app_lock_${userId}`;
-const credentialKey = (userId: string) => `afrifinance_app_lock_cred_${userId}`;
+const enabledKey = (userId: string) => `continua_app_lock_${userId}`;
+const credentialKey = (userId: string) => `continua_app_lock_cred_${userId}`;
 
 function toBase64Url(buf: ArrayBuffer): string {
   const bytes = new Uint8Array(buf);
@@ -42,8 +42,8 @@ export async function enableAppLock(userId: string, displayName: string): Promis
     const credential = (await navigator.credentials.create({
       publicKey: {
         challenge,
-        rp: { name: 'AfriFinance', id: window.location.hostname },
-        user: { id: userIdBytes, name: displayName || 'AfriFinance user', displayName: displayName || 'AfriFinance user' },
+        rp: { name: 'Continua', id: window.location.hostname },
+        user: { id: userIdBytes, name: displayName || 'Continua user', displayName: displayName || 'Continua user' },
         pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
         authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
         attestation: 'none',

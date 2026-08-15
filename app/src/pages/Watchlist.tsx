@@ -25,7 +25,7 @@ export default function Watchlist() {
   const rows = useMemo(() => {
     return watchlist.map(item => {
       const quote = quotes[item.symbol.toUpperCase()];
-      // Live AfriFinance Data Layer quote when this symbol is in its
+      // Live Continua Data Layer quote when this symbol is in its
       // current universe; otherwise fall back to the static reference
       // price so a stock not covered yet still renders sensibly.
       const price = quote?.lastPrice ?? getPrice(item.symbol);
