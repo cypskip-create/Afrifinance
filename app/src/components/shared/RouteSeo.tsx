@@ -5,7 +5,7 @@ type Meta = { title: string; description: string };
 
 const STATIC_META: Record<string, Meta> = {
   "/": {
-    title: "AfriFinance — NSE stock tracker & research",
+    title: "Continua — NSE stock tracker & research",
     description:
       "Track Nairobi Securities Exchange stocks, follow your portfolio and read daily Kenyan market insights in one command centre.",
   },
@@ -70,19 +70,19 @@ const STATIC_META: Record<string, Meta> = {
       "Join live and scheduled rooms where Kenyan investors discuss NSE earnings, sectors and market strategy.",
   },
   "/account": {
-    title: "Account settings — AfriFinance",
+    title: "Account settings — Continua",
     description:
-      "Manage your AfriFinance profile, appearance, text size, portfolio privacy and notification preferences.",
+      "Manage your Continua profile, appearance, text size, portfolio privacy and notification preferences.",
   },
   "/auth": {
-    title: "Sign in to AfriFinance",
+    title: "Sign in to Continua",
     description:
-      "Sign in or create a free AfriFinance account to track NSE investments and join the Kenyan investor community.",
+      "Sign in or create a free Continua account to track NSE investments and join the Kenyan investor community.",
   },
   "/landing": {
-    title: "AfriFinance — invest smarter on the NSE",
+    title: "Continua — invest smarter on the NSE",
     description:
-      "AfriFinance brings Nairobi Securities Exchange research, portfolio tracking and an investor community together.",
+      "Continua brings Nairobi Securities Exchange research, portfolio tracking and an investor community together.",
   },
 };
 
@@ -129,7 +129,7 @@ export const RouteSeo = () => {
     return (
       <Seo
         path={pathname}
-        title="Investor profile — AfriFinance TradersHub"
+        title="Investor profile — Continua TradersHub"
         description="View this investor's TradersHub posts, followers and (when shared publicly) their NSE portfolio allocation."
       />
     );
@@ -140,8 +140,8 @@ export const RouteSeo = () => {
     return (
       <Seo
         path={pathname}
-        title="AfriFinance — Kenyan market research"
-        description="Track NSE stocks, manage your portfolio and follow Kenyan market news and investor discussion on AfriFinance."
+        title="Continua — Kenyan market research"
+        description="Track NSE stocks, manage your portfolio and follow Kenyan market news and investor discussion on Continua."
       />
     );
   }

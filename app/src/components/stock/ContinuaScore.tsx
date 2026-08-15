@@ -13,7 +13,7 @@ export interface ScoreInputs {
   marketCap?: string;
 }
 
-export interface AfriFinanceScores {
+export interface ContinuaScores {
   value: number;
   growth: number;
   health: number;
@@ -31,7 +31,7 @@ const num = (v: string | number | undefined): number => {
 
 const clamp = (n: number, min = 0, max = 100) => Math.max(min, Math.min(max, n));
 
-export function computeScores(s: ScoreInputs): AfriFinanceScores {
+export function computeScores(s: ScoreInputs): ContinuaScores {
   const pe = num(s.pe);
   const eps = num(s.eps);
   const div = num(s.dividend);
@@ -78,7 +78,7 @@ const scoreBg = (n: number) =>
 const overallLabel = (n: number) =>
   n >= 75 ? "Strong" : n >= 60 ? "Solid" : n >= 45 ? "Mixed" : n >= 30 ? "Weak" : "Poor";
 
-export function AfriFinanceScoreCard({ scores }: { scores: AfriFinanceScores }) {
+export function ContinuaScoreCard({ scores }: { scores: ContinuaScores }) {
   const items = [
     { key: "value", label: "Value", icon: Coins, v: scores.value },
     { key: "growth", label: "Growth", icon: TrendingUp, v: scores.growth },
@@ -110,7 +110,7 @@ export function AfriFinanceScoreCard({ scores }: { scores: AfriFinanceScores }) 
         <div className="flex items-center justify-between mb-3">
           <div>
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-              AfriFinance Score
+              Continua Score
             </p>
             <div className="flex items-baseline gap-2 mt-0.5">
               <span className={`text-3xl font-bold ${scoreColor(scores.overall)}`}>

@@ -26,6 +26,7 @@ export const ContinuaMark = ({ size = 40, bare = false, className }: ContinuaMar
       role="img"
       aria-label="Continua"
       className={className}
+      style={{ width: size, height: size, flexShrink: 0, display: "block" }}
     >
       <defs>
         <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
@@ -34,12 +35,16 @@ export const ContinuaMark = ({ size = 40, bare = false, className }: ContinuaMar
         </linearGradient>
       </defs>
       {!bare && <rect x="0" y="0" width="100" height="100" rx="24" fill="#101014" />}
-      <path
-        d="M72.2 31.3 A29 29 0 1 1 72.2 68.7"
+      <circle
+        cx="50"
+        cy="50"
+        r="29"
         fill="none"
         stroke={`url(#${gradId})`}
         strokeWidth="12"
         strokeLinecap="round"
+        strokeDasharray="141.72 40.49"
+        strokeDashoffset="-20.25"
       />
       <circle cx="72.2" cy="68.7" r="4.3" fill="#FF7A45" />
     </svg>

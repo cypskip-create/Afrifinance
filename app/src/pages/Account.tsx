@@ -114,7 +114,7 @@ export default function Account() {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
               <h2 className="text-lg font-semibold truncate">{profile?.full_name || user?.email?.split('@')[0] || 'Guest'}</h2>
-              {isPremium && <Badge className="h-4 px-1.5 text-[9px] bg-foreground text-background border-0"><Crown className="h-2.5 w-2.5 mr-0.5" />Premium</Badge>}
+              {isPremium && <Badge className="h-4 px-1.5 text-[9px] brand-active border-0"><Crown className="h-2.5 w-2.5 mr-0.5" />Premium</Badge>}
             </div>
             <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
             <button
@@ -221,7 +221,7 @@ export default function Account() {
                     onClick={() => setFontScale(opt.val)}
                     data-small-target
                     className={`h-9 rounded-lg text-xs font-semibold transition-colors ${
-                      fontScale === opt.val ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:text-foreground"
+                      fontScale === opt.val ? "brand-active" : "bg-muted text-muted-foreground hover:text-foreground"
                     }`}
                   >{opt.label}</button>
                 ))}
@@ -274,7 +274,7 @@ export default function Account() {
           Sign out
         </Button>
 
-        <p className="text-center text-[10px] text-muted-foreground pb-4">AfriFinance · v1.0</p>
+        <p className="text-center text-[10px] text-muted-foreground pb-4">Continua · v1.0</p>
       </div>
     </div>
   );

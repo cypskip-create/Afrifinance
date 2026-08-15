@@ -12,7 +12,7 @@ import { StockAlertDialog } from "@/components/alerts/StockAlertDialog";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { MarketStatusIndicator } from "@/components/shared/MarketStatusIndicator";
 import { AddInvestmentDialog } from "@/components/portfolio/AddInvestmentDialog";
-import { AfriFinanceScoreCard, computeScores } from "@/components/stock/AfriFinanceScore";
+import { ContinuaScoreCard, computeScores } from "@/components/stock/ContinuaScore";
 import { AIThesisCard } from "@/components/stock/AIThesisCard";
 import { getFundamentals } from "@/data/stockFundamentals";
 import { STOCK_META, getPrice, getDayChange, DIV_YIELD, getStockFundamentals } from "@/lib/stockPrices";
@@ -34,7 +34,7 @@ import { useResearch } from "@/hooks/useResearch";
 import { useHistoricalCandles } from "@/hooks/useHistoricalCandles";
 import { useDividendHistory } from "@/hooks/useDividendHistory";
 import { useOwnership } from "@/hooks/useOwnership";
-import type { AfriFinanceScores } from "@/components/stock/AfriFinanceScore";
+import type { ContinuaScores } from "@/components/stock/ContinuaScore";
 
 
 // Price, change, sector, and key stats all come from the shared stockPrices.ts source
@@ -80,7 +80,7 @@ export default function StockDetail() {
   const upperSymbol = (symbol || "").toUpperCase();
   const stockMeta = STOCK_META[upperSymbol];
 
-  // Live AfriFinance Data Layer quote for this symbol, when it's in the
+  // Live Continua Data Layer quote for this symbol, when it's in the
   // Data Layer's current universe (see docs/api/API.md /instruments) —
   // overlaid onto the static reference stats below so this page shows the
   // same live price as Watchlist/Markets, and falls back gracefully
@@ -193,7 +193,7 @@ export default function StockDetail() {
   // covered; otherwise fall back to the client-side heuristic estimate so
   // the card still renders something for symbols outside the current
   // backend universe.
-  const scores: AfriFinanceScores = liveResearch
+  const scores: ContinuaScores = liveResearch
     ? {
         value: liveResearch.score.afriValue,
         growth: liveResearch.score.afriGrowth,
@@ -355,7 +355,7 @@ export default function StockDetail() {
             key={tf}
             data-small-target
             onClick={() => setSelectedTimeframe(tf)}
-            className={`px-2 py-1 text-[11px] font-semibold rounded-md tabular transition-colors ${tf === selectedTimeframe ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
+            className={`px-2 py-1 text-[11px] font-semibold rounded-md tabular transition-colors ${tf === selectedTimeframe ? 'brand-active' : 'text-muted-foreground hover:text-foreground'}`}
           >
             {tf}
           </button>
@@ -412,7 +412,7 @@ export default function StockDetail() {
                 key={tf}
                 data-small-target
                 onClick={() => setSelectedTimeframe(tf)}
-                className={`px-2.5 py-1.5 text-[12px] font-semibold rounded-md tabular transition-colors ${tf === selectedTimeframe ? 'bg-foreground text-background' : 'text-muted-foreground'}`}
+                className={`px-2.5 py-1.5 text-[12px] font-semibold rounded-md tabular transition-colors ${tf === selectedTimeframe ? 'brand-active' : 'text-muted-foreground'}`}
               >
                 {tf}
               </button>
@@ -429,7 +429,7 @@ export default function StockDetail() {
               key={s.id}
               data-small-target
               onClick={() => scrollTo(s.id)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-full whitespace-nowrap transition-colors ${section === s.id ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-full whitespace-nowrap transition-colors ${section === s.id ? 'brand-active' : 'text-muted-foreground hover:text-foreground'}`}
             >
               {s.label}
             </button>
@@ -490,7 +490,7 @@ export default function StockDetail() {
 
           <div>
             <Eyebrow>Investment Health Score</Eyebrow>
-            <AfriFinanceScoreCard scores={scores} />
+            <ContinuaScoreCard scores={scores} />
           </div>
 
           {stockNews.length > 0 && (
@@ -534,7 +534,7 @@ export default function StockDetail() {
                   key={g}
                   data-small-target
                   onClick={() => setResearchGroup(g)}
-                  className={`px-3 py-1 text-[11px] font-semibold rounded-full whitespace-nowrap capitalize transition-colors ${researchGroup === g ? 'bg-foreground text-background' : 'bg-muted/40 text-muted-foreground'}`}
+                  className={`px-3 py-1 text-[11px] font-semibold rounded-full whitespace-nowrap capitalize transition-colors ${researchGroup === g ? 'brand-active' : 'bg-muted/40 text-muted-foreground'}`}
                 >
                   {g}
                 </button>
@@ -612,7 +612,7 @@ export default function StockDetail() {
         <AddInvestmentDialog
           lockedSymbol={symbol} lockedName={stock.name} lockedSector={stock.sector}
           trigger={
-            <Button className="w-full h-10 rounded-full bg-foreground text-background font-semibold text-xs shadow-lg hover:shadow-xl">
+            <Button className="w-full h-10 rounded-full brand-active font-semibold text-xs shadow-lg hover:shadow-xl">
               <Plus className="h-3.5 w-3.5 mr-1.5" />
               {myHolding ? `Update ${symbol} holding` : `Add ${symbol} to portfolio`}
             </Button>

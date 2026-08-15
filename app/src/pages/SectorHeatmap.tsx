@@ -10,7 +10,7 @@ import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 // and Compare use — so this heatmap can't show a stock (or a change%) that disagrees with
 // the rest of the app, and can't include a ticker (like the old placeholder "NMG") that
 // isn't actually part of the app's real NSE universe. Change% is overlaid with live
-// AfriFinance Data Layer quotes inside the component below wherever the Data Layer covers
+// Continua Data Layer quotes inside the component below wherever the Data Layer covers
 // a symbol; market cap (used only for relative bubble sizing) stays on the static table.
 function buildStaticStocks() {
   return CANONICAL_SYMBOLS.map(symbol => {
@@ -82,7 +82,7 @@ export default function SectorHeatmap() {
               key={r}
               data-small-target
               onClick={() => setRange(r)}
-              className={`px-3 py-1 text-[11px] font-semibold rounded-full transition-colors ${range === r ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground border border-border/60'}`}
+              className={`px-3 py-1 text-[11px] font-semibold rounded-full transition-colors ${range === r ? 'brand-active' : 'text-muted-foreground hover:text-foreground border border-border/60'}`}
             >{r}</button>
           ))}
         </div>
@@ -116,7 +116,7 @@ export default function SectorHeatmap() {
               key={s}
               data-small-target
               onClick={() => setSector(s)}
-              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${sector === s ? 'bg-foreground text-background' : 'border border-border/60 text-muted-foreground hover:text-foreground'}`}
+              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${sector === s ? 'brand-active' : 'border border-border/60 text-muted-foreground hover:text-foreground'}`}
             >{s}</button>
           ))}
         </div>

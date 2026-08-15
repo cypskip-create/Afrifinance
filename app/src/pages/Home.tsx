@@ -46,7 +46,7 @@ export default function Home() {
 
   // Real watchlist, ranked by today's biggest movers — no more standing in
   // for a fixed demo list regardless of what the person actually watches.
-  // Overlaid with live AfriFinance Data Layer quotes wherever available.
+  // Overlaid with live Continua Data Layer quotes wherever available.
   const { quotes: watchlistQuotes } = useLiveQuotes(watchlist.map(w => w.symbol));
   const watchlistMovers = [...watchlist]
     .map(w => {
@@ -79,7 +79,7 @@ export default function Home() {
   return (
     <div className="page-canvas min-h-screen bg-background pb-24">
       <TopBar
-        title="AfriFinance"
+        title="Continua"
         subtitle={user ? `${greeting}, ${firstName}` : "Your smart companion"}
         showSearch
         showNotifications

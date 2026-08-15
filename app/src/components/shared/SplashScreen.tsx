@@ -20,7 +20,7 @@ export function SplashScreen({ onDone }: { onDone: () => void }) {
       className={`fixed inset-0 z-[100] flex items-center justify-center bg-background transition-opacity duration-300 ${leaving ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
     >
       <div className="flex flex-col items-center gap-4">
-        <div className="relative">
+        <div className="relative w-16 h-16">
           <div className="absolute inset-0 rounded-2xl bg-primary/25 blur-xl splash-pulse" />
           <ContinuaMark
             size={64}

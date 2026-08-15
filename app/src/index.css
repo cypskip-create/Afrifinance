@@ -435,7 +435,16 @@
     @apply text-muted-foreground hover:text-foreground;
   }
   .pill-tab.active {
-    @apply bg-foreground text-background;
+    @apply brand-active;
+  }
+
+  /* Shared "selected/primary" treatment for pills, segmented controls, and
+     CTA buttons — brand-colored fill with a soft glow underneath, instead
+     of the old bg-foreground/text-background invert (which read as a solid
+     white pill in dark/AMOLED mode, since --foreground is near-white there). */
+  .brand-active {
+    @apply bg-primary text-primary-foreground;
+    box-shadow: 0 6px 16px -4px hsl(var(--primary) / 0.5);
   }
 
   /* Sticky sub-nav strip */

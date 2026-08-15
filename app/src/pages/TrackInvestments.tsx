@@ -38,7 +38,7 @@ export default function TrackInvestments() {
   const [allocationMode, setAllocationMode] = useState<"asset" | "sector">("sector");
   const [selectedSlice, setSelectedSlice] = useState<string | null>(null);
 
-  // Live AfriFinance Data Layer quotes — the SAME quotes HoldingsList (rendered further
+  // Live Continua Data Layer quotes — the SAME quotes HoldingsList (rendered further
   // down) uses internally, so this page's total balance / allocation chart can't disagree
   // with what the individual holding rows show.
   const { liveQuotes } = useLivePortfolioQuotes(portfolio.map(h => h.symbol));
@@ -364,7 +364,7 @@ export default function TrackInvestments() {
                 <button
                   key={key}
                   data-small-target
-                  className={`text-[10px] font-semibold px-2.5 h-6 rounded-full transition-colors ${sortBy === key ? 'bg-foreground text-background' : 'text-muted-foreground'}`}
+                  className={`text-[10px] font-semibold px-2.5 h-6 rounded-full transition-colors ${sortBy === key ? 'brand-active' : 'text-muted-foreground'}`}
                   onClick={() => toggleSort(key)}
                 >
                   {label}
