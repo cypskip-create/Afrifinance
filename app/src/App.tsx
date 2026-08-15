@@ -28,6 +28,7 @@ import Rooms from "./pages/Rooms";
 import StockScreener from "./pages/StockScreener";
 import StockCompare from "./pages/StockCompare";
 import UserProfile from "./pages/UserProfile";
+import Settings from "./pages/Settings";
 import PostDetail from "./pages/PostDetail";
 import ThemeDetail from "./pages/ThemeDetail";
 import FeaturedListDetail from "./pages/FeaturedListDetail";
@@ -54,6 +55,7 @@ const App = () => (
                   <Route path="discover" element={<Discover />} />
 
                   <Route path="account" element={<Account />} />
+                  <Route path="settings" element={<Settings />} />
                   <Route path="stock/:symbol" element={<StockDetail />} />
                   <Route path="watchlist" element={<Watchlist />} />
                   <Route path="sector/:sector" element={<SectorDetail />} />

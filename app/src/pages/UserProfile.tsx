@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Calendar, UserPlus, MessageCircle, MoreHorizontal, Lock, Verified, Heart, Repeat2, FileText, Camera, Loader2, Share, TrendingUp, TrendingDown, Award, Target, PieChart, ChevronRight, Image as ImageIcon, MapPin, Pin, Settings, Bookmark, VolumeX, UserX } from "lucide-react";
+import { ArrowLeft, Calendar, UserPlus, MessageCircle, MoreHorizontal, Lock, Verified, Heart, Repeat2, FileText, Camera, Loader2, Share, TrendingUp, TrendingDown, Award, Target, PieChart, ChevronRight, Image as ImageIcon, MapPin, Pin, Bookmark, VolumeX, UserX, Settings } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,12 +19,12 @@ import { XPostCard } from "@/components/social/XPostCard";
 import { HubPostCard } from "@/components/social/HubPostCard";
 import { usePosts, Post, Comment, ReactionKind } from "@/hooks/usePosts";
 import { XCommentSheet } from "@/components/social/XCommentSheet";
-import { ProfileSettingsDialog } from "@/components/profile/ProfileSettingsDialog";
 import { PortfolioPrivacyDialog } from "@/components/profile/PortfolioPrivacyDialog";
 import { getPrice } from "@/lib/stockPrices";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { atHandle } from "@/lib/handle";
 import { shareLink } from "@/lib/share";
+import { ImageViewer } from "@/components/social/ImageViewer";
 
 
 interface UserProfileData {
@@ -65,8 +65,6 @@ export default function UserProfile() {
   const [likedPosts, setLikedPosts] = useState<UserPost[]>([]);
   const [repostedPosts, setRepostedPosts] = useState<UserPost[]>([]);
   const [bookmarkedPosts, setBookmarkedPosts] = useState<UserPost[]>([]);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [portfolioPrivacyOpen, setPortfolioPrivacyOpen] = useState(false);
   const [publicPortfolio, setPublicPortfolio] = useState<PortfolioHolding[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadingBanner, setUploadingBanner] = useState(false);
@@ -79,6 +77,9 @@ export default function UserProfile() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
+  const [avatarViewerOpen, setAvatarViewerOpen] = useState(false);
+  const [followsMe, setFollowsMe] = useState(false);
+  const [portfolioPrivacyOpen, setPortfolioPrivacyOpen] = useState(false);
 
   const isOwnProfile = user?.id === userId;
   const userIsFollowing = userId ? isFollowing(userId) : false;
@@ -91,6 +92,23 @@ export default function UserProfile() {
       if (user?.id === userId) fetchBookmarks();
     }
   }, [userId, user]);
+
+  // Does the profile being viewed already follow the current user? If so, the
+  // follow button should read "Follow back" instead of a plain "Follow", the
+  // way X does.
+  useEffect(() => {
+    const checkFollowsMe = async () => {
+      if (!user || !userId || user.id === userId) { setFollowsMe(false); return; }
+      const { data } = await supabase
+        .from("user_follows")
+        .select("id")
+        .eq("follower_id", userId)
+        .eq("following_id", user.id)
+        .maybeSingle();
+      setFollowsMe(!!data);
+    };
+    checkFollowsMe();
+  }, [user, userId]);
 
   const fetchBookmarks = async () => {
     if (!user) return;
@@ -266,7 +284,7 @@ export default function UserProfile() {
   };
   const handlePostShare = async (post: Post) => {
     const url = `${window.location.origin}/traders-hub/post/${post.id}`;
-    const result = await shareLink(url, { title: "Continua TradersHub", text: post.content.slice(0, 120) });
+    const result = await shareLink(url, { title: "AfriFinance TradersHub", text: post.content.slice(0, 120) });
     if (result.method === "clipboard") toast({ title: "Link copied" });
     else if (result.method === "failed") toast({ title: "Couldn't share this post", variant: "destructive" });
   };
@@ -355,18 +373,12 @@ export default function UserProfile() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex items-center gap-1.5">
-            {isOwnProfile && (
-              <Button variant="secondary" size="icon" className="h-9 w-9 rounded-full bg-background/40 hover:bg-background/60 backdrop-blur-sm text-foreground" onClick={() => setSettingsOpen(true)} title="TradersHub Settings">
-                <Settings className="h-5 w-5" />
-              </Button>
-            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="secondary" size="icon" className="h-9 w-9 rounded-full bg-background/40 hover:bg-background/60 backdrop-blur-sm text-foreground"><MoreHorizontal className="h-5 w-5" /></Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={handleShare}><Share className="h-4 w-4 mr-2" />Share Profile</DropdownMenuItem>
-                {isOwnProfile && <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setTimeout(() => setSettingsOpen(true), 50); }}><Settings className="h-4 w-4 mr-2" />Settings</DropdownMenuItem>}
                 {!isOwnProfile && (
                   <>
                     <DropdownMenuItem onClick={handleMuteUser}><VolumeX className="h-4 w-4 mr-2" />Mute {atHandle(profileData)}</DropdownMenuItem>
@@ -391,7 +403,10 @@ export default function UserProfile() {
       {/* Avatar + actions */}
       <div className="px-4 -mt-12">
         <div className="flex justify-between items-end">
-          <Avatar className="h-24 w-24 sm:h-28 sm:w-28 ring-4 ring-background shadow-md">
+          <Avatar
+            className="h-24 w-24 sm:h-28 sm:w-28 ring-4 ring-background shadow-md cursor-pointer"
+            onClick={() => profileData.avatar_url && setAvatarViewerOpen(true)}
+          >
             <AvatarImage src={profileData.avatar_url || ""} className="object-cover" />
             <AvatarFallback className="bg-primary text-primary-foreground text-2xl font-bold">{getInitials(profileData.full_name)}</AvatarFallback>
           </Avatar>
@@ -400,7 +415,7 @@ export default function UserProfile() {
               <Button variant="outline" size="sm" className="h-9 rounded-full font-semibold text-[13.5px] px-4" onClick={() => setEditProfileOpen(true)}>Edit profile</Button>
             ) : (
               <Button variant={userIsFollowing ? "outline" : "default"} size="sm" onClick={handleFollow} className="h-9 rounded-full font-semibold text-[13.5px] px-4">
-                {userIsFollowing ? "Following" : "Follow"}
+                {userIsFollowing ? "Following" : followsMe ? "Follow back" : "Follow"}
               </Button>
             )}
           </div>
@@ -577,7 +592,7 @@ export default function UserProfile() {
           )}
         </TabsContent>
 
-        {/* Portfolio tab — enhanced */}
+        {/* Portfolio tab — enhanced with privacy dialog */}
         <TabsContent value="portfolio" className="mt-0">
           {isOwnProfile && (
             <div className="flex items-center justify-between px-4 pt-3">
@@ -644,8 +659,10 @@ export default function UserProfile() {
       <XCommentSheet open={commentSheetOpen} onOpenChange={setCommentSheetOpen} post={selectedPost} currentUserId={user?.id} comments={comments} loadingComments={loadingComments} onAddComment={handleAddComment} onBookmark={handleBookmark} onShare={handlePostShare} onDelete={isOwnProfile ? handleDelete : undefined} onReact={handleReact} onReactComment={reactToComment} />
       {userId && <FollowersDialog open={followersDialogOpen} onOpenChange={setFollowersDialogOpen} userId={userId} initialTab={dialogTab} />}
       <EditProfileDialog open={editProfileOpen} onOpenChange={(open) => { setEditProfileOpen(open); if (!open) fetchProfile(); }} />
-      <ProfileSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} currentHandle={profileData.handle} portfolioPublic={profileData.portfolio_public} onSaved={fetchProfile} />
       <PortfolioPrivacyDialog open={portfolioPrivacyOpen} onOpenChange={setPortfolioPrivacyOpen} portfolioPublic={profileData.portfolio_public} onSaved={fetchProfile} />
+      {profileData.avatar_url && (
+        <ImageViewer open={avatarViewerOpen} onOpenChange={setAvatarViewerOpen} images={[profileData.avatar_url]} />
+      )}
     </div>
   );
 }

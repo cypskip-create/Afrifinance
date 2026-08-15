@@ -91,9 +91,23 @@ export function usePosts() {
 
       let postsData = postsDataRaw;
       if (user && postsData && postsData.length > 0) {
-        const { data: hiddenRows } = await supabase.from('hidden_posts' as any).select('post_id').eq('user_id', user.id);
-        const hiddenSet = new Set((hiddenRows as any[] | null)?.map(r => r.post_id));
-        if (hiddenSet.size > 0) postsData = postsData.filter(p => !hiddenSet.has(p.id));
+        const [hiddenRes, blockedRes, mutedRes] = await Promise.all([
+          supabase.from('hidden_posts' as any).select('post_id').eq('user_id', user.id),
+          supabase.from('blocked_users' as any).select('blocked_id').eq('blocker_id', user.id),
+          supabase.from('muted_users' as any).select('muted_id').eq('muter_id', user.id),
+        ]);
+        const hiddenSet = new Set((hiddenRes.data as any[] | null)?.map(r => r.post_id));
+        // Blocking/muting someone only meant anything if it actually kept
+        // their posts out of your feed — previously these tables were
+        // written to (from the post-card and profile "Block"/"Mute"
+        // actions) but never read back here, so the setting did nothing.
+        const excludedUserIds = new Set([
+          ...((blockedRes.data as any[] | null)?.map(r => r.blocked_id) || []),
+          ...((mutedRes.data as any[] | null)?.map(r => r.muted_id) || []),
+        ]);
+        if (hiddenSet.size > 0 || excludedUserIds.size > 0) {
+          postsData = postsData.filter(p => !hiddenSet.has(p.id) && !excludedUserIds.has(p.user_id));
+        }
       }
 
       if (!postsData || postsData.length === 0) {

@@ -1,706 +1,308 @@
-import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { ArrowLeft, Search, MoreHorizontal, Send, X, Bookmark, BookmarkCheck, Share2, MessageSquare, Verified, SlidersHorizontal, ChevronDown, Trash2, Link2 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { TopBar } from "@/components/shared/TopBar";
-import { SparklineChart } from "@/components/shared/SparklineChart";
-import { MarketStatusIndicator } from "@/components/shared/MarketStatusIndicator";
-import { AllStocksList } from "@/components/markets/AllStocksList";
-import { StockHeatmap } from "@/components/home/StockHeatmap";
-import { CANONICAL_SYMBOLS, STOCK_META, getPrice, getDayChange, relativeDate } from "@/lib/stockPrices";
-import { useMovers } from "@/hooks/useMovers";
-import { useLiveQuotes } from "@/hooks/useLiveQuotes";
-import { EconomicCalendar } from "@/components/home/EconomicCalendar";
-import { investmentThemes } from "@/data/investmentThemes";
-import { featuredLists } from "@/data/featuredLists";
-import {
-  TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Search, Clock,
-  BarChart3, Globe, Calendar, Star, ChevronRight, Flame, Filter,
-  Building2, Zap, Award, DollarSign, Percent, Activity, Bell, Landmark,
-  Lightbulb, Volume2, BarChart2, Layers
-} from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useFollows } from "@/hooks/useFollows";
+import { useToast } from "@/hooks/use-toast";
+import { usePosts, Post, Comment } from "@/hooks/usePosts";
+import { CommentThread } from "@/components/social/CommentThread";
+import { CommunityReactionButton, CommunityReaction, ReactionChips } from "@/components/social/CommunityReactionButton";
+import { atHandle, getInitials } from "@/lib/handle";
+import { shareLink } from "@/lib/share";
+import { renderRichText, splitContent } from "@/components/social/HubPostCard";
+import { formatTimestamp } from "@/lib/formatTimestamp";
+import { ImageViewer } from "@/components/social/ImageViewer";
 
-const tabs = ["Overview", "Discover", "Calendars", "Heatmap", "All Stocks"] as const;
-type Tab = typeof tabs[number];
+export default function PostDetail() {
+  const { postId } = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const { isFollowing, toggleFollow } = useFollows();
+  const { posts, fetchComments, addComment, bookmarkPost, reactToPost, reactToComment, deletePost } = usePosts();
 
-const indices = [
-  { name: "NSE 20", value: "1,847.23", change: 1.2, isUp: true, points: "+22.1" },
-  { name: "NSE 25", value: "3,542.87", change: 0.8, isUp: true, points: "+28.3" },
-  { name: "NASI", value: "112.45", change: -0.3, isUp: false, points: "-0.34" },
-  { name: "FTSE Kenya", value: "1,234.56", change: 2.1, isUp: true, points: "+25.9" },
-];
+  const [post, setPost] = useState<Post | null>(null);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [loadingComments, setLoadingComments] = useState(true);
+  const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
+  const [draft, setDraft] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sortBy, setSortBy] = useState<"relevant" | "latest">("relevant");
+  const [viewerOpen, setViewerOpen] = useState(false);
 
-const commodities = [
-  { name: "Tea (Mombasa)", value: "KES 312/kg", change: 2.1, isUp: true },
-  { name: "Coffee (Nairobi)", value: "KES 580/kg", change: 1.4, isUp: true },
-  { name: "Maize (90kg)", value: "KES 4,800", change: -0.6, isUp: false },
-  { name: "Avocado (export)", value: "KES 95/kg", change: 0.9, isUp: true },
-];
+  const cached = useMemo(() => posts.find(p => p.id === postId) || null, [posts, postId]);
 
-// Static fallback (used only while live data is loading, or if the
-// Continua Data API is unreachable) — Overview normally renders live
-// topGainers/topLosers/sectors computed inside the component below from
-// useMovers()/useLiveQuotes(), which come straight from the Data Layer.
-const nseUniverse = CANONICAL_SYMBOLS.map(symbol => {
-  const { pct } = getDayChange(symbol);
-  return { symbol, name: STOCK_META[symbol].name, sector: STOCK_META[symbol].sector, price: getPrice(symbol), change: pct };
-});
-const staticTopGainers = [...nseUniverse].sort((a, b) => b.change - a.change).slice(0, 5);
-const staticTopLosers = [...nseUniverse].sort((a, b) => a.change - b.change).slice(0, 5);
-
-function computeSectors(universe: typeof nseUniverse) {
-  const map = new Map<string, { sum: number; count: number; topSymbol: string; topChange: number }>();
-  universe.forEach(s => {
-    const cur = map.get(s.sector) || { sum: 0, count: 0, topSymbol: s.symbol, topChange: -Infinity };
-    map.set(s.sector, {
-      sum: cur.sum + s.change,
-      count: cur.count + 1,
-      topSymbol: s.change > cur.topChange ? s.symbol : cur.topSymbol,
-      topChange: Math.max(cur.topChange, s.change),
+  const loadPost = useCallback(async () => {
+    if (!postId) return;
+    if (cached) { setPost(cached); return; }
+    const { data } = await supabase.from("posts").select("*").eq("id", postId).maybeSingle();
+    if (!data) { setPost(null); return; }
+    const [{ data: author }, { data: reactions }, { count: commentCount }, { data: bookmark }] = await Promise.all([
+      supabase.from("profiles_public").select("id, user_id, full_name, handle, avatar_url, bio").eq("user_id", data.user_id).maybeSingle(),
+      supabase.from("post_reactions").select("user_id, reaction").eq("post_id", postId),
+      supabase.from("post_comments").select("id", { count: "exact", head: true }).eq("post_id", postId),
+      user ? supabase.from("post_bookmarks").select("id").eq("post_id", postId).eq("user_id", user.id).maybeSingle() : Promise.resolve({ data: null }),
+    ]);
+    const counts: Record<string, number> = {};
+    let mine: CommunityReaction | null = null;
+    reactions?.forEach((r: any) => {
+      counts[r.reaction] = (counts[r.reaction] || 0) + 1;
+      if (r.user_id === user?.id) mine = r.reaction;
     });
-  });
-  return Array.from(map.entries())
-    .map(([name, v]) => ({ name, change: v.sum / v.count, isUp: v.sum >= 0, stocks: v.count, topStock: v.topSymbol }))
-    .sort((a, b) => b.change - a.change);
-}
+    setPost({
+      ...(data as any),
+      author: author as any,
+      likes_count: 0, reposts_count: 0,
+      comments_count: commentCount || 0,
+      is_liked: false, is_reposted: false, is_bookmarked: !!bookmark,
+      reaction_counts: counts as any, my_reaction: mine,
+    });
+  }, [postId, cached, user]);
 
-// allNseStocks removed — the "All Stocks" tab now renders <AllStocksList/>, which derives
-// its data from the shared stockPrices.ts source instead of a separate hardcoded array.
+  useEffect(() => { loadPost(); }, [loadPost]);
 
-// Calendar/IPO dates below are all expressed as offsets from "today" via fmtDate() rather
-// than fixed calendar strings, so Upcoming Earnings/Dividends/IPOs always read as genuinely
-// upcoming (and Recently Listed as genuinely recent) no matter when the app is opened.
-const fmtDate = (daysOffset: number) =>
-  relativeDate(daysOffset).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const refreshComments = useCallback(async () => {
+    if (!postId) return;
+    setLoadingComments(true);
+    setComments(await fetchComments(postId));
+    setLoadingComments(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [postId]);
 
-const ipos = [
-  { name: "TechPay Africa", sector: "Fintech", issuePrice: 20.00, status: "Open", closeDate: fmtDate(10), subscriptionRate: "340%", minShares: 100 },
-  { name: "SafeInsure Ltd", sector: "Insurance", issuePrice: 15.50, status: "Upcoming", closeDate: fmtDate(25), subscriptionRate: "-", minShares: 200 },
-  { name: "AgroTech Kenya", sector: "Agriculture", issuePrice: 8.00, status: "Upcoming", closeDate: fmtDate(35), subscriptionRate: "-", minShares: 500 },
-];
+  useEffect(() => { refreshComments(); }, [refreshComments]);
 
-const recentIPOs = [
-  { name: "DigitalPay PLC", symbol: "DPAY", listingPrice: 12.00, currentPrice: 18.50, change: 54.2, listDate: fmtDate(-20) },
-  { name: "GreenEnergy Co", symbol: "GREN", listingPrice: 25.00, currentPrice: 22.30, change: -10.8, listDate: fmtDate(-45) },
-];
+  const totalComments = useMemo(() => {
+    const count = (arr: Comment[]): number => arr.reduce((s, c) => s + 1 + (c.replies ? count(c.replies) : 0), 0);
+    return count(comments);
+  }, [comments]);
 
-const dividendCalendar = [
-  { symbol: "SAFCOM", name: "Safaricom", exDate: fmtDate(15), payDate: fmtDate(40), amount: 0.64, yield: 5.8, type: "Final" },
-  { symbol: "EQTY", name: "Equity Group", exDate: fmtDate(20), payDate: fmtDate(45), amount: 4.00, yield: 4.2, type: "Final" },
-  { symbol: "SCBK", name: "Std Chartered", exDate: fmtDate(25), payDate: fmtDate(50), amount: 17.00, yield: 6.2, type: "Final" },
-  { symbol: "EABL", name: "EABL", exDate: fmtDate(32), payDate: fmtDate(57), amount: 11.00, yield: 7.1, type: "Interim" },
-  { symbol: "KCB", name: "KCB Group", exDate: fmtDate(38), payDate: fmtDate(63), amount: 2.50, yield: 3.9, type: "Final" },
-];
+  const viewCount = post
+    ? Math.max(1, (post.comments_count || 0) * 24 + Object.values(post.reaction_counts || {}).reduce((s, n) => s + (n || 0), 0) * 11 + 37)
+    : 0;
 
-const highDividendStocks = [
-  { symbol: "EABL", name: "EABL", yield: 7.1, amount: 11.00, price: getPrice("EABL"), frequency: "Semi-annual" },
-  { symbol: "SCBK", name: "Std Chartered", yield: 6.2, amount: 17.00, price: getPrice("SCBK"), frequency: "Annual" },
-  { symbol: "SAFCOM", name: "Safaricom", yield: 5.8, amount: 0.64, price: getPrice("SAFCOM"), frequency: "Annual" },
-  { symbol: "ABSA", name: "ABSA Bank", yield: 5.1, amount: 1.10, price: getPrice("ABSA"), frequency: "Annual" },
-  { symbol: "COOP", name: "Co-op Bank", yield: 4.8, amount: 1.00, price: getPrice("COOP"), frequency: "Annual" },
-];
+  const submit = async () => {
+    if (!draft.trim() || !post) return;
+    if (!user) { navigate("/auth"); return; }
+    setSending(true);
+    const isReply = !!replyingTo?.id;
+    const { error } = await addComment(post.id, draft.trim(), replyingTo?.id);
+    if (!error) {
+      setDraft("");
+      setReplyingTo(null);
+      await refreshComments();
+      setPost(p => p ? { ...p, comments_count: (p.comments_count || 0) + 1 } : p);
+      toast({ title: isReply ? "Reply posted" : "Comment posted" });
+    }
+    setSending(false);
+  };
 
-// featuredLists now comes from the shared data/featuredLists.ts module (imported above) so
-// the Overview cards and the list's own detail page can't show different member stocks.
-// Icons are looked up here by slug since the shared data module stays icon-free/serializable.
-const FEATURED_LIST_ICONS: Record<string, typeof Star> = {
-  "blue-chip-nse": Star,
-  "high-dividend": DollarSign,
-  "undervalued": Award,
-};
+  const react = async (reaction: CommunityReaction) => {
+    if (!user || !post) { navigate("/auth"); return; }
+    const prev = post.my_reaction;
+    setPost(p => {
+      if (!p) return p;
+      const counts: any = { ...(p.reaction_counts || {}) };
+      if (prev) counts[prev] = Math.max(0, (counts[prev] || 0) - 1);
+      const next = prev === reaction ? null : reaction;
+      if (next) counts[next] = (counts[next] || 0) + 1;
+      return { ...p, reaction_counts: counts, my_reaction: next };
+    });
+    await reactToPost(post.id, reaction);
+  };
 
-// Theme change % is computed live from its member stocks below (via themesWithChange),
-// instead of a hardcoded number that would drift from real prices.
-const priceMap = new Map(nseUniverse.map(s => [s.symbol, s]));
-const themesWithChange = investmentThemes.map(theme => {
-  const memberChanges = theme.stocks.map(s => priceMap.get(s)?.change ?? 0);
-  const change = memberChanges.length > 0 ? memberChanges.reduce((a, b) => a + b, 0) / memberChanges.length : 0;
-  return { ...theme, change };
-});
+  const bookmark = async () => {
+    if (!user || !post) { navigate("/auth"); return; }
+    const wasBookmarked = !!post.is_bookmarked;
+    setPost(p => p ? { ...p, is_bookmarked: !p.is_bookmarked } : p);
+    await bookmarkPost(post.id, wasBookmarked);
+    toast({ title: wasBookmarked ? "Removed from bookmarks" : "Saved to bookmarks" });
+  };
 
-const earningsCalendar = [
-  { symbol: "EABL", name: "EABL", date: fmtDate(5), time: "2:00 PM EAT", expected: "KES 9.80", impact: "high" as const },
-  { symbol: "SAFCOM", name: "Safaricom", date: fmtDate(12), time: "10:00 AM EAT", expected: "KES 1.08", impact: "high" as const },
-  { symbol: "KCB", name: "KCB Group", date: fmtDate(19), time: "11:00 AM EAT", expected: "KES 7.20", impact: "medium" as const },
-  { symbol: "BAMB", name: "Bamburi", date: fmtDate(30), time: "3:00 PM EAT", expected: "KES 2.30", impact: "low" as const },
-];
+  const share = async () => {
+    const url = `${window.location.origin}/traders-hub/post/${postId}`;
+    const result = await shareLink(url, { title: "AfriFinance TradersHub", text: post?.content?.slice(0, 120) });
+    if (result.method === "clipboard") toast({ title: "Link copied" });
+    else if (result.method === "failed") toast({ title: "Couldn't share this post", variant: "destructive" });
+  };
 
-const volumeLeaders = [
-  { symbol: "KPLC", name: "Kenya Power", volume: "15.2M", avgVolume: "8.5M", ratio: 1.79, price: getPrice("KPLC"), change: getDayChange("KPLC").pct },
-  { symbol: "SAFCOM", name: "Safaricom", volume: "8.1M", avgVolume: "6.2M", ratio: 1.31, price: getPrice("SAFCOM"), change: getDayChange("SAFCOM").pct },
-  { symbol: "EQTY", name: "Equity Group", volume: "2.4M", avgVolume: "1.8M", ratio: 1.33, price: getPrice("EQTY"), change: getDayChange("EQTY").pct },
-  { symbol: "BRIT", name: "Britam", volume: "1.8M", avgVolume: "950K", ratio: 1.89, price: getPrice("BRIT"), change: getDayChange("BRIT").pct },
-];
-
-const analystRatings = [
-  { symbol: "SAFCOM", rating: "Buy", target: 20.50, current: getPrice("SAFCOM"), firm: "Genghis Capital" },
-  { symbol: "EQTY", rating: "Strong Buy", target: 58.00, current: getPrice("EQTY"), firm: "SBG Securities" },
-  { symbol: "KCB", rating: "Hold", target: 42.00, current: getPrice("KCB"), firm: "Dyer & Blair" },
-  { symbol: "SCBK", rating: "Sell", target: 190.00, current: getPrice("SCBK"), firm: "Standard Investment" },
-].map(r => ({ ...r, upside: +(((r.target - r.current) / r.current) * 100).toFixed(1) }));
-
-function StockRow({ stock, onTap }: { stock: { symbol: string; name: string; price: number; change: number }; onTap: () => void }) {
-  return (
-    <div onClick={onTap} className="flex items-center justify-between py-3 px-1 border-b border-border/40 last:border-0 cursor-pointer active:bg-muted/30 active:scale-[0.99] transition-all duration-150">
-      <div className="flex items-center gap-3 flex-1 min-w-0">
-        <div className="w-9 h-9 rounded-xl bg-primary/8 flex items-center justify-center text-xs font-bold text-primary shrink-0">
-          {stock.symbol.slice(0, 2)}
-        </div>
-        <div className="min-w-0">
-          <p className="text-sm font-semibold truncate">{stock.symbol}</p>
-          <p className="text-xs text-muted-foreground truncate">{stock.name}</p>
-        </div>
+  if (!post) {
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="sticky top-0 z-40 flex items-center gap-3 px-3 py-2.5 border-b border-border/60 bg-background/95 backdrop-blur-xl">
+          <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => navigate(-1)}><ArrowLeft className="h-5 w-5" /></Button>
+          <h1 className="text-sm font-bold">Post</h1>
+        </header>
+        <p className="p-10 text-center text-sm text-muted-foreground">This post is no longer available.</p>
       </div>
-      <div className="flex items-center gap-3">
-        <SparklineChart isPositive={stock.change >= 0} width={44} height={18} />
-        <div className="text-right min-w-[72px]">
-          <p className="text-sm font-bold">KES {stock.price.toFixed(2)}</p>
-          <p className={`text-xs font-semibold ${stock.change >= 0 ? 'text-bull' : 'text-bear'}`}>
-            {stock.change >= 0 ? '+' : ''}{stock.change.toFixed(1)}%
+    );
+  }
+
+  const { title, body } = splitContent(post.content);
+  const following = isFollowing(post.user_id);
+  const sorted = sortBy === "latest"
+    ? [...comments].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    : comments;
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col pb-[76px]">
+      {/* Detail header — back, author identity, search, overflow */}
+      <header className="sticky top-0 z-40 flex items-center gap-2 px-2 py-2 border-b border-border/60 bg-background/95 backdrop-blur-xl">
+        <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => navigate(-1)} aria-label="Back">
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <button className="flex items-center gap-2 min-w-0 flex-1" onClick={() => navigate(`/profile/${post.user_id}`)}>
+          <Avatar className="h-7 w-7 shrink-0">
+            <AvatarImage src={post.author?.avatar_url || ""} className="object-cover" />
+            <AvatarFallback className="text-[10px] font-bold bg-primary/10 text-primary">{getInitials(post.author?.full_name)}</AvatarFallback>
+          </Avatar>
+          <span className="text-[13px] font-bold truncate">{post.author?.full_name || "Investor"}</span>
+          <Verified className="h-3 w-3 text-primary fill-primary shrink-0" />
+        </button>
+        {!following && user?.id !== post.user_id && (
+          <button
+            data-small-target
+            onClick={() => toggleFollow(post.user_id)}
+            className="h-7 px-2.5 rounded-full text-[12px] font-bold text-primary hover:bg-primary/10"
+          >
+            + Follow
+          </button>
+        )}
+        <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" aria-label="Search" onClick={() => navigate("/traders-hub?focus=search")}>
+          <Search className="h-[18px] w-[18px]" />
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" aria-label="More"><MoreHorizontal className="h-[18px] w-[18px]" /></Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44 rounded-xl">
+            <DropdownMenuItem onClick={share}><Link2 className="h-4 w-4 mr-2" />Share post</DropdownMenuItem>
+            {user?.id === post.user_id && (
+              <DropdownMenuItem className="text-destructive" onClick={async () => { await deletePost(post.id); navigate("/traders-hub"); }}>
+                <Trash2 className="h-4 w-4 mr-2" />Delete post
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </header>
+
+      <div className="flex-1">
+        {/* Full post */}
+        <div className="px-4 pt-4 pb-3">
+          <div className="flex items-center gap-2.5">
+            <Avatar className="h-9 w-9" onClick={() => navigate(`/profile/${post.user_id}`)}>
+              <AvatarImage src={post.author?.avatar_url || ""} className="object-cover" />
+              <AvatarFallback className="bg-primary/10 text-primary text-[11px] font-bold">{getInitials(post.author?.full_name)}</AvatarFallback>
+            </Avatar>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1">
+                <span className="font-bold text-[13px] truncate">{post.author?.full_name || "Investor"}</span>
+                <span className="text-[12px] text-muted-foreground">{atHandle(post.author as any)}</span>
+              </div>
+              <p className="text-[11px] text-muted-foreground">{formatTimestamp(post.created_at)}{post.edited_at ? " · edited" : ""}</p>
+            </div>
+          </div>
+
+          <h1 className="mt-3 text-[17px] font-bold leading-snug break-words">{renderRichText(title, navigate)}</h1>
+          {body && <p className="mt-2 text-[13.5px] leading-[1.6] whitespace-pre-wrap break-words">{renderRichText(body, navigate)}</p>}
+
+          {post.image_url && (
+            <button className="mt-3 block w-full rounded-xl overflow-hidden bg-muted/40" onClick={() => setViewerOpen(true)}>
+              <img src={post.image_url} alt="Post attachment" className="w-full max-h-[380px] object-cover" />
+            </button>
+          )}
+
+          {post.stock_mentions && post.stock_mentions.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {post.stock_mentions.map(s => (
+                <button key={s} data-small-target onClick={() => navigate(`/stock/${s}`)} className="h-7 px-2.5 rounded-full bg-muted/50 text-[11px] font-semibold text-primary">
+                  ${s}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
+            Disclaimer: AfriFinance provides this content for information and educational use only. It is not investment advice.
+          </p>
+
+          <div className="mt-3">
+            <ReactionChips counts={post.reaction_counts || {}} selected={post.my_reaction} onSelect={react} />
+          </div>
+
+          <p className="mt-3 text-right text-[11px] text-muted-foreground tabular-nums">
+            {post.comments_count || 0} Comments · {viewCount.toLocaleString()} Views
           </p>
         </div>
-      </div>
-    </div>
-  );
-}
 
-export default function Markets() {
-  const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<Tab>("Overview");
-  const [nseFilter, setNseFilter] = useState<string>("All");
-  const [listFilter, setListFilter] = useState<{ label: string; symbols: string[] } | null>(null);
-  const [divSortBy, setDivSortBy] = useState<string>("yield");
-
-  // Live from the Continua Data Layer (backend/src/services/marketData/moversService.ts) —
-  // falls back to the static, client-derived list above only while loading or if unreachable.
-  const { gainers: liveGainers, losers: liveLosers, isLoading: moversLoading } = useMovers(5);
-  const { quotes: liveQuotes } = useLiveQuotes(CANONICAL_SYMBOLS);
-
-  const topGainers = liveGainers.length > 0
-    ? liveGainers.map(q => ({ symbol: q.symbol, name: STOCK_META[q.symbol]?.name ?? q.symbol, sector: STOCK_META[q.symbol]?.sector ?? "Other", price: q.lastPrice, change: q.changePercent }))
-    : staticTopGainers;
-  const topLosers = liveLosers.length > 0
-    ? liveLosers.map(q => ({ symbol: q.symbol, name: STOCK_META[q.symbol]?.name ?? q.symbol, sector: STOCK_META[q.symbol]?.sector ?? "Other", price: q.lastPrice, change: q.changePercent }))
-    : staticTopLosers;
-
-  // Sector rollup, overlaying live quotes onto the static universe wherever the
-  // Data Layer has coverage for a symbol (see docs/api/API.md /instruments).
-  const liveUniverse = useMemo(
-    () => nseUniverse.map(s => {
-      const q = liveQuotes[s.symbol];
-      return q ? { ...s, price: q.lastPrice, change: q.changePercent } : s;
-    }),
-    [liveQuotes]
-  );
-  const sectors = useMemo(() => computeSectors(liveUniverse), [liveUniverse]);
-
-  const sortedDividendStocks = [...highDividendStocks].sort((a, b) => {
-    if (divSortBy === "amount") return b.amount - a.amount;
-    return b.yield - a.yield;
-  });
-
-  return (
-    <div className="page-canvas min-h-screen bg-background pb-24">
-      <TopBar title="Markets" subtitle="Discover opportunities" showSearch showNotifications />
-
-      {/* Sticky editorial sub-nav */}
-      <div className="sub-nav">
-        <div className="flex overflow-x-auto scrollbar-hide px-4 gap-1 py-2">
-          {tabs.map(tab => (
-            <button
-              key={tab}
-              data-small-target
-              onClick={() => setActiveTab(tab)}
-              className={`pill-tab whitespace-nowrap ${activeTab === tab ? 'active' : ''}`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="px-4 pt-4 space-y-5 animate-fade-in">
-        {/* ── INTERACTIVE ANALYSIS TOOLS ── shown on every Markets tab */}
-        <div>
-          <h2 className="text-sm font-bold mb-3 flex items-center gap-2">
-            <Filter className="h-4 w-4 text-primary" />
-            Analysis Tools
-          </h2>
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { title: "Stock Screener", desc: "Filter by P/E, yield, sector", icon: Filter, color: "bg-primary/10 text-primary", action: () => navigate('/screener') },
-              { title: "Compare Stocks", desc: "Side-by-side metrics", icon: BarChart2, color: "bg-accent/10 text-accent", action: () => navigate('/compare') },
-              { title: "Sector Heatmap", desc: "See what's hot today", icon: Activity, color: "bg-bull/10 text-bull", action: () => navigate('/sector-heatmap') },
-              { title: "Sector Explorer", desc: "Browse every NSE sector", icon: Layers, color: "bg-chart-3/10 text-chart-3", action: () => setActiveTab("Heatmap") },
-              { title: "Investment Themes", desc: "Stocks by what's driving them", icon: Lightbulb, color: "bg-chart-4/10 text-chart-4", action: () => setActiveTab("Overview") },
-              { title: "My Watchlist", desc: "Track favourite stocks", icon: Star, color: "bg-chart-2/10 text-chart-2", action: () => navigate('/watchlist') },
-            ].map(tool => (
-              <Card key={tool.title} className="soft-card p-2 cursor-pointer active:scale-[0.97] transition-transform" onClick={tool.action}>
-                <div className={`w-7 h-7 rounded-lg ${tool.color} flex items-center justify-center mb-1.5`}>
-                  <tool.icon className="h-3.5 w-3.5" />
-                </div>
-                <p className="text-xs font-bold leading-tight">{tool.title}</p>
-                <p className="text-[9px] text-muted-foreground leading-tight mt-0.5">{tool.desc}</p>
-              </Card>
-            ))}
+        {/* Comments */}
+        <div className="border-t-4 border-muted/40">
+          <div className="flex items-center justify-between px-4 py-3">
+            <h2 className="text-[14px] font-bold">Comments ({totalComments})</h2>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-[11px] gap-1" data-small-target>
+                  <SlidersHorizontal className="h-3 w-3" />{sortBy === "latest" ? "Latest" : "Relevant"}<ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="rounded-xl">
+                <DropdownMenuItem onClick={() => setSortBy("relevant")}>Relevant</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortBy("latest")}>Latest</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
+
+          {loadingComments ? (
+            <div className="flex justify-center py-10"><div className="h-6 w-6 rounded-full border-2 border-primary/30 border-t-primary animate-spin" /></div>
+          ) : sorted.length === 0 ? (
+            <p className="py-10 text-center text-[13px] text-muted-foreground">No comments yet. Start the discussion.</p>
+          ) : (
+            <CommentThread comments={sorted} onReply={setReplyingTo} onReactComment={reactToComment as any} replyingToId={replyingTo?.id} />
+          )}
         </div>
-
-        {activeTab === "Overview" && (
-          <>
-            {/* Market Status */}
-            <div className="flex items-center justify-between">
-              <MarketStatusIndicator />
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Clock className="h-3 w-3" />
-                <span>Live</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-bull animate-pulse" />
-              </div>
-            </div>
-
-            {/* NSE Indices */}
-            <div>
-              <h2 className="text-sm font-bold mb-3 flex items-center gap-2">
-                <Landmark className="h-4 w-4 text-primary" />
-                NSE Indices
-              </h2>
-              <div className="grid grid-cols-2 gap-2.5">
-                {indices.map(idx => (
-                  <Card key={idx.name} className="soft-card p-3 active:scale-[0.98] transition-transform cursor-pointer" onClick={() => navigate('/markets')}>
-                    <p className="text-xs font-medium text-muted-foreground">{idx.name}</p>
-                    <p className="text-lg font-bold mt-0.5">{idx.value}</p>
-                    <div className="flex items-center gap-1.5 mt-1">
-                      <span className={`text-xs font-semibold flex items-center gap-0.5 ${idx.isUp ? 'text-bull' : 'text-bear'}`}>
-                        {idx.isUp ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                        {idx.points}
-                      </span>
-                      <span className={`text-xs ${idx.isUp ? 'text-bull' : 'text-bear'}`}>
-                        ({idx.isUp ? '+' : ''}{idx.change.toFixed(1)}%)
-                      </span>
-                    </div>
-                    <div className="mt-2">
-                      <SparklineChart isPositive={idx.isUp} width={120} height={28} />
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </div>
-
-            {/* Investment Themes */}
-            <div>
-              <h2 className="text-sm font-bold mb-3 flex items-center gap-2">
-                <Lightbulb className="h-4 w-4 text-accent" />
-                Investment Themes
-              </h2>
-              <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-2">
-                {themesWithChange.map(theme => (
-                  <div
-                    key={theme.slug}
-                    data-small-target
-                    onClick={() => navigate(`/theme/${theme.slug}`)}
-                    className="min-w-[210px] flex-shrink-0 border-l border-border/60 pl-3 cursor-pointer active:opacity-70 transition-opacity"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-2xl">{theme.icon}</span>
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${theme.change >= 0 ? 'bg-bull/10 text-bull' : 'bg-bear/10 text-bear'}`}>
-                        {theme.change >= 0 ? '+' : ''}{theme.change.toFixed(1)}%
-                      </span>
-                    </div>
-                    <p className="text-sm font-bold">{theme.title}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{theme.desc}</p>
-                    <div className="flex gap-1 mt-2">
-                      {theme.stocks.map(s => (
-                        <Badge key={s} variant="secondary" className="text-[10px] py-0 px-1.5 border-0">{s}</Badge>
-                      ))}
-                    </div>
-                    <p className="text-[10px] text-muted-foreground mt-2 leading-snug">{theme.why}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Local Commodities */}
-            <div>
-              <h2 className="text-sm font-bold mb-3 flex items-center gap-2">
-                <Zap className="h-4 w-4 text-accent" />
-                Local Commodities
-              </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {commodities.map(c => (
-                  <Card key={c.name} className="soft-card p-3">
-                    <p className="text-xs text-muted-foreground font-medium">{c.name}</p>
-                    <p className="text-sm font-bold mt-0.5">{c.value}</p>
-                    <p className={`text-xs font-semibold mt-0.5 ${c.isUp ? 'text-bull' : 'text-bear'}`}>
-                      {c.isUp ? '+' : ''}{c.change.toFixed(1)}%
-                    </p>
-                  </Card>
-                ))}
-              </div>
-            </div>
-
-            {/* Featured Lists */}
-            <div>
-              <h2 className="text-sm font-bold mb-3">Featured Lists</h2>
-              <div className="grid grid-cols-2 gap-2.5">
-                {featuredLists.map(list => {
-                  const Icon = FEATURED_LIST_ICONS[list.slug] || Star;
-                  return (
-                    <Card
-                      key={list.slug}
-                      className="soft-card p-4 cursor-pointer active:scale-[0.97] transition-transform"
-                      onClick={() => navigate(`/featured/${list.slug}`)}
-                    >
-                      <div className={`w-10 h-10 rounded-2xl ${list.color} flex items-center justify-center mb-3`}>
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <p className="text-sm font-bold">{list.title}</p>
-                      <p className="text-xs text-muted-foreground">{list.desc}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{list.symbols.length} stocks</p>
-                    </Card>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Earnings Calendar */}
-            <div>
-              <h2 className="text-sm font-bold mb-3 flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-primary" />
-                Upcoming Earnings
-              </h2>
-              <Card className="soft-card overflow-hidden">
-                {earningsCalendar.map(e => (
-                  <div key={e.symbol} onClick={() => navigate(`/stock/${e.symbol}`)} className="flex items-center justify-between py-3 px-4 border-b border-border/40 last:border-0 cursor-pointer active:bg-muted/30 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-2 h-2 rounded-full ${e.impact === 'high' ? 'bg-bear' : e.impact === 'medium' ? 'bg-accent' : 'bg-muted-foreground'}`} />
-                      <div>
-                        <p className="text-sm font-semibold">{e.symbol} · {e.name}</p>
-                        <p className="text-xs text-muted-foreground">{e.date} · {e.time}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground">Est. EPS</p>
-                      <p className="text-sm font-bold">{e.expected}</p>
-                    </div>
-                  </div>
-                ))}
-              </Card>
-            </div>
-
-            {/* Volume Leaders */}
-            <div>
-              <h2 className="text-sm font-bold mb-3 flex items-center gap-2">
-                <Volume2 className="h-4 w-4 text-accent" />
-                Volume Leaders
-              </h2>
-              <Card className="soft-card overflow-hidden">
-                {volumeLeaders.map(v => (
-                  <div key={v.symbol} onClick={() => navigate(`/stock/${v.symbol}`)} className="flex items-center justify-between py-3 px-4 border-b border-border/40 last:border-0 cursor-pointer active:bg-muted/30 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-accent/10 flex items-center justify-center text-xs font-bold text-accent shrink-0">
-                        {v.symbol.slice(0, 2)}
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold">{v.symbol}</p>
-                        <p className="text-xs text-muted-foreground">Vol: {v.volume}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold">{v.ratio.toFixed(1)}x</p>
-                      <p className={`text-xs font-semibold ${v.change >= 0 ? 'text-bull' : 'text-bear'}`}>
-                        {v.change >= 0 ? '+' : ''}{v.change.toFixed(1)}%
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </Card>
-            </div>
-
-            {/* Economic Calendar */}
-            <EconomicCalendar />
-
-            {/* Top Gainers & Losers */}
-            <div>
-              <h2 className="text-sm font-bold mb-3 flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-bull" />
-                Top Gainers
-              </h2>
-              <Card className="soft-card overflow-hidden">
-                <div className="divide-y divide-border/40">
-                  {topGainers.slice(0, 5).map(s => (
-                    <StockRow key={s.symbol} stock={s} onTap={() => navigate(`/stock/${s.symbol}`)} />
-                  ))}
-                </div>
-              </Card>
-            </div>
-
-            <div>
-              <h2 className="text-sm font-bold mb-3 flex items-center gap-2">
-                <TrendingDown className="h-4 w-4 text-bear" />
-                Top Losers
-              </h2>
-              <Card className="soft-card overflow-hidden">
-                <div className="divide-y divide-border/40">
-                  {topLosers.slice(0, 5).map(s => (
-                    <StockRow key={s.symbol} stock={s} onTap={() => navigate(`/stock/${s.symbol}`)} />
-                  ))}
-                </div>
-              </Card>
-            </div>
-
-            {/* Analyst Ratings */}
-            <div>
-              <h2 className="text-sm font-bold mb-3 flex items-center gap-2">
-                <Award className="h-4 w-4 text-accent" />
-                Analyst Ratings
-              </h2>
-              <Card className="soft-card overflow-hidden">
-                {analystRatings.map(r => (
-                  <div key={r.symbol} onClick={() => navigate(`/stock/${r.symbol}`)} className="flex items-center justify-between py-3 px-4 border-b border-border/40 last:border-0 cursor-pointer active:bg-muted/30">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold">{r.symbol}</span>
-                        <Badge className={`text-[10px] py-0 px-1.5 ${
-                          r.rating.includes('Buy') ? 'bg-bull/10 text-bull border-bull/20' :
-                          r.rating === 'Hold' ? 'bg-accent/10 text-accent border-accent/20' :
-                          'bg-bear/10 text-bear border-bear/20'
-                        }`}>{r.rating}</Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground">{r.firm}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold">KES {r.target.toFixed(2)}</p>
-                      <p className={`text-xs font-semibold ${r.upside >= 0 ? 'text-bull' : 'text-bear'}`}>
-                        {r.upside >= 0 ? '+' : ''}{r.upside}% upside
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </Card>
-            </div>
-
-            {/* Sector Heat Map */}
-            <div>
-              <h2 className="text-sm font-bold mb-3 flex items-center gap-2">
-                <BarChart3 className="h-4 w-4 text-primary" />
-                Sector Performance
-              </h2>
-              <div className="grid grid-cols-2 gap-2">
-                {sectors.map(s => (
-                  <Card key={s.name} className="soft-card p-3 cursor-pointer active:scale-[0.97] transition-transform" onClick={() => navigate(`/sector/${encodeURIComponent(s.name)}`)}>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold">{s.name}</p>
-                      <p className={`text-xs font-bold px-2 py-0.5 rounded-full ${s.isUp ? 'bg-bull/10 text-bull' : 'bg-bear/10 text-bear'}`}>
-                        {s.isUp ? '+' : ''}{s.change.toFixed(1)}%
-                      </p>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">{s.stocks} stocks · Top: {s.topStock}</p>
-                  </Card>
-                ))}
-              </div>
-            </div>
-
-          </>
-        )}
-
-        {/* ─── NSE TAB ─── */}
-        {activeTab === "All Stocks" && (
-          <>
-            {listFilter && (
-              <div className="flex items-center justify-between bg-primary/10 rounded-xl px-3 py-2">
-                <span className="text-xs font-semibold text-primary">Showing: {listFilter.label}</span>
-                <button data-small-target onClick={() => setListFilter(null)} className="text-xs font-semibold text-muted-foreground">Clear</button>
-              </div>
-            )}
-            <AllStocksList
-              initialSector={nseFilter === "All" ? undefined : nseFilter}
-              onlySymbols={listFilter?.symbols}
-            />
-          </>
-        )}
-
-        {/* Global tab removed — focused on Kenyan market */}
-
-        {/* ─── IPOs TAB ─── */}
-        {activeTab === "Discover" && (
-          <>
-            {/* Quick jumps into curated slices of the market — same underlying live data as
-                Overview/All Stocks, just one tap away from here. */}
-            <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4">
-              <Button variant="outline" size="sm" className="h-8 rounded-full text-xs shrink-0 gap-1.5" onClick={() => { setListFilter({ label: "Top Gainers", symbols: topGainers.map(s => s.symbol) }); setActiveTab("All Stocks"); }}>
-                <TrendingUp className="h-3.5 w-3.5 text-bull" /> Top Gainers
-              </Button>
-              <Button variant="outline" size="sm" className="h-8 rounded-full text-xs shrink-0 gap-1.5" onClick={() => { setListFilter({ label: "Top Losers", symbols: topLosers.map(s => s.symbol) }); setActiveTab("All Stocks"); }}>
-                <TrendingDown className="h-3.5 w-3.5 text-bear" /> Top Losers
-              </Button>
-              <Button variant="outline" size="sm" className="h-8 rounded-full text-xs shrink-0 gap-1.5" onClick={() => setActiveTab("Calendars")}>
-                <DollarSign className="h-3.5 w-3.5 text-bull" /> High Dividend
-              </Button>
-            </div>
-
-            <h2 className="text-sm font-bold flex items-center gap-2">
-              <Flame className="h-4 w-4 text-accent" />
-              Listing Soon
-            </h2>
-            <div className="space-y-3">
-              {ipos.map(ipo => (
-                <Card key={ipo.name} className="soft-card overflow-hidden">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <p className="text-sm font-bold">{ipo.name}</p>
-                        <p className="text-xs text-muted-foreground">{ipo.sector}</p>
-                      </div>
-                      <Badge className={`text-xs ${ipo.status === "Open" ? 'bg-bull/10 text-bull border-bull/20' : 'bg-accent/10 text-accent border-accent/20'}`}>
-                        {ipo.status}
-                      </Badge>
-                    </div>
-                    <div className="grid grid-cols-3 gap-3 mb-3">
-                      <div>
-                        <p className="text-xs text-muted-foreground">Issue Price</p>
-                        <p className="text-sm font-bold">KES {ipo.issuePrice.toFixed(2)}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Close Date</p>
-                        <p className="text-sm font-semibold">{ipo.closeDate}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Subscription</p>
-                        <p className="text-sm font-bold text-bull">{ipo.subscriptionRate}</p>
-                      </div>
-                    </div>
-                    {ipo.status === "Open" && (
-                      <Button className="w-full h-10 rounded-2xl bg-primary text-primary-foreground font-semibold text-sm active:scale-[0.98] transition-transform">
-                        Subscribe Now
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            <h2 className="text-sm font-bold flex items-center gap-2 mt-2">
-              <Activity className="h-4 w-4 text-primary" />
-              Recently Listed
-            </h2>
-            <Card className="soft-card overflow-hidden">
-              {recentIPOs.map(ipo => (
-                <div key={ipo.symbol} onClick={() => navigate(`/stock/${ipo.symbol}`)} className="flex items-center justify-between py-3 px-4 border-b border-border/40 last:border-0 cursor-pointer active:bg-muted/30">
-                  <div>
-                    <p className="text-sm font-bold">{ipo.name}</p>
-                    <p className="text-xs text-muted-foreground">${ipo.symbol} · Listed {ipo.listDate}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold">KES {ipo.currentPrice.toFixed(2)}</p>
-                    <p className={`text-xs font-semibold ${ipo.change >= 0 ? 'text-bull' : 'text-bear'}`}>
-                      {ipo.change >= 0 ? '+' : ''}{ipo.change.toFixed(1)}% from IPO
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </Card>
-          </>
-        )}
-
-        {/* ─── DIVIDENDS TAB ─── */}
-        {activeTab === "Calendars" && (
-          <>
-            <h2 className="text-sm font-bold flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-primary" />
-              Upcoming Dividends
-            </h2>
-            <Card className="soft-card overflow-hidden">
-              {dividendCalendar.map(d => (
-                <div key={d.symbol} onClick={() => navigate(`/stock/${d.symbol}`)} className="flex items-center justify-between py-3 px-4 border-b border-border/40 last:border-0 cursor-pointer active:bg-muted/30">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-bull/8 flex items-center justify-center text-xs font-bold text-bull">
-                      {d.symbol.slice(0, 2)}
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold">{d.symbol}</p>
-                      <p className="text-xs text-muted-foreground">Ex: {d.exDate}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-bull">KES {d.amount.toFixed(2)}</p>
-                    <div className="flex items-center gap-1.5 justify-end">
-                      <Badge variant="secondary" className="text-[10px] py-0 px-1.5">{d.type}</Badge>
-                      <span className="text-xs text-muted-foreground">{d.yield}% yield</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </Card>
-
-            <div className="flex items-center justify-between mt-2">
-              <h2 className="text-sm font-bold flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-bull" />
-                High Dividend Stocks
-              </h2>
-              <div className="flex gap-1.5">
-                {["yield", "amount"].map(s => (
-                  <Button key={s} variant={divSortBy === s ? "default" : "outline"} size="sm" className={`text-xs rounded-full h-7 ${divSortBy === s ? 'bg-primary text-primary-foreground' : ''}`} onClick={() => setDivSortBy(s)}>
-                    {s === "yield" ? "By Yield" : "By Amount"}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            <Card className="soft-card overflow-hidden">
-              {sortedDividendStocks.map((stock, i) => (
-                <div key={stock.symbol} onClick={() => navigate(`/stock/${stock.symbol}`)} className="flex items-center justify-between py-3 px-4 border-b border-border/40 last:border-0 cursor-pointer active:bg-muted/30">
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-bold text-muted-foreground w-5">{i + 1}</span>
-                    <div>
-                      <p className="text-sm font-bold">{stock.symbol}</p>
-                      <p className="text-xs text-muted-foreground">{stock.frequency}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-bull">{stock.yield}%</p>
-                    <p className="text-xs text-muted-foreground">KES {stock.amount.toFixed(2)}/share</p>
-                  </div>
-                </div>
-              ))}
-            </Card>
-          </>
-        )}
-
-        {/* ─── HEATMAP TAB — previously rendered nothing at all ─── */}
-        {activeTab === "Heatmap" && (
-          <>
-            <h2 className="text-sm font-bold flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-primary" />
-              Sector &amp; Stock Heatmap
-            </h2>
-            <p className="text-xs text-muted-foreground -mt-3">Box size reflects market cap, colour reflects today's move.</p>
-            <StockHeatmap />
-
-            <h2 className="text-sm font-bold flex items-center gap-2 mt-2">
-              <Landmark className="h-4 w-4 text-accent" />
-              By Sector
-            </h2>
-            <div className="grid grid-cols-2 gap-2">
-              {sectors.map(s => (
-                <Card
-                  key={s.name}
-                  className="soft-card p-3 cursor-pointer active:scale-[0.97] transition-transform"
-                  onClick={() => navigate(`/sector/${encodeURIComponent(s.name)}`)}
-                >
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold">{s.name}</p>
-                    <p className={`text-xs font-bold px-2 py-0.5 rounded-full ${s.isUp ? 'bg-bull/10 text-bull' : 'bg-bear/10 text-bear'}`}>
-                      {s.isUp ? '+' : ''}{s.change.toFixed(1)}%
-                    </p>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">{s.stocks} stocks · Top: {s.topStock}</p>
-                </Card>
-              ))}
-            </div>
-          </>
-        )}
       </div>
+
+      {/* Sticky composer + engagement rail */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border/60 bg-background/97 backdrop-blur-xl">
+        {replyingTo && (
+          <div className="flex items-center justify-between px-4 py-1.5 bg-muted/40 text-[11px]">
+            <span className="text-muted-foreground truncate">Replying to <span className="text-primary font-semibold">{atHandle(replyingTo.author as any)}</span></span>
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setReplyingTo(null)} data-small-target><X className="h-3.5 w-3.5" /></Button>
+          </div>
+        )}
+        <div className="flex items-center gap-2 px-3 py-2" style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}>
+          <Input
+            value={draft}
+            onChange={e => setDraft(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") submit(); }}
+            placeholder={replyingTo ? `Reply to ${replyingTo.author?.full_name || "investor"}` : "Say something"}
+            className="h-9 flex-1 rounded-full bg-muted/50 border-0 text-[13px]"
+          />
+          {draft.trim() ? (
+            <Button size="icon" className="h-9 w-9 rounded-full shrink-0" onClick={submit} disabled={sending} aria-label="Send comment">
+              <Send className="h-4 w-4" />
+            </Button>
+          ) : (
+            <div className="flex items-center gap-1 shrink-0">
+              <CommunityReactionButton counts={post.reaction_counts || {}} selected={post.my_reaction} onSelect={react} />
+              <button data-small-target aria-label="Comments" className="flex items-center gap-1 h-9 px-1.5 text-muted-foreground">
+                <MessageSquare className="h-[17px] w-[17px]" />
+                <span className="text-[11px] tabular-nums">{post.comments_count || 0}</span>
+              </button>
+              <button data-small-target aria-label="Share" onClick={share} className="h-9 px-1.5 text-muted-foreground"><Share2 className="h-[17px] w-[17px]" /></button>
+              <button data-small-target aria-label="Bookmark" onClick={bookmark} className={`h-9 px-1.5 ${post.is_bookmarked ? "text-primary" : "text-muted-foreground"}`}>
+                {post.is_bookmarked ? <BookmarkCheck className="h-[17px] w-[17px]" /> : <Bookmark className="h-[17px] w-[17px]" />}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {post.image_url && <ImageViewer open={viewerOpen} onOpenChange={setViewerOpen} images={[post.image_url]} />}
     </div>
   );
 }

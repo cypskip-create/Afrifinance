@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { User, Settings, CreditCard, Bell, Shield, Crown, LogOut, ChevronRight, Globe, HelpCircle, FileText, Eye, EyeOff, Check, Type, Sparkles } from "lucide-react";
+import { User, LogOut, Eye, EyeOff, Check, Type, Sparkles, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -10,7 +10,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useNavigate } from "react-router-dom";
 import { EditProfileDialog } from "@/components/profile/EditProfileDialog";
-import { ProfileSettingsDialog, Section } from "@/components/profile/ProfileSettingsDialog";
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 import { useToast } from "@/hooks/use-toast";
 
@@ -35,11 +34,9 @@ const PREMIUM = [
 
 export default function Account() {
   const [editProfileOpen, setEditProfileOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsSection, setSettingsSection] = useState<Section>("menu");
   const [annual, setAnnual] = useState(false);
   const { user, signOut } = useAuth();
-  const { profile, updateProfile, refetch: refetchProfile } = useProfile();
+  const { profile, updateProfile } = useProfile();
   const { methods: paymentMethods } = usePaymentMethods();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -57,18 +54,8 @@ export default function Account() {
   }, [profile]);
 
   const handleSignOut = async () => { await signOut(); navigate('/auth'); };
-  const openSettings = (section: Section) => { setSettingsSection(section); setSettingsOpen(true); };
   const getInitials = (name: string) => name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
   const isPremium = profile?.subscription_plan === 'premium' || profile?.subscription_plan === 'premium+';
-
-  const menuItems = [
-    { icon: Bell, label: "Notifications", action: () => navigate('/notifications') },
-    { icon: CreditCard, label: "Payment methods", action: () => openSettings("payment") },
-    { icon: Shield, label: "Privacy & security", action: () => openSettings("privacy") },
-    { icon: Globe, label: "Language & region", action: () => openSettings("language") },
-    { icon: HelpCircle, label: "Help & support", action: () => openSettings("help") },
-    { icon: FileText, label: "Terms & privacy", action: () => openSettings("legal") },
-  ];
 
   // Monthly is KES 800. Yearly is billed as a single KES 7,980 charge, which works out
   // to KES 665/mo — a 17% discount off the monthly rate (matches the "save 17%" pill).
@@ -84,7 +71,7 @@ export default function Account() {
     if (!user) return;
     if (paymentMethods.length === 0) {
       toast({ title: "Add a payment method first", description: "Add M-Pesa or a card to complete your upgrade." });
-      openSettings("payment");
+      navigate('/settings', { state: { section: 'payment' } });
       return;
     }
     const { error } = await updateProfile({ subscription_plan: 'premium' });
@@ -100,7 +87,13 @@ export default function Account() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <TopBar title="Profile" showSearch={false} showNotifications />
+      <TopBar
+        title="Profile"
+        showSearch={false}
+        showNotifications
+        showWidgetSettings
+        onWidgetSettingsClick={() => navigate('/settings')}
+      />
 
       <div className="px-4 pt-6 space-y-8">
         {/* ── IDENTITY — canvas ── */}
@@ -128,14 +121,6 @@ export default function Account() {
         </div>
 
         <EditProfileDialog open={editProfileOpen} onOpenChange={setEditProfileOpen} />
-        <ProfileSettingsDialog
-          open={settingsOpen}
-          onOpenChange={setSettingsOpen}
-          initialSection={settingsSection}
-          currentHandle={profile?.handle}
-          portfolioPublic={portfolioPublic}
-          onSaved={refetchProfile}
-        />
 
         {/* ── SUBSCRIPTION — short, editorial, one clear CTA ── */}
         <section>
@@ -246,26 +231,6 @@ export default function Account() {
               await updateProfile({ portfolio_public: checked });
               toast({ title: checked ? "Portfolio public" : "Portfolio private" });
             }} />
-          </div>
-        </section>
-
-        {/* ── SETTINGS ── */}
-        <section>
-          <p className="section-eyebrow mb-2">Settings</p>
-          <div>
-            {menuItems.map(item => (
-              <button
-                key={item.label}
-                onClick={item.action}
-                className="w-full flex items-center justify-between py-3 border-b border-border/50 last:border-0 group"
-              >
-                <div className="flex items-center gap-3">
-                  <item.icon className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">{item.label}</span>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-              </button>
-            ))}
           </div>
         </section>
 

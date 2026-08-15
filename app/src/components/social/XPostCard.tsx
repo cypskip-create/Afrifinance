@@ -131,8 +131,8 @@ export function XPostCard({ post, currentUserId, onComment, onBookmark, onShare,
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1 min-w-0 flex-wrap" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${post.user_id}`); }}>
-                <span className="font-bold text-sm truncate max-w-[140px] sm:max-w-[200px] cursor-pointer hover:underline">{post.author?.full_name || "User"}</span>
+              <div className="flex items-center gap-1 min-w-0 flex-wrap">
+                <span className="font-bold text-sm truncate max-w-[140px] sm:max-w-[200px]">{post.author?.full_name || "User"}</span>
                 <Verified className="h-3.5 w-3.5 text-primary fill-primary shrink-0" />
                 <span className="text-muted-foreground text-sm">@{handle}</span>
                 <span className="text-muted-foreground text-sm">·</span>

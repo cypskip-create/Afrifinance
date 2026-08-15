@@ -99,7 +99,7 @@ export function HubPostCard({
           <AvatarFallback className="bg-primary/10 text-primary text-[11px] font-bold">{getInitials(author?.full_name)}</AvatarFallback>
         </Avatar>
 
-        <div className="flex-1 min-w-0" onClick={e => { e.stopPropagation(); navigate(`/profile/${post.user_id}`); }}>
+        <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1 min-w-0">
             <span className="font-bold text-[13px] truncate max-w-[45%]">{author?.full_name || "Investor"}</span>
             <Verified className="h-3 w-3 text-primary fill-primary shrink-0" />
