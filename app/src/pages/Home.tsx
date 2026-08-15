@@ -283,7 +283,7 @@ export default function Home() {
                 <p className="text-[10px] text-muted-foreground">Advanced insights & real-time prices</p>
               </div>
             </div>
-            <span className="text-xs font-bold text-primary">KES 1,200/mo →</span>
+            <span className="text-xs font-bold text-primary">KES 800/mo →</span>
           </button>
         )}
 
