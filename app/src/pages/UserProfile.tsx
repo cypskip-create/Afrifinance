@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Calendar, UserPlus, MessageCircle, MoreHorizontal, Lock, Verified, Heart, Repeat2, FileText, Camera, Loader2, Share, TrendingUp, TrendingDown, Award, Target, PieChart, ChevronRight, Image as ImageIcon, MapPin, Pin, Bookmark, VolumeX, UserX, Settings } from "lucide-react";
+import { ArrowLeft, Calendar, UserPlus, MessageCircle, MoreHorizontal, Lock, Verified, Heart, Repeat2, FileText, Camera, Loader2, Share, TrendingUp, TrendingDown, Award, Target, PieChart, ChevronRight, Image as ImageIcon, MapPin, Pin, Bookmark, VolumeX, UserX } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,7 +19,6 @@ import { XPostCard } from "@/components/social/XPostCard";
 import { HubPostCard } from "@/components/social/HubPostCard";
 import { usePosts, Post, Comment, ReactionKind } from "@/hooks/usePosts";
 import { XCommentSheet } from "@/components/social/XCommentSheet";
-import { PortfolioPrivacyDialog } from "@/components/profile/PortfolioPrivacyDialog";
 import { getPrice } from "@/lib/stockPrices";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { atHandle } from "@/lib/handle";
@@ -79,7 +78,6 @@ export default function UserProfile() {
   const [loadingComments, setLoadingComments] = useState(false);
   const [avatarViewerOpen, setAvatarViewerOpen] = useState(false);
   const [followsMe, setFollowsMe] = useState(false);
-  const [portfolioPrivacyOpen, setPortfolioPrivacyOpen] = useState(false);
 
   const isOwnProfile = user?.id === userId;
   const userIsFollowing = userId ? isFollowing(userId) : false;
@@ -362,7 +360,7 @@ export default function UserProfile() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Banner — also carries the back/settings/more controls as an overlay, so
+      {/* Banner — also carries the back/more controls as an overlay, so
           there's no separate header bar above it (matches X / moomoo profile layout) */}
       <div className="relative h-32 sm:h-40 bg-gradient-to-br from-primary/30 via-accent/20 to-primary/10 overflow-hidden">
         {profileData.banner_url && <img src={profileData.banner_url} alt="Banner" className="w-full h-full object-cover" />}
@@ -592,15 +590,20 @@ export default function UserProfile() {
           )}
         </TabsContent>
 
-        {/* Portfolio tab — enhanced with privacy dialog */}
+        {/* Portfolio tab */}
         <TabsContent value="portfolio" className="mt-0">
           {isOwnProfile && (
             <div className="flex items-center justify-between px-4 pt-3">
               <div className="text-xs text-muted-foreground">
                 {profileData.portfolio_public ? "Visible to everyone" : "Only visible to you"}
               </div>
-              <Button variant="ghost" size="sm" className="h-8 rounded-full text-xs gap-1.5" onClick={() => setPortfolioPrivacyOpen(true)}>
-                <Settings className="h-3.5 w-3.5" />Privacy
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 rounded-full text-xs gap-1.5"
+                onClick={() => navigate("/settings", { state: { section: "th-privacy" } })}
+              >
+                Manage in Settings<ChevronRight className="h-3.5 w-3.5" />
               </Button>
             </div>
           )}
@@ -659,7 +662,6 @@ export default function UserProfile() {
       <XCommentSheet open={commentSheetOpen} onOpenChange={setCommentSheetOpen} post={selectedPost} currentUserId={user?.id} comments={comments} loadingComments={loadingComments} onAddComment={handleAddComment} onBookmark={handleBookmark} onShare={handlePostShare} onDelete={isOwnProfile ? handleDelete : undefined} onReact={handleReact} onReactComment={reactToComment} />
       {userId && <FollowersDialog open={followersDialogOpen} onOpenChange={setFollowersDialogOpen} userId={userId} initialTab={dialogTab} />}
       <EditProfileDialog open={editProfileOpen} onOpenChange={(open) => { setEditProfileOpen(open); if (!open) fetchProfile(); }} />
-      <PortfolioPrivacyDialog open={portfolioPrivacyOpen} onOpenChange={setPortfolioPrivacyOpen} portfolioPublic={profileData.portfolio_public} onSaved={fetchProfile} />
       {profileData.avatar_url && (
         <ImageViewer open={avatarViewerOpen} onOpenChange={setAvatarViewerOpen} images={[profileData.avatar_url]} />
       )}

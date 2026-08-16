@@ -91,10 +91,11 @@ export function usePosts() {
 
       let postsData = postsDataRaw;
       if (user && postsData && postsData.length > 0) {
-        const [hiddenRes, blockedRes, mutedRes] = await Promise.all([
+        const [hiddenRes, blockedRes, mutedRes, mutedKeywordsRes] = await Promise.all([
           supabase.from('hidden_posts' as any).select('post_id').eq('user_id', user.id),
           supabase.from('blocked_users' as any).select('blocked_id').eq('blocker_id', user.id),
           supabase.from('muted_users' as any).select('muted_id').eq('muter_id', user.id),
+          supabase.from('muted_keywords' as any).select('keyword').eq('user_id', user.id),
         ]);
         const hiddenSet = new Set((hiddenRes.data as any[] | null)?.map(r => r.post_id));
         // Blocking/muting someone only meant anything if it actually kept
@@ -105,8 +106,19 @@ export function usePosts() {
           ...((blockedRes.data as any[] | null)?.map(r => r.blocked_id) || []),
           ...((mutedRes.data as any[] | null)?.map(r => r.muted_id) || []),
         ]);
-        if (hiddenSet.size > 0 || excludedUserIds.size > 0) {
-          postsData = postsData.filter(p => !hiddenSet.has(p.id) && !excludedUserIds.has(p.user_id));
+        // Same bug as above for muted keywords: Settings → TradersHub →
+        // Muted let you add keywords, but nothing ever checked a post's
+        // content against them, so muting a word did nothing either.
+        const mutedKeywords = ((mutedKeywordsRes.data as any[] | null)?.map(r => (r.keyword || '').toLowerCase().trim()).filter(Boolean)) || [];
+        if (hiddenSet.size > 0 || excludedUserIds.size > 0 || mutedKeywords.length > 0) {
+          postsData = postsData.filter(p => {
+            if (hiddenSet.has(p.id) || excludedUserIds.has(p.user_id)) return false;
+            if (mutedKeywords.length > 0) {
+              const content = (p.content || '').toLowerCase();
+              if (mutedKeywords.some(kw => content.includes(kw))) return false;
+            }
+            return true;
+          });
         }
       }
 

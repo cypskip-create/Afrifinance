@@ -771,95 +771,32 @@ export type Database = {
       }
       user_preferences: {
         Row: {
-          allow_dms_from: string | null
-          allow_tagging: string | null
-          autoplay_videos: string | null
           created_at: string
-          data_saver: boolean | null
-          discoverable_by_email: boolean | null
-          discoverable_by_phone: boolean | null
-          email_digest: string | null
           font_size: string | null
-          hide_likes: boolean | null
-          high_contrast: boolean | null
           id: string
-          language: string | null
           notif_comments: boolean | null
-          notif_dms: boolean | null
           notif_follows: boolean | null
-          notif_likes: boolean | null
-          notif_mentions: boolean | null
-          notif_quality: string | null
-          notif_reposts: boolean | null
-          personalized_feed: boolean | null
-          protected_account: boolean | null
-          reduce_motion: boolean | null
-          show_activity_status: boolean | null
           show_sensitive_content: boolean | null
-          theme: string | null
-          timezone: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
-          allow_dms_from?: string | null
-          allow_tagging?: string | null
-          autoplay_videos?: string | null
           created_at?: string
-          data_saver?: boolean | null
-          discoverable_by_email?: boolean | null
-          discoverable_by_phone?: boolean | null
-          email_digest?: string | null
           font_size?: string | null
-          hide_likes?: boolean | null
-          high_contrast?: boolean | null
           id?: string
-          language?: string | null
           notif_comments?: boolean | null
-          notif_dms?: boolean | null
           notif_follows?: boolean | null
-          notif_likes?: boolean | null
-          notif_mentions?: boolean | null
-          notif_quality?: string | null
-          notif_reposts?: boolean | null
-          personalized_feed?: boolean | null
-          protected_account?: boolean | null
-          reduce_motion?: boolean | null
-          show_activity_status?: boolean | null
           show_sensitive_content?: boolean | null
-          theme?: string | null
-          timezone?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
-          allow_dms_from?: string | null
-          allow_tagging?: string | null
-          autoplay_videos?: string | null
           created_at?: string
-          data_saver?: boolean | null
-          discoverable_by_email?: boolean | null
-          discoverable_by_phone?: boolean | null
-          email_digest?: string | null
           font_size?: string | null
-          hide_likes?: boolean | null
-          high_contrast?: boolean | null
           id?: string
-          language?: string | null
           notif_comments?: boolean | null
-          notif_dms?: boolean | null
           notif_follows?: boolean | null
-          notif_likes?: boolean | null
-          notif_mentions?: boolean | null
-          notif_quality?: string | null
-          notif_reposts?: boolean | null
-          personalized_feed?: boolean | null
-          protected_account?: boolean | null
-          reduce_motion?: boolean | null
-          show_activity_status?: boolean | null
           show_sensitive_content?: boolean | null
-          theme?: string | null
-          timezone?: string | null
           updated_at?: string
           user_id?: string
         }

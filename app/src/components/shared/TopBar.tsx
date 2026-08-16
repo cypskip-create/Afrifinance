@@ -71,7 +71,7 @@ export function TopBar({
             </>
           )}
           {showWidgetSettings && onWidgetSettingsClick && (
-            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full" aria-label="Customize widgets" onClick={onWidgetSettingsClick}>
+            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full" aria-label="Settings" onClick={onWidgetSettingsClick}>
               <Settings2 className="h-[18px] w-[18px]" />
             </Button>
           )}
