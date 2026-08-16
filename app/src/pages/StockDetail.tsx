@@ -259,6 +259,21 @@ export default function StockDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const [priceVisible, setPriceVisible] = useState(true);
+  const heroPriceRef = useRef<HTMLDivElement>(null);
+  const STICKY_HEADER_HEIGHT = 53; // matches the header's own height (see sticky top-[53px] sub-nav below)
+
+  useEffect(() => {
+    const el = heroPriceRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setPriceVisible(entry.isIntersecting),
+      { root: null, rootMargin: `-${STICKY_HEADER_HEIGHT}px 0px 0px 0px`, threshold: 0 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   const Eyebrow = ({ children }: { children: React.ReactNode }) => (
     <p className="section-eyebrow mb-2">{children}</p>
   );
@@ -278,7 +293,22 @@ export default function StockDetail() {
                 <span className="text-[10px] text-muted-foreground">{stock.exchange}</span>
                 <MarketStatusIndicator />
               </div>
-              <p className="text-[11px] text-muted-foreground truncate">{stock.name}</p>
+              <div className="relative h-[15px] min-w-0">
+                <p
+                  className={`absolute inset-0 text-[11px] text-muted-foreground truncate transition-opacity duration-200 ${priceVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                >
+                  {stock.name}
+                </p>
+                <div
+                  className={`absolute inset-0 flex items-center gap-1.5 transition-opacity duration-200 ${priceVisible ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+                >
+                  <span className="text-sm font-bold tabular">{displayPrice.toFixed(2)}</span>
+                  <span className={`text-xs font-semibold flex items-center gap-0.5 tabular ${displayIsUp ? 'text-bull' : 'text-bear'}`}>
+                    {displayIsUp ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
+                    {priceChange >= 0 ? '+' : ''}{priceChangePercent}%
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -295,7 +325,7 @@ export default function StockDetail() {
       {/* HERO — company · price · delta. No card. */}
       <div className="px-4 pt-4 pb-2 animate-fade-in">
         <h1 className="text-[15px] font-medium text-muted-foreground tracking-tight leading-tight">{stock.name}</h1>
-        <div className="mt-1 flex items-end justify-between gap-3">
+        <div ref={heroPriceRef} className="mt-1 flex items-end justify-between gap-3">
           <span className="text-4xl font-bold tabular tracking-tight">KES {displayPrice.toFixed(2)}</span>
           <Button
             variant="ghost"

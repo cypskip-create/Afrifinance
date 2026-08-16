@@ -125,7 +125,7 @@ export default function PostDetail() {
 
   const share = async () => {
     const url = `${window.location.origin}/traders-hub/post/${postId}`;
-    const result = await shareLink(url, { title: "AfriFinance TradersHub", text: post?.content?.slice(0, 120) });
+    const result = await shareLink(url, { title: "Continua TradersHub", text: post?.content?.slice(0, 120) });
     if (result.method === "clipboard") toast({ title: "Link copied" });
     else if (result.method === "failed") toast({ title: "Couldn't share this post", variant: "destructive" });
   };
@@ -227,7 +227,7 @@ export default function PostDetail() {
           )}
 
           <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
-            Disclaimer: AfriFinance provides this content for information and educational use only. It is not investment advice.
+            Disclaimer: Continua provides this content for information and educational use only. It is not investment advice.
           </p>
 
           <div className="mt-3">

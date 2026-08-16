@@ -155,6 +155,47 @@ export const getDivYield = (symbol: string): number => {
   return key && DIV_YIELD[key] != null ? DIV_YIELD[key] : 0;
 };
 
+// ─────────────────────────────────────────────────────────────────────────
+// Multi-range change % (1D/1W/1M/YTD) — single source for the Sector Heatmap's
+// range pills and anywhere else that needs a longer-horizon move. 1D always
+// comes from getDayChange (real price vs prev close). Longer ranges don't yet
+// have a historical series from the data layer, so they're derived
+// deterministically per symbol+range (stable across renders, never random)
+// until RealNseClient exposes real historical bars.
+// ─────────────────────────────────────────────────────────────────────────
+export type ChangeRange = "1D" | "1W" | "1M" | "YTD";
+
+const RANGE_SPAN: Record<Exclude<ChangeRange, "1D">, { min: number; max: number }> = {
+  "1W": { min: -11, max: 11 },
+  "1M": { min: -22, max: 24 },
+  YTD: { min: -38, max: 55 },
+};
+
+/** Deterministic pseudo-random float in [0,1) seeded by a number — stable, not Math.random(). */
+function seededUnit(seed: number): number {
+  const x = Math.sin(seed) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+export function getRangeChangePct(symbol: string, range: ChangeRange): number {
+  if (range === "1D") return +getDayChange(symbol).pct.toFixed(2);
+  const span = RANGE_SPAN[range];
+  const seed = tickerSeed(symbol) * (range === "1W" ? 7 : range === "1M" ? 31 : 365);
+  const pct = span.min + seededUnit(seed) * (span.max - span.min);
+  return +pct.toFixed(2);
+}
+
+/** Net money flow (KES, millions) for a symbol over a range: price × volume, signed by
+ *  that range's direction. Powers the heatmap's "Capital Flow" view — size/colour show
+ *  where money is actually moving rather than raw % change. */
+export function getMoneyFlowM(symbol: string, range: ChangeRange): number {
+  const price = getPrice(symbol);
+  const volumeM = parseMagnitude(getStockFundamentals(symbol).volume) / 1e6;
+  const pct = getRangeChangePct(symbol, range);
+  const flow = price * volumeM;
+  return +(pct >= 0 ? flow : -flow).toFixed(2);
+}
+
 export interface PortfolioLike {
   symbol: string;
   shares: number;

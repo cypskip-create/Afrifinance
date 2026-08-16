@@ -22,9 +22,23 @@ interface ScreenerFilters {
   maxPE: number;
   minVolume: string;
   marketCapRange: string;
+  minDividendYield: number;
+  maxDividendYield: number;
+  minVolumeM: number;
+  minBeta: number;
+  maxBeta: number;
+  minRSI: number;
+  maxRSI: number;
   sortBy: string;
   sortOrder: 'asc' | 'desc';
 }
+
+const MARKET_CAP_BUCKETS: Record<string, { min: number; max: number }> = {
+  all: { min: 0, max: Infinity },
+  large: { min: 50, max: Infinity }, // >50B
+  mid: { min: 5, max: 50 },          // 5B–50B
+  small: { min: 0, max: 5 },         // <5B
+};
 
 const sectors = ["All Sectors", ...Array.from(new Set(Object.values(STOCK_META).map(m => m.sector))).sort()];
 
@@ -44,6 +58,7 @@ function buildStaticStocks() {
       change: +pct.toFixed(2),
       dividendYield: DIV_YIELD[symbol] ?? 0,
       volume: meta.volume,
+      volumeM: parseMagnitude(meta.volume) / 1e6,
       marketCap: meta.marketCap,
       pe: meta.pe,
       beta: meta.beta,
@@ -59,8 +74,11 @@ const presetFilters = [
   { name: "💰 High Dividend", icon: BarChart3, filters: { sector: "All Sectors", minChange: -100, maxChange: 100, sortBy: "dividendYield", sortOrder: "desc" as const } },
   { name: "📊 High Volume", icon: LineChart, filters: { sector: "All Sectors", minChange: -100, maxChange: 100, sortBy: "volume", sortOrder: "desc" as const } },
   { name: "🏦 Banking", icon: Filter, filters: { sector: "Banking", minChange: -100, maxChange: 100, sortBy: "marketCap", sortOrder: "desc" as const } },
-  { name: "⚡ Oversold (RSI<40)", icon: Sparkles, filters: { sector: "All Sectors", minChange: -100, maxChange: 100, sortBy: "rsi", sortOrder: "asc" as const } },
+  { name: "⚡ Oversold (RSI<40)", icon: Sparkles, filters: { sector: "All Sectors", minChange: -100, maxChange: 100, minRSI: 0, maxRSI: 40, sortBy: "rsi", sortOrder: "asc" as const } },
   { name: "🎯 Top AfriScore", icon: Sparkles, filters: { sector: "All Sectors", minChange: -100, maxChange: 100, sortBy: "afriScore", sortOrder: "desc" as const } },
+  { name: "🏛️ Large Cap", icon: BarChart3, filters: { sector: "All Sectors", minChange: -100, maxChange: 100, marketCapRange: "large", sortBy: "marketCap", sortOrder: "desc" as const } },
+  { name: "🐣 Small Cap", icon: Sparkles, filters: { sector: "All Sectors", minChange: -100, maxChange: 100, marketCapRange: "small", sortBy: "marketCap", sortOrder: "desc" as const } },
+  { name: "🛡️ Low Volatility (Beta<0.8)", icon: Filter, filters: { sector: "All Sectors", minChange: -100, maxChange: 100, minBeta: 0, maxBeta: 0.8, sortBy: "marketCap", sortOrder: "desc" as const } },
 ];
 
 export default function StockScreenerPage() {
@@ -77,6 +95,13 @@ export default function StockScreenerPage() {
     maxPE: 50,
     minVolume: "0",
     marketCapRange: "all",
+    minDividendYield: 0,
+    maxDividendYield: 15,
+    minVolumeM: 0,
+    minBeta: 0,
+    maxBeta: 2,
+    minRSI: 0,
+    maxRSI: 100,
     sortBy: "marketCap",
     sortOrder: "desc",
   });
@@ -96,6 +121,13 @@ export default function StockScreenerPage() {
       maxPE: 50,
       minVolume: "0",
       marketCapRange: "all",
+      minDividendYield: 0,
+      maxDividendYield: 15,
+      minVolumeM: 0,
+      minBeta: 0,
+      maxBeta: 2,
+      minRSI: 0,
+      maxRSI: 100,
       sortBy: "marketCap",
       sortOrder: "desc",
     });
@@ -133,6 +165,13 @@ export default function StockScreenerPage() {
       if (stock.change < filters.minChange || stock.change > filters.maxChange) return false;
       if (stock.price < filters.minPrice || stock.price > filters.maxPrice) return false;
       if (stock.pe < filters.minPE || stock.pe > filters.maxPE) return false;
+      if (stock.dividendYield < filters.minDividendYield || stock.dividendYield > filters.maxDividendYield) return false;
+      if (stock.volumeM < filters.minVolumeM) return false;
+      if (stock.beta < filters.minBeta || stock.beta > filters.maxBeta) return false;
+      if (stock.rsi < filters.minRSI || stock.rsi > filters.maxRSI) return false;
+      const capBucket = MARKET_CAP_BUCKETS[filters.marketCapRange] ?? MARKET_CAP_BUCKETS.all;
+      const marketCapB = parseMagnitude(stock.marketCap) / 1e9;
+      if (marketCapB < capBucket.min || marketCapB > capBucket.max) return false;
       return true;
     })
     .sort((a, b) => {
@@ -144,6 +183,7 @@ export default function StockScreenerPage() {
         case 'pe': aVal = a.pe; bVal = b.pe; break;
         case 'dividendYield': aVal = a.dividendYield; bVal = b.dividendYield; break;
         case 'rsi': aVal = a.rsi; bVal = b.rsi; break;
+        case 'beta': aVal = a.beta; bVal = b.beta; break;
         case 'afriScore': aVal = a.afriScore ?? 0; bVal = b.afriScore ?? 0; break;
         default: aVal = parseMagnitude(a.marketCap); bVal = parseMagnitude(b.marketCap);
       }
@@ -257,6 +297,7 @@ export default function StockScreenerPage() {
                     <SelectItem value="pe" className="text-xs">P/E Ratio</SelectItem>
                     <SelectItem value="dividendYield" className="text-xs">Dividend Yield</SelectItem>
                     <SelectItem value="rsi" className="text-xs">RSI</SelectItem>
+                    <SelectItem value="beta" className="text-xs">Beta</SelectItem>
                     <SelectItem value="afriScore" className="text-xs">AfriScore</SelectItem>
                   </SelectContent>
                 </Select>
@@ -302,6 +343,83 @@ export default function StockScreenerPage() {
                     step={1}
                     onValueChange={([min, max]) => setFilters(prev => ({ ...prev, minPE: min, maxPE: max }))}
                   />
+                </div>
+
+                <div>
+                  <label className="text-xs text-muted-foreground mb-2 block">
+                    Dividend Yield: {filters.minDividendYield}% to {filters.maxDividendYield}%
+                  </label>
+                  <Slider
+                    value={[filters.minDividendYield, filters.maxDividendYield]}
+                    min={0}
+                    max={15}
+                    step={0.5}
+                    onValueChange={([min, max]) => setFilters(prev => ({ ...prev, minDividendYield: min, maxDividendYield: max }))}
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-muted-foreground mb-2 block">
+                    Beta (volatility): {filters.minBeta.toFixed(1)} to {filters.maxBeta.toFixed(1)}
+                  </label>
+                  <Slider
+                    value={[filters.minBeta, filters.maxBeta]}
+                    min={0}
+                    max={2}
+                    step={0.05}
+                    onValueChange={([min, max]) => setFilters(prev => ({ ...prev, minBeta: min, maxBeta: max }))}
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-muted-foreground mb-2 block">
+                    RSI: {filters.minRSI} to {filters.maxRSI} {filters.maxRSI <= 40 ? "(oversold)" : filters.minRSI >= 70 ? "(overbought)" : ""}
+                  </label>
+                  <Slider
+                    value={[filters.minRSI, filters.maxRSI]}
+                    min={0}
+                    max={100}
+                    step={1}
+                    onValueChange={([min, max]) => setFilters(prev => ({ ...prev, minRSI: min, maxRSI: max }))}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1.5 block">Market Cap</label>
+                    <Select
+                      value={filters.marketCapRange}
+                      onValueChange={(val) => setFilters(prev => ({ ...prev, marketCapRange: val }))}
+                    >
+                      <SelectTrigger className="h-9 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all" className="text-xs">All Sizes</SelectItem>
+                        <SelectItem value="large" className="text-xs">Large Cap (&gt;50B)</SelectItem>
+                        <SelectItem value="mid" className="text-xs">Mid Cap (5B–50B)</SelectItem>
+                        <SelectItem value="small" className="text-xs">Small Cap (&lt;5B)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1.5 block">Min Volume</label>
+                    <Select
+                      value={String(filters.minVolumeM)}
+                      onValueChange={(val) => setFilters(prev => ({ ...prev, minVolumeM: Number(val) }))}
+                    >
+                      <SelectTrigger className="h-9 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="0" className="text-xs">Any</SelectItem>
+                        <SelectItem value="0.1" className="text-xs">&gt;100K</SelectItem>
+                        <SelectItem value="0.5" className="text-xs">&gt;500K</SelectItem>
+                        <SelectItem value="1" className="text-xs">&gt;1M</SelectItem>
+                        <SelectItem value="5" className="text-xs">&gt;5M</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </>
             )}

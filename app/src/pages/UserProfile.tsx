@@ -282,7 +282,7 @@ export default function UserProfile() {
   };
   const handlePostShare = async (post: Post) => {
     const url = `${window.location.origin}/traders-hub/post/${post.id}`;
-    const result = await shareLink(url, { title: "AfriFinance TradersHub", text: post.content.slice(0, 120) });
+    const result = await shareLink(url, { title: "Continua TradersHub", text: post.content.slice(0, 120) });
     if (result.method === "clipboard") toast({ title: "Link copied" });
     else if (result.method === "failed") toast({ title: "Couldn't share this post", variant: "destructive" });
   };

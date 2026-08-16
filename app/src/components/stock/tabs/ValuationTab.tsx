@@ -19,6 +19,7 @@ export function ValuationTab({ price, pe, fundamentals, onSeePerformance }: Prop
 
   const clamp = Math.max(-50, Math.min(50, upside));
   const angle = ((clamp + 50) / 100) * 180;
+  const pct = ((clamp + 50) / 100) * 100; // 0–100, how far round the arc the needle sits
   const cx = 100, cy = 100, rad = 78;
   const nx = cx + rad * Math.cos((180 - angle) * Math.PI / 180);
   const ny = cy - rad * Math.sin((180 - angle) * Math.PI / 180);
@@ -48,13 +49,25 @@ export function ValuationTab({ price, pe, fundamentals, onSeePerformance }: Prop
         <div className="flex justify-center mt-2">
           <svg viewBox="0 0 200 118" className="w-full max-w-[280px]">
             <defs>
+              {/* TradingView Technicals gauge palette: red → magenta → blue */}
               <linearGradient id="valgauge" x1="0%" x2="100%">
-                <stop offset="0%" stopColor={fx.weak} />
-                <stop offset="50%" stopColor={fx.ok} />
-                <stop offset="100%" stopColor={fx.strong} />
+                <stop offset="0%" stopColor="#e0245e" />
+                <stop offset="50%" stopColor="#a855f7" />
+                <stop offset="100%" stopColor="#3b82f6" />
               </linearGradient>
             </defs>
-            <path d="M 20 100 A 80 80 0 0 1 180 100" stroke="url(#valgauge)" strokeWidth="12" fill="none" strokeLinecap="round" />
+            {/* pale unfilled track, same as TradingView's grey remainder past the needle */}
+            <path d="M 20 100 A 80 80 0 0 1 180 100" stroke="hsl(var(--muted))" strokeWidth="12" fill="none" strokeLinecap="round" />
+            {/* coloured portion, revealed only up to the current reading */}
+            <path
+              d="M 20 100 A 80 80 0 0 1 180 100"
+              stroke="url(#valgauge)"
+              strokeWidth="12"
+              fill="none"
+              strokeLinecap="round"
+              pathLength={100}
+              strokeDasharray={`${pct} ${100 - pct}`}
+            />
             <line x1={cx} y1={cy} x2={nx} y2={ny} stroke="hsl(var(--foreground))" strokeWidth="2.5" strokeLinecap="round" />
             <circle cx={cx} cy={cy} r="5" fill="hsl(var(--foreground))" />
             <text x="20" y="115" fontSize="9" fill="hsl(var(--muted-foreground))">Overvalued</text>
