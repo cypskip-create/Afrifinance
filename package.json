@@ -12,6 +12,7 @@
     "preview": "npm --workspace app run preview"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
     "express": "^5.2.1",
     "nanoid": "^3.3.18",
     "pino": "^10.3.1"
