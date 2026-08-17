@@ -296,6 +296,8 @@
   }
 
   .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom, 8px); }
+  .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
 
   .tab-item {
     @apply flex flex-col items-center justify-center gap-0.5;

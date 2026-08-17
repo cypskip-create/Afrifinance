@@ -802,9 +802,40 @@ export type Database = {
         }
         Relationships: []
       }
+      watchlist_folders: {
+        Row: {
+          created_at: string
+          id: string
+          is_default: boolean
+          name: string
+          sort_order: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name: string
+          sort_order?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          sort_order?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       watchlists: {
         Row: {
           created_at: string
+          folder_id: string
           id: string
           name: string
           symbol: string
@@ -812,6 +843,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          folder_id: string
           id?: string
           name: string
           symbol: string
@@ -819,12 +851,21 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          folder_id?: string
           id?: string
           name?: string
           symbol?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "watchlists_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "watchlist_folders"
+            referencedColumns: ["id"]
+          }
+        ]
       }
     }
     Views: {

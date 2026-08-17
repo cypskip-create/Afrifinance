@@ -176,8 +176,8 @@ function CommentNode({ comment, depth, onReply, onReactComment, replyingToId, cu
 
       {expanded && replies.length > 0 && (
         <div
-          className="ml-[17px] pl-[16px] border-l-2"
-          style={{ borderColor: `hsl(var(--border) / ${Math.max(0.25, 0.6 - depth * 0.12)})` }}
+          className="ml-[10px] pl-[10px] border-l"
+          style={{ borderColor: `hsl(var(--foreground) / 0.13)` }}
         >
           {replies.map(r => (
             <CommentNode

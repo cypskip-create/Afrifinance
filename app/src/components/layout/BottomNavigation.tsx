@@ -12,16 +12,17 @@ const navItems = [
   { id: "account", label: "Profile", icon: User, path: "/account", isProfile: true },
 ];
 
-// Immersive routes — full-bleed research/reading surfaces where the nav competes
-// with content. It slides away and returns on the way back.
-const IMMERSIVE = [/^\/stock\//, /^\/compare/, /^\/sector\//, /^\/sector-heatmap/, /^\/screener/, /^\/profile\//, /^\/traders-hub\/post\//];
+// The bottom nav only ever shows on the 5 primary tabs. Every other screen
+// (watchlist, themes, featured lists, stock detail, settings, etc.) is a
+// "drill-in" surface where the nav would just compete with content.
+const MAIN_ROUTES = new Set(["/", "/markets", "/track-investments", "/traders-hub", "/account"]);
 
 export function BottomNavigation() {
   const location = useLocation();
   const { profile } = useProfile();
-  const immersive = IMMERSIVE.some((re) => re.test(location.pathname));
+  const isMainRoute = MAIN_ROUTES.has(location.pathname);
 
-  if (immersive) return null;
+  if (!isMainRoute) return null;
 
   return (
     <nav className="bottom-nav safe-area-bottom">

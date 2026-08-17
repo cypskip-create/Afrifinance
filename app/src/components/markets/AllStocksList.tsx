@@ -2,13 +2,14 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, TrendingUp, TrendingDown, Filter, ChevronDown, Star } from "lucide-react";
+import { Search, TrendingUp, TrendingDown, Filter, ChevronDown, Heart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { SparklineChart } from "@/components/shared/SparklineChart";
 import { CANONICAL_SYMBOLS, STOCK_META, getPrice, getDayChange } from "@/lib/stockPrices";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useToast } from "@/hooks/use-toast";
+import { AddToWatchlistDialog } from "@/components/markets/AddToWatchlistDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,8 +33,9 @@ export function AllStocksList({ initialSector, onlySymbols }: AllStocksListProps
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSector, setSelectedSector] = useState(initialSector || "All Sectors");
   const [sortBy, setSortBy] = useState<"name" | "change" | "price">("name");
-  const { isInWatchlist, addToWatchlist, removeFromWatchlist } = useWatchlist();
+  const { isInWatchlist, addToWatchlist, removeFromWatchlist, folders, foldersLoading } = useWatchlist();
   const { toast } = useToast();
+  const [pickerStock, setPickerStock] = useState<{ symbol: string; name: string } | null>(null);
 
   useEffect(() => { if (initialSector) setSelectedSector(initialSector); }, [initialSector]);
 
@@ -105,16 +107,24 @@ export function AllStocksList({ initialSector, onlySymbols }: AllStocksListProps
 
   const toggleFavorite = async (symbol: string, name: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isInWatchlist(symbol)) {
-      await removeFromWatchlist(symbol);
-      toast({ title: "Removed from watchlist" });
-    } else {
-      const { error } = await addToWatchlist(symbol, name) || {};
-      if (!error) toast({ title: "Added to watchlist" });
+    // Only one watchlist exists (the common free-tier case) — just toggle it,
+    // no need to make the person pick from a list of one.
+    if (!foldersLoading && folders.length <= 1) {
+      if (isInWatchlist(symbol)) {
+        await removeFromWatchlist(symbol);
+        toast({ title: "Removed from watchlist" });
+      } else {
+        const { error } = await addToWatchlist(symbol, name) || {};
+        if (!error) toast({ title: "Added to watchlist" });
+      }
+      return;
     }
+    // Multiple named watchlists (Premium) — let them choose which one(s).
+    setPickerStock({ symbol, name });
   };
 
   return (
+    <>
     <Card className="soft-card overflow-hidden">
       <div className="flex items-center justify-between px-4 pt-4 pb-3">
         <span className="text-sm font-bold">All Stocks ({filteredStocks.length})</span>
@@ -177,7 +187,7 @@ export function AllStocksList({ initialSector, onlySymbols }: AllStocksListProps
               className="shrink-0 -ml-1 p-1"
               aria-label="Toggle watchlist"
             >
-              <Star className={`h-4 w-4 ${isInWatchlist(stock.symbol) ? 'fill-yellow-500 text-yellow-500' : 'text-muted-foreground'}`} />
+              <Heart className={`h-4 w-4 ${isInWatchlist(stock.symbol) ? 'fill-primary text-primary' : 'text-muted-foreground'}`} />
             </button>
 
             <div className="min-w-0 flex-1">
@@ -206,5 +216,15 @@ export function AllStocksList({ initialSector, onlySymbols }: AllStocksListProps
         )}
       </div>
     </Card>
+
+    {pickerStock && (
+      <AddToWatchlistDialog
+        open={!!pickerStock}
+        onOpenChange={(o) => !o && setPickerStock(null)}
+        symbol={pickerStock.symbol}
+        name={pickerStock.name}
+      />
+    )}
+    </>
   );
 }
