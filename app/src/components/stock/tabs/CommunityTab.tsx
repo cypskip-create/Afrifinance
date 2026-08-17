@@ -9,6 +9,34 @@ import { formatPostDate } from "@/lib/formatTimestamp";
 
 interface Props { symbol: string }
 
+// Sentiment: scan each relevant post for bull/bear language — not just the literal
+// word "bullish"/"bearish", but the broader vocabulary traders actually use (buy/sell
+// calls, price-action slang, analyst-style terms, and common emoji shorthand).
+// Single words are matched on word boundaries (so "up" doesn't match inside "group"),
+// phrases and emoji are matched as substrings.
+const BULLISH_TERMS = [
+  "bull", "bullish", "buy", "buying", "long", "growth", "moon", "mooning", "to the moon",
+  "up", "uptrend", "strong", "breakout", "rally", "rallying", "undervalued", "accumulate",
+  "accumulating", "green", "pump", "pumping", "outperform", "upgrade", "strong buy",
+  "buy the dip", "loading up", "all in", "diamond hands", "surge", "surging", "soar",
+  "soaring", "rocket", "gains", "beat expectations", "upside", "positive outlook",
+  "overweight", "recommend buy", "🚀", "📈",
+];
+const BEARISH_TERMS = [
+  "bear", "bearish", "sell", "selling", "short", "shorting", "drop", "dropping", "down",
+  "downtrend", "weak", "crash", "crashing", "dump", "dumping", "overvalued", "red",
+  "downgrade", "underperform", "panic sell", "sell off", "correction", "bag holder",
+  "rug pull", "decline", "declining", "plunge", "plunging", "slump", "downside",
+  "miss expectations", "tank", "tanking", "negative outlook", "underweight",
+  "recommend sell", "🔻", "📉",
+];
+const countMatches = (text: string, terms: string[]) =>
+  terms.reduce((count, term) => {
+    const isPhraseOrSymbol = /\s/.test(term) || !/^[a-z]+$/i.test(term);
+    const hit = isPhraseOrSymbol ? text.includes(term) : new RegExp(`\\b${term}\\b`, "i").test(text);
+    return hit ? count + 1 : count;
+  }, 0);
+
 export function CommunityTab({ symbol }: Props) {
   const navigate = useNavigate();
   const { posts } = usePosts();
@@ -21,15 +49,17 @@ export function CommunityTab({ symbol }: Props) {
     ).slice(0, 6);
   }, [posts, symbol]);
 
-  // crude sentiment: count bull vs bear words
+  // Sentiment: scan each relevant post for bull/bear language — not just the literal
+  // word "bullish"/"bearish", but the broader vocabulary traders actually use (buy/sell
+  // calls, price-action slang, analyst-style terms, and common emoji shorthand).
+  // Single words are matched on word boundaries (so "up" doesn't match inside "group"),
+  // phrases and emoji are matched as substrings.
   const sentiment = useMemo(() => {
-    const bullWords = ["bull", "buy", "long", "growth", "moon", "up", "strong"];
-    const bearWords = ["bear", "sell", "short", "drop", "down", "weak", "crash"];
     let bull = 0, bear = 0;
     relevant.forEach(p => {
       const c = (p.content || "").toLowerCase();
-      bullWords.forEach(w => c.includes(w) && bull++);
-      bearWords.forEach(w => c.includes(w) && bear++);
+      bull += countMatches(c, BULLISH_TERMS);
+      bear += countMatches(c, BEARISH_TERMS);
     });
     const total = bull + bear || 1;
     return { bullPct: Math.round((bull / total) * 100), bearPct: Math.round((bear / total) * 100) };

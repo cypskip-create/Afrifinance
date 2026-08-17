@@ -477,6 +477,7 @@ export default function TradersHub() {
         }}
         portfolioSnapshot={portfolioSnapshot}
         prefillContent={prefillContent}
+        isPremium={profile?.subscription_plan === 'premium' || profile?.subscription_plan === 'premium_plus'}
       />
 
       {/* Inline edit */}

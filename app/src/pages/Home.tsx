@@ -274,7 +274,7 @@ export default function Home() {
           <button
             data-small-target
             className="grouped-card w-full flex items-center justify-between gap-3 p-4 rounded-2xl border border-primary/25 bg-primary/5 text-left"
-            onClick={() => navigate('/account')}
+            onClick={() => navigate('/upgrade')}
           >
             <div className="flex items-center gap-2 min-w-0">
               <Crown className="h-4 w-4 text-primary shrink-0" />

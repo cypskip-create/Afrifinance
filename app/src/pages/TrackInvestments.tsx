@@ -179,7 +179,7 @@ export default function TrackInvestments() {
               <p className="text-[10px] text-muted-foreground">{holdings.length} stocks</p>
             </div>
             <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Diversif.</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Diversification</p>
               <p className="mt-0.5 text-sm font-semibold tabular">{diversificationScore}/10</p>
               <p className="text-[10px] text-muted-foreground">{sectorAlloc.length} sectors</p>
             </div>

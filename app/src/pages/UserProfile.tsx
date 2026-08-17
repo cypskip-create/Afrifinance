@@ -17,7 +17,7 @@ import { SparklineChart } from "@/components/shared/SparklineChart";
 import { HoldingsList } from "@/components/portfolio/HoldingsList";
 import { XPostCard } from "@/components/social/XPostCard";
 import { HubPostCard } from "@/components/social/HubPostCard";
-import { usePosts, Post, Comment, ReactionKind } from "@/hooks/usePosts";
+import { usePosts, Post, Comment, ReactionKind, updateCommentInTree, removeCommentFromTree, countCommentSubtree } from "@/hooks/usePosts";
 import { XCommentSheet } from "@/components/social/XCommentSheet";
 import { getPrice } from "@/lib/stockPrices";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
@@ -56,7 +56,7 @@ export default function UserProfile() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { isFollowing, toggleFollow, fetchFollowers, fetchFollowing } = useFollows();
-  const { bookmarkPost, reactToPost, reactToComment, fetchComments, addComment, deletePost, reportPost, hidePost } = usePosts();
+  const { bookmarkPost, reactToPost, reactToComment, fetchComments, addComment, editComment, deleteComment, deletePost, reportPost, hidePost } = usePosts();
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
   const [profileData, setProfileData] = useState<UserProfileData | null>(null);
@@ -304,6 +304,24 @@ export default function UserProfile() {
     if (!selectedPost || !user) return;
     const { error } = await addComment(selectedPost.id, content);
     if (!error) { const updated = await fetchComments(selectedPost.id); setComments(updated); }
+  };
+
+  const handleEditComment = async (commentId: string, content: string) => {
+    const { error, editedAt } = await editComment(commentId, content);
+    if (!error) {
+      setComments(prev => updateCommentInTree(prev, commentId, c => ({ ...c, content, edited_at: editedAt })));
+    }
+    return { error };
+  };
+
+  const handleDeleteComment = async (comment: Comment) => {
+    if (!selectedPost) return;
+    const removedCount = countCommentSubtree(comment);
+    const { error } = await deleteComment(comment.id, selectedPost.id, removedCount);
+    if (!error) {
+      setComments(prev => removeCommentFromTree(prev, comment.id).tree);
+      setSelectedPost(p => p ? { ...p, comments_count: Math.max(0, (p.comments_count || 0) - removedCount) } : p);
+    }
   };
 
   const getInitials = (name: string | null) => name ? name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) : "U";
@@ -659,7 +677,7 @@ export default function UserProfile() {
       </Tabs>
 
       {/* Comment sheet */}
-      <XCommentSheet open={commentSheetOpen} onOpenChange={setCommentSheetOpen} post={selectedPost} currentUserId={user?.id} comments={comments} loadingComments={loadingComments} onAddComment={handleAddComment} onBookmark={handleBookmark} onShare={handlePostShare} onDelete={isOwnProfile ? handleDelete : undefined} onReact={handleReact} onReactComment={reactToComment} />
+      <XCommentSheet open={commentSheetOpen} onOpenChange={setCommentSheetOpen} post={selectedPost} currentUserId={user?.id} comments={comments} loadingComments={loadingComments} onAddComment={handleAddComment} onBookmark={handleBookmark} onShare={handlePostShare} onDelete={isOwnProfile ? handleDelete : undefined} onReact={handleReact} onReactComment={reactToComment} onEditComment={handleEditComment} onDeleteComment={handleDeleteComment} />
       {userId && <FollowersDialog open={followersDialogOpen} onOpenChange={setFollowersDialogOpen} userId={userId} initialTab={dialogTab} />}
       <EditProfileDialog open={editProfileOpen} onOpenChange={(open) => { setEditProfileOpen(open); if (!open) fetchProfile(); }} />
       {profileData.avatar_url && (

@@ -54,6 +54,7 @@ export interface Comment {
   user_id: string;
   content: string;
   created_at: string;
+  edited_at?: string | null;
   parent_comment_id?: string | null;
   author?: PostAuthor;
   replies?: Comment[];
@@ -63,6 +64,48 @@ export interface Comment {
   is_reposted?: boolean;
   reaction_counts?: ReactionCounts;
   my_reaction?: ReactionKind | null;
+}
+
+// ── Pure helpers for working with the nested comment tree client-side ──────
+// (editing/deleting a comment happens against a single comment somewhere in
+// a tree of replies, so callers need to patch that tree locally rather than
+// refetch the whole thread on every action).
+
+/** 1 + every nested reply underneath this comment. */
+export function countCommentSubtree(comment: Comment): number {
+  return 1 + (comment.replies || []).reduce((sum, r) => sum + countCommentSubtree(r), 0);
+}
+
+/** Returns a new tree with the given comment id patched via `updater`, wherever it sits. */
+export function updateCommentInTree(comments: Comment[], id: string, updater: (c: Comment) => Comment): Comment[] {
+  return comments.map(c => {
+    if (c.id === id) return updater(c);
+    if (c.replies && c.replies.length) return { ...c, replies: updateCommentInTree(c.replies, id, updater) };
+    return c;
+  });
+}
+
+/** Returns a new tree with the given comment id (and all its replies) removed, plus how many nodes were removed. */
+export function removeCommentFromTree(comments: Comment[], id: string): { tree: Comment[]; removedCount: number } {
+  let removedCount = 0;
+  const tree = comments
+    .filter(c => {
+      if (c.id === id) {
+        removedCount = countCommentSubtree(c);
+        return false;
+      }
+      return true;
+    })
+    .map(c => {
+      if (removedCount > 0 || !c.replies || !c.replies.length) return c;
+      const nested = removeCommentFromTree(c.replies, id);
+      if (nested.removedCount > 0) {
+        removedCount = nested.removedCount;
+        return { ...c, replies: nested.tree };
+      }
+      return c;
+    });
+  return { tree, removedCount };
 }
 
 // Module-level cache so re-entering TradersHub is instant
@@ -414,6 +457,28 @@ export function usePosts() {
     return { data, error };
   };
 
+  const editComment = async (commentId: string, newContent: string) => {
+    if (!user) return { error: { message: 'Must be logged in' } };
+    const editedAt = new Date().toISOString();
+    const { error } = await supabase
+      .from('post_comments')
+      .update({ content: newContent, edited_at: editedAt } as any)
+      .eq('id', commentId).eq('user_id', user.id);
+    return { error, editedAt };
+  };
+
+  /** removedCount defaults to 1 but should be the full subtree size (comment + its
+   *  nested replies, see countCommentSubtree) since deleting a comment cascades to
+   *  its replies in the database. */
+  const deleteComment = async (commentId: string, postId: string, removedCount = 1) => {
+    if (!user) return { error: { message: 'Must be logged in' } };
+    const { error } = await supabase.from('post_comments').delete().eq('id', commentId).eq('user_id', user.id);
+    if (!error) {
+      setPosts(prev => prev.map(p => p.id === postId ? { ...p, comments_count: Math.max(0, (p.comments_count || 0) - removedCount) } : p));
+    }
+    return { error };
+  };
+
   const getUserPosts = async (userId: string) => {
     const { data, error } = await supabase.from('posts').select('*').eq('user_id', userId).order('created_at', { ascending: false });
     return { data, error };
@@ -442,7 +507,7 @@ export function usePosts() {
     posts, loading, error,
     fetchPosts, createPost, deletePost, editPost,
     likePost, repostPost, bookmarkPost, reactToPost, reactToComment, reportPost, hidePost,
-    fetchComments, addComment, getUserPosts,
+    fetchComments, addComment, editComment, deleteComment, getUserPosts,
     likeComment, repostComment,
   };
 }

@@ -13,6 +13,7 @@ import Markets from "./pages/Markets";
 import Discover from "./pages/Discover";
 
 import Account from "./pages/Account";
+import Upgrade from "./pages/upgrade";
 import StockDetail from "./pages/StockDetail";
 import Watchlist from "./pages/Watchlist";
 import SectorDetail from "./pages/SectorDetail";
@@ -57,6 +58,7 @@ const App = () => (
                     <Route path="discover" element={<Discover />} />
 
                     <Route path="account" element={<Account />} />
+                    <Route path="upgrade" element={<Upgrade />} />
                     <Route path="settings" element={<Settings />} />
                     <Route path="stock/:symbol" element={<StockDetail />} />
                     <Route path="watchlist" element={<Watchlist />} />

@@ -24,9 +24,16 @@ interface XComposeModalProps {
   portfolioSnapshot?: PortfolioSnapshot | null;
   prefillContent?: string;
   quotedPost?: { id: string; content: string; author?: { full_name: string | null; avatar_url: string | null } | null; created_at: string } | null;
+  /** Free: 500 chars, a quick take. Premium: 5000 chars, room for a proper
+   *  article-length post (Moomoo-style long-form). Enforced server-side too
+   *  — see enforce_post_length_by_plan() — this just keeps the compose UX honest. */
+  isPremium?: boolean;
 }
 
-export function XComposeModal({ open, onOpenChange, user, profile, onPost, portfolioSnapshot, prefillContent, quotedPost }: XComposeModalProps) {
+const FREE_MAX_CHARS = 500;
+const PREMIUM_MAX_CHARS = 5000;
+
+export function XComposeModal({ open, onOpenChange, user, profile, onPost, portfolioSnapshot, prefillContent, quotedPost, isPremium = false }: XComposeModalProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -96,8 +103,9 @@ export function XComposeModal({ open, onOpenChange, user, profile, onPost, portf
   };
 
   const charCount = content.length;
-  const maxChars = 500;
+  const maxChars = isPremium ? PREMIUM_MAX_CHARS : FREE_MAX_CHARS;
   const charPercent = (charCount / maxChars) * 100;
+  const atFreeLimit = !isPremium && charCount >= FREE_MAX_CHARS;
 
   if (!user) return null;
 
@@ -119,13 +127,25 @@ export function XComposeModal({ open, onOpenChange, user, profile, onPost, portf
             <div className="relative">
               <textarea
                 ref={textareaRef}
-                placeholder="What's happening in the markets?"
+                placeholder={isPremium ? "What's happening in the markets? (Premium: write a full article)" : "What's happening in the markets?"}
                 value={content}
                 onChange={handleContentChange}
-                className="w-full bg-transparent border-0 outline-none resize-none text-[17px] leading-[1.4] placeholder:text-muted-foreground/50 min-h-[120px]"
-                maxLength={maxChars + 50}
+                className={`w-full bg-transparent border-0 outline-none resize-none text-[17px] leading-[1.4] placeholder:text-muted-foreground/50 ${isPremium ? "min-h-[220px]" : "min-h-[120px]"}`}
+                maxLength={maxChars}
               />
             </div>
+
+            {!isPremium && atFreeLimit && (
+              <button
+                type="button"
+                data-small-target
+                onClick={() => { onOpenChange(false); navigate("/upgrade"); }}
+                className="mt-2 w-full flex items-center justify-between gap-2 p-2.5 rounded-xl border border-primary/25 bg-primary/5 text-left"
+              >
+                <span className="text-[11px] font-medium">Free posts stop at {FREE_MAX_CHARS} characters. Go Premium for {PREMIUM_MAX_CHARS.toLocaleString()}-character, article-length posts.</span>
+                <span className="text-[11px] font-bold text-primary shrink-0 whitespace-nowrap">Upgrade →</span>
+              </button>
+            )}
 
             {/* Preview image */}
             {selectedImage && (

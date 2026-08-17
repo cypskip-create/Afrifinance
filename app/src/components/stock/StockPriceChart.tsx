@@ -1,7 +1,8 @@
 import {
-  AreaChart, Area, ComposedChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceLine, Cell
+  AreaChart, Area, ComposedChart, Bar, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceLine, Cell
 } from "recharts";
 import { useMemo, useCallback, useState } from "react";
+import { sma, ema, bollingerBands, rsi, macd, DEFAULT_INDICATOR_SETTINGS, type IndicatorSettings } from "@/lib/technicalIndicators";
 
 let lastHaptic = 0;
 const chartHaptic = () => {
@@ -26,6 +27,9 @@ interface StockPriceChartProps {
    *  chart falls back to its own generated series — this keeps the component
    *  usable standalone while letting callers supply real data when they have it. */
   data?: ReturnType<typeof generateMockData>;
+  /** Which overlay/sub-panel indicators are switched on (Moomoo-style). Defaults to
+   *  everything off — a clean chart until the person turns something on. */
+  indicators?: IndicatorSettings;
 }
 
 export const generateMockData = (timeframe: string, symbol: string = "STK") => {
@@ -87,17 +91,43 @@ export const generateMockData = (timeframe: string, symbol: string = "STK") => {
   return dataPoints;
 };
 
-export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area", onHoverPrice, data: liveData }: StockPriceChartProps) => {
+export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area", onHoverPrice, data: liveData, indicators = DEFAULT_INDICATOR_SETTINGS }: StockPriceChartProps) => {
   const mockData = useMemo(() => generateMockData(timeframe, symbol), [timeframe, symbol]);
   const data = liveData && liveData.length > 1 ? liveData : mockData;
   const firstPrice = data[0]?.price || 0;
   const lastPrice = data[data.length - 1]?.price || 0;
   const isPositive = lastPrice >= firstPrice;
   const lineColor = isPositive ? "hsl(var(--bull))" : "hsl(var(--bear))";
-  const minPrice = Math.min(...data.map(d => d.low ?? d.price));
-  const maxPrice = Math.max(...data.map(d => d.high ?? d.price));
-  const padding = (maxPrice - minPrice) * 0.15;
   const gradientId = `gs-${symbol}-${timeframe}`;
+
+  // Overlay indicators (drawn on the price chart itself) + sub-panel indicator
+  // (Volume / MACD / RSI, drawn in their own panel below since they need a
+  // different y-scale entirely). Computed once per data/indicator-toggle change.
+  const chartData = useMemo(() => {
+    const ma5 = sma(data, 5), ma20 = sma(data, 20), ma50 = sma(data, 50);
+    const ema12 = ema(data, 12), ema26 = ema(data, 26);
+    const boll = bollingerBands(data, 20, 2);
+    const rsiVals = rsi(data, 14);
+    const { macdLine, signal, histogram } = macd(data, 12, 26, 9);
+    return data.map((d, i) => ({
+      ...d,
+      ma5: ma5[i], ma20: ma20[i], ma50: ma50[i],
+      ema12: ema12[i], ema26: ema26[i],
+      bollUpper: boll[i].upper, bollMid: boll[i].mid, bollLower: boll[i].lower,
+      rsi: rsiVals[i],
+      macdLine: macdLine[i], macdSignal: signal[i], macdHist: histogram[i],
+    }));
+  }, [data]);
+
+  const minPrice = Math.min(
+    ...data.map(d => d.low ?? d.price),
+    ...(indicators.overlays.boll ? chartData.map(d => d.bollLower ?? Infinity).filter(Number.isFinite) : []),
+  );
+  const maxPrice = Math.max(
+    ...data.map(d => d.high ?? d.price),
+    ...(indicators.overlays.boll ? chartData.map(d => d.bollUpper ?? -Infinity).filter(Number.isFinite) : []),
+  );
+  const padding = (maxPrice - minPrice) * 0.15;
 
   // Crosshair overlay position. Recharts v3 no longer hands mouse/touch handlers an
   // `activePayload` — it hands them a small { activeIndex, activeCoordinate, ... } state
@@ -144,71 +174,149 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
     );
   };
 
+  // Overlay lines share one distinct palette so MA/EMA/BOLL stay visually
+  // separable from each other and from the price series itself.
+  const OVERLAY_COLORS = { ma5: "#f59e0b", ma20: "#3b82f6", ma50: "#8b5cf6", ema12: "#14b8a6", ema26: "#ec4899", boll: "#94a3b8" };
+
+  const renderOverlays = () => (
+    <>
+      {indicators.overlays.ma && (
+        <>
+          <Line type="monotone" dataKey="ma5" stroke={OVERLAY_COLORS.ma5} strokeWidth={1.1} dot={false} activeDot={false} isAnimationActive={false} connectNulls />
+          <Line type="monotone" dataKey="ma20" stroke={OVERLAY_COLORS.ma20} strokeWidth={1.1} dot={false} activeDot={false} isAnimationActive={false} connectNulls />
+          <Line type="monotone" dataKey="ma50" stroke={OVERLAY_COLORS.ma50} strokeWidth={1.1} dot={false} activeDot={false} isAnimationActive={false} connectNulls />
+        </>
+      )}
+      {indicators.overlays.ema && (
+        <>
+          <Line type="monotone" dataKey="ema12" stroke={OVERLAY_COLORS.ema12} strokeWidth={1.1} dot={false} activeDot={false} isAnimationActive={false} connectNulls />
+          <Line type="monotone" dataKey="ema26" stroke={OVERLAY_COLORS.ema26} strokeWidth={1.1} dot={false} activeDot={false} isAnimationActive={false} connectNulls />
+        </>
+      )}
+      {indicators.overlays.boll && (
+        <>
+          <Line type="monotone" dataKey="bollUpper" stroke={OVERLAY_COLORS.boll} strokeWidth={1} strokeDasharray="3 3" dot={false} activeDot={false} isAnimationActive={false} connectNulls />
+          <Line type="monotone" dataKey="bollMid" stroke={OVERLAY_COLORS.boll} strokeWidth={1} dot={false} activeDot={false} isAnimationActive={false} connectNulls />
+          <Line type="monotone" dataKey="bollLower" stroke={OVERLAY_COLORS.boll} strokeWidth={1} strokeDasharray="3 3" dot={false} activeDot={false} isAnimationActive={false} connectNulls />
+        </>
+      )}
+    </>
+  );
+
+  const renderSubPanel = () => {
+    if (indicators.subPanel === "rsi") {
+      return (
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }} syncId={`chart-${symbol}-${timeframe}`}>
+            <XAxis dataKey="date" hide />
+            <YAxis hide domain={[0, 100]} />
+            <Tooltip content={() => null} cursor={false} />
+            <ReferenceLine y={70} stroke="hsl(var(--bear))" strokeOpacity={0.35} strokeDasharray="2 3" />
+            <ReferenceLine y={30} stroke="hsl(var(--bull))" strokeOpacity={0.35} strokeDasharray="2 3" />
+            <Line type="monotone" dataKey="rsi" stroke="#a855f7" strokeWidth={1.3} dot={false} activeDot={false} isAnimationActive={false} connectNulls />
+          </ComposedChart>
+        </ResponsiveContainer>
+      );
+    }
+    if (indicators.subPanel === "macd") {
+      return (
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }} syncId={`chart-${symbol}-${timeframe}`}>
+            <XAxis dataKey="date" hide />
+            <YAxis hide />
+            <Tooltip content={() => null} cursor={false} />
+            <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeOpacity={0.35} />
+            <Bar dataKey="macdHist" isAnimationActive={false} barSize={2}>
+              {chartData.map((d, i) => (
+                <Cell key={i} fill={(d.macdHist ?? 0) >= 0 ? "hsl(var(--bull))" : "hsl(var(--bear))"} />
+              ))}
+            </Bar>
+            <Line type="monotone" dataKey="macdLine" stroke="#3b82f6" strokeWidth={1.2} dot={false} activeDot={false} isAnimationActive={false} connectNulls />
+            <Line type="monotone" dataKey="macdSignal" stroke="#f59e0b" strokeWidth={1.2} dot={false} activeDot={false} isAnimationActive={false} connectNulls />
+          </ComposedChart>
+        </ResponsiveContainer>
+      );
+    }
+    return null;
+  };
+
+  const hasSubPanel = indicators.subPanel !== "none";
+
   if (chartType === "candle") {
     const barSize = data.length > 120 ? 2 : data.length > 60 ? 4 : 7;
     return (
-      <div className="relative h-full w-full touch-none" onTouchEnd={handleLeave}>
-        <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart
-            data={data}
-            margin={{ top: 8, right: 0, left: 0, bottom: 0 }}
-            onMouseMove={updateFromChartState}
-            onMouseLeave={handleLeave}
-            onTouchMove={updateFromChartState}
-          >
-            <XAxis dataKey="date" hide />
-            <YAxis hide domain={domain} />
-            <Tooltip content={() => null} cursor={false} />
-            <Bar dataKey="wickRange" barSize={1} isAnimationActive={false}>
-              {data.map((d, i) => (
-                <Cell key={i} fill={d.up ? "hsl(var(--bull))" : "hsl(var(--bear))"} />
-              ))}
-            </Bar>
-            <Bar dataKey="body" barSize={barSize} isAnimationActive={false} minPointSize={1}>
-              {data.map((d, i) => (
-                <Cell key={i} fill={d.up ? "hsl(var(--bull))" : "hsl(var(--bear))"} />
-              ))}
-            </Bar>
-          </ComposedChart>
-        </ResponsiveContainer>
-        {renderCrosshair()}
+      <div className="relative h-full w-full flex flex-col touch-none" onTouchEnd={handleLeave}>
+        <div className={hasSubPanel ? "flex-[7] min-h-0 relative" : "flex-1 min-h-0 relative"}>
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart
+              data={chartData}
+              margin={{ top: 8, right: 0, left: 0, bottom: 0 }}
+              onMouseMove={updateFromChartState}
+              onMouseLeave={handleLeave}
+              onTouchMove={updateFromChartState}
+              syncId={`chart-${symbol}-${timeframe}`}
+            >
+              <XAxis dataKey="date" hide />
+              <YAxis hide domain={domain} />
+              <Tooltip content={() => null} cursor={false} />
+              <Bar dataKey="wickRange" barSize={1} isAnimationActive={false}>
+                {data.map((d, i) => (
+                  <Cell key={i} fill={d.up ? "hsl(var(--bull))" : "hsl(var(--bear))"} />
+                ))}
+              </Bar>
+              <Bar dataKey="body" barSize={barSize} isAnimationActive={false} minPointSize={1}>
+                {data.map((d, i) => (
+                  <Cell key={i} fill={d.up ? "hsl(var(--bull))" : "hsl(var(--bear))"} />
+                ))}
+              </Bar>
+              {renderOverlays()}
+            </ComposedChart>
+          </ResponsiveContainer>
+          {renderCrosshair()}
+        </div>
+        {hasSubPanel && <div className="flex-[3] min-h-0 border-t border-border/30 pt-1">{renderSubPanel()}</div>}
       </div>
     );
   }
 
   return (
-    <div className="relative h-full w-full touch-none" onTouchEnd={handleLeave}>
-      <ResponsiveContainer width="100%" height="100%">
-        <AreaChart
-          data={data}
-          margin={{ top: 8, right: 0, left: 0, bottom: 0 }}
-          onMouseMove={updateFromChartState}
-          onMouseLeave={handleLeave}
-          onTouchMove={updateFromChartState}
-        >
-          <defs>
-            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={lineColor} stopOpacity={0.14} />
-              <stop offset="100%" stopColor={lineColor} stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <XAxis dataKey="date" hide />
-          <YAxis hide domain={domain} />
-          <Tooltip content={() => null} cursor={false} />
-          <ReferenceLine y={firstPrice} stroke="hsl(var(--muted-foreground))" strokeWidth={1} strokeDasharray="2 4" strokeOpacity={0.35} />
-          <Area
-            type="monotone"
-            dataKey="price"
-            stroke={lineColor}
-            strokeWidth={1.6}
-            fill={chartType === "area" ? `url(#${gradientId})` : "transparent"}
-            dot={false}
-            activeDot={false}
-            isAnimationActive={false}
-          />
-        </AreaChart>
-      </ResponsiveContainer>
-      {renderCrosshair()}
+    <div className="relative h-full w-full flex flex-col touch-none" onTouchEnd={handleLeave}>
+      <div className={hasSubPanel ? "flex-[7] min-h-0 relative" : "flex-1 min-h-0 relative"}>
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart
+            data={chartData}
+            margin={{ top: 8, right: 0, left: 0, bottom: 0 }}
+            onMouseMove={updateFromChartState}
+            onMouseLeave={handleLeave}
+            onTouchMove={updateFromChartState}
+            syncId={`chart-${symbol}-${timeframe}`}
+          >
+            <defs>
+              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={lineColor} stopOpacity={0.14} />
+                <stop offset="100%" stopColor={lineColor} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <XAxis dataKey="date" hide />
+            <YAxis hide domain={domain} />
+            <Tooltip content={() => null} cursor={false} />
+            <ReferenceLine y={firstPrice} stroke="hsl(var(--muted-foreground))" strokeWidth={1} strokeDasharray="2 4" strokeOpacity={0.35} />
+            <Area
+              type="monotone"
+              dataKey="price"
+              stroke={lineColor}
+              strokeWidth={1.6}
+              fill={chartType === "area" ? `url(#${gradientId})` : "transparent"}
+              dot={false}
+              activeDot={false}
+              isAnimationActive={false}
+            />
+            {renderOverlays()}
+          </ComposedChart>
+        </ResponsiveContainer>
+        {renderCrosshair()}
+      </div>
+      {hasSubPanel && <div className="flex-[3] min-h-0 border-t border-border/30 pt-1">{renderSubPanel()}</div>}
     </div>
   );
 };

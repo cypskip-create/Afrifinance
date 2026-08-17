@@ -1,8 +1,10 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Heart, TrendingUp, TrendingDown, AlarmClock, GitCompare, MessageSquare, Plus, Pencil, Maximize2, Minimize2, CandlestickChart, LineChart as LineChartIcon, AreaChart as AreaChartIcon, ChevronRight, FileText, Users2, Briefcase, Download, Building2, Eye, Bell } from "lucide-react";
+import { ArrowLeft, Heart, TrendingUp, TrendingDown, AlarmClock, GitCompare, MessageSquare, Plus, Pencil, Maximize2, Minimize2, CandlestickChart, LineChart as LineChartIcon, AreaChart as AreaChartIcon, ChevronRight, FileText, Users2, Briefcase, Download, Building2, Eye, Bell, SlidersHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { StockPriceChart, generateMockData, type ChartType } from "@/components/stock/StockPriceChart";
+import { ChartIndicatorsSheet } from "@/components/stock/ChartIndicatorsSheet";
+import { DEFAULT_INDICATOR_SETTINGS, anyIndicatorsOn, type IndicatorSettings } from "@/lib/technicalIndicators";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useToast } from "@/hooks/use-toast";
@@ -34,6 +36,8 @@ import { useResearch } from "@/hooks/useResearch";
 import { useHistoricalCandles } from "@/hooks/useHistoricalCandles";
 import { useDividendHistory } from "@/hooks/useDividendHistory";
 import { useOwnership } from "@/hooks/useOwnership";
+import { useCorporateActions } from "@/hooks/useCorporateActions";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { ContinuaScores } from "@/components/stock/ContinuaScore";
 
 
@@ -88,6 +92,10 @@ export default function StockDetail() {
   const { quote: liveQuote } = useLiveQuote(upperSymbol || undefined);
   const { profile: liveProfile } = useCompanyProfile(upperSymbol || undefined);
   const { research: liveResearch } = useResearch(upperSymbol || undefined);
+  const { actions: corporateActions, isLoading: actionsLoading } = useCorporateActions(upperSymbol || undefined);
+  const [infoSheet, setInfoSheet] = useState<{ title: string; body: React.ReactNode } | null>(null);
+  const [indicatorSettings, setIndicatorSettings] = useState<IndicatorSettings>(DEFAULT_INDICATOR_SETTINGS);
+  const [indicatorsSheetOpen, setIndicatorsSheetOpen] = useState(false);
 
   const stock = stockMeta ? (() => {
     const price = liveQuote?.lastPrice ?? getPrice(upperSymbol);
@@ -182,6 +190,14 @@ export default function StockDetail() {
   const priceChangePercent = activeChangePercent.toFixed(2);
   const displayIsUp = activeIsUp;
   const displayPrice = stock.price + priceChange;
+
+  // stock.changePercent is stored as a pre-formatted string (see the `stock` object
+  // above, built with `.toFixed(2)`), not a number — so it needs to be coerced to a
+  // number before it can be compared with `>= 0`. This is used for the collapsed
+  // sticky-header price row, which always shows the day's change regardless of the
+  // active timeframe pill.
+  const dayChangeNum = Number(stock.changePercent);
+  const dayChangeIsUp = dayChangeNum >= 0;
 
   const scoreInputs = {
     price: stock.price, pe: stock.pe, eps: stock.eps, dividend: stock.dividend,
@@ -302,10 +318,14 @@ export default function StockDetail() {
                 <div
                   className={`absolute inset-0 flex items-center gap-1.5 transition-opacity duration-200 ${priceVisible ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
                 >
-                  <span className="text-sm font-bold tabular">{displayPrice.toFixed(2)}</span>
-                  <span className={`text-xs font-semibold flex items-center gap-0.5 tabular ${displayIsUp ? 'text-bull' : 'text-bear'}`}>
-                    {displayIsUp ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
-                    {priceChange >= 0 ? '+' : ''}{priceChangePercent}%
+                  {/* Always the day's change here, regardless of which timeframe pill is
+                      selected or whether the person is scrubbing the chart — the hero
+                      price below reflects the active timeframe, this collapsed header
+                      is meant to answer "how did today go". */}
+                  <span className="text-sm font-bold tabular">{stock.price.toFixed(2)}</span>
+                  <span className={`text-xs font-semibold flex items-center gap-0.5 tabular ${dayChangeIsUp ? 'text-bull' : 'text-bear'}`}>
+                    {dayChangeIsUp ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
+                    {dayChangeIsUp ? '+' : ''}{stock.changePercent}%
                   </span>
                 </div>
               </div>
@@ -348,17 +368,24 @@ export default function StockDetail() {
       {/* CHART — embedded, no card wrapper */}
       <div className="relative">
         <div className="h-[280px] px-1">
-          <StockPriceChart symbol={symbol} timeframe={selectedTimeframe} chartType={chartType} onHoverPrice={handleChartHover} data={periodData} />
+          <StockPriceChart symbol={symbol} timeframe={selectedTimeframe} chartType={chartType} onHoverPrice={handleChartHover} data={periodData} indicators={indicatorSettings} />
         </div>
         {/* Chart tool row */}
         <div className="absolute top-2 right-3 z-10 flex items-center gap-1">
+          <Button
+            variant="ghost" size="icon" aria-label="Chart indicators"
+            className={`h-7 w-7 rounded-full ${anyIndicatorsOn(indicatorSettings) ? "text-primary" : "text-muted-foreground"}`}
+            onClick={() => setIndicatorsSheetOpen(true)}
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" aria-label="Change chart type" className="h-7 w-7 rounded-full text-muted-foreground">
                 {chartType === "candle" ? <CandlestickChart className="h-3.5 w-3.5" /> : chartType === "line" ? <LineChartIcon className="h-3.5 w-3.5" /> : <AreaChartIcon className="h-3.5 w-3.5" />}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
+            <DropdownMenuContent align="end" className="w-40 z-[110]">
               {([
                 { id: "line", label: "Line", icon: LineChartIcon },
                 { id: "area", label: "Area", icon: AreaChartIcon },
@@ -409,13 +436,20 @@ export default function StockDetail() {
               </div>
             </div>
             <div className="flex items-center gap-1">
+              <Button
+                variant="ghost" size="icon" aria-label="Chart indicators"
+                className={`h-9 w-9 rounded-full ${anyIndicatorsOn(indicatorSettings) ? "text-primary" : "text-muted-foreground"}`}
+                onClick={() => setIndicatorsSheetOpen(true)}
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" aria-label="Change chart type" className="h-9 w-9 rounded-full text-muted-foreground">
                     {chartType === "candle" ? <CandlestickChart className="h-4 w-4" /> : chartType === "line" ? <LineChartIcon className="h-4 w-4" /> : <AreaChartIcon className="h-4 w-4" />}
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-40">
+                <DropdownMenuContent align="end" className="w-40 z-[110]">
                   {([
                     { id: "line", label: "Line", icon: LineChartIcon },
                     { id: "area", label: "Area", icon: AreaChartIcon },
@@ -434,7 +468,7 @@ export default function StockDetail() {
             </div>
           </div>
           <div className="flex-1 min-h-0 px-1 py-2">
-            <StockPriceChart symbol={symbol} timeframe={selectedTimeframe} chartType={chartType} onHoverPrice={handleChartHover} data={periodData} />
+            <StockPriceChart symbol={symbol} timeframe={selectedTimeframe} chartType={chartType} onHoverPrice={handleChartHover} data={periodData} indicators={indicatorSettings} />
           </div>
           <div className="flex items-center justify-between px-4 py-3 border-t border-border/60" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}>
             {timeframes.map(tf => (
@@ -606,16 +640,66 @@ export default function StockDetail() {
           <Eyebrow>More</Eyebrow>
           <div className="border-t border-border/60">
             {[
-              { icon: Building2, label: "Company Profile", detail: company.description, action: () => {} },
-              { icon: Users2, label: "Management", detail: `CEO · ${company.ceo}`, action: () => {} },
-              { icon: Briefcase, label: "Corporate Actions", detail: "Dividends, splits, buybacks", action: () => {} },
-              { icon: FileText, label: "Documents", detail: "Annual reports & filings", action: () => {} },
+              {
+                icon: Building2, label: "Company Profile", detail: company.description,
+                action: () => setInfoSheet({ title: "Company Profile", body: <p className="text-sm leading-relaxed">{company.description}</p> }),
+              },
+              {
+                icon: Users2, label: "Management", detail: `CEO · ${company.ceo}`,
+                action: () => setInfoSheet({
+                  title: "Management",
+                  body: (
+                    <div className="text-sm space-y-1">
+                      <p><span className="text-muted-foreground">CEO:</span> {company.ceo}</p>
+                      <p><span className="text-muted-foreground">Employees:</span> {company.employees}</p>
+                      <p className="text-[11px] text-muted-foreground pt-2">Full leadership team and board data isn't in the Data Layer's /companies/:symbol response yet — this shows the CEO field only, live.</p>
+                    </div>
+                  ),
+                }),
+              },
+              {
+                icon: Briefcase, label: "Corporate Actions",
+                detail: actionsLoading ? "Loading…" : corporateActions.length > 0 ? `${corporateActions.length} on record` : "None on record yet",
+                action: () => setInfoSheet({
+                  title: "Corporate Actions",
+                  body: corporateActions.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No dividends, splits, or other corporate actions on record for {symbol} yet.</p>
+                  ) : (
+                    <div className="space-y-2.5 max-h-[50vh] overflow-y-auto">
+                      {corporateActions.map(a => (
+                        <div key={a.id} className="flex items-center justify-between border-b border-border/40 pb-2 last:border-0">
+                          <div>
+                            <p className="text-xs font-semibold capitalize">{a.type.replace(/_/g, " ")}</p>
+                            <p className="text-[11px] text-muted-foreground">{a.exDate ? `Ex-date ${new Date(a.exDate).toLocaleDateString()}` : new Date(a.announcedAt).toLocaleDateString()}</p>
+                          </div>
+                          <Badge variant="outline" className="text-[10px] capitalize">{a.status}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  ),
+                }),
+              },
+              {
+                icon: FileText, label: "Documents", detail: "Not connected yet",
+                action: () => toast({ title: "No filings source yet", description: "Annual reports & filings need a documents/filings endpoint on the Data Layer — none is defined in docs/api/API.md yet." }),
+              },
               { icon: Heart, label: "Watchlist", detail: isInWatchlist(symbol || "") ? "In your watchlist" : "Add to watchlist", action: handleWatchlistToggle },
               { icon: GitCompare, label: "Compare", detail: "Benchmark against peers", action: () => navigate(`/compare?stock=${symbol}`) },
               { icon: Download, label: "Export", detail: "Download data as CSV", action: () => toast({ title: "Export coming soon" }) },
               { icon: Bell, label: "Alerts", detail: "Price & event alerts", action: () => setShowAlertsDialog(true) },
               { icon: MessageSquare, label: "Discuss on TradersHub", detail: `Start a $${symbol} thread`, action: () => navigate(`/traders-hub?compose=true&ticker=${symbol}`) },
-              { icon: Eye, label: "Founded / HQ", detail: `${company.founded} · ${company.headquarters}`, action: () => {} },
+              {
+                icon: Eye, label: "Founded / HQ", detail: `${company.founded} · ${company.headquarters}`,
+                action: () => setInfoSheet({
+                  title: "Founded / HQ",
+                  body: (
+                    <div className="text-sm space-y-1">
+                      <p><span className="text-muted-foreground">Founded:</span> {company.founded}</p>
+                      <p><span className="text-muted-foreground">Headquarters:</span> {company.headquarters}</p>
+                    </div>
+                  ),
+                }),
+              },
             ].map(row => (
               <button
                 key={row.label}
@@ -637,6 +721,15 @@ export default function StockDetail() {
         </section>
       </div>
 
+      <Dialog open={!!infoSheet} onOpenChange={(open) => !open && setInfoSheet(null)}>
+        <DialogContent className="max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-sm">{infoSheet?.title}</DialogTitle>
+          </DialogHeader>
+          {infoSheet?.body}
+        </DialogContent>
+      </Dialog>
+
       {/* Fixed Add Investment CTA — compact, pinned to the very bottom edge */}
       <div className="fixed left-6 right-6 z-30" style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 1px)" }}>
         <AddInvestmentDialog
@@ -650,6 +743,8 @@ export default function StockDetail() {
         />
       </div>
 
+
+      <ChartIndicatorsSheet open={indicatorsSheetOpen} onOpenChange={setIndicatorsSheetOpen} settings={indicatorSettings} onChange={setIndicatorSettings} />
 
       {showAlertsDialog && <PriceAlertsManager />}
       <StockAlertDialog open={stockAlertOpen} onOpenChange={setStockAlertOpen} symbol={symbol || ""} currentPrice={stock.price} />

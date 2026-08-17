@@ -18,11 +18,11 @@ const ContinuaLandingPage = () => {
       <style>{`@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@500;600;700;800&display=swap");
 
   :root{
-    --bg:#faf7f1; --bg-alt:#f3efe6; --card:#ffffff; --border:#e7e0d3;
-    --fg:#15181c; --muted:#6b7178;
-    --primary:#1e8a58; --primary-dark:#166b44; --primary-tint:#e6f3ec;
-    --gold:#c99a3a;
-    --bear:#d7503a; --bear-tint:#fbeae7;
+    --bg:#F9F8F6; --bg-alt:#F2F0EE; --card:#ffffff; --border:#E4E1DD;
+    --fg:#16181D; --muted:#6C727F;
+    --primary:#6C4FE0; --primary-dark:#5638C4; --primary-tint:#F0ECFC;
+    --accent:#FF7A45; --accent-tint:#FFEDE3;
+    --bull:#25935F; --bear:#DB3024; --bear-tint:#FCEAE8;
     --radius:14px;
     --shadow: 0 1px 2px rgba(20,20,20,.04), 0 8px 24px -12px rgba(20,20,20,.12);
   }
@@ -44,8 +44,8 @@ const ContinuaLandingPage = () => {
     white-space:nowrap;
   }
   .btn:active{ transform:scale(0.97); }
-  .btn-primary{ background:var(--primary); color:#fff; box-shadow:0 6px 18px -6px rgba(30,138,88,.55); }
-  .btn-primary:hover{ background:var(--primary-dark); }
+  .btn-primary{ background: linear-gradient(135deg, var(--primary), var(--accent)); color:#fff; box-shadow:0 6px 18px -6px rgba(108,79,224,.45); }
+  .btn-primary:hover{ filter: brightness(1.05); }
   .btn-ghost{ background:transparent; color:var(--fg); border-color:var(--border); }
   .btn-ghost:hover{ background:var(--bg-alt); }
   .btn-lg{ height:52px; padding:0 28px; font-size:15.5px; }
@@ -53,11 +53,11 @@ const ContinuaLandingPage = () => {
     font-size:11.5px; font-weight:700; letter-spacing:.14em; text-transform:uppercase;
     color:var(--primary); display:inline-flex; align-items:center; gap:8px; margin-bottom:14px;
   }
-  .eyebrow::before{ content:""; width:16px; height:2px; background:var(--primary); border-radius:2px; }
+  .eyebrow::before{ content:""; width:16px; height:2px; background: linear-gradient(90deg, var(--primary), var(--accent)); border-radius:2px; }
 
   /* ---------- Signature: scrolling NSE ticker strip ---------- */
   .ticker-strip{
-    background:var(--fg); color:#fff; overflow:hidden; white-space:nowrap;
+    background:#101014; color:#fff; overflow:hidden; white-space:nowrap;
     border-bottom:1px solid rgba(255,255,255,.08);
   }
   .ticker-track{
@@ -105,7 +105,7 @@ const ContinuaLandingPage = () => {
   .phone-screen{ background:var(--bg); border-radius:26px; overflow:hidden; position:relative; }
   .p-status{ display:flex; justify-content:space-between; align-items:center; font-size:10px; padding:10px 16px 4px; color:var(--fg); font-weight:600; }
   .p-header{ display:flex; align-items:center; gap:8px; padding:6px 14px 10px; border-bottom:1px solid var(--border); }
-  .p-avatar{ width:22px; height:22px; border-radius:50%; background:linear-gradient(155deg,var(--primary),var(--gold)); flex:none; }
+  .p-avatar{ width:22px; height:22px; border-radius:50%; background:linear-gradient(155deg,var(--primary),var(--accent)); flex:none; }
   .p-search{ flex:1; height:26px; border-radius:999px; background:var(--bg-alt); }
   .p-card{ padding:12px 14px; border-bottom:1px solid var(--border); }
   .p-row{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
@@ -183,13 +183,26 @@ const ContinuaLandingPage = () => {
 
   /* CTA band */
   .cta-band{
-    background:linear-gradient(155deg, var(--primary-dark), var(--primary));
+    background:linear-gradient(155deg, var(--primary-dark), var(--primary) 55%, var(--accent));
     border-radius:24px; padding:56px 48px; color:#fff; display:flex; align-items:center; justify-content:space-between; gap:32px;
   }
   .cta-band h2{ font-size:28px; margin:0 0 8px; }
   .cta-band p{ margin:0; opacity:.88; font-size:14.5px; max-width:420px; }
   .cta-band .btn-primary{ background:#fff; color:var(--primary-dark); box-shadow:none; }
   .cta-band .btn-primary:hover{ background:#f2f2f2; }
+
+  /* Pricing */
+  .pricing-grid{ display:grid; grid-template-columns:1fr 1fr; gap:20px; max-width:760px; margin:0 auto; }
+  .price-card{ background:var(--card); border:1px solid var(--border); border-radius:20px; padding:28px; }
+  .price-card.premium{ border-color:transparent; background:linear-gradient(180deg, var(--primary-tint), var(--card) 40%); box-shadow:0 0 0 1.5px var(--primary); position:relative; }
+  .price-card .plan-name{ font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
+  .price-card.premium .plan-name{ color:var(--primary); }
+  .price-card .plan-price{ font-family:'Inter Tight'; font-size:34px; font-weight:800; margin:8px 0 2px; }
+  .price-card .plan-period{ font-size:13px; color:var(--muted); font-weight:500; }
+  .price-card ul{ list-style:none; padding:0; margin:20px 0 0; display:flex; flex-direction:column; gap:10px; }
+  .price-card li{ display:flex; align-items:flex-start; gap:8px; font-size:13.5px; }
+  .price-card li svg{ flex:none; margin-top:2px; color:var(--primary); }
+  .price-card .btn{ width:100%; margin-top:22px; }
 
   /* FAQ */
   .faq-item{ border-bottom:1px solid var(--border); padding:20px 0; }
@@ -220,6 +233,7 @@ const ContinuaLandingPage = () => {
     .stats{ grid-template-columns:1fr 1fr; }
     .stat{ border-bottom:1px solid var(--border); }
     .trust-grid{ grid-template-columns:1fr; }
+    .pricing-grid{ grid-template-columns:1fr; }
     .cta-band{ flex-direction:column; text-align:center; padding:40px 26px; }
     .foot-grid{ grid-template-columns:1fr 1fr; }
   }
@@ -250,6 +264,7 @@ const ContinuaLandingPage = () => {
 <a href="#research">Research</a>
 <a href="#tradershub">TradersHub</a>
 <a href="#portfolio">Portfolio</a>
+<a href="#pricing">Pricing</a>
 <a href="#faq">FAQ</a>
 </nav>
 <div className="nav-cta">
@@ -290,7 +305,7 @@ const ContinuaLandingPage = () => {
 </div>
 <div className="p-line" style={{width: "92%"}}></div>
 <div className="p-line" style={{width: "70%"}}></div>
-<span className="p-chip">$SAFCOM +3.4%</span>
+<span className="p-chip" style={{color: "#25935F", background: "#EAF6F0"}}>$SAFCOM +3.4%</span>
 <div className="p-reacts"><span>🔥 24</span><span>💬 8</span><span>↗ Share</span></div>
 </div>
 <div className="p-card">
@@ -299,7 +314,7 @@ const ContinuaLandingPage = () => {
 </div>
 <div className="p-chart">
 <svg viewBox="0 0 260 64" preserveAspectRatio="none">
-<polyline points="0,50 25,44 50,48 75,30 100,36 125,18 150,26 175,10 200,20 225,6 260,14" fill="none" stroke="#1e8a58" strokeWidth="2.5"></polyline>
+<polyline points="0,50 25,44 50,48 75,30 100,36 125,18 150,26 175,10 200,20 225,6 260,14" fill="none" stroke="#25935F" strokeWidth="2.5"></polyline>
 </svg>
 </div>
 </div>
@@ -351,6 +366,16 @@ const ContinuaLandingPage = () => {
 <div className="f-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M3 15v4a2 2 0 0 0 2 2h4m10-6v4a2 2 0 0 1-2 2h-4"></path></svg></div>
 <h3>Compare stocks side by side</h3>
 <p>Line up two or three companies on the same metrics before deciding which one earns a place in your portfolio.</p>
+</div>
+<div className="feature-card">
+<div className="f-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2a10 10 0 1 0 10 10"></path><path d="M12 2v10l7 3"></path></svg></div>
+<h3>AI-generated investment thesis</h3>
+<p>Get a plain-language read on a stock — the bull case, the bear case, and what to watch — generated fresh from its current numbers.</p>
+</div>
+<div className="feature-card">
+<div className="f-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3v18h18"></path><path d="M7 14l3-5 3 3 5-8"></path></svg></div>
+<h3>Chart indicators, your way</h3>
+<p>Turn on moving averages, EMA, Bollinger Bands, MACD or RSI — or keep the chart clean. Switch chart types anytime, even in fullscreen.</p>
 </div>
 <div className="feature-card">
 <div className="f-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg></div>
@@ -411,12 +436,12 @@ const ContinuaLandingPage = () => {
 <div className="p-hand" style={{marginBottom: "4px"}}>Portfolio value</div>
 <div style={{fontFamily: "'Inter Tight'", fontSize: "22px", fontWeight: "800"}}>KES 184,650</div>
 </div>
-<span className="p-chip" style={{color: "#1e8a58"}}>+12.4% overall</span>
+<span className="p-chip" style={{color: "#25935F"}}>+12.4% overall</span>
 </div>
 <div className="p-chart" style={{height: "96px"}}>
 <svg viewBox="0 0 300 96" preserveAspectRatio="none">
-<polyline points="0,80 30,74 60,78 90,55 120,62 150,40 180,48 210,26 240,34 270,14 300,22" fill="none" stroke="#1e8a58" strokeWidth="2.5"></polyline>
-<line x1="210" y1="0" x2="210" y2="96" stroke="#1e8a58" strokeOpacity=".3" strokeDasharray="3 3"></line>
+<polyline points="0,80 30,74 60,78 90,55 120,62 150,40 180,48 210,26 240,34 270,14 300,22" fill="none" stroke="#25935F" strokeWidth="2.5"></polyline>
+<line x1="210" y1="0" x2="210" y2="96" stroke="#25935F" strokeOpacity=".3" strokeDasharray="3 3"></line>
 </svg>
 </div>
 </div>
@@ -445,15 +470,15 @@ const ContinuaLandingPage = () => {
 </div>
 <div className="trust-grid">
 <div className="trust-card">
-<h4><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1e8a58" strokeWidth="2"><path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11z"></path></svg> Row-level data security</h4>
+<h4><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6C4FE0" strokeWidth="2"><path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11z"></path></svg> Row-level data security</h4>
 <p>Your portfolio, watchlist and posts are protected at the database level — not just hidden in the app's interface.</p>
 </div>
 <div className="trust-card">
-<h4><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1e8a58" strokeWidth="2"><rect x="3" y="11" width="18" height="10" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg> You control your privacy</h4>
+<h4><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6C4FE0" strokeWidth="2"><rect x="3" y="11" width="18" height="10" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg> You control your privacy</h4>
 <p>Choose whether your portfolio is visible to others, mute or block any account, and report anything that shouldn't be there.</p>
 </div>
 <div className="trust-card">
-<h4><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1e8a58" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg> Real-time where it counts</h4>
+<h4><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6C4FE0" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg> Real-time where it counts</h4>
 <p>Price alerts are checked continuously, so you hear about a target the moment it's hit — not sometime after.</p>
 </div>
 </div>
@@ -467,6 +492,41 @@ const ContinuaLandingPage = () => {
 <p>Free to create an account. Bring your watchlist, set your first alert, and see what TradersHub is saying about it.</p>
 </div>
 <a href="/auth?mode=signup" className="btn btn-primary btn-lg">Create free account</a>
+</div>
+</div>
+</section>
+<section className="alt" id="pricing">
+<div className="wrap">
+<div className="section-head" style={{margin: "0 auto 44px", textAlign: "center"}}>
+<div className="eyebrow" style={{justifyContent: "center"}}>Pricing</div>
+<h2>Free to research. Premium to go deeper.</h2>
+<p style={{margin: "0 auto"}}>Start with the essentials at no cost. Upgrade whenever you want real-time prices, unlimited AI research, and room to write long-form posts on TradersHub.</p>
+</div>
+<div className="pricing-grid">
+<div className="price-card">
+<div className="plan-name">Free</div>
+<div className="plan-price">KES 0</div>
+<div className="plan-period">Forever</div>
+<ul>
+<li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6 9 17l-5-5"></path></svg> Watchlists & delayed prices</li>
+<li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6 9 17l-5-5"></path></svg> TradersHub — post up to 500 characters</li>
+<li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6 9 17l-5-5"></path></svg> Basic charts, incl. candlesticks</li>
+<li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6 9 17l-5-5"></path></svg> 3 AI theses a month</li>
+</ul>
+<a href="/auth?mode=signup" className="btn btn-ghost">Create free account</a>
+</div>
+<div className="price-card premium">
+<div className="plan-name">Premium</div>
+<div className="plan-price">KES 800<span className="plan-period">/mo</span></div>
+<div className="plan-period">or KES 7,980/year</div>
+<ul>
+<li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6 9 17l-5-5"></path></svg> Real-time NSE prices, no delay</li>
+<li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6 9 17l-5-5"></path></svg> Unlimited AI investment theses</li>
+<li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6 9 17l-5-5"></path></svg> Long-form TradersHub posts, up to 5,000 characters</li>
+<li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6 9 17l-5-5"></path></svg> Advanced screener & priority alerts</li>
+</ul>
+<a href="/auth?mode=signup" className="btn btn-primary">Get Premium</a>
+</div>
 </div>
 </div>
 </section>

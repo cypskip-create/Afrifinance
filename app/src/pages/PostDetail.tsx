@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useFollows } from "@/hooks/useFollows";
 import { useToast } from "@/hooks/use-toast";
-import { usePosts, Post, Comment } from "@/hooks/usePosts";
+import { usePosts, Post, Comment, updateCommentInTree, removeCommentFromTree, countCommentSubtree } from "@/hooks/usePosts";
 import { CommentThread } from "@/components/social/CommentThread";
 import { CommunityReactionButton, CommunityReaction, ReactionChips } from "@/components/social/CommunityReactionButton";
 import { atHandle, getInitials } from "@/lib/handle";
@@ -24,7 +24,7 @@ export default function PostDetail() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { isFollowing, toggleFollow } = useFollows();
-  const { posts, fetchComments, addComment, bookmarkPost, reactToPost, reactToComment, deletePost } = usePosts();
+  const { posts, fetchComments, addComment, editComment, deleteComment, bookmarkPost, reactToPost, reactToComment, deletePost } = usePosts();
 
   const [post, setPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -100,6 +100,26 @@ export default function PostDetail() {
     }
     setSending(false);
   };
+
+  const handleEditComment = useCallback(async (commentId: string, content: string) => {
+    const { error, editedAt } = await editComment(commentId, content);
+    if (!error) {
+      setComments(prev => updateCommentInTree(prev, commentId, c => ({ ...c, content, edited_at: editedAt })));
+    }
+    return { error };
+  }, [editComment]);
+
+  const handleDeleteComment = useCallback(async (comment: Comment) => {
+    const removedCount = countCommentSubtree(comment);
+    const { error } = await deleteComment(comment.id, post?.id || "", removedCount);
+    if (!error) {
+      setComments(prev => removeCommentFromTree(prev, comment.id).tree);
+      setPost(p => p ? { ...p, comments_count: Math.max(0, (p.comments_count || 0) - removedCount) } : p);
+      toast({ title: "Reply deleted" });
+    } else {
+      toast({ title: "Couldn't delete reply", description: error.message, variant: "destructive" });
+    }
+  }, [deleteComment, post?.id, toast]);
 
   const react = async (reaction: CommunityReaction) => {
     if (!user || !post) { navigate("/auth"); return; }
@@ -261,7 +281,10 @@ export default function PostDetail() {
           ) : sorted.length === 0 ? (
             <p className="py-10 text-center text-[13px] text-muted-foreground">No comments yet. Start the discussion.</p>
           ) : (
-            <CommentThread comments={sorted} onReply={setReplyingTo} onReactComment={reactToComment as any} replyingToId={replyingTo?.id} />
+            <CommentThread
+              comments={sorted} onReply={setReplyingTo} onReactComment={reactToComment as any} replyingToId={replyingTo?.id}
+              currentUserId={user?.id} onEditSave={handleEditComment} onDeleteComment={handleDeleteComment}
+            />
           )}
         </div>
       </div>
