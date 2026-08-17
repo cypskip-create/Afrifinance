@@ -13,7 +13,7 @@ import Markets from "./pages/Markets";
 import Discover from "./pages/Discover";
 
 import Account from "./pages/Account";
-import Upgrade from "./pages/upgrade";
+import Upgrade from "./pages/upgrade";//small u
 import StockDetail from "./pages/StockDetail";
 import Watchlist from "./pages/Watchlist";
 import SectorDetail from "./pages/SectorDetail";
