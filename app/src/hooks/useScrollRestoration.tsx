@@ -25,8 +25,6 @@ const RESTORE_ATTEMPTS = 30; // ~500ms at 60fps — enough for most async page c
 export function useScrollRestoration() {
   const location = useLocation();
   const navigationType = useNavigationType(); // "POP" | "PUSH" | "REPLACE"
-  const currentKeyRef = useRef(location.key);
-  currentKeyRef.current = location.key;
 
   // Browser-native restoration fights with ours (it can jump the scroll
   // position around mid-transition) — take manual control once, up front.
@@ -42,10 +40,17 @@ export function useScrollRestoration() {
   // position, regardless of what triggered the navigation away from it.
   useEffect(() => {
     const key = location.key;
-    const record = () => scrollPositions.set(key, window.scrollY);
-    record();
-    window.addEventListener("scroll", record, { passive: true });
-    return () => window.removeEventListener("scroll", record);
+    const onScroll = () => scrollPositions.set(key, window.scrollY);
+
+    // Only set an initial value if we don't already have a saved position.
+    // This prevents overwriting a previously saved scroll position when
+    // returning to a page (e.g., navigating back).
+    if (!scrollPositions.has(key)) {
+      onScroll(); // record the initial position (usually 0)
+    }
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, [location.key]);
 
   // Apply the right scroll position for the page we've just landed on.
@@ -73,6 +78,8 @@ export function useScrollRestoration() {
       window.scrollTo(0, 0);
     }
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [location.key, navigationType]);
 }
