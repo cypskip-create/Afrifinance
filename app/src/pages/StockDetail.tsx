@@ -4,7 +4,7 @@ import { ArrowLeft, Heart, TrendingUp, TrendingDown, AlarmClock, GitCompare, Mes
 import { Badge } from "@/components/ui/badge";
 import { StockPriceChart, generateMockData, type ChartType } from "@/components/stock/StockPriceChart";
 import { ChartIndicatorsSheet } from "@/components/stock/ChartIndicatorsSheet";
-import { DEFAULT_INDICATOR_SETTINGS, anyIndicatorsOn, type IndicatorSettings } from "@/lib/technicalIndicators";
+import { anyIndicatorsOn, loadIndicatorSettings, saveIndicatorSettings, type IndicatorSettings } from "@/lib/technicalIndicators";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useToast } from "@/hooks/use-toast";
@@ -94,7 +94,14 @@ export default function StockDetail() {
   const { research: liveResearch } = useResearch(upperSymbol || undefined);
   const { actions: corporateActions, isLoading: actionsLoading } = useCorporateActions(upperSymbol || undefined);
   const [infoSheet, setInfoSheet] = useState<{ title: string; body: React.ReactNode } | null>(null);
-  const [indicatorSettings, setIndicatorSettings] = useState<IndicatorSettings>(DEFAULT_INDICATOR_SETTINGS);
+  // Indicator choices are a chart preference, not a per-stock one — they're loaded
+  // from (and saved to) localStorage so switching stocks, or reloading, keeps
+  // whatever was last turned on until the person switches it off themselves.
+  const [indicatorSettings, setIndicatorSettingsState] = useState<IndicatorSettings>(loadIndicatorSettings);
+  const setIndicatorSettings = useCallback((next: IndicatorSettings) => {
+    setIndicatorSettingsState(next);
+    saveIndicatorSettings(next);
+  }, []);
   const [indicatorsSheetOpen, setIndicatorsSheetOpen] = useState(false);
 
   const stock = stockMeta ? (() => {

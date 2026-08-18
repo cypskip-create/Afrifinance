@@ -1,5 +1,8 @@
 ﻿import { useState } from "react";
-import { Menu, X, ArrowRight } from "lucide-react";
+import {
+  Menu, X, ArrowRight, MessageSquare, Users, Radio, TrendingUp,
+  GraduationCap, Sparkles, ListChecks, Star, Bell, FolderKanban, Moon, GitCompare,
+} from "lucide-react";
 
 const tickerSymbols = [
   ["SAFCOM", 17.85, 1.7],
@@ -65,17 +68,18 @@ const assetAllocation = [
 ];
 
 const navSections = [
+  { id: "tradershub", label: "TradersHub" },
   { id: "research", label: "Research" },
   { id: "stock-page", label: "Stock page" },
-  { id: "tradershub", label: "TradersHub" },
   { id: "portfolio", label: "Portfolio" },
+  { id: "more-features", label: "More" },
   { id: "pricing", label: "Pricing" },
   { id: "faq", label: "FAQ" },
 ];
 
-// Fixed ticker (32px) + fixed nav (60px) height — used to offset in-page
+// Fixed ticker (28px) + fixed nav (52px) height — used to offset in-page
 // scrolling so anchored sections don't land underneath the fixed header.
-const HEADER_HEIGHT = 92;
+const HEADER_HEIGHT = 80;
 
 function conicGradient(segments: { value: number; color: string }[]) {
   let cumulative = 0;
@@ -108,6 +112,24 @@ function Donut({ data, title }: { data: { label: string; value: number; color: s
     </div>
   );
 }
+
+const thMiniFeatures = [
+  { icon: MessageSquare, title: "Threaded posts", body: "Tag a ticker, share your take, and reply in nested threads." },
+  { icon: Radio, title: "Community Rooms", body: "Live and scheduled rooms for deeper, focused discussion." },
+  { icon: TrendingUp, title: "Discover feed", body: "See trending posts, tickers and voices across the market." },
+  { icon: Users, title: "Follow investors", body: "Build a feed of the takes you actually want to see." },
+];
+
+const moreFeatures = [
+  { icon: GraduationCap, title: "Learn", body: "Bite-sized courses on investing basics, the NSE and reading the numbers — with badges and streaks as you go." },
+  { icon: Sparkles, title: "Investment Themes", body: "Curated groups of NSE stocks built around a theme, like banking majors or export-driven earners." },
+  { icon: Star, title: "Featured lists", body: "Ready-made lists — blue-chip, high-dividend, undervalued — to jump-start your research." },
+  { icon: ListChecks, title: "Stock screener", body: "Filter every listed company by sector, valuation, dividend yield and more, down to exactly what matters to you." },
+  { icon: FolderKanban, title: "Watchlist folders", body: "Organise the stocks you're tracking into folders that make sense for how you invest." },
+  { icon: Bell, title: "Notifications centre", body: "Every price alert, reply and reaction lands in one place, so nothing gets missed." },
+  { icon: GitCompare, title: "Compare view", body: "Line up any two or three NSE stocks side by side on the same set of metrics." },
+  { icon: Moon, title: "Light, dark & AMOLED", body: "Three themes to choose from, including a true-black AMOLED mode that's easy on the battery." },
+];
 
 const Check = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6 9 17l-5-5"></path></svg>
@@ -188,7 +210,7 @@ const ContinuaLandingPage = () => {
      motif reappears as texture inside the CTA band below.
      ============================================================ */
   .ticker-strip{
-    position:fixed; top:0; left:0; right:0; z-index:51; height:32px; margin:0;
+    position:fixed; top:0; left:0; right:0; z-index:51; height:28px; margin:0;
     background:#101014; color:#fff; overflow:hidden; white-space:nowrap;
     border-bottom:1px solid rgba(255,255,255,.08);
   }
@@ -205,10 +227,10 @@ const ContinuaLandingPage = () => {
   @keyframes scroll-left{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
 
   header.nav{
-    position:fixed; top:32px; left:0; right:0; z-index:50; margin:0; background:rgba(250,247,241,.9); backdrop-filter:blur(10px);
+    position:fixed; top:28px; left:0; right:0; z-index:50; margin:0; background:rgba(250,247,241,.9); backdrop-filter:blur(10px);
     border-bottom:1px solid var(--border);
   }
-  .nav-inner{ display:flex; align-items:center; justify-content:space-between; height:60px; gap:10px; }
+  .nav-inner{ display:flex; align-items:center; justify-content:space-between; height:52px; gap:10px; }
   .brand{ display:flex; align-items:center; gap:9px; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:16px; letter-spacing:-.01em; flex:none; }
   .mark{
     width:30px; height:30px; border-radius:8px; flex:none;
@@ -255,7 +277,7 @@ const ContinuaLandingPage = () => {
   .drawer-actions .btn{ width:100%; height:44px; font-size:14px; }
 
   /* ---------- Hero ---------- */
-  .hero{ padding:20px 0 30px; }
+  .hero{ padding:4px 0 30px; }
   .hero-grid{ display:grid; grid-template-columns:1.05fr .95fr; gap:56px; align-items:center; }
   .hero h1{ font-size:47px; line-height:1.06; font-weight:700; margin:0 0 20px; }
   .hero h1 em{ font-style:normal; color:var(--primary); }
@@ -360,6 +382,31 @@ const ContinuaLandingPage = () => {
   .step p{ font-size:13.5px; color:var(--muted); line-height:1.6; margin:0; }
   .step-line{ position:absolute; top:16px; left:44px; right:-14px; height:1px; background:var(--border); }
 
+  /* ---------- TradersHub spotlight — pulled out of the regular section rhythm
+     with a tinted, bordered panel so it reads as the standout feature, not
+     just another item in the list. ---------- */
+  .th-spotlight{ padding-top:8px; }
+  .th-spotlight-panel{
+    background:linear-gradient(165deg, var(--primary-tint), var(--card) 55%);
+    border:1px solid var(--border); border-radius:24px; padding:48px 44px;
+    box-shadow:0 1px 2px rgba(20,20,20,.04), 0 24px 48px -28px rgba(108,79,224,.35);
+  }
+  .th-eyebrow{ color:var(--accent); }
+  .th-eyebrow::before{ background:var(--accent); }
+  .th-mini-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-top:40px; padding-top:36px; border-top:1px solid var(--border); }
+  .th-mini{ display:flex; gap:11px; align-items:flex-start; }
+  .th-mini svg{ color:var(--primary); flex:none; margin-top:2px; }
+  .th-mini h5{ font-size:13px; font-weight:600; margin:0 0 3px; font-family:'Space Grotesk',sans-serif; }
+  .th-mini p{ font-size:12px; color:var(--muted); line-height:1.5; margin:0; }
+
+  /* ---------- More features — a compact grid for everything that doesn't
+     earn its own showcase but still matters to know about. ---------- */
+  .more-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+  .more-item{ background:var(--card); padding:22px 20px; }
+  .more-item svg{ color:var(--primary); margin-bottom:12px; }
+  .more-item h5{ font-size:13.5px; font-weight:600; margin:0 0 6px; font-family:'Space Grotesk',sans-serif; }
+  .more-item p{ font-size:12px; color:var(--muted); line-height:1.55; margin:0; }
+
   /* ---------- Trust — a three-column ledger, echoing the stats strip ---------- */
   .trust-grid{ display:grid; grid-template-columns:repeat(3,1fr); border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
   .trust-col{ padding:28px 26px; border-right:1px solid var(--border); }
@@ -433,12 +480,18 @@ const ContinuaLandingPage = () => {
     .cta-band{ flex-direction:column; text-align:center; padding:40px 26px; }
     .foot-grid{ grid-template-columns:1fr 1fr; }
     .donut-row{ justify-content:center; }
+    .th-spotlight-panel{ padding:32px 22px; }
+    .th-mini-grid{ grid-template-columns:1fr 1fr; }
+    .more-grid{ grid-template-columns:1fr 1fr; }
   }
   @media (max-width:560px){
+    .hero{ padding-top:0; }
     .hero h1{ font-size:32px; }
     .stats{ grid-template-columns:1fr 1fr; }
     section{ padding:56px 0; }
     .board-cols, .board-row{ grid-template-columns:1.3fr .9fr .8fr; }
+    .th-mini-grid{ grid-template-columns:1fr; }
+    .more-grid{ grid-template-columns:1fr; }
   }
   @media (max-width:420px){
     .brand span:last-child{ display:none; }
@@ -559,6 +612,68 @@ const ContinuaLandingPage = () => {
   </div>
 </section>
 
+<section id="tradershub" className="th-spotlight">
+  <div className="wrap">
+    <div className="th-spotlight-panel">
+      <div className="showcase">
+        <div className="showcase-copy">
+          <div className="eyebrow th-eyebrow" style={{ justifyContent: "flex-start" }}>The heart of Continua — TradersHub</div>
+          <h3>Numbers tell you what happened.<br />People tell you why it matters.</h3>
+          <p>TradersHub is a live feed built entirely around Kenyan markets — post your thesis, tag the ticker, and see how the room reacts. It's the reason Continua isn't just a research app: it's where you find out what other NSE investors are actually thinking, right now.</p>
+          <ul className="check-list">
+            <li><Check /> React with more than a like — bullish, cautious, insightful, fire and more</li>
+            <li><Check /> Nested, threaded replies, so you always know what's being answered</li>
+            <li><Check /> Follow the investors whose takes you actually want to see</li>
+            <li><Check /> Join topic and stock-specific community Rooms for live discussion</li>
+            <li><Check /> A Discover feed for trending posts, tickers and voices across the whole market</li>
+          </ul>
+          <a href="/auth?mode=signup" className="btn btn-primary" style={{ marginTop: "6px" }}>Join TradersHub free</a>
+        </div>
+        <div className="showcase-media">
+          <div className="media-card">
+            <div className="post-row">
+              <div className="post-avatar"></div>
+              <div><div className="post-name">Cyprian K. <span className="post-handle">@cypskip</span></div></div>
+            </div>
+            <div className="post-line" style={{ width: "96%" }}></div>
+            <div className="post-line" style={{ width: "60%" }}></div>
+            <span className="pf-chip">$SAFCOM +3.4%</span>
+            <div className="quote-chart">
+              <svg viewBox="0 0 260 64" preserveAspectRatio="none">
+                <polyline points="0,50 25,44 50,48 75,30 100,36 125,18 150,26 175,10 200,20 225,6 260,14" fill="none" stroke="#25935F" strokeWidth="2.5"></polyline>
+              </svg>
+            </div>
+            <div className="react-demo">
+              <div className="react-pill on">🐂 Bullish · 18</div>
+              <div className="react-pill">🔥 Fire · 6</div>
+              <div className="react-pill">🧠 Insightful · 3</div>
+            </div>
+            <div className="reply-preview">
+              <div className="post-row" style={{ marginBottom: "4px" }}>
+                <div className="post-avatar" style={{ width: "20px", height: "20px" }}></div>
+                <div className="post-name" style={{ fontSize: "11.5px" }}>Amina O. <span className="post-handle">@amina_ke</span></div>
+              </div>
+              <div className="post-line" style={{ width: "80%", height: "6px" }}></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="th-mini-grid">
+        {thMiniFeatures.map((f) => (
+          <div className="th-mini" key={f.title}>
+            <f.icon size={17} strokeWidth={2} />
+            <div>
+              <h5>{f.title}</h5>
+              <p>{f.body}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+</section>
+
 <section id="research">
   <div className="wrap">
     <div className="section-head">
@@ -632,51 +747,6 @@ const ContinuaLandingPage = () => {
   </div>
 </section>
 
-<section id="tradershub">
-  <div className="wrap">
-    <div className="showcase">
-      <div className="showcase-copy">
-        <div className="eyebrow" style={{ justifyContent: "flex-start" }}>TradersHub</div>
-        <h3>Numbers tell you what happened.<br />People tell you why it matters.</h3>
-        <p>TradersHub is a feed built entirely around Kenyan markets — post your thesis, tag the ticker, and see how the room reacts. Threaded replies keep every conversation easy to follow, no matter how deep it goes.</p>
-        <ul className="check-list">
-          <li><Check /> React with more than a like — bullish, cautious, insightful and more</li>
-          <li><Check /> Nested replies, so you always know what's being answered</li>
-          <li><Check /> Follow the investors whose takes you actually want to see</li>
-        </ul>
-      </div>
-      <div className="showcase-media">
-        <div className="media-card">
-          <div className="post-row">
-            <div className="post-avatar"></div>
-            <div><div className="post-name">Cyprian K. <span className="post-handle">@cypskip</span></div></div>
-          </div>
-          <div className="post-line" style={{ width: "96%" }}></div>
-          <div className="post-line" style={{ width: "60%" }}></div>
-          <span className="pf-chip">$SAFCOM +3.4%</span>
-          <div className="quote-chart">
-            <svg viewBox="0 0 260 64" preserveAspectRatio="none">
-              <polyline points="0,50 25,44 50,48 75,30 100,36 125,18 150,26 175,10 200,20 225,6 260,14" fill="none" stroke="#25935F" strokeWidth="2.5"></polyline>
-            </svg>
-          </div>
-          <div className="react-demo">
-            <div className="react-pill on">🐂 Bullish · 18</div>
-            <div className="react-pill">🔥 Fire · 6</div>
-            <div className="react-pill">🧠 Insightful · 3</div>
-          </div>
-          <div className="reply-preview">
-            <div className="post-row" style={{ marginBottom: "4px" }}>
-              <div className="post-avatar" style={{ width: "20px", height: "20px" }}></div>
-              <div className="post-name" style={{ fontSize: "11.5px" }}>Amina O. <span className="post-handle">@amina_ke</span></div>
-            </div>
-            <div className="post-line" style={{ width: "80%", height: "6px" }}></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
 <section className="alt" id="portfolio">
   <div className="wrap">
     <div className="showcase reverse">
@@ -727,6 +797,25 @@ const ContinuaLandingPage = () => {
       <div className="step"><div className="step-line"></div><span className="num">01</span><h3>Create your account</h3><p>Sign up with email or Google — no brokerage or bank details required to start researching.</p></div>
       <div className="step"><div className="step-line"></div><span className="num">02</span><h3>Build your watchlist</h3><p>Search any NSE-listed company, add it to your watchlist, and set a price alert if you have a target in mind.</p></div>
       <div className="step"><span className="num">03</span><h3>Join the conversation</h3><p>Post your take on TradersHub, or just read what other Kenyan investors are watching this week.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="more-features">
+  <div className="wrap">
+    <div className="section-head" style={{ margin: "0 auto 40px", textAlign: "center" }}>
+      <div className="eyebrow" style={{ justifyContent: "center" }}>And everything else</div>
+      <h2>The smaller features that add up</h2>
+      <p style={{ margin: "0 auto" }}>Beyond research, charts and TradersHub, Continua fills in the rest of what an NSE investor actually needs.</p>
+    </div>
+    <div className="more-grid">
+      {moreFeatures.map((f) => (
+        <div className="more-item" key={f.title}>
+          <f.icon size={18} strokeWidth={2} />
+          <h5>{f.title}</h5>
+          <p>{f.body}</p>
+        </div>
+      ))}
     </div>
   </div>
 </section>

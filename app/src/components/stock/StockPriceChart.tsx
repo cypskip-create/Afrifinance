@@ -2,7 +2,7 @@ import {
   AreaChart, Area, ComposedChart, Bar, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceLine, Cell
 } from "recharts";
 import { useMemo, useCallback, useState } from "react";
-import { sma, ema, bollingerBands, rsi, macd, DEFAULT_INDICATOR_SETTINGS, type IndicatorSettings } from "@/lib/technicalIndicators";
+import { sma, ema, bollingerBands, rsi, macd, parabolicSAR, kdj, williamsR, cci, DEFAULT_INDICATOR_SETTINGS, type IndicatorSettings } from "@/lib/technicalIndicators";
 
 let lastHaptic = 0;
 const chartHaptic = () => {
@@ -109,6 +109,10 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
     const boll = bollingerBands(data, 20, 2);
     const rsiVals = rsi(data, 14);
     const { macdLine, signal, histogram } = macd(data, 12, 26, 9);
+    const sar = parabolicSAR(data);
+    const { k: kdjK, d: kdjD, j: kdjJ } = kdj(data);
+    const wr = williamsR(data);
+    const cciVals = cci(data);
     return data.map((d, i) => ({
       ...d,
       ma5: ma5[i], ma20: ma20[i], ma50: ma50[i],
@@ -116,6 +120,10 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
       bollUpper: boll[i].upper, bollMid: boll[i].mid, bollLower: boll[i].lower,
       rsi: rsiVals[i],
       macdLine: macdLine[i], macdSignal: signal[i], macdHist: histogram[i],
+      sar: sar[i],
+      kdjK: kdjK[i], kdjD: kdjD[i], kdjJ: kdjJ[i],
+      wr: wr[i],
+      cci: cciVals[i],
     }));
   }, [data]);
 
@@ -176,7 +184,7 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
 
   // Overlay lines share one distinct palette so MA/EMA/BOLL stay visually
   // separable from each other and from the price series itself.
-  const OVERLAY_COLORS = { ma5: "#f59e0b", ma20: "#3b82f6", ma50: "#8b5cf6", ema12: "#14b8a6", ema26: "#ec4899", boll: "#94a3b8" };
+  const OVERLAY_COLORS = { ma5: "#f59e0b", ma20: "#3b82f6", ma50: "#8b5cf6", ema12: "#14b8a6", ema26: "#ec4899", boll: "#94a3b8", sar: "#f59e0b" };
 
   const renderOverlays = () => (
     <>
@@ -199,6 +207,18 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
           <Line type="monotone" dataKey="bollMid" stroke={OVERLAY_COLORS.boll} strokeWidth={1} dot={false} activeDot={false} isAnimationActive={false} connectNulls />
           <Line type="monotone" dataKey="bollLower" stroke={OVERLAY_COLORS.boll} strokeWidth={1} strokeDasharray="3 3" dot={false} activeDot={false} isAnimationActive={false} connectNulls />
         </>
+      )}
+      {indicators.overlays.sar && (
+        <Line
+          type="monotone"
+          dataKey="sar"
+          stroke={OVERLAY_COLORS.sar}
+          strokeWidth={0}
+          dot={{ r: 1.6, fill: OVERLAY_COLORS.sar, strokeWidth: 0 }}
+          activeDot={false}
+          isAnimationActive={false}
+          connectNulls
+        />
       )}
     </>
   );
@@ -233,6 +253,51 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
             </Bar>
             <Line type="monotone" dataKey="macdLine" stroke="#3b82f6" strokeWidth={1.2} dot={false} activeDot={false} isAnimationActive={false} connectNulls />
             <Line type="monotone" dataKey="macdSignal" stroke="#f59e0b" strokeWidth={1.2} dot={false} activeDot={false} isAnimationActive={false} connectNulls />
+          </ComposedChart>
+        </ResponsiveContainer>
+      );
+    }
+    if (indicators.subPanel === "kdj") {
+      return (
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }} syncId={`chart-${symbol}-${timeframe}`}>
+            <XAxis dataKey="date" hide />
+            <YAxis hide domain={[-20, 120]} />
+            <Tooltip content={() => null} cursor={false} />
+            <ReferenceLine y={80} stroke="hsl(var(--bear))" strokeOpacity={0.35} strokeDasharray="2 3" />
+            <ReferenceLine y={20} stroke="hsl(var(--bull))" strokeOpacity={0.35} strokeDasharray="2 3" />
+            <Line type="monotone" dataKey="kdjK" stroke="#3b82f6" strokeWidth={1.2} dot={false} activeDot={false} isAnimationActive={false} connectNulls />
+            <Line type="monotone" dataKey="kdjD" stroke="#f59e0b" strokeWidth={1.2} dot={false} activeDot={false} isAnimationActive={false} connectNulls />
+            <Line type="monotone" dataKey="kdjJ" stroke="#a855f7" strokeWidth={1.2} dot={false} activeDot={false} isAnimationActive={false} connectNulls />
+          </ComposedChart>
+        </ResponsiveContainer>
+      );
+    }
+    if (indicators.subPanel === "wr") {
+      return (
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }} syncId={`chart-${symbol}-${timeframe}`}>
+            <XAxis dataKey="date" hide />
+            <YAxis hide domain={[-100, 0]} />
+            <Tooltip content={() => null} cursor={false} />
+            <ReferenceLine y={-20} stroke="hsl(var(--bear))" strokeOpacity={0.35} strokeDasharray="2 3" />
+            <ReferenceLine y={-80} stroke="hsl(var(--bull))" strokeOpacity={0.35} strokeDasharray="2 3" />
+            <Line type="monotone" dataKey="wr" stroke="#ec4899" strokeWidth={1.3} dot={false} activeDot={false} isAnimationActive={false} connectNulls />
+          </ComposedChart>
+        </ResponsiveContainer>
+      );
+    }
+    if (indicators.subPanel === "cci") {
+      return (
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }} syncId={`chart-${symbol}-${timeframe}`}>
+            <XAxis dataKey="date" hide />
+            <YAxis hide />
+            <Tooltip content={() => null} cursor={false} />
+            <ReferenceLine y={100} stroke="hsl(var(--bear))" strokeOpacity={0.35} strokeDasharray="2 3" />
+            <ReferenceLine y={-100} stroke="hsl(var(--bull))" strokeOpacity={0.35} strokeDasharray="2 3" />
+            <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeOpacity={0.3} />
+            <Line type="monotone" dataKey="cci" stroke="#0ea5e9" strokeWidth={1.3} dot={false} activeDot={false} isAnimationActive={false} connectNulls />
           </ComposedChart>
         </ResponsiveContainer>
       );

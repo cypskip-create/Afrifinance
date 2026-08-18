@@ -1,7 +1,6 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
-import { DEFAULT_INDICATOR_SETTINGS, anyIndicatorsOn, type IndicatorSettings } from "@/lib/technicalIndicators";
+import { type IndicatorSettings } from "@/lib/technicalIndicators";
 
 interface Props {
   open: boolean;
@@ -14,11 +13,15 @@ const OVERLAY_ROWS: { key: keyof IndicatorSettings["overlays"]; label: string; d
   { key: "ma", label: "MA", detail: "Moving averages · 5 / 20 / 50", swatch: "#3b82f6" },
   { key: "ema", label: "EMA", detail: "Exponential moving averages · 12 / 26", swatch: "#14b8a6" },
   { key: "boll", label: "BOLL", detail: "Bollinger Bands · 20, 2σ", swatch: "#94a3b8" },
+  { key: "sar", label: "SAR", detail: "Parabolic SAR · stop & reverse", swatch: "#f59e0b" },
 ];
 
-const SUB_PANEL_ROWS: { key: IndicatorSettings["subPanel"]; label: string; detail: string; swatch: string }[] = [
+const SUB_PANEL_ROWS: { key: Exclude<IndicatorSettings["subPanel"], "none">; label: string; detail: string; swatch: string }[] = [
   { key: "macd", label: "MACD", detail: "12, 26, 9", swatch: "#3b82f6" },
   { key: "rsi", label: "RSI", detail: "14-period", swatch: "#a855f7" },
+  { key: "kdj", label: "KDJ", detail: "Stochastic · 9, 3, 3", swatch: "#f59e0b" },
+  { key: "wr", label: "WR", detail: "Williams %R · 14-period", swatch: "#ec4899" },
+  { key: "cci", label: "CCI", detail: "Commodity Channel Index · 20-period", swatch: "#0ea5e9" },
 ];
 
 export function ChartIndicatorsSheet({ open, onOpenChange, settings, onChange }: Props) {
@@ -32,14 +35,7 @@ export function ChartIndicatorsSheet({ open, onOpenChange, settings, onChange }:
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="rounded-t-3xl max-h-[75vh] overflow-y-auto">
         <SheetHeader className="text-left">
-          <div className="flex items-center justify-between">
-            <SheetTitle className="text-sm">Indicators</SheetTitle>
-            {anyIndicatorsOn(settings) && (
-              <Button variant="ghost" size="sm" className="h-7 text-[11px] rounded-full -mr-2" onClick={() => onChange(DEFAULT_INDICATOR_SETTINGS)}>
-                Turn off all
-              </Button>
-            )}
-          </div>
+          <SheetTitle className="text-sm">Indicators</SheetTitle>
         </SheetHeader>
 
         <div className="mt-2">

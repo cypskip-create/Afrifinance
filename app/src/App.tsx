@@ -35,8 +35,16 @@ import PostDetail from "./pages/PostDetail";
 import ThemeDetail from "./pages/ThemeDetail";
 import FeaturedListDetail from "./pages/FeaturedListDetail";
 import { AppLockGate } from "./components/security/AppLockGate";
+import { useScrollRestoration } from "./hooks/useScrollRestoration";
 
 const queryClient = new QueryClient();
+
+// Lives inside <BrowserRouter> (needs router context) and renders nothing —
+// it just keeps window scroll position in sync with navigation, app-wide.
+function ScrollRestorationController() {
+  useScrollRestoration();
+  return null;
+}
 
 const App = () => (
   <HelmetProvider>
@@ -50,6 +58,7 @@ const App = () => (
             <Analytics />
             <AppLockGate>
               <BrowserRouter>
+                <ScrollRestorationController />
                 <Routes>
                   <Route path="/" element={<Landing />} />
                   <Route path="/landing" element={<Landing />} />
