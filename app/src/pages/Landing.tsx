@@ -1,4 +1,5 @@
-﻿import { useMemo } from "react";
+﻿import { useState } from "react";
+import { Menu, X, ArrowRight } from "lucide-react";
 
 const tickerSymbols = [
   ["SAFCOM", 17.85, 1.7],
@@ -18,6 +19,11 @@ const tickerSymbols = [
   ["SBIC", 8.90, 2.0],
 ] as const;
 
+const tickerItems = [
+  ...tickerSymbols.map(([symbol, price, change]) => ({ symbol, price, change })),
+  ...tickerSymbols.map(([symbol, price, change]) => ({ symbol, price, change })),
+];
+
 // A small slice of the board used in the hero panel — just enough rows to
 // read as "a real exchange board", not the whole universe.
 const boardRows = [
@@ -29,71 +35,96 @@ const boardRows = [
 ] as const;
 
 const researchModules = [
-  {
-    code: "R.01",
-    title: "Valuation & performance",
-    body: "Fair value estimates, valuation multiples against the sector, analyst price targets and how the stock has actually performed against a benchmark.",
-  },
-  {
-    code: "R.02",
-    title: "Growth & health",
-    body: "Revenue and earnings trends, margins, cash flow, debt load and share dilution — the fundamentals that hold up a price move.",
-  },
-  {
-    code: "R.03",
-    title: "Ownership & insider activity",
-    body: "See who holds the stock — institutions and insiders — and whether they've been buying or selling recently.",
-  },
-  {
-    code: "R.04",
-    title: "Sector heatmap & screener",
-    body: "Scan the whole board by sector performance, or filter every listed company down by the exact criteria that matter to you.",
-  },
-  {
-    code: "R.05",
-    title: "Compare stocks side by side",
-    body: "Line up two or three companies on the same metrics before deciding which one earns a place in your portfolio.",
-  },
-  {
-    code: "R.06",
-    title: "AI-generated investment thesis",
-    body: "Get a plain-language read on a stock — the bull case, the bear case, and what to watch — generated fresh from its current numbers.",
-  },
-  {
-    code: "R.07",
-    title: "Chart indicators, your way",
-    body: "Turn on moving averages, EMA, Bollinger Bands, MACD or RSI — or keep the chart clean. Switch chart types anytime, even in fullscreen.",
-  },
-  {
-    code: "R.08",
-    title: "Price alerts, on your terms",
-    body: "Set a target above or below the current price. Edit it, duplicate it, or add another for the same stock — you're in control.",
-  },
+  { code: "R.01", title: "Valuation & performance", body: "Fair value estimates, valuation multiples against the sector, analyst price targets and how the stock has actually performed against a benchmark." },
+  { code: "R.02", title: "Growth & health", body: "Revenue and earnings trends, margins, cash flow, debt load and share dilution — the fundamentals that hold up a price move." },
+  { code: "R.03", title: "Ownership & insider activity", body: "See who holds the stock — institutions and insiders — and whether they've been buying or selling recently." },
+  { code: "R.04", title: "Sector heatmap & screener", body: "Scan the whole board by sector performance, or filter every listed company down by the exact criteria that matter to you." },
+  { code: "R.05", title: "Compare stocks side by side", body: "Line up two or three companies on the same metrics before deciding which one earns a place in your portfolio." },
+  { code: "R.06", title: "AI-generated investment thesis", body: "Get a plain-language read on a stock — the bull case, the bear case, and what to watch — generated fresh from its current numbers." },
+  { code: "R.07", title: "Chart indicators, your way", body: "Turn on moving averages, EMA, Bollinger Bands, MACD or RSI — or keep the chart clean. Switch chart types anytime, even in fullscreen." },
+  { code: "R.08", title: "Price alerts, on your terms", body: "Set a target above or below the current price. Edit it, duplicate it, or add another for the same stock — you're in control." },
 ];
 
 const trustItems = [
-  {
-    code: "S.01",
-    title: "Row-level data security",
-    body: "Your portfolio, watchlist and posts are protected at the database level — not just hidden in the app's interface.",
-  },
-  {
-    code: "S.02",
-    title: "You control your privacy",
-    body: "Choose whether your portfolio is visible to others, mute or block any account, and report anything that shouldn't be there.",
-  },
-  {
-    code: "S.03",
-    title: "Real-time where it counts",
-    body: "Price alerts are checked continuously, so you hear about a target the moment it's hit — not sometime after.",
-  },
+  { code: "S.01", title: "Row-level data security", body: "Your portfolio, watchlist and posts are protected at the database level — not just hidden in the app's interface." },
+  { code: "S.02", title: "You control your privacy", body: "Choose whether your portfolio is visible to others, mute or block any account, and report anything that shouldn't be there." },
+  { code: "S.03", title: "Real-time where it counts", body: "Price alerts are checked continuously, so you hear about a target the moment it's hit — not sometime after." },
 ];
 
+const sectorAllocation = [
+  { label: "Banking", value: 38, color: "var(--primary)" },
+  { label: "Telecom", value: 24, color: "var(--accent)" },
+  { label: "Manufacturing", value: 16, color: "var(--bull)" },
+  { label: "Energy", value: 12, color: "var(--primary-dark)" },
+  { label: "Insurance", value: 10, color: "var(--bear)" },
+];
+
+const assetAllocation = [
+  { label: "Equities", value: 82, color: "var(--primary)" },
+  { label: "Cash", value: 18, color: "var(--border)" },
+];
+
+const navSections = [
+  { id: "research", label: "Research" },
+  { id: "stock-page", label: "Stock page" },
+  { id: "tradershub", label: "TradersHub" },
+  { id: "portfolio", label: "Portfolio" },
+  { id: "pricing", label: "Pricing" },
+  { id: "faq", label: "FAQ" },
+];
+
+// Fixed ticker (32px) + fixed nav (60px) height — used to offset in-page
+// scrolling so anchored sections don't land underneath the fixed header.
+const HEADER_HEIGHT = 92;
+
+function conicGradient(segments: { value: number; color: string }[]) {
+  let cumulative = 0;
+  const stops = segments.map((seg) => {
+    const start = cumulative;
+    cumulative += seg.value;
+    return `${seg.color} ${start}% ${cumulative}%`;
+  });
+  return `conic-gradient(${stops.join(", ")})`;
+}
+
+function Donut({ data, title }: { data: { label: string; value: number; color: string }[]; title: string }) {
+  return (
+    <div>
+      <div className="donut-title mono">{title}</div>
+      <div className="donut-wrap">
+        <div className="donut" style={{ background: conicGradient(data) }}>
+          <div className="donut-hole" />
+        </div>
+        <ul className="donut-legend">
+          {data.map((d) => (
+            <li key={d.label}>
+              <span className="dot" style={{ background: d.color }} />
+              {d.label}
+              <b>{d.value}%</b>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+const Check = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6 9 17l-5-5"></path></svg>
+);
+
 const ContinuaLandingPage = () => {
-  const tickerItems = useMemo(() => [
-    ...tickerSymbols.map(([symbol, price, change]) => ({ symbol, price, change })),
-    ...tickerSymbols.map(([symbol, price, change]) => ({ symbol, price, change })),
-  ], []);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const scrollToSection = (id: string) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    const el = document.getElementById(id);
+    if (el) {
+      const top = el.getBoundingClientRect().top + window.scrollY - HEADER_HEIGHT - 12;
+      window.scrollTo({ top, behavior: "smooth" });
+    }
+    setMenuOpen(false);
+  };
 
   return (
     <>
@@ -123,9 +154,6 @@ const ContinuaLandingPage = () => {
   img{ max-width:100%; display:block; }
   .wrap{ max-width:1140px; margin:0 auto; padding:0 24px; }
 
-  /* Display type carries the market-board personality: Space Grotesk for
-     headings, IBM Plex Mono for anything that reads as data — ticker
-     symbols, prices, eyebrows, index codes. Inter stays for body copy. */
   h1,h2,h3,.display{ font-family:'Space Grotesk',system-ui,sans-serif; letter-spacing:-0.01em; }
   .mono{ font-family:'IBM Plex Mono',ui-monospace,monospace; font-variant-numeric:tabular-nums; }
 
@@ -150,14 +178,14 @@ const ContinuaLandingPage = () => {
 
   .eyebrow{
     font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; letter-spacing:.12em; text-transform:uppercase;
-    color:var(--primary); display:inline-flex; align-items:center; gap:8px; margin-bottom:16px;
+    color:var(--primary); display:inline-flex; align-items:center; justify-content:center; gap:8px; margin-bottom:16px;
   }
-  .eyebrow::before{ content:""; width:14px; height:1px; background:var(--primary); }
+  .eyebrow::before{ content:""; width:14px; height:1px; background:var(--primary); flex:none; }
 
   /* ============================================================
-     SIGNATURE — the ticker strip. It's pinned to the very top of
-     the page (no gap above it), and the same scrolling-tape motif
-     reappears as texture inside the CTA band further down.
+     SIGNATURE — the ticker strip. Fixed to the true viewport top,
+     so it can never leave a gap above it. Same scrolling-tape
+     motif reappears as texture inside the CTA band below.
      ============================================================ */
   .ticker-strip{
     position:fixed; top:0; left:0; right:0; z-index:51; height:32px; margin:0;
@@ -180,24 +208,54 @@ const ContinuaLandingPage = () => {
     position:fixed; top:32px; left:0; right:0; z-index:50; margin:0; background:rgba(250,247,241,.9); backdrop-filter:blur(10px);
     border-bottom:1px solid var(--border);
   }
-  .nav-inner{ display:flex; align-items:center; justify-content:space-between; height:60px; }
-  .brand{ display:flex; align-items:center; gap:10px; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:17px; letter-spacing:-.01em; }
+  .nav-inner{ display:flex; align-items:center; justify-content:space-between; height:60px; gap:10px; }
+  .brand{ display:flex; align-items:center; gap:9px; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:16px; letter-spacing:-.01em; flex:none; }
   .mark{
-    width:32px; height:32px; border-radius:8px; flex:none;
+    width:30px; height:30px; border-radius:8px; flex:none;
     display:inline-flex; align-items:center; justify-content:center;
-    font-family:'Space Grotesk',sans-serif; font-weight:700; color:#0d775d; font-size:17px;
+    font-family:'Space Grotesk',sans-serif; font-weight:700; color:#0d775d; font-size:16px;
     background:#f3efe6;
   }
-  nav.links{ display:flex; align-items:center; gap:28px; }
-  nav.links a{ font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); position:relative; padding-bottom:3px; }
+  nav.links{ display:flex; align-items:center; gap:22px; }
+  nav.links a{ font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); position:relative; padding-bottom:3px; }
   nav.links a::after{ content:""; position:absolute; left:0; right:100%; bottom:0; height:1px; background:var(--accent); transition:right .2s ease; }
   nav.links a:hover{ color:var(--fg); }
   nav.links a:hover::after{ right:0; }
-  .nav-cta{ display:flex; align-items:center; gap:10px; }
-  .nav-cta .btn{ height:36px; padding:0 16px; font-size:12.5px; }
+  .nav-cta{ display:flex; align-items:center; gap:8px; flex:none; }
+  .nav-cta .btn{ height:32px; padding:0 13px; font-size:11.5px; border-radius:7px; }
+  .menu-btn{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:32px; height:32px; border-radius:7px; border:1px solid var(--border); background:transparent; color:var(--fg);
+    cursor:pointer; flex:none; transition:background .15s ease;
+  }
+  .menu-btn:hover{ background:var(--bg-alt); }
+
+  /* ---------- Side menu drawer ---------- */
+  .drawer-overlay{
+    position:fixed; inset:0; z-index:59; background:rgba(15,15,20,.45);
+    opacity:0; pointer-events:none; transition:opacity .22s ease;
+  }
+  .drawer-overlay.open{ opacity:1; pointer-events:auto; }
+  .drawer{
+    position:fixed; top:0; right:0; bottom:0; z-index:60; width:min(82vw,320px);
+    background:var(--card); box-shadow:-8px 0 30px -10px rgba(20,20,20,.25);
+    transform:translateX(100%); transition:transform .25s ease;
+    display:flex; flex-direction:column; padding:18px 20px; overflow-y:auto;
+  }
+  .drawer.open{ transform:translateX(0); }
+  .drawer-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; padding-top:8px; }
+  .drawer-head span{ font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+  .drawer nav{ display:flex; flex-direction:column; gap:2px; margin-bottom:20px; }
+  .drawer nav a{
+    font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:600; padding:12px 4px;
+    border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between;
+  }
+  .drawer nav a svg{ color:var(--muted); flex:none; }
+  .drawer-actions{ display:flex; flex-direction:column; gap:10px; margin-top:auto; padding-top:16px; }
+  .drawer-actions .btn{ width:100%; height:44px; font-size:14px; }
 
   /* ---------- Hero ---------- */
-  .hero{ padding:56px 0 30px; }
+  .hero{ padding:20px 0 30px; }
   .hero-grid{ display:grid; grid-template-columns:1.05fr .95fr; gap:56px; align-items:center; }
   .hero h1{ font-size:47px; line-height:1.06; font-weight:700; margin:0 0 20px; }
   .hero h1 em{ font-style:normal; color:var(--primary); }
@@ -229,7 +287,7 @@ const ContinuaLandingPage = () => {
     font-size:10px; font-weight:600; letter-spacing:.05em; padding:5px 12px; border-radius:999px; box-shadow:var(--shadow);
   }
 
-  section{ padding:80px 0; scroll-margin-top:92px; }
+  section{ padding:80px 0; scroll-margin-top:${HEADER_HEIGHT + 16}px; }
   .section-head{ max-width:620px; margin-bottom:48px; }
   .section-head h2{ font-size:32px; font-weight:600; margin:0 0 14px; line-height:1.15; }
   .section-head p{ font-size:15.5px; color:var(--muted); line-height:1.6; margin:0; }
@@ -252,26 +310,28 @@ const ContinuaLandingPage = () => {
   .module-row h3{ font-size:15.5px; font-weight:600; margin:0 0 6px; }
   .module-row p{ font-size:13.5px; color:var(--muted); line-height:1.55; margin:0; }
 
-  /* ---------- Showcases (TradersHub / Portfolio) ---------- */
+  /* ---------- Showcases (Stock page / TradersHub / Portfolio) ---------- */
   .showcase{ display:grid; grid-template-columns:1fr 1fr; gap:64px; align-items:center; }
   .showcase.reverse .showcase-media{ order:2; }
   .showcase.reverse .showcase-copy{ order:1; }
-  .showcase + .showcase{ margin-top:88px; }
+  .showcase + .showcase{ margin-top:0; }
   .showcase-copy h3{ font-size:25px; font-weight:600; margin:0 0 14px; line-height:1.22; }
   .showcase-copy p{ font-size:14.5px; color:var(--muted); line-height:1.65; margin:0 0 20px; }
   .check-list{ list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:10px; }
   .check-list li{ display:flex; align-items:flex-start; gap:10px; font-size:13.5px; color:var(--fg); }
   .check-list svg{ flex:none; margin-top:2px; color:var(--primary); }
   .media-card{ background:var(--card); border:1px solid var(--border); border-radius:14px; padding:22px; box-shadow:var(--shadow); }
+  .media-card + .media-card{ margin-top:16px; }
 
   .post-row{ display:flex; align-items:center; gap:8px; margin-bottom:12px; }
   .post-avatar{ width:26px; height:26px; border-radius:50%; background:linear-gradient(155deg,var(--primary),var(--accent)); flex:none; }
   .post-name{ font-size:13px; font-weight:600; }
-  .post-handle{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--muted); }
+  .post-handle{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--muted); font-weight:400; }
   .post-line{ height:7px; border-radius:3px; background:var(--bg-alt); margin-bottom:7px; }
   .react-demo{ display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; }
   .react-pill{ display:flex; align-items:center; gap:6px; background:var(--bg-alt); border-radius:999px; padding:6px 12px; font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; }
   .react-pill.on{ background:var(--primary-tint); color:var(--primary-dark); }
+  .reply-preview{ margin-top:14px; padding-left:14px; border-left:1px solid rgba(22,24,29,.12); }
 
   .pf-value-label{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:5px; }
   .pf-value{ font-family:'IBM Plex Mono',monospace; font-size:24px; font-weight:600; }
@@ -280,6 +340,17 @@ const ContinuaLandingPage = () => {
   .pf-chart svg{ position:absolute; inset:0; }
   .quote-chart{ height:64px; margin-top:10px; border-radius:8px; background:var(--primary-tint); position:relative; overflow:hidden; }
   .quote-chart svg{ position:absolute; inset:0; }
+
+  /* ---------- Allocation donuts (Portfolio) ---------- */
+  .donut-title{ font-size:10.5px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:12px; }
+  .donut-row{ display:flex; gap:28px; flex-wrap:wrap; }
+  .donut-wrap{ display:flex; align-items:center; gap:14px; }
+  .donut{ position:relative; width:96px; height:96px; border-radius:50%; flex:none; }
+  .donut-hole{ position:absolute; inset:20px; background:var(--card); border-radius:50%; }
+  .donut-legend{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px; }
+  .donut-legend li{ display:flex; align-items:center; gap:7px; font-size:12px; color:var(--muted); }
+  .donut-legend .dot{ width:8px; height:8px; border-radius:50%; flex:none; }
+  .donut-legend b{ margin-left:10px; font-family:'IBM Plex Mono',monospace; color:var(--fg); font-size:11.5px; font-weight:600; }
 
   /* ---------- Getting started — a real sequence, so numbering is earned ---------- */
   .steps{ display:grid; grid-template-columns:repeat(3,1fr); gap:28px; }
@@ -303,9 +374,7 @@ const ContinuaLandingPage = () => {
     border-radius:20px; padding:56px 48px; color:#fff; overflow:hidden;
     display:flex; align-items:center; justify-content:space-between; gap:32px;
   }
-  .cta-tape{
-    position:absolute; inset:0; display:flex; align-items:center; opacity:.14; pointer-events:none;
-  }
+  .cta-tape{ position:absolute; inset:0; display:flex; align-items:center; opacity:.14; pointer-events:none; }
   .cta-tape span{ font-family:'IBM Plex Mono',monospace; font-size:13px; white-space:nowrap; animation:scroll-left 26s linear infinite; }
   .cta-band > *{ position:relative; }
   .cta-band h2{ font-size:27px; font-weight:600; margin:0 0 8px; }
@@ -345,7 +414,7 @@ const ContinuaLandingPage = () => {
 
   @media (max-width:900px){
     .hero-grid{ grid-template-columns:1fr; }
-    .hero{ text-align:center; padding-top:44px; }
+    .hero{ text-align:center; }
     .hero p.lead{ margin-left:auto; margin-right:auto; }
     .hero-actions,.hero-trust{ justify-content:center; }
     nav.links{ display:none; }
@@ -363,12 +432,19 @@ const ContinuaLandingPage = () => {
     .pricing-grid{ grid-template-columns:1fr; }
     .cta-band{ flex-direction:column; text-align:center; padding:40px 26px; }
     .foot-grid{ grid-template-columns:1fr 1fr; }
+    .donut-row{ justify-content:center; }
   }
   @media (max-width:560px){
     .hero h1{ font-size:32px; }
     .stats{ grid-template-columns:1fr 1fr; }
     section{ padding:56px 0; }
     .board-cols, .board-row{ grid-template-columns:1.3fr .9fr .8fr; }
+  }
+  @media (max-width:420px){
+    .brand span:last-child{ display:none; }
+    .nav-cta{ gap:6px; }
+    .nav-cta .btn{ height:30px; padding:0 10px; font-size:10.5px; }
+    .menu-btn{ width:30px; height:30px; }
   }
   @media (prefers-reduced-motion:reduce){
     .ticker-track, .cta-tape span, .board-live .dot{ animation:none; }
@@ -392,20 +468,43 @@ const ContinuaLandingPage = () => {
       <span>Continua</span>
     </div>
     <nav className="links" aria-label="Main navigation">
-      <a href="#research">Research</a>
-      <a href="#tradershub">TradersHub</a>
-      <a href="#portfolio">Portfolio</a>
-      <a href="#pricing">Pricing</a>
-      <a href="#faq">FAQ</a>
+      {navSections.map((s) => (
+        <a key={s.id} href={`#${s.id}`} onClick={scrollToSection(s.id)}>{s.label}</a>
+      ))}
     </nav>
     <div className="nav-cta">
       <a href="/auth" className="btn btn-ghost">Log in</a>
       <a href="/auth?mode=signup" className="btn btn-primary">Get started</a>
+      <button className="menu-btn" aria-label="Open menu" onClick={() => setMenuOpen(true)}>
+        <Menu size={16} />
+      </button>
     </div>
   </div>
 </header>
 
-<div style={{ height: "92px" }} aria-hidden="true"></div>
+<div className={`drawer-overlay ${menuOpen ? "open" : ""}`} onClick={() => setMenuOpen(false)} aria-hidden="true"></div>
+<aside className={`drawer ${menuOpen ? "open" : ""}`} aria-label="Site menu" aria-hidden={!menuOpen}>
+  <div className="drawer-head">
+    <span>Menu</span>
+    <button className="menu-btn" aria-label="Close menu" onClick={() => setMenuOpen(false)}>
+      <X size={16} />
+    </button>
+  </div>
+  <nav>
+    {navSections.map((s) => (
+      <a key={s.id} href={`#${s.id}`} onClick={scrollToSection(s.id)}>
+        {s.label}
+        <ArrowRight size={15} />
+      </a>
+    ))}
+  </nav>
+  <div className="drawer-actions">
+    <a href="/auth" className="btn btn-ghost">Log in</a>
+    <a href="/auth?mode=signup" className="btn btn-primary">Get started</a>
+  </div>
+</aside>
+
+<div style={{ height: `${HEADER_HEIGHT}px` }} aria-hidden="true"></div>
 
 <section className="hero">
   <div className="wrap hero-grid">
@@ -415,7 +514,7 @@ const ContinuaLandingPage = () => {
       <p className="lead">Continua brings real NSE research, portfolio tracking and price alerts into one app — with TradersHub, a place to see what other Kenyan investors think before you decide.</p>
       <div className="hero-actions">
         <a href="/auth?mode=signup" className="btn btn-primary btn-lg">Create free account</a>
-        <a href="#research" className="btn btn-ghost btn-lg">See what's inside</a>
+        <a href="#research" onClick={scrollToSection("research")} className="btn btn-ghost btn-lg">See what's inside</a>
       </div>
       <div className="hero-trust">
         <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11z"></path></svg> No brokerage account required to research</span>
@@ -463,7 +562,7 @@ const ContinuaLandingPage = () => {
 <section id="research">
   <div className="wrap">
     <div className="section-head">
-      <div className="eyebrow">Research</div>
+      <div className="eyebrow" style={{ justifyContent: "flex-start" }}>Research</div>
       <h2>Every angle on a stock, in one screen</h2>
       <p>Open any NSE-listed company and move through valuation, growth, health, dividends, ownership and risk — the way an analyst would, without needing to be one.</p>
     </div>
@@ -481,17 +580,69 @@ const ContinuaLandingPage = () => {
   </div>
 </section>
 
-<section className="alt" id="tradershub">
+<section className="alt" id="stock-page">
   <div className="wrap">
     <div className="showcase">
       <div className="showcase-copy">
-        <div className="eyebrow">TradersHub</div>
+        <div className="eyebrow" style={{ justifyContent: "flex-start" }}>Stock page</div>
+        <h3>One page, everything you need before you decide.</h3>
+        <p>Open any listed company and get the live price, an interactive chart, and a plain-language read on the stock — all on the same screen, no tab-hopping required.</p>
+        <ul className="check-list">
+          <li><Check /> Switch between line, candlestick and area charts, with EMA, RSI, MACD and Bollinger Bands</li>
+          <li><Check /> A bull case and a bear case, generated fresh from the stock's current numbers</li>
+          <li><Check /> Set a price alert right from the chart — above or below any target</li>
+        </ul>
+      </div>
+      <div className="showcase-media">
+        <div className="media-card">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "12px" }}>
+            <div className="post-name" style={{ fontSize: "15px" }}>SAFCOM <span className="post-handle">Safaricom PLC</span></div>
+            <div style={{ textAlign: "right" }}>
+              <div className="pf-value" style={{ fontSize: "18px" }}>KES 17.85</div>
+              <span className="pf-chip">+1.7% today</span>
+            </div>
+          </div>
+          <div className="react-demo" style={{ marginTop: 0, marginBottom: "4px" }}>
+            <div className="react-pill on">EMA</div>
+            <div className="react-pill">RSI</div>
+            <div className="react-pill">MACD</div>
+          </div>
+          <div className="quote-chart" style={{ height: "78px" }}>
+            <svg viewBox="0 0 260 78" preserveAspectRatio="none">
+              <polyline points="0,58 25,52 50,56 75,38 100,44 125,26 150,34 175,18 200,28 225,14 260,20" fill="none" stroke="#25935F" strokeWidth="2.5"></polyline>
+            </svg>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginTop: "14px" }}>
+            <div style={{ background: "var(--primary-tint)", borderRadius: "8px", padding: "9px 11px" }}>
+              <div className="mono" style={{ fontSize: "10px", fontWeight: 600, color: "var(--primary)", marginBottom: "3px", letterSpacing: ".04em", textTransform: "uppercase" }}>Bull case</div>
+              <p style={{ fontSize: "11.5px", color: "var(--fg)", margin: 0, lineHeight: 1.4 }}>Subscriber growth and M-Pesa margins keep outpacing the sector.</p>
+            </div>
+            <div style={{ background: "var(--bear-tint)", borderRadius: "8px", padding: "9px 11px" }}>
+              <div className="mono" style={{ fontSize: "10px", fontWeight: 600, color: "var(--bear)", marginBottom: "3px", letterSpacing: ".04em", textTransform: "uppercase" }}>Bear case</div>
+              <p style={{ fontSize: "11.5px", color: "var(--fg)", margin: 0, lineHeight: 1.4 }}>Regulatory pressure on mobile money fees remains a watch-point.</p>
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "14px", padding: "9px 12px", background: "var(--bg-alt)", borderRadius: "8px" }}>
+            <span style={{ fontSize: "11.5px", color: "var(--muted)" }}>Alert when above</span>
+            <span className="mono" style={{ fontSize: "12px", fontWeight: 600 }}>KES 20.00</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="tradershub">
+  <div className="wrap">
+    <div className="showcase">
+      <div className="showcase-copy">
+        <div className="eyebrow" style={{ justifyContent: "flex-start" }}>TradersHub</div>
         <h3>Numbers tell you what happened.<br />People tell you why it matters.</h3>
         <p>TradersHub is a feed built entirely around Kenyan markets — post your thesis, tag the ticker, and see how the room reacts. Threaded replies keep every conversation easy to follow, no matter how deep it goes.</p>
         <ul className="check-list">
-          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6 9 17l-5-5"></path></svg> React with more than a like — bullish, cautious, insightful and more</li>
-          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6 9 17l-5-5"></path></svg> Nested replies, so you always know what's being answered</li>
-          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6 9 17l-5-5"></path></svg> Follow the investors whose takes you actually want to see</li>
+          <li><Check /> React with more than a like — bullish, cautious, insightful and more</li>
+          <li><Check /> Nested replies, so you always know what's being answered</li>
+          <li><Check /> Follow the investors whose takes you actually want to see</li>
         </ul>
       </div>
       <div className="showcase-media">
@@ -513,23 +664,30 @@ const ContinuaLandingPage = () => {
             <div className="react-pill">🔥 Fire · 6</div>
             <div className="react-pill">🧠 Insightful · 3</div>
           </div>
+          <div className="reply-preview">
+            <div className="post-row" style={{ marginBottom: "4px" }}>
+              <div className="post-avatar" style={{ width: "20px", height: "20px" }}></div>
+              <div className="post-name" style={{ fontSize: "11.5px" }}>Amina O. <span className="post-handle">@amina_ke</span></div>
+            </div>
+            <div className="post-line" style={{ width: "80%", height: "6px" }}></div>
+          </div>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<section id="portfolio">
+<section className="alt" id="portfolio">
   <div className="wrap">
     <div className="showcase reverse">
       <div className="showcase-copy">
-        <div className="eyebrow">Portfolio</div>
+        <div className="eyebrow" style={{ justifyContent: "flex-start" }}>Portfolio</div>
         <h3>Your holdings, tracked properly — in shillings.</h3>
         <p>Log what you own and Continua keeps score: gains and losses per holding, how your allocation breaks down, and how it's all trending over time — built for the way Kenyan investors actually hold NSE stocks.</p>
         <ul className="check-list">
-          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6 9 17l-5-5"></path></svg> Performance chart with a real crosshair — drag to see any day's value</li>
-          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6 9 17l-5-5"></path></svg> A watchlist for stocks you're circling but haven't bought yet</li>
-          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6 9 17l-5-5"></path></svg> Notifications grouped by feature, so alerts don't get lost in noise</li>
+          <li><Check /> Performance chart with a real crosshair — drag to see any day's value</li>
+          <li><Check /> Sector and asset allocation, broken down at a glance</li>
+          <li><Check /> A watchlist for stocks you're circling but haven't bought yet</li>
         </ul>
       </div>
       <div className="showcase-media">
@@ -548,12 +706,18 @@ const ContinuaLandingPage = () => {
             </svg>
           </div>
         </div>
+        <div className="media-card">
+          <div className="donut-row">
+            <Donut data={sectorAllocation} title="Sector allocation" />
+            <Donut data={assetAllocation} title="Asset allocation" />
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </section>
 
-<section className="alt">
+<section>
   <div className="wrap">
     <div className="section-head" style={{ margin: "0 auto 48px", textAlign: "center" }}>
       <div className="eyebrow" style={{ justifyContent: "center" }}>Getting started</div>
@@ -567,10 +731,10 @@ const ContinuaLandingPage = () => {
   </div>
 </section>
 
-<section>
+<section className="alt">
   <div className="wrap">
     <div className="section-head">
-      <div className="eyebrow">Built to be trusted</div>
+      <div className="eyebrow" style={{ justifyContent: "flex-start" }}>Built to be trusted</div>
       <h2>Serious about the details you don't see</h2>
     </div>
     <div className="trust-grid">
@@ -585,7 +749,7 @@ const ContinuaLandingPage = () => {
   </div>
 </section>
 
-<section style={{ paddingTop: "0" }}>
+<section>
   <div className="wrap">
     <div className="cta-band">
       <div className="cta-tape" aria-hidden="true">
@@ -613,10 +777,10 @@ const ContinuaLandingPage = () => {
         <div className="plan-price">KES 0</div>
         <div className="plan-period">Forever</div>
         <ul>
-          <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6 9 17l-5-5"></path></svg> Watchlists &amp; delayed prices</li>
-          <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6 9 17l-5-5"></path></svg> TradersHub — post up to 500 characters</li>
-          <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6 9 17l-5-5"></path></svg> Basic charts, incl. candlesticks</li>
-          <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6 9 17l-5-5"></path></svg> 3 AI theses a month</li>
+          <li><Check /> Watchlists &amp; delayed prices</li>
+          <li><Check /> TradersHub — post up to 500 characters</li>
+          <li><Check /> Basic charts, incl. candlesticks</li>
+          <li><Check /> 3 AI theses a month</li>
         </ul>
         <a href="/auth?mode=signup" className="btn btn-ghost">Create free account</a>
       </div>
@@ -625,10 +789,10 @@ const ContinuaLandingPage = () => {
         <div className="plan-price">KES 800<span className="plan-period">/mo</span></div>
         <div className="plan-period">or KES 7,980/year</div>
         <ul>
-          <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6 9 17l-5-5"></path></svg> Real-time NSE prices, no delay</li>
-          <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6 9 17l-5-5"></path></svg> Unlimited AI investment theses</li>
-          <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6 9 17l-5-5"></path></svg> Long-form TradersHub posts, up to 5,000 characters</li>
-          <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6 9 17l-5-5"></path></svg> Advanced screener &amp; priority alerts</li>
+          <li><Check /> Real-time NSE prices, no delay</li>
+          <li><Check /> Unlimited AI investment theses</li>
+          <li><Check /> Long-form TradersHub posts, up to 5,000 characters</li>
+          <li><Check /> Advanced screener &amp; priority alerts</li>
         </ul>
         <a href="/auth?mode=signup" className="btn btn-primary">Get Premium</a>
       </div>
@@ -639,7 +803,7 @@ const ContinuaLandingPage = () => {
 <section id="faq">
   <div className="wrap" style={{ maxWidth: "760px" }}>
     <div className="section-head" style={{ marginBottom: "28px" }}>
-      <div className="eyebrow">FAQ</div>
+      <div className="eyebrow" style={{ justifyContent: "flex-start" }}>FAQ</div>
       <h2>Good to know</h2>
     </div>
 
@@ -686,9 +850,10 @@ const ContinuaLandingPage = () => {
       </div>
       <div>
         <h5>Product</h5>
-        <a href="#research">Research</a>
-        <a href="#tradershub">TradersHub</a>
-        <a href="#portfolio">Portfolio</a>
+        <a href="#research" onClick={scrollToSection("research")}>Research</a>
+        <a href="#stock-page" onClick={scrollToSection("stock-page")}>Stock page</a>
+        <a href="#tradershub" onClick={scrollToSection("tradershub")}>TradersHub</a>
+        <a href="#portfolio" onClick={scrollToSection("portfolio")}>Portfolio</a>
       </div>
       <div>
         <h5>Company</h5>
