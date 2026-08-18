@@ -23,6 +23,8 @@ REDIS_URL=redis://localhost:6379
 NSE_CLIENT_MODE=mock
 NSE_API_BASE_URL=
 NSE_API_KEY=
+MANSA_API_BASE_URL=
+MANSA_API_KEY=
 
 # ── Ingestion cadence ─────────────────────────────────────
 PRICE_POLL_INTERVAL_MS=5000

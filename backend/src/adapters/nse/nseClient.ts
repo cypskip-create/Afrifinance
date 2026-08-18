@@ -287,7 +287,25 @@ function intervalToMs(interval: NseRawCandle["Interval"]): number {
 }
 
 /* ────────────────────────────────────────────────────────────────────── */
-/* Real client — scaffold for a licensed NSE feed. Fill in when contracted */
+/* Real client — Mansa's current test feed exposes pan-African movers. */
+
+interface MansaMover {
+  ticker: string;
+  name: string;
+  price: number;
+  change: number | null;
+  change_pct: number | null;
+  volume: number | null;
+  exchange?: string;
+  exchange_code?: string;
+  currency?: string;
+  last_updated: string;
+}
+
+interface MansaMoversResponse {
+  success: boolean;
+  data: { gainers: MansaMover[]; losers: MansaMover[] };
+}
 /* ────────────────────────────────────────────────────────────────────── */
 
 export class RealNseClient implements INseClient {
@@ -295,41 +313,78 @@ export class RealNseClient implements INseClient {
   private apiKey: string;
 
   constructor() {
-    if (!env.NSE_API_BASE_URL || !env.NSE_API_KEY) {
+    const baseUrl = env.MANSA_API_BASE_URL || env.NSE_API_BASE_URL;
+    const apiKey = env.MANSA_API_KEY || env.NSE_API_KEY;
+    if (!baseUrl || !apiKey) {
       throw new Error(
-        "RealNseClient requires NSE_API_BASE_URL and NSE_API_KEY. " +
+        "The live market-data client requires MANSA_API_BASE_URL and MANSA_API_KEY. " +
         "Set NSE_CLIENT_MODE=mock in .env until a licensed feed is contracted."
       );
     }
-    this.baseUrl = env.NSE_API_BASE_URL;
-    this.apiKey = env.NSE_API_KEY;
+    this.baseUrl = baseUrl;
+    this.apiKey = apiKey;
   }
 
-  private async request<T>(path: string, params?: Record<string, string>): Promise<T> {
-    const url = new URL(path, this.baseUrl);
-    if (params) for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${this.apiKey}` } });
-    if (!res.ok) throw new Error(`NSE feed request failed: ${res.status} ${res.statusText} (${path})`);
+  private async request<T>(url: string): Promise<T> {
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        "X-API-Key": this.apiKey,
+      },
+    });
+    if (!res.ok) throw new Error(`Mansa request failed: ${res.status} ${res.statusText}`);
     return res.json() as Promise<T>;
   }
 
-  // TODO: map each method to the real feed's actual endpoint paths/params
-  // once the provider contract is signed. Shapes below assume the feed
-  // returns JSON matching nseRawTypes.ts — adjust there, not here, if not.
-  fetchSecurities() { return this.request<NseRawSecurity[]>("/v1/securities"); }
-  fetchQuotes(symbols: string[]) { return this.request<NseRawQuote[]>("/v1/quotes", { symbols: symbols.join(",") }); }
-  fetchCandles(symbol: string, interval: NseRawCandle["Interval"], from: string, to: string) {
-    return this.request<NseRawCandle[]>("/v1/candles", { symbol, interval, from, to });
+  private async fetchMovers(): Promise<MansaMover[]> {
+    const response = await this.request<MansaMoversResponse>(this.baseUrl);
+    if (!response.success) throw new Error("Mansa returned an unsuccessful response");
+    return [...response.data.gainers, ...response.data.losers];
   }
-  fetchCompanyProfile(symbol: string) { return this.request<NseRawCompanyProfile | null>(`/v1/companies/${symbol}`); }
-  fetchFinancials(symbol: string) { return this.request<NseRawFinancialPeriod[]>(`/v1/financials/${symbol}`); }
-  fetchCorporateActions(symbol: string | null, since: string) {
-    return this.request<NseRawCorporateAction[]>("/v1/corporate-actions", { symbol: symbol ?? "", since });
+
+  async fetchSecurities(): Promise<NseRawSecurity[]> {
+    const movers = await this.fetchMovers();
+    const unique = new Map(movers.map((mover) => [mover.ticker, mover]));
+    return [...unique.values()].map((mover) => ({
+      Symbol: mover.ticker,
+      CompanyName: mover.name,
+      Sector: "Unknown",
+      Industry: "Unknown",
+      TradingStatus: "ACTIVE",
+    }));
   }
-  fetchEarningsEvents(symbol: string | null, since: string) {
-    return this.request<NseRawEarningsEvent[]>("/v1/earnings", { symbol: symbol ?? "", since });
+
+  async fetchQuotes(symbols: string[]): Promise<NseRawQuote[]> {
+    const requested = new Set(symbols.map((symbol) => symbol.toUpperCase()));
+    const movers = await this.fetchMovers();
+    return movers
+      .filter((mover) => !requested.size || requested.has(mover.ticker.toUpperCase()))
+      .map((mover) => {
+        const change = mover.change ?? 0;
+        const previousClose = mover.price - change;
+        return {
+          Symbol: mover.ticker,
+          LastTradedPrice: mover.price,
+          Open: previousClose,
+          High: Math.max(mover.price, previousClose),
+          Low: Math.min(mover.price, previousClose),
+          PrevClose: previousClose,
+          Change: change,
+          ChangePct: mover.change_pct ?? 0,
+          Volume: mover.volume ?? 0,
+          Currency: mover.currency ?? "KES",
+          TradingStatus: "ACTIVE" as const,
+          EventTimestamp: mover.last_updated,
+        };
+      });
   }
-  fetchOwnership(symbol: string) { return this.request<NseRawOwnership[]>(`/v1/ownership/${symbol}`); }
+
+  fetchCandles(_symbol: string, _interval: NseRawCandle["Interval"], _from: string, _to: string) { return Promise.resolve<NseRawCandle[]>([]); }
+  fetchCompanyProfile(_symbol: string) { return Promise.resolve<NseRawCompanyProfile | null>(null); }
+  fetchFinancials(_symbol: string) { return Promise.resolve<NseRawFinancialPeriod[]>([]); }
+  fetchCorporateActions(_symbol: string | null, _since: string) { return Promise.resolve<NseRawCorporateAction[]>([]); }
+  fetchEarningsEvents(_symbol: string | null, _since: string) { return Promise.resolve<NseRawEarningsEvent[]>([]); }
+  fetchOwnership(_symbol: string) { return Promise.resolve<NseRawOwnership[]>([]); }
 
   streamQuotes(_symbols: string[], _onTick: (q: NseRawQuote) => void): () => void {
     // TODO: open a WebSocket/FIX session to the licensed feed here and
