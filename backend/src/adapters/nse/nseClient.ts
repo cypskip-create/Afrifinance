@@ -14,6 +14,7 @@
  *                      NSE_CLIENT_MODE=live in .env.
  */
 import { env } from "../../config/index.js";
+import https from "node:https";
 import type {
   NseRawSecurity, NseRawQuote, NseRawCandle, NseRawCompanyProfile,
   NseRawFinancialPeriod, NseRawCorporateAction, NseRawEarningsEvent, NseRawOwnership,
@@ -311,6 +312,7 @@ interface MansaMoversResponse {
 export class RealNseClient implements INseClient {
   private baseUrl: string;
   private apiKey: string;
+  private apiIp?: string;
 
   constructor() {
     const baseUrl = env.MANSA_API_BASE_URL || env.NSE_API_BASE_URL;
@@ -323,17 +325,48 @@ export class RealNseClient implements INseClient {
     }
     this.baseUrl = baseUrl;
     this.apiKey = apiKey;
+    this.apiIp = env.MANSA_API_IP;
   }
 
   private async request<T>(url: string): Promise<T> {
-    const res = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-        "X-API-Key": this.apiKey,
-      },
+    const target = new URL(url);
+    const response = await new Promise<{ statusCode?: number; contentType?: string; body: string }>((resolve, reject) => {
+      const request = https.request({
+        protocol: target.protocol,
+        hostname: target.hostname,
+        port: target.port || 443,
+        path: `${target.pathname}${target.search}`,
+        servername: target.hostname,
+        lookup: this.apiIp
+          ? (_hostname, options, callback) => {
+            if (options.all) callback(null, [{ address: this.apiIp!, family: 4 }]);
+            else callback(null, this.apiIp!, 4);
+          }
+          : undefined,
+        headers: {
+          Host: target.host,
+          Accept: "application/json",
+          Authorization: `Bearer ${this.apiKey}`,
+          "X-API-Key": this.apiKey,
+        },
+      }, (res) => {
+        let body = "";
+        res.setEncoding("utf8");
+        res.on("data", (chunk: string) => { body += chunk; });
+        res.on("end", () => resolve({
+          statusCode: res.statusCode,
+          contentType: res.headers["content-type"],
+          body,
+        }));
+      });
+      request.on("error", reject);
+      request.end();
     });
-    if (!res.ok) throw new Error(`Mansa request failed: ${res.status} ${res.statusText}`);
-    return res.json() as Promise<T>;
+    if (response.statusCode !== 200) throw new Error(`Mansa request failed: ${response.statusCode ?? "unknown"}`);
+    if (!response.contentType?.includes("application/json")) {
+      throw new Error(`Mansa returned ${response.contentType ?? "an unknown content type"}; check MANSA_API_BASE_URL or MANSA_API_IP`);
+    }
+    return JSON.parse(response.body) as T;
   }
 
   private async fetchMovers(): Promise<MansaMover[]> {

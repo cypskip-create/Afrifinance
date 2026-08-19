@@ -35,6 +35,7 @@ const EnvSchema = z.object({
   NSE_API_KEY: z.string().optional(),
   MANSA_API_BASE_URL: z.string().optional(),
   MANSA_API_KEY: z.string().optional(),
+  MANSA_API_IP: z.string().optional(),
 
   PRICE_POLL_INTERVAL_MS: z.coerce.number().default(5000),
   FINANCIALS_SYNC_CRON: z.string().default("0 2 * * *"),

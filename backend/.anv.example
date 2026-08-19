@@ -25,6 +25,8 @@ NSE_API_BASE_URL=
 NSE_API_KEY=
 MANSA_API_BASE_URL=
 MANSA_API_KEY=
+# Optional: use the provider's API edge if local DNS resolves the hostname incorrectly.
+MANSA_API_IP=
 
 # ── Ingestion cadence ─────────────────────────────────────
 PRICE_POLL_INTERVAL_MS=5000
