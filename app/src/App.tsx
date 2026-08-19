@@ -8,6 +8,7 @@ import { HelmetProvider } from "react-helmet-async";
 import { MainLayout } from "./components/layout/MainLayout";
 import { AuthProvider } from "./hooks/useAuth";
 import { ProfileProvider } from "./hooks/useProfile";
+import { ExchangeProvider } from "./hooks/useExchange";
 import { Analytics } from "@vercel/analytics/react";
 import Home from "./pages/Home";
 import Markets from "./pages/Markets";
@@ -53,6 +54,7 @@ const App = () => (
       <TooltipProvider>
         <AuthProvider>
           <ProfileProvider>
+          <ExchangeProvider>
             <Toaster />
             <Sonner />
             <Analytics />
@@ -93,6 +95,7 @@ const App = () => (
                 </Routes>
               </BrowserRouter>
             </AppLockGate>
+          </ExchangeProvider>
           </ProfileProvider>
         </AuthProvider>
       </TooltipProvider>

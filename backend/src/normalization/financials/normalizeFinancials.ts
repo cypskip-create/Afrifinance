@@ -26,7 +26,16 @@ export function checkBalanceSheetIntegrity(b: BalanceSheet): { ok: boolean; delt
 export function normalizeCashFlow(c: CashFlowStatement): CashFlowStatement {
   return {
     ...c,
-    operatingCashFlow: round2(c.operatingCashFlow),
-    freeCashFlow: c.freeCashFlow != null ? round2(c.freeCashFlow) : (c.capex != null ? round2(c.operatingCashFlow - c.capex) : undefined),
+    // operatingCashFlow is optional now — not every provider (e.g. Mansa)
+    // supplies a cash flow statement at all. Only round/derive when it's
+    // actually present; leave it undefined otherwise rather than treating
+    // absence as zero.
+    operatingCashFlow: c.operatingCashFlow != null ? round2(c.operatingCashFlow) : undefined,
+    freeCashFlow:
+      c.freeCashFlow != null
+        ? round2(c.freeCashFlow)
+        : c.capex != null && c.operatingCashFlow != null
+          ? round2(c.operatingCashFlow - c.capex)
+          : undefined,
   };
 }

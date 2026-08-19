@@ -44,6 +44,20 @@ export const QuoteSchema = z.object({
     message: "lastPrice implausibly far outside high/low range",
   });
 
+export const IndexSchema = z.object({
+  id: z.string().min(1),
+  code: z.string().min(1),
+  name: z.string().min(1),
+  exchange: z.string().min(1),
+  value: nonNegativeNumber,
+  previousClose: nonNegativeNumber,
+  change: finiteNumber,
+  changePercent: finiteNumber,
+  currency: z.string().length(3),
+  timestamp: isoDate,
+  source: z.enum(["live", "delayed", "eod"]),
+});
+
 export const CandleSchema = z.object({
   securityId: z.string().min(1),
   interval: z.enum(["1m", "5m", "15m", "1h", "1d", "1w", "1M", "1y"]),

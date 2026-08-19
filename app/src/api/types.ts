@@ -4,9 +4,9 @@
 // coupling to how the backend stores anything — so the frontend only ever
 // depends on the wire contract, not the backend's internals.
 
-export type Currency = "KES" | "NGN" | "ZAR" | "EGP" | "GHS" | "XOF" | "USD";
+export type Currency = "KES" | "NGN" | "ZAR" | "EGP" | "GHS" | "XOF" | "USD" | "TZS" | "ZMW";
 export type SecurityStatus = "active" | "suspended" | "halted" | "delisted";
-export type ExchangeCode = "NSE" | "NGX" | "JSE" | "EGX" | "GSE" | "BRVM";
+export type ExchangeCode = "NSE" | "NGX" | "JSE" | "EGX" | "GSE" | "BRVM" | "LuSE" | "DSE";
 
 export interface Quote {
   securityId: string;
@@ -25,6 +25,20 @@ export interface Quote {
   marketCap?: number;
   currency: Currency;
   status: SecurityStatus;
+  timestamp: string;
+  source: "live" | "delayed" | "eod";
+}
+
+export interface MarketIndex {
+  id: string;
+  code: string;
+  name: string;
+  exchange: ExchangeCode;
+  value: number;
+  previousClose: number;
+  change: number;
+  changePercent: number;
+  currency: Currency;
   timestamp: string;
   source: "live" | "delayed" | "eod";
 }

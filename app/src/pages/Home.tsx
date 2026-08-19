@@ -83,6 +83,7 @@ export default function Home() {
         subtitle={user ? `${greeting}, ${firstName}` : "Your smart companion"}
         showSearch
         showNotifications
+        showExchangeSelector
       />
 
       <div className="px-4 pt-3 space-y-6">
