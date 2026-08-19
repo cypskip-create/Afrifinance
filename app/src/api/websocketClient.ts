@@ -34,7 +34,9 @@ class ContinuaRealtimeClient {
   }
 
   private getApiKey(): string {
-    return (import.meta.env.VITE_AFRIFINANCE_API_KEY as string | undefined) ?? "dev-local-only-key";
+    return (import.meta.env.VITE_CONTINUA_API_KEY as string | undefined) ??
+      (import.meta.env.VITE_AFRIFINANCE_API_KEY as string | undefined) ??
+      "dev-local-only-key";
   }
 
   private ensureConnected() {
