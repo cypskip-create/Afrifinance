@@ -17,9 +17,29 @@ import { runPriceIngestionOnce, startPriceWorker } from "./priceWorker.js";
 import { researchService } from "../services/research/researchService.js";
 import { ACTIVE_EXCHANGES } from "../config/index.js";
 import { logger } from "../monitoring/logger.js";
+import { getAllAdapters } from "../adapters/registry.js";
+import { securitiesRepository } from "../storage/repositories/securitiesRepository.js";
+
+async function bootstrapSecurities(): Promise<void> {
+  for (const adapter of getAllAdapters()) {
+    const securities = await adapter.listSecurities();
+    for (const security of securities) {
+      const sectorId = `${adapter.exchange.toLowerCase()}-unknown`;
+      await securitiesRepository.upsertSector({ id: sectorId, name: "Unknown" });
+      await securitiesRepository.upsertCompany({
+        id: security.companyId,
+        name: security.symbol,
+        sectorId,
+      });
+      await securitiesRepository.upsertSecurity(security);
+    }
+    logger.info({ exchange: adapter.exchange, count: securities.length }, "Bootstrapped securities");
+  }
+}
 
 export async function startAllWorkers(): Promise<() => void> {
   logger.info("Bootstrapping reference data + fundamentals…");
+  await bootstrapSecurities();
   await runFinancialsSyncOnce();
   await runCorporateActionsSyncOnce();
   await runCandlesBackfillOnce();

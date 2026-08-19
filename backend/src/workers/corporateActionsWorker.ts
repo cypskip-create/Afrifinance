@@ -3,7 +3,7 @@
  * Same cadence reasoning as financialsWorker — these are event-driven, not
  * continuous, datasets.
  */
-import cron from "node-cron";
+import cron, { type ScheduledTask } from "node-cron";
 import { getAllAdapters } from "../adapters/registry.js";
 import { runCorporateActionsIngestion } from "../ingestion/pipelines/corporateActionsIngestionPipeline.js";
 import { env } from "../config/index.js";
@@ -24,7 +24,7 @@ export async function runCorporateActionsSyncOnce(): Promise<void> {
   }
 }
 
-export function startCorporateActionsWorker(): cron.ScheduledTask {
+export function startCorporateActionsWorker(): ScheduledTask {
   logger.info({ cron: env.CORPORATE_ACTIONS_SYNC_CRON }, "Scheduling corporate actions worker");
   return cron.schedule(env.CORPORATE_ACTIONS_SYNC_CRON, () => { void runCorporateActionsSyncOnce(); });
 }
