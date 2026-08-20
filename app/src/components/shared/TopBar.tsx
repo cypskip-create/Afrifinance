@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Logo } from "./Logo";
 import { useNotifications } from "@/hooks/useNotifications";
+import { ExchangeSelector } from "./ExchangeSelector";
 
 interface TopBarProps {
   title: string;
@@ -12,6 +13,11 @@ interface TopBarProps {
   showSearch?: boolean;
   showWidgetSettings?: boolean;
   showNotifications?: boolean;
+  /** Shows the 🇰🇪 NSE ▾ market picker next to the title. Opt-in — only
+   *  screens that actually render exchange-specific data (Markets, Home,
+   *  Screener, ...) should turn this on; a stock detail page for a symbol
+   *  already tied to one exchange shouldn't invite switching mid-view. */
+  showExchangeSelector?: boolean;
   onWidgetSettingsClick?: () => void;
   onSearch?: (query: string) => void;
   initialSearchQuery?: string;
@@ -19,7 +25,7 @@ interface TopBarProps {
 
 export function TopBar({ 
   title, subtitle, showSearch = true, showWidgetSettings = false, 
-  showNotifications = true, onWidgetSettingsClick, onSearch, initialSearchQuery = ""
+  showNotifications = true, showExchangeSelector = false, onWidgetSettingsClick, onSearch, initialSearchQuery = ""
 }: TopBarProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -44,6 +50,7 @@ export function TopBar({
             <h1 className="text-lg font-bold text-foreground truncate">{title}</h1>
             {subtitle && <p className="text-xs text-muted-foreground truncate">{subtitle}</p>}
           </div>
+          {showExchangeSelector && <ExchangeSelector className="ml-1 shrink-0" />}
         </div>
         
         <div className="flex items-center gap-1">

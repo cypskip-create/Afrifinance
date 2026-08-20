@@ -13,7 +13,7 @@
 
 import type { ExchangeCode } from "../config/index.js";
 
-export type Currency = "KES" | "NGN" | "ZAR" | "EGP" | "GHS" | "XOF" | "USD";
+export type Currency = "KES" | "NGN" | "ZAR" | "EGP" | "GHS" | "XOF" | "USD" | "TZS" | "ZMW";
 
 export type SecurityStatus = "active" | "suspended" | "halted" | "delisted";
 
@@ -86,6 +86,24 @@ export interface Quote {
   source: "live" | "delayed" | "eod";
 }
 
+/** A market/benchmark index — NASI, NGX30, JSE All Share, etc. Deliberately
+ *  NOT a Security: an index isn't tradable, has no company/sector, and its
+ *  "id" namespace is separate (`${exchange}:index:${code}`) so it can never
+ *  collide with a real ticker. */
+export interface MarketIndex {
+  id: string;
+  code: string;             // 'NASI', 'NGX30', 'ALSI', ...
+  name: string;
+  exchange: ExchangeCode;
+  value: number;
+  previousClose: number;
+  change: number;
+  changePercent: number;
+  currency: Currency;
+  timestamp: string;
+  source: "live" | "delayed" | "eod";
+}
+
 /** ── Historical / candle data ────────────────────────────────────────── */
 
 export type CandleInterval = "1m" | "5m" | "15m" | "1h" | "1d" | "1w" | "1M" | "1y";
@@ -143,7 +161,12 @@ export interface BalanceSheet {
 
 export interface CashFlowStatement {
   periodId: string;
-  operatingCashFlow: number;
+  /** Optional because not every exchange adapter's data source provides a
+   *  cash flow statement (e.g. Mansa's fundamentals endpoint doesn't) —
+   *  undefined means "unavailable from this provider", not "zero". Any
+   *  ratio/screener calculation using this must skip rather than treat
+   *  missing as 0. */
+  operatingCashFlow?: number;
   investingCashFlow?: number;
   financingCashFlow?: number;
   freeCashFlow?: number;
@@ -243,7 +266,7 @@ export interface AfriScoreResult {
 export interface IngestionRecord {
   id: string;
   exchange: ExchangeCode;
-  dataset: "price" | "candle" | "company" | "financials" | "corporate_action" | "earnings" | "ownership";
+  dataset: "price" | "candle" | "company" | "financials" | "corporate_action" | "earnings" | "ownership" | "index";
   status: "success" | "partial" | "failed";
   recordCount: number;
   errorCount: number;

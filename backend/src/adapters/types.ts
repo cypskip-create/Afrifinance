@@ -6,7 +6,7 @@
  */
 import type {
   Quote, Candle, Company, Security, Sector, FinancialPeriod,
-  IncomeStatement, BalanceSheet, CashFlowStatement,
+  IncomeStatement, BalanceSheet, CashFlowStatement, MarketIndex,
   CorporateAction, EarningsEvent, OwnershipRecord,
 } from "../types/market.js";
 import type { ExchangeCode } from "../config/index.js";
@@ -29,6 +29,10 @@ export interface IExchangeAdapter {
 
   /** Latest quote for one or more symbols. */
   getQuotes(symbols: string[]): Promise<Quote[]>;
+
+  /** Benchmark/market indices for this exchange (e.g. NASI, NGX30). One
+   *  exchange can have several; return all of them — the caller filters. */
+  getIndices(): Promise<MarketIndex[]>;
 
   /** Historical OHLCV candles for a symbol/interval/date range. */
   getCandles(symbol: string, interval: Candle["interval"], from: string, to: string): Promise<Candle[]>;

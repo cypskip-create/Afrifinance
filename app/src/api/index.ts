@@ -11,3 +11,4 @@ export { researchApi } from "./researchApi";
 export { screenerApi } from "./screenerApi";
 export type { ScreenerFilters } from "./screenerApi";
 export { instrumentsApi } from "./instrumentsApi";
+export { indicesApi } from "./indicesApi";

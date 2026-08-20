@@ -35,7 +35,7 @@ export const financialsRepository = {
        ON CONFLICT (period_id) DO UPDATE SET
          operating_cash_flow=EXCLUDED.operating_cash_flow, investing_cash_flow=EXCLUDED.investing_cash_flow,
          financing_cash_flow=EXCLUDED.financing_cash_flow, free_cash_flow=EXCLUDED.free_cash_flow, capex=EXCLUDED.capex`,
-      [cashFlow.periodId, cashFlow.operatingCashFlow, cashFlow.investingCashFlow ?? null, cashFlow.financingCashFlow ?? null,
+      [cashFlow.periodId, cashFlow.operatingCashFlow ?? null, cashFlow.investingCashFlow ?? null, cashFlow.financingCashFlow ?? null,
        cashFlow.freeCashFlow ?? null, cashFlow.capex ?? null]
     );
   },

@@ -109,4 +109,5 @@ export const CacheKeys = {
   afriScore: (symbol: string) => `afriscore:${symbol}`,
   sectors: () => "sectors:all",
   instruments: (exchange: string) => `instruments:${exchange}`,
+  indices: (exchange: string) => `indices:${exchange}`,
 };

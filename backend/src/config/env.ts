@@ -33,11 +33,22 @@ const EnvSchema = z.object({
   NSE_CLIENT_MODE: z.enum(["mock", "live"]).default("mock"),
   NSE_API_BASE_URL: z.string().optional(),
   NSE_API_KEY: z.string().optional(),
-  MANSA_API_BASE_URL: z.string().optional(),
+
+  // ── Mansa API ───────────────────────────────────────────────────────
+  // Pan-African market data (mansaapi.com) — the live data source behind
+  // every exchange adapter in adapters/mansa/. One key covers all
+  // exchanges; ADAPTER_MODE below lets a deployment run entirely on the
+  // NSE mock (no key needed) until a Mansa key is actually issued.
+  MANSA_API_BASE_URL: z.string().default("https://mansaapi.com"),
   MANSA_API_KEY: z.string().optional(),
   MANSA_API_IP: z.string().optional(),
+  // "mock" keeps every exchange on the existing seeded NSE mock client
+  // (default — works with zero setup). "live" routes every ACTIVE_EXCHANGES
+  // entry through the Mansa adapter and requires MANSA_API_KEY to be set.
+  ADAPTER_MODE: z.enum(["mock", "live"]).default("mock"),
 
   PRICE_POLL_INTERVAL_MS: z.coerce.number().default(5000),
+  INDEX_POLL_INTERVAL_MS: z.coerce.number().default(300_000), // 5 min — see workers/indexWorker.ts
   FINANCIALS_SYNC_CRON: z.string().default("0 2 * * *"),
   CORPORATE_ACTIONS_SYNC_CRON: z.string().default("0 3 * * *"),
 

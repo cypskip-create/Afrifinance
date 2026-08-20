@@ -12,6 +12,8 @@ import { StockHeatmap } from "@/components/home/StockHeatmap";
 import { CANONICAL_SYMBOLS, STOCK_META, getPrice, getDayChange, relativeDate } from "@/lib/stockPrices";
 import { useMovers } from "@/hooks/useMovers";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
+import { useIndices } from "@/hooks/useIndices";
+import { useExchange } from "@/hooks/useExchange";
 import { EconomicCalendar } from "@/components/home/EconomicCalendar";
 import { investmentThemes } from "@/data/investmentThemes";
 import { featuredLists } from "@/data/featuredLists";
@@ -25,7 +27,12 @@ import {
 const tabs = ["Overview", "Discover", "Calendars", "Heatmap", "All Stocks"] as const;
 type Tab = typeof tabs[number];
 
-const indices = [
+// Static fallback — used only while live index data is loading, or if the
+// Continua Data API is unreachable, and ONLY when NSE is the selected
+// exchange (see the isLoading/isError fallback logic below Markets()).
+// Showing this under an "NGX"/"JSE" label on an API error would show
+// invented Kenyan-index numbers for a market they don't apply to.
+const staticNseIndicesFallback = [
   { name: "NSE 20", value: "1,847.23", change: 1.2, isUp: true, points: "+22.1" },
   { name: "NSE 25", value: "3,542.87", change: 0.8, isUp: true, points: "+28.3" },
   { name: "NASI", value: "112.45", change: -0.3, isUp: false, points: "-0.34" },
@@ -177,6 +184,23 @@ export default function Markets() {
   // falls back to the static, client-derived list above only while loading or if unreachable.
   const { gainers: liveGainers, losers: liveLosers, isLoading: moversLoading } = useMovers(5);
   const { quotes: liveQuotes } = useLiveQuotes(CANONICAL_SYMBOLS);
+  const { exchange, exchangeMeta } = useExchange();
+  const { indices: liveIndices, isLoading: indicesLoading } = useIndices();
+
+  // Live from market.indices (backend/src/services/marketData/indexService.ts,
+  // populated by workers/indexWorker.ts) — falls back to the static Kenya
+  // demo list only while loading AND only when NSE is actually selected;
+  // any other exchange with no live indices yet just shows nothing rather
+  // than mislabeled Kenyan index values.
+  const indices = liveIndices.length > 0
+    ? liveIndices.map(idx => ({
+        name: idx.code,
+        value: idx.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        change: idx.changePercent,
+        isUp: idx.change >= 0,
+        points: `${idx.change >= 0 ? "+" : ""}${idx.change.toFixed(2)}`,
+      }))
+    : (exchange === "NSE" && !indicesLoading ? staticNseIndicesFallback : []);
 
   const topGainers = liveGainers.length > 0
     ? liveGainers.map(q => ({ symbol: q.symbol, name: STOCK_META[q.symbol]?.name ?? q.symbol, sector: STOCK_META[q.symbol]?.sector ?? "Other", price: q.lastPrice, change: q.changePercent }))
@@ -203,7 +227,7 @@ export default function Markets() {
 
   return (
     <div className="page-canvas min-h-screen bg-background pb-24">
-      <TopBar title="Markets" subtitle="Discover opportunities" showSearch showNotifications />
+      <TopBar title="Markets" subtitle="Discover opportunities" showSearch showNotifications showExchangeSelector />
 
       {/* Sticky editorial sub-nav */}
       <div className="sub-nav">
@@ -260,12 +284,17 @@ export default function Markets() {
               </div>
             </div>
 
-            {/* NSE Indices */}
+            {/* Indices */}
             <div>
               <h2 className="text-sm font-bold mb-3 flex items-center gap-2">
                 <Landmark className="h-4 w-4 text-primary" />
-                NSE Indices
+                {exchangeMeta.name} Indices
               </h2>
+              {indices.length === 0 && !indicesLoading ? (
+                <Card className="soft-card p-4 text-center">
+                  <p className="text-xs text-muted-foreground">No index data available yet for {exchangeMeta.name}.</p>
+                </Card>
+              ) : (
               <div className="grid grid-cols-2 gap-2.5">
                 {indices.map(idx => (
                   <Card key={idx.name} className="soft-card p-3 active:scale-[0.98] transition-transform cursor-pointer" onClick={() => navigate('/markets')}>
@@ -286,6 +315,7 @@ export default function Markets() {
                   </Card>
                 ))}
               </div>
+              )}
             </div>
 
             {/* Investment Themes */}

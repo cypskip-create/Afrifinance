@@ -14,32 +14,13 @@ import { runFinancialsSyncOnce, startFinancialsWorker } from "./financialsWorker
 import { runCorporateActionsSyncOnce, startCorporateActionsWorker } from "./corporateActionsWorker.js";
 import { runCandlesBackfillOnce, startCandlesWorker } from "./candlesWorker.js";
 import { runPriceIngestionOnce, startPriceWorker } from "./priceWorker.js";
+import { runIndexIngestionOnce, startIndexWorker } from "./indexWorker.js";
 import { researchService } from "../services/research/researchService.js";
 import { ACTIVE_EXCHANGES } from "../config/index.js";
 import { logger } from "../monitoring/logger.js";
-import { getAllAdapters } from "../adapters/registry.js";
-import { securitiesRepository } from "../storage/repositories/securitiesRepository.js";
-
-async function bootstrapSecurities(): Promise<void> {
-  for (const adapter of getAllAdapters()) {
-    const securities = await adapter.listSecurities();
-    for (const security of securities) {
-      const sectorId = `${adapter.exchange.toLowerCase()}-unknown`;
-      await securitiesRepository.upsertSector({ id: sectorId, name: "Unknown" });
-      await securitiesRepository.upsertCompany({
-        id: security.companyId,
-        name: security.symbol,
-        sectorId,
-      });
-      await securitiesRepository.upsertSecurity(security);
-    }
-    logger.info({ exchange: adapter.exchange, count: securities.length }, "Bootstrapped securities");
-  }
-}
 
 export async function startAllWorkers(): Promise<() => void> {
   logger.info("Bootstrapping reference data + fundamentals…");
-  await bootstrapSecurities();
   await runFinancialsSyncOnce();
   await runCorporateActionsSyncOnce();
   await runCandlesBackfillOnce();
@@ -52,12 +33,16 @@ export async function startAllWorkers(): Promise<() => void> {
   // respect market hours.
   await runPriceIngestionOnce({ respectTradingCalendar: false });
 
+  logger.info("Running first index pass…");
+  await runIndexIngestionOnce({ respectTradingCalendar: false });
+
   logger.info("Computing research (ratios + AfriScore) for the full universe…");
   for (const exchange of ACTIVE_EXCHANGES) {
     await researchService.recomputeAllForExchange(exchange);
   }
 
   const stopPriceWorker = startPriceWorker();
+  const stopIndexWorker = startIndexWorker();
   const financialsTask = startFinancialsWorker();
   const corporateActionsTask = startCorporateActionsWorker();
   const candlesTask = startCandlesWorker();
@@ -65,6 +50,7 @@ export async function startAllWorkers(): Promise<() => void> {
   logger.info("All workers started");
   return () => {
     stopPriceWorker();
+    stopIndexWorker();
     financialsTask.stop();
     corporateActionsTask.stop();
     candlesTask.stop();

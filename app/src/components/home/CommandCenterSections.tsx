@@ -4,6 +4,7 @@ import { TrendingUp, Sparkles, Calendar, Coins, ArrowUpRight, ChevronRight } fro
 import { AIThesisCard } from "@/components/stock/AIThesisCard";
 import { getPrice, getDivYield, getStockName } from "@/lib/stockPrices";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
+import { useExchange } from "@/hooks/useExchange";
 import { getFundamentals } from "@/data/stockFundamentals";
 
 // A canonical pool of tradable symbols (matches StockDetail's own dataset)
@@ -20,6 +21,7 @@ const upcomingEarnings = [
 
 export function CommandCenterSections() {
   const navigate = useNavigate();
+  const { exchange, exchangeMeta } = useExchange();
 
   // "Undervalued" upside is computed against a synthetic analyst target
   // price (the Data Layer has no analyst-target data source yet — see
@@ -126,9 +128,9 @@ export function CommandCenterSections() {
       <div>
         <p className="section-eyebrow mb-2 flex items-center gap-1.5"><Sparkles className="h-3 w-3 text-primary" /> AI Insight of the Day</p>
         <AIThesisCard
-          mode="market_insight" symbol="NSE" name="NSE Market" sector="Market"
+          mode="market_insight" symbol={exchange} name={`${exchangeMeta.name} Market`} sector="Market"
           price={0} changePercent={0} pe="" eps="" dividend=""
-          title="Today's NSE Insight"
+          title={`Today's ${exchange} Insight`}
         />
       </div>
     </div>
