@@ -19,9 +19,17 @@ import { logger } from "../monitoring/logger.js";
 // unaffected — CORS is a browser-only mechanism.
 const allowedOrigins = new Set(env.ALLOWED_ORIGINS);
 
+// Every Vercel deployment of this project — production or preview — gets its
+// own unique URL like https://continua-<hash>-cypskip-creates-projects.vercel.app,
+// on top of the one stable alias (https://continua-cypskip-creates-projects.vercel.app).
+// Chasing each new hash by hand in ALLOWED_ORIGINS doesn't scale with how often
+// this ships, so recognize the whole family by pattern instead of exact string.
+// Update the slug below if the Vercel project/team is ever renamed.
+const VERCEL_PROJECT_ORIGIN = /^https:\/\/continua(-[a-z0-9-]+)?-cypskip-creates-projects\.vercel\.app$/;
+
 const corsOptions: cors.CorsOptions = {
   origin(origin, callback) {
-    if (!origin || allowedOrigins.has(origin)) {
+    if (!origin || allowedOrigins.has(origin) || VERCEL_PROJECT_ORIGIN.test(origin)) {
       callback(null, true);
       return;
     }
