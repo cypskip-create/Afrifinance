@@ -1,14 +1,53 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Loader2, Mail, Lock, User, ArrowLeft, ShieldCheck, TrendingUp } from 'lucide-react';
+import {
+  Eye, EyeOff, Loader2, Mail, Lock, User, ArrowLeft,
+  ShieldCheck, TrendingUp, CheckCircle2,
+} from 'lucide-react';
 import { Logo } from '@/components/shared/Logo';
 import { lovable } from '@/integrations/lovable';
 
 type Mode = 'signin' | 'signup' | 'reset';
+
+// Rotates under the logo so the page feels alive even before anyone types
+// anything — same brand voice as the landing page, just a few flavors of it.
+const TAGLINES = [
+  'Track the Nairobi Securities Exchange, securely',
+  'Where Kenyan investors talk numbers',
+  'Research first. React second.',
+];
+
+// Purely decorative background chips — a little nod to the exchange board
+// on the landing page, drifting past behind the card. Not real data.
+const FLOATING_CHIPS = [
+  { symbol: 'SAFCOM', change: 1.7, className: 'top-[12%] left-[8%]', delay: 0 },
+  { symbol: 'EQTY', change: -0.9, className: 'top-[22%] right-[10%]', delay: 1.4 },
+  { symbol: 'KCB', change: 2.3, className: 'bottom-[24%] left-[12%]', delay: 2.8 },
+  { symbol: 'EABL', change: 0.6, className: 'bottom-[14%] right-[8%]', delay: 4.1 },
+];
+
+function getPasswordStrength(password: string) {
+  if (!password) return { score: 0, label: '', barClass: '' };
+  let score = 0;
+  if (password.length >= 6) score++;
+  if (password.length >= 10) score++;
+  if (/[0-9]/.test(password) && /[a-zA-Z]/.test(password)) score++;
+  if (/[^a-zA-Z0-9]/.test(password)) score++;
+
+  const levels = [
+    { label: 'Too short', barClass: 'bg-bear' },
+    { label: 'Getting there', barClass: 'bg-accent' },
+    { label: 'Decent', barClass: 'bg-accent' },
+    { label: 'Strong', barClass: 'bg-bull' },
+    { label: 'Excellent 💪', barClass: 'bg-bull' },
+  ];
+  return { score, ...levels[score] };
+}
 
 export default function Auth() {
   const [searchParams] = useSearchParams();
@@ -20,12 +59,22 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [taglineIndex, setTaglineIndex] = useState(0);
 
   const { signUp, signIn, resetPassword } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const isSignUp = mode === 'signup';
+  const passwordStrength = useMemo(() => getPasswordStrength(password), [password]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTaglineIndex((i) => (i + 1) % TAGLINES.length);
+    }, 3200);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,13 +106,13 @@ export default function Auth() {
 
       if (result.error) {
         toast({ title: 'Error', description: result.error.message, variant: 'destructive' });
+        setLoading(false);
       } else {
-        toast({ title: 'Success', description: isSignUp ? 'Account created successfully!' : 'Welcome back!' });
-        navigate('/');
+        setSuccess(true);
+        setTimeout(() => navigate('/'), 700);
       }
     } catch {
       toast({ title: 'Error', description: 'An unexpected error occurred', variant: 'destructive' });
-    } finally {
       setLoading(false);
     }
   };
@@ -84,132 +133,267 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen bg-gradient-hero flex flex-col relative overflow-hidden">
-      {/* Decorative backdrop — subtle sparkline motif, purely visual */}
-      <svg className="absolute inset-x-0 top-0 w-full h-[280px] text-primary/10 pointer-events-none" viewBox="0 0 400 160" preserveAspectRatio="none" fill="none">
-        <path d="M0,120 L40,100 L80,115 L120,70 L160,85 L200,40 L240,60 L280,25 L320,45 L360,15 L400,30" stroke="currentColor" strokeWidth="3" />
+      {/* Decorative backdrop — drifting brand-color glows */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+        <motion.div
+          className="absolute -top-24 -left-16 h-64 w-64 rounded-full bg-primary/20 blur-3xl"
+          animate={{ x: [0, 30, 0], y: [0, 20, 0] }}
+          transition={{ duration: 14, repeat: Infinity, ease: 'easeInOut' }}
+        />
+        <motion.div
+          className="absolute top-1/3 -right-20 h-72 w-72 rounded-full bg-accent/20 blur-3xl"
+          animate={{ x: [0, -25, 0], y: [0, -15, 0] }}
+          transition={{ duration: 16, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+        />
+        <motion.div
+          className="absolute bottom-0 left-1/4 h-56 w-56 rounded-full bg-bull/10 blur-3xl"
+          animate={{ x: [0, 15, 0], y: [0, -20, 0] }}
+          transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
+        />
+      </div>
+
+      {/* Drawn-in sparkline, same motif as before but animates in on load */}
+      <svg className="absolute inset-x-0 top-0 w-full h-[280px] text-primary/10 pointer-events-none" viewBox="0 0 400 160" preserveAspectRatio="none" fill="none" aria-hidden="true">
+        <motion.path
+          d="M0,120 L40,100 L80,115 L120,70 L160,85 L200,40 L240,60 L280,25 L320,45 L360,15 L400,30"
+          stroke="currentColor"
+          strokeWidth="3"
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 1.6, ease: 'easeOut' }}
+        />
       </svg>
+
+      {/* Floating ticker chips — decorative only, not real data */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+        {FLOATING_CHIPS.map((chip) => (
+          <motion.div
+            key={chip.symbol}
+            className={`absolute hidden sm:flex items-center gap-1 rounded-full bg-card/70 backdrop-blur border border-border px-2.5 py-1 text-[10px] font-mono font-semibold shadow-sm ${chip.className} ${chip.change >= 0 ? 'text-bull' : 'text-bear'}`}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: [0, 1, 1, 0], y: [12, -4, -4, -22] }}
+            transition={{ duration: 6, repeat: Infinity, delay: chip.delay, ease: 'easeInOut' }}
+          >
+            {chip.symbol} {chip.change >= 0 ? '▲' : '▼'} {Math.abs(chip.change).toFixed(1)}%
+          </motion.div>
+        ))}
+      </div>
 
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-10 relative">
         {/* Brand */}
-        <div className="mb-8 flex flex-col items-center text-center animate-fade-in">
+        <motion.div
+          className="mb-8 flex flex-col items-center text-center"
+          initial={{ opacity: 0, scale: 0.85 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+        >
           <Logo size="lg" />
-          <div className="mt-4 flex items-center gap-1.5 text-[11px] font-semibold text-primary bg-primary/10 rounded-full px-3 py-1">
-            <ShieldCheck className="h-3.5 w-3.5" />
-            Track the Nairobi Securities Exchange, securely
+          <div className="mt-4 flex items-center gap-1.5 text-[11px] font-semibold text-primary bg-primary/10 rounded-full px-3 py-1 min-w-[240px] justify-center">
+            <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
+            <AnimatePresence mode="wait">
+              <motion.span
+                key={taglineIndex}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.3 }}
+              >
+                {TAGLINES[taglineIndex]}
+              </motion.span>
+            </AnimatePresence>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="w-full max-w-sm rounded-3xl border border-border bg-card shadow-xl animate-fade-in overflow-hidden">
+        <motion.div
+          className="relative w-full max-w-sm rounded-3xl border border-border bg-card shadow-xl overflow-hidden"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.5 }}
+        >
+          {/* Success flourish — briefly shown right before navigating away */}
+          <AnimatePresence>
+            {success && (
+              <motion.div
+                className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-card/95 backdrop-blur-sm"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <motion.div
+                  initial={{ scale: 0, rotate: -20 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ type: 'spring', stiffness: 320, damping: 16 }}
+                  className="h-14 w-14 rounded-full bg-bull/15 text-bull flex items-center justify-center"
+                >
+                  <CheckCircle2 className="h-7 w-7" />
+                </motion.div>
+                <p className="text-[14px] font-semibold">
+                  {isSignUp ? "You're in! Welcome to Continua" : 'Welcome back!'}
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {mode !== 'reset' ? (
             <>
-              {/* Sign in / Sign up segmented toggle */}
-              <div className="grid grid-cols-2 p-1.5 m-4 mb-0 bg-muted/50 rounded-full">
+              {/* Sign in / Sign up segmented toggle — pill slides between the two */}
+              <div className="relative grid grid-cols-2 p-1.5 m-4 mb-0 bg-muted/50 rounded-full">
+                <motion.div
+                  className="absolute top-1.5 bottom-1.5 left-1.5 w-[calc(50%-6px)] rounded-full bg-background shadow-sm"
+                  animate={{ x: mode === 'signup' ? 'calc(100% + 4px)' : 0 }}
+                  transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                />
                 <button
                   type="button"
                   onClick={() => switchMode('signin')}
-                  className={`h-9 rounded-full text-[13.5px] font-semibold transition-colors ${mode === 'signin' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'}`}
+                  className={`relative z-10 h-9 rounded-full text-[13.5px] font-semibold transition-colors ${mode === 'signin' ? 'text-foreground' : 'text-muted-foreground'}`}
                 >
                   Log In
                 </button>
                 <button
                   type="button"
                   onClick={() => switchMode('signup')}
-                  className={`h-9 rounded-full text-[13.5px] font-semibold transition-colors ${mode === 'signup' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'}`}
+                  className={`relative z-10 h-9 rounded-full text-[13.5px] font-semibold transition-colors ${mode === 'signup' ? 'text-foreground' : 'text-muted-foreground'}`}
                 >
                   Sign Up
                 </button>
               </div>
 
-              <div className="p-6 pt-5">
-                <h1 className="text-[19px] font-extrabold tracking-tight">
-                  {isSignUp ? 'Create your account' : 'Welcome back'}
-                </h1>
-                <p className="text-[13px] text-muted-foreground mt-1 mb-5">
-                  {isSignUp ? 'Start researching and tracking NSE stocks in minutes.' : 'Log in to pick up where you left off.'}
-                </p>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={mode}
+                  initial={{ opacity: 0, x: mode === 'signup' ? 16 : -16 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: mode === 'signup' ? -16 : 16 }}
+                  transition={{ duration: 0.22 }}
+                  className="p-6 pt-5"
+                >
+                  <h1 className="text-[19px] font-extrabold tracking-tight">
+                    {isSignUp ? 'Create your account' : 'Welcome back'}
+                  </h1>
+                  <p className="text-[13px] text-muted-foreground mt-1 mb-5">
+                    {isSignUp ? 'Start researching and tracking NSE stocks in minutes.' : 'Log in to pick up where you left off.'}
+                  </p>
 
-                <Button type="button" variant="outline" className="w-full h-11 mb-4 font-medium rounded-xl" onClick={handleGoogleSignIn} disabled={googleLoading}>
-                  {googleLoading ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24">
-                      <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                      <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                      <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                      <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                    </svg>
-                  )}
-                  Continue with Google
-                </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-11 mb-4 font-medium rounded-xl transition-transform hover:-translate-y-0.5 active:scale-[0.97]"
+                    onClick={handleGoogleSignIn}
+                    disabled={googleLoading}
+                  >
+                    {googleLoading ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24">
+                        <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                        <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                        <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                        <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                      </svg>
+                    )}
+                    Continue with Google
+                  </Button>
 
-                <div className="relative mb-4">
-                  <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
-                  <div className="relative flex justify-center text-[11px]"><span className="bg-card px-2 text-muted-foreground uppercase tracking-wide">or use email</span></div>
-                </div>
+                  <div className="relative mb-4">
+                    <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
+                    <div className="relative flex justify-center text-[11px]"><span className="bg-card px-2 text-muted-foreground uppercase tracking-wide">or use email</span></div>
+                  </div>
 
-                <form onSubmit={handleSubmit} className="space-y-3">
-                  {isSignUp && (
+                  <form onSubmit={handleSubmit} className="space-y-3">
+                    <AnimatePresence initial={false}>
+                      {isSignUp && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="relative">
+                            <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              type="text"
+                              value={fullName}
+                              onChange={(e) => setFullName(e.target.value)}
+                              placeholder="Full name"
+                              className="h-12 pl-10 rounded-xl text-[14px] focus-visible:shadow-[0_0_0_4px_hsl(var(--primary)/0.15)] transition-shadow"
+                              required={isSignUp}
+                            />
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
                     <div className="relative">
-                      <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
-                        type="text"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        placeholder="Full name"
-                        className="h-12 pl-10 rounded-xl text-[14px]"
-                        required={isSignUp}
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="Email address"
+                        className="h-12 pl-10 rounded-xl text-[14px] focus-visible:shadow-[0_0_0_4px_hsl(var(--primary)/0.15)] transition-shadow"
+                        required
                       />
                     </div>
-                  )}
 
-                  <div className="relative">
-                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Email address"
-                      className="h-12 pl-10 rounded-xl text-[14px]"
-                      required
-                    />
-                  </div>
+                    <div>
+                      <div className="relative">
+                        <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          type={showPassword ? 'text' : 'password'}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="Password"
+                          className="h-12 pl-10 pr-10 rounded-xl text-[14px] focus-visible:shadow-[0_0_0_4px_hsl(var(--primary)/0.15)] transition-shadow"
+                          required
+                        />
+                        <button
+                          type="button"
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
 
-                  <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Password"
-                      className="h-12 pl-10 pr-10 rounded-xl text-[14px]"
-                      required
-                    />
-                    <button
-                      type="button"
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-
-                  {!isSignUp && (
-                    <div className="flex justify-end">
-                      <button type="button" onClick={() => switchMode('reset')} className="text-[12.5px] font-semibold text-primary hover:underline">
-                        Forgot password?
-                      </button>
+                      {isSignUp && password.length > 0 && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden flex gap-0.5">
+                            {[0, 1, 2, 3].map((i) => (
+                              <div
+                                key={i}
+                                className={`flex-1 rounded-full transition-colors duration-300 ${i < passwordStrength.score ? passwordStrength.barClass : 'bg-muted-foreground/15'}`}
+                              />
+                            ))}
+                          </div>
+                          <span className="text-[10.5px] font-medium text-muted-foreground whitespace-nowrap">{passwordStrength.label}</span>
+                        </div>
+                      )}
                     </div>
-                  )}
 
-                  <Button type="submit" className="w-full h-12 text-[14.5px] font-semibold rounded-xl mt-1" disabled={loading}>
-                    {loading ? (
-                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{isSignUp ? 'Creating account…' : 'Logging in…'}</>
-                    ) : (
-                      isSignUp ? 'Create account' : 'Log In'
+                    {!isSignUp && (
+                      <div className="flex justify-end">
+                        <button type="button" onClick={() => switchMode('reset')} className="text-[12.5px] font-semibold text-primary hover:underline">
+                          Forgot password?
+                        </button>
+                      </div>
                     )}
-                  </Button>
-                </form>
-              </div>
+
+                    <Button
+                      type="submit"
+                      className="w-full h-12 text-[14.5px] font-semibold rounded-xl mt-1 transition-transform hover:-translate-y-0.5 active:scale-[0.97]"
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{isSignUp ? 'Creating account…' : 'Logging in…'}</>
+                      ) : (
+                        isSignUp ? 'Create account' : 'Log In'
+                      )}
+                    </Button>
+                  </form>
+                </motion.div>
+              </AnimatePresence>
             </>
           ) : (
             /* Reset password */
@@ -218,13 +402,18 @@ export default function Auth() {
                 <ArrowLeft className="h-3.5 w-3.5" /> Back to log in
               </button>
               {resetSent ? (
-                <div className="text-center py-6">
+                <motion.div
+                  className="text-center py-6"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                >
                   <div className="h-12 w-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto mb-3">
                     <Mail className="h-5 w-5" />
                   </div>
                   <h2 className="text-[16px] font-bold mb-1">Check your inbox</h2>
                   <p className="text-[13px] text-muted-foreground">We've sent a password reset link to <span className="font-medium text-foreground">{email}</span>.</p>
-                </div>
+                </motion.div>
               ) : (
                 <>
                   <h1 className="text-[19px] font-extrabold tracking-tight">Reset your password</h1>
@@ -237,11 +426,11 @@ export default function Auth() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="Email address"
-                        className="h-12 pl-10 rounded-xl text-[14px]"
+                        className="h-12 pl-10 rounded-xl text-[14px] focus-visible:shadow-[0_0_0_4px_hsl(var(--primary)/0.15)] transition-shadow"
                         required
                       />
                     </div>
-                    <Button type="submit" className="w-full h-12 text-[14.5px] font-semibold rounded-xl" disabled={loading}>
+                    <Button type="submit" className="w-full h-12 text-[14.5px] font-semibold rounded-xl transition-transform hover:-translate-y-0.5 active:scale-[0.97]" disabled={loading}>
                       {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
                       Send reset link
                     </Button>
@@ -250,7 +439,7 @@ export default function Auth() {
               )}
             </div>
           )}
-        </div>
+        </motion.div>
 
         {mode !== 'reset' && (
           <p className="text-[13px] text-muted-foreground mt-5 text-center">
