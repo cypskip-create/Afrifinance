@@ -274,7 +274,7 @@ export function RobinhoodPerformanceChart({
           </ResponsiveContainer>
           {crosshair && (
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
-              <div className="absolute w-px bg-foreground/30" style={{ left: crosshair.x, top: crosshair.y, bottom: 0 }} />
+              <div className="absolute w-px bg-foreground/30" style={{ left: crosshair.x, top: 0, bottom: 0 }} />
               <div
                 className="absolute h-2.5 w-2.5 rounded-full -translate-x-1/2 -translate-y-1/2 ring-2 ring-background"
                 style={{ left: crosshair.x, top: crosshair.y, backgroundColor: lineColor }}
