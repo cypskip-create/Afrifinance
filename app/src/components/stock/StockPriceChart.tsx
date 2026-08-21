@@ -1,7 +1,7 @@
 import {
   AreaChart, Area, ComposedChart, Bar, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceLine, Cell
 } from "recharts";
-import { useMemo, useCallback, useState } from "react";
+import { useMemo, useCallback, useState, useRef } from "react";
 import { sma, ema, bollingerBands, rsi, macd, parabolicSAR, kdj, williamsR, cci, DEFAULT_INDICATOR_SETTINGS, type IndicatorSettings } from "@/lib/technicalIndicators";
 
 let lastHaptic = 0;
@@ -139,19 +139,33 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
 
   // Crosshair overlay position. Recharts v3 no longer hands mouse/touch handlers an
   // `activePayload` — it hands them a small { activeIndex, activeCoordinate, ... } state
-  // object as the FIRST argument (the raw DOM event is the second argument). We look up
-  // the exact data point from activeIndex, and use activeCoordinate (pixel-relative to the
-  // chart) to draw our own crosshair lines + dot on an overlay above the chart. This same
+  // object as the FIRST argument (the raw DOM event is the second argument). activeCoordinate.y
+  // is NOT reliably snapped to the plotted value's pixel position (it can trail the actual
+  // mouse/touch position instead), so the dot would drift off the line. We only trust
+  // activeCoordinate.x (the category/index position, which recharts gets right), and derive
+  // the y pixel ourselves from the real price value + the measured plot area + the known
+  // domain/margins — guaranteeing the dot always sits exactly on the price line. This same
   // handler is wired to both onMouseMove (desktop) and onTouchMove (mobile drag) — v3
   // requires touch to be wired explicitly, it is no longer inferred from onMouseMove.
-  const [crosshair, setCrosshair] = useState<{ x: number; y: number } | null>(null);
+  const [crosshair, setCrosshair] = useState<{ x: number; y: number; fraction: number } | null>(null);
+  const plotRef = useRef<HTMLDivElement | null>(null);
+  const PLOT_MARGIN_TOP = 8;
+
+  const domainMin = minPrice - padding;
+  const domainMax = maxPrice + padding;
 
   const updateFromChartState = useCallback((state: any) => {
     const idx = state?.activeIndex != null ? Number(state.activeIndex) : NaN;
     const coord = state?.activeCoordinate;
     if (Number.isFinite(idx) && data[idx] && coord) {
       const point = data[idx];
-      setCrosshair({ x: coord.x, y: coord.y });
+      const rect = plotRef.current?.getBoundingClientRect();
+      const plotHeight = rect ? Math.max(1, rect.height - PLOT_MARGIN_TOP) : 0;
+      const priceY = domainMax === domainMin
+        ? PLOT_MARGIN_TOP + plotHeight / 2
+        : PLOT_MARGIN_TOP + (1 - (point.price - domainMin) / (domainMax - domainMin)) * plotHeight;
+      const plotWidth = rect?.width || 1;
+      setCrosshair({ x: coord.x, y: priceY, fraction: Math.min(1, Math.max(0, coord.x / plotWidth)) });
       // Change is always relative to the first point of the currently selected
       // timeframe, so scrubbing a 1M chart shows gain/loss vs. a month ago, not vs. today.
       const pointChangePercent = firstPrice ? ((point.price - firstPrice) / firstPrice) * 100 : 0;
@@ -159,21 +173,26 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
       onHoverPrice?.(point.price, point.date, pointChangePercent, pointIsUp);
       chartHaptic();
     }
-  }, [data, onHoverPrice, firstPrice]);
+  }, [data, onHoverPrice, firstPrice, domainMin, domainMax]);
 
   const handleLeave = useCallback(() => {
     setCrosshair(null);
     onHoverPrice?.(null, null, null, null);
   }, [onHoverPrice]);
 
-  const domain: [number, number] = [minPrice - padding, maxPrice + padding];
+  const domain: [number, number] = [domainMin, domainMax];
+
+  // Price line is two-tone: the actual bull/bear color up to the crosshair, and grey
+  // beyond it — the fraction defaults to 1 (fully colored) when nothing is being dragged.
+  const crosshairGradId = `ch-${symbol}-${timeframe}`;
+  const greyLineColor = "hsl(var(--muted-foreground))";
+  const crosshairFraction = crosshair ? crosshair.fraction : 1;
 
   const renderCrosshair = () => {
     if (!crosshair) return null;
     return (
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-0 bottom-0 w-px bg-foreground/30" style={{ left: crosshair.x }} />
-        <div className="absolute left-0 right-0 border-t border-dashed border-foreground/30" style={{ top: crosshair.y }} />
+        <div className="absolute w-px bg-foreground/30" style={{ left: crosshair.x, top: crosshair.y, bottom: 0 }} />
         <div
           className="absolute h-2.5 w-2.5 rounded-full -translate-x-1/2 -translate-y-1/2 ring-2 ring-background"
           style={{ left: crosshair.x, top: crosshair.y, backgroundColor: lineColor }}
@@ -311,7 +330,7 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
     const barSize = data.length > 120 ? 2 : data.length > 60 ? 4 : 7;
     return (
       <div className="relative h-full w-full flex flex-col touch-none" onTouchEnd={handleLeave}>
-        <div className={hasSubPanel ? "flex-[7] min-h-0 relative" : "flex-1 min-h-0 relative"}>
+        <div ref={plotRef} className={hasSubPanel ? "flex-[7] min-h-0 relative" : "flex-1 min-h-0 relative"}>
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart
               data={chartData}
@@ -346,7 +365,7 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
 
   return (
     <div className="relative h-full w-full flex flex-col touch-none" onTouchEnd={handleLeave}>
-      <div className={hasSubPanel ? "flex-[7] min-h-0 relative" : "flex-1 min-h-0 relative"}>
+      <div ref={plotRef} className={hasSubPanel ? "flex-[7] min-h-0 relative" : "flex-1 min-h-0 relative"}>
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
             data={chartData}
@@ -361,6 +380,12 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
                 <stop offset="0%" stopColor={lineColor} stopOpacity={0.14} />
                 <stop offset="100%" stopColor={lineColor} stopOpacity={0} />
               </linearGradient>
+              <linearGradient id={crosshairGradId} x1="0" y1="0" x2="1" y2="0">
+                <stop offset={0} stopColor={lineColor} />
+                <stop offset={crosshairFraction} stopColor={lineColor} />
+                <stop offset={crosshairFraction} stopColor={greyLineColor} />
+                <stop offset={1} stopColor={greyLineColor} />
+              </linearGradient>
             </defs>
             <XAxis dataKey="date" hide />
             <YAxis hide domain={domain} />
@@ -369,7 +394,7 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
             <Area
               type="monotone"
               dataKey="price"
-              stroke={lineColor}
+              stroke={`url(#${crosshairGradId})`}
               strokeWidth={1.6}
               fill={chartType === "area" ? `url(#${gradientId})` : "transparent"}
               dot={false}

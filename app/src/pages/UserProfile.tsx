@@ -29,6 +29,8 @@ import { ImageViewer } from "@/components/social/ImageViewer";
 interface UserProfileData {
   id: string; user_id: string; full_name: string | null; avatar_url: string | null;
   banner_url: string | null; bio: string | null; portfolio_public: boolean;
+  portfolio_hide_amounts?: boolean | null; portfolio_hide_gains?: boolean | null;
+  portfolio_top_holdings_only?: boolean | null; portfolio_followers_only?: boolean | null;
   followers_count: number; following_count: number; created_at: string;
   handle?: string | null;
 }
@@ -134,10 +136,10 @@ export default function UserProfile() {
     if (!userId) return;
     setLoading(true);
     try {
-      const { data } = await supabase.from("profiles_public").select("id, user_id, full_name, avatar_url, banner_url, bio, portfolio_public, followers_count, following_count, created_at, handle").eq("user_id", userId).maybeSingle();
+      const { data } = await supabase.from("profiles_public").select("id, user_id, full_name, avatar_url, banner_url, bio, portfolio_public, portfolio_hide_amounts, portfolio_hide_gains, portfolio_top_holdings_only, portfolio_followers_only, followers_count, following_count, created_at, handle").eq("user_id", userId).maybeSingle();
       if (data) setProfileData(data as UserProfileData);
       else {
-        const { data: fb } = await supabase.from("profiles").select("id, user_id, full_name, avatar_url, banner_url, bio, portfolio_public, followers_count, following_count, created_at, handle").eq("user_id", userId).maybeSingle();
+        const { data: fb } = await supabase.from("profiles").select("id, user_id, full_name, avatar_url, banner_url, bio, portfolio_public, portfolio_hide_amounts, portfolio_hide_gains, portfolio_top_holdings_only, portfolio_followers_only, followers_count, following_count, created_at, handle").eq("user_id", userId).maybeSingle();
         if (fb) setProfileData(fb as UserProfileData);
       }
     } catch (err) { console.error(err); }
@@ -341,6 +343,23 @@ export default function UserProfile() {
     const totalCost = holdings.reduce((s, h) => s + h.avg_cost * h.shares, 0);
     return { totalValue, totalGain: totalValue - totalCost, gainPercent: totalCost > 0 ? ((totalValue - totalCost) / totalCost) * 100 : 0, holdings };
   }, [publicPortfolio, publicPortfolioQuotes]);
+
+  // Privacy toggles (Settings → Sharing & privacy) only ever restrict what OTHER
+  // people see — the owner always sees their own full portfolio here, same as
+  // the Portfolio page. "Followers only" gates the whole tab; the other three
+  // control what's shown once past that gate.
+  const canViewPortfolio = !!profileData?.portfolio_public && (
+    isOwnProfile || !profileData?.portfolio_followers_only || userIsFollowing
+  );
+  const maskAmounts = !isOwnProfile && !!profileData?.portfolio_hide_amounts;
+  const maskGains = !isOwnProfile && !!profileData?.portfolio_hide_gains;
+  const visibleHoldings = useMemo(() => {
+    const holdings = portfolioSummary?.holdings || [];
+    if (isOwnProfile || !profileData?.portfolio_top_holdings_only) return holdings;
+    return [...holdings]
+      .sort((a, b) => (b.currentPrice * b.shares) - (a.currentPrice * a.shares))
+      .slice(0, 5);
+  }, [portfolioSummary, isOwnProfile, profileData?.portfolio_top_holdings_only]);
 
 
   const castToPost = (p: UserPost): Post => ({
@@ -613,7 +632,11 @@ export default function UserProfile() {
           {isOwnProfile && (
             <div className="flex items-center justify-between px-4 pt-3">
               <div className="text-xs text-muted-foreground">
-                {profileData.portfolio_public ? "Visible to everyone" : "Only visible to you"}
+                {!profileData.portfolio_public
+                  ? "Only visible to you"
+                  : profileData.portfolio_followers_only
+                    ? "Visible to your followers"
+                    : "Visible to everyone"}
               </div>
               <Button
                 variant="ghost"
@@ -631,6 +654,12 @@ export default function UserProfile() {
               <p className="font-semibold mb-1">Portfolio is private</p>
               <p className="text-sm text-muted-foreground">This user has chosen to keep their portfolio private</p>
             </div>
+          ) : !canViewPortfolio ? (
+            <div className="p-12 text-center">
+              <Lock className="h-12 w-12 mx-auto mb-4 text-muted-foreground/40" />
+              <p className="font-semibold mb-1">Portfolio is for followers only</p>
+              <p className="text-sm text-muted-foreground">Follow this user to see their portfolio</p>
+            </div>
           ) : publicPortfolio.length === 0 ? (
             <div className="p-12 text-center">
               <PieChart className="h-12 w-12 mx-auto mb-4 text-muted-foreground/40" />
@@ -645,25 +674,34 @@ export default function UserProfile() {
                 <div>
                   <p className="section-eyebrow">Portfolio value</p>
                   <div className="mt-1 text-[28px] leading-none font-semibold tabular">
-                    KES {portfolioSummary.totalValue.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                    {maskAmounts ? "••••••" : `KES ${portfolioSummary.totalValue.toLocaleString('en-US', { maximumFractionDigits: 0 })}`}
                   </div>
-                  <div className={`text-[12px] font-semibold mt-1.5 flex items-center gap-1 tabular ${portfolioSummary.totalGain >= 0 ? "text-bull" : "text-bear"}`}>
-                    {portfolioSummary.totalGain >= 0 ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
-                    {portfolioSummary.totalGain >= 0 ? "+" : "−"}KES {Math.abs(portfolioSummary.totalGain).toLocaleString('en-US', { maximumFractionDigits: 0 })} ({portfolioSummary.gainPercent.toFixed(2)}%)
-                  </div>
+                  {!maskGains && (
+                    <div className={`text-[12px] font-semibold mt-1.5 flex items-center gap-1 tabular ${portfolioSummary.totalGain >= 0 ? "text-bull" : "text-bear"}`}>
+                      {portfolioSummary.totalGain >= 0 ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+                      {maskAmounts
+                        ? `${portfolioSummary.totalGain >= 0 ? "+" : "−"}${Math.abs(portfolioSummary.gainPercent).toFixed(2)}%`
+                        : `${portfolioSummary.totalGain >= 0 ? "+" : "−"}KES ${Math.abs(portfolioSummary.totalGain).toLocaleString('en-US', { maximumFractionDigits: 0 })} (${portfolioSummary.gainPercent.toFixed(2)}%)`}
+                    </div>
+                  )}
                 </div>
               )}
 
               {/* Holdings — same institutional layout as the Portfolio page */}
               <HoldingsList
-                holdings={(portfolioSummary?.holdings || []).map(h => ({
+                holdings={visibleHoldings.map(h => ({
                   symbol: h.symbol,
                   name: (h as any).name || h.symbol,
                   shares: h.shares,
                   avg_cost: h.avg_cost,
                   sector: (h as any).sector ?? null,
                 }))}
+                showValues={!maskAmounts}
+                showGains={!maskGains}
               />
+              {!isOwnProfile && profileData?.portfolio_top_holdings_only && (portfolioSummary?.holdings?.length || 0) > visibleHoldings.length && (
+                <p className="text-[11px] text-muted-foreground text-center">Showing top {visibleHoldings.length} holdings only</p>
+              )}
 
               {/* Share portfolio button */}
               {isOwnProfile && (

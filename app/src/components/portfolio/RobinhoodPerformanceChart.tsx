@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { Button } from "@/components/ui/button";
 import { TrendingUp, TrendingDown } from "lucide-react";
@@ -56,7 +56,10 @@ export function RobinhoodPerformanceChart({
   const [activeTimeframe, setActiveTimeframe] = useState("1M");
   const [hoverValue, setHoverValue] = useState<number | null>(null);
   const [hoverDate, setHoverDate] = useState<string | null>(null);
-  const [crosshair, setCrosshair] = useState<{ x: number; y: number } | null>(null);
+  const [crosshair, setCrosshair] = useState<{ x: number; y: number; fraction: number } | null>(null);
+  const plotRef = useRef<HTMLDivElement | null>(null);
+  const PLOT_MARGIN_TOP = 5;
+  const PLOT_MARGIN_BOTTOM = 5;
 
   const rng = (s: string) => {
     let h = 2166136261;
@@ -133,6 +136,13 @@ export function RobinhoodPerformanceChart({
     return rawData.map(p => ({ ...p, value: ((p.value - totalCost) / totalCost) * 100 }));
   }, [rawData, mode, totalCost]);
 
+  // Mirrors the YAxis's auto ['dataMin', 'dataMax'] domain exactly, so our manual
+  // y-pixel calc for the crosshair dot lines up with where recharts actually draws the curve.
+  const { valMin, valMax } = useMemo(() => {
+    const values = chartData.map(p => p.value);
+    return { valMin: Math.min(...values), valMax: Math.max(...values) };
+  }, [chartData]);
+
   const startOfWindow = chartData[0]?.value ?? 0;
   const endOfWindow = chartData[chartData.length - 1]?.value ?? 0;
   const displayValue = hoverValue ?? endOfWindow;
@@ -151,20 +161,32 @@ export function RobinhoodPerformanceChart({
 
   const gradientId = `perfGrad-${activeTimeframe}-${mode}`;
   const lineColor = isPositive ? 'hsl(var(--bull))' : 'hsl(var(--bear))';
+  const greyLineColor = "hsl(var(--muted-foreground))";
+  const crosshairGradId = `perfChGrad-${activeTimeframe}-${mode}`;
+  const crosshairFraction = crosshair ? crosshair.fraction : 1;
 
+  // As with the stock chart, activeCoordinate.y from recharts isn't reliably snapped to
+  // the plotted value's pixel position, so we derive the dot's y ourselves from the real
+  // value + measured plot area + the same min/max the YAxis uses — keeping the dot exactly on the line.
   const handleMove = useCallback((state: any) => {
     const idx = state?.activeIndex != null ? Number(state.activeIndex) : NaN;
     const coord = state?.activeCoordinate;
     if (Number.isFinite(idx) && chartData[idx] && coord) {
       const point = chartData[idx];
-      setCrosshair({ x: coord.x, y: coord.y });
+      const rect = plotRef.current?.getBoundingClientRect();
+      const plotHeight = rect ? Math.max(1, rect.height - PLOT_MARGIN_TOP - PLOT_MARGIN_BOTTOM) : 0;
+      const priceY = valMax === valMin
+        ? PLOT_MARGIN_TOP + plotHeight / 2
+        : PLOT_MARGIN_TOP + (1 - (point.value - valMin) / (valMax - valMin)) * plotHeight;
+      const plotWidth = rect?.width || 1;
+      setCrosshair({ x: coord.x, y: priceY, fraction: Math.min(1, Math.max(0, coord.x / plotWidth)) });
       setHoverValue(prev => {
         if (prev !== point.value) haptic(6);
         return point.value;
       });
       setHoverDate(point.date);
     }
-  }, [chartData]);
+  }, [chartData, valMin, valMax]);
 
   const handleLeave = useCallback(() => {
     setHoverValue(null);
@@ -209,6 +231,7 @@ export function RobinhoodPerformanceChart({
 
         {/* Chart */}
         <div
+          ref={plotRef}
           className="relative h-[170px] -mx-4 touch-none select-none"
           onTouchStart={() => haptic(10)}
           onTouchEnd={handleLeave}
@@ -227,6 +250,12 @@ export function RobinhoodPerformanceChart({
                   <stop offset="50%" stopColor={lineColor} stopOpacity={0.1} />
                   <stop offset="100%" stopColor={lineColor} stopOpacity={0} />
                 </linearGradient>
+                <linearGradient id={crosshairGradId} x1="0" y1="0" x2="1" y2="0">
+                  <stop offset={0} stopColor={lineColor} />
+                  <stop offset={crosshairFraction} stopColor={lineColor} />
+                  <stop offset={crosshairFraction} stopColor={greyLineColor} />
+                  <stop offset={1} stopColor={greyLineColor} />
+                </linearGradient>
               </defs>
               <XAxis dataKey="date" hide />
               <YAxis hide domain={['dataMin', 'dataMax']} />
@@ -234,7 +263,7 @@ export function RobinhoodPerformanceChart({
               <Area
                 type="monotone"
                 dataKey="value"
-                stroke={lineColor}
+                stroke={`url(#${crosshairGradId})`}
                 strokeWidth={2}
                 fill={`url(#${gradientId})`}
                 dot={false}
@@ -245,8 +274,7 @@ export function RobinhoodPerformanceChart({
           </ResponsiveContainer>
           {crosshair && (
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
-              <div className="absolute top-0 bottom-0 w-px bg-foreground/30" style={{ left: crosshair.x }} />
-              <div className="absolute left-0 right-0 border-t border-dashed border-foreground/30" style={{ top: crosshair.y }} />
+              <div className="absolute w-px bg-foreground/30" style={{ left: crosshair.x, top: crosshair.y, bottom: 0 }} />
               <div
                 className="absolute h-2.5 w-2.5 rounded-full -translate-x-1/2 -translate-y-1/2 ring-2 ring-background"
                 style={{ left: crosshair.x, top: crosshair.y, backgroundColor: lineColor }}

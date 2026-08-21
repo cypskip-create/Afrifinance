@@ -1,11 +1,11 @@
 import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toPng, toBlob } from "html-to-image";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogClose, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { MessageSquare, Download, Share2, Loader2, DollarSign, Percent, Eye, Calendar } from "lucide-react";
+import { MessageSquare, Download, Share2, Loader2, DollarSign, Percent, Eye, Calendar, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
@@ -73,7 +73,7 @@ export function SharePortfolioDialog({ open, onOpenChange, holdings, totalValue,
       dayChange: String(showDayChange),
     });
     onOpenChange(false);
-    navigate(`/tradershub?${params.toString()}`);
+    navigate(`/traders-hub?${params.toString()}`);
   };
 
   const handleDownload = async () => {
@@ -109,28 +109,39 @@ export function SharePortfolioDialog({ open, onOpenChange, holdings, totalValue,
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[92dvh] overflow-y-auto rounded-2xl">
-        <DialogHeader>
+      {/* Full-screen, top-anchored (not center-translated) so it never "jumps" as the
+       *  mobile browser chrome shows/hides and 100dvh recalculates. Header and the
+       *  action buttons are pinned in place; only the middle (preview + toggles) area
+       *  scrolls, and only if a given screen is too short to show everything at once. */}
+      <DialogContent
+        hideClose
+        className="max-w-none w-screen h-[100dvh] max-h-[100dvh] top-0 left-0 translate-x-0 translate-y-0 rounded-none border-0 p-0 gap-0 flex flex-col overflow-hidden sm:rounded-none data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100 data-[state=open]:slide-in-from-left-0 data-[state=open]:slide-in-from-top-0 data-[state=closed]:slide-out-to-left-0 data-[state=closed]:slide-out-to-top-0"
+      >
+        <div className="flex items-center justify-between px-4 h-12 border-b border-border shrink-0">
           <DialogTitle className="text-base">Share Portfolio</DialogTitle>
-        </DialogHeader>
-
-        <div className="flex justify-center py-2">
-          <PortfolioShareCard ref={cardRef} {...cardProps} />
+          <DialogClose className="rounded-full p-1.5 opacity-70 hover:opacity-100 hover:bg-muted transition">
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </DialogClose>
         </div>
 
-        <Separator />
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <div className="flex justify-center py-3">
+            <PortfolioShareCard ref={cardRef} {...cardProps} />
+          </div>
 
-        <div className="space-y-3">
-          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Customize this share</p>
-          <ToggleRow icon={<DollarSign className="h-4 w-4" />} title="Hide amounts" desc="Show percentages only, no KES values" checked={hideAmounts} onChange={setHideAmounts} />
-          <ToggleRow icon={<Percent className="h-4 w-4" />} title="Hide gains/losses" desc="Just show holdings, no P&L" checked={hideGains} onChange={setHideGains} />
-          <ToggleRow icon={<Eye className="h-4 w-4" />} title="Top 5 holdings only" desc="Leave out smaller positions" checked={topHoldingsOnly} onChange={setTopHoldingsOnly} />
-          <ToggleRow icon={<Calendar className="h-4 w-4" />} title="Show today's change" desc="Off shows all-time gain instead" checked={showDayChange} onChange={setShowDayChange} />
+          <Separator />
+
+          <div className="space-y-3 px-4 py-3">
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Customize this share</p>
+            <ToggleRow icon={<DollarSign className="h-4 w-4" />} title="Hide amounts" desc="Show percentages only, no KES values" checked={hideAmounts} onChange={setHideAmounts} />
+            <ToggleRow icon={<Percent className="h-4 w-4" />} title="Hide gains/losses" desc="Just show holdings, no P&L" checked={hideGains} onChange={setHideGains} />
+            <ToggleRow icon={<Eye className="h-4 w-4" />} title="Top 5 holdings only" desc="Leave out smaller positions" checked={topHoldingsOnly} onChange={setTopHoldingsOnly} />
+            <ToggleRow icon={<Calendar className="h-4 w-4" />} title="Show today's change" desc="Off shows all-time gain instead" checked={showDayChange} onChange={setShowDayChange} />
+          </div>
         </div>
 
-        <Separator />
-
-        <div className="space-y-2">
+        <div className="shrink-0 border-t border-border bg-background px-4 py-3 space-y-2" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
           <Button className="w-full rounded-full h-11 font-semibold" onClick={handlePostToTradersHub}>
             <MessageSquare className="h-4 w-4 mr-2" />Post to TradersHub
           </Button>
