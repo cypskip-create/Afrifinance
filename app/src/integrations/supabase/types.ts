@@ -588,7 +588,11 @@ export type Database = {
           full_name: string | null
           handle: string | null
           id: string
+          portfolio_followers_only: boolean | null
+          portfolio_hide_amounts: boolean | null
+          portfolio_hide_gains: boolean | null
           portfolio_public: boolean | null
+          portfolio_top_holdings_only: boolean | null
           subscription_plan: string | null
           tradershub_onboarded: boolean
           updated_at: string
@@ -605,7 +609,11 @@ export type Database = {
           full_name?: string | null
           handle?: string | null
           id?: string
+          portfolio_followers_only?: boolean | null
+          portfolio_hide_amounts?: boolean | null
+          portfolio_hide_gains?: boolean | null
           portfolio_public?: boolean | null
+          portfolio_top_holdings_only?: boolean | null
           subscription_plan?: string | null
           tradershub_onboarded?: boolean
           updated_at?: string
@@ -622,7 +630,11 @@ export type Database = {
           full_name?: string | null
           handle?: string | null
           id?: string
+          portfolio_followers_only?: boolean | null
+          portfolio_hide_amounts?: boolean | null
+          portfolio_hide_gains?: boolean | null
           portfolio_public?: boolean | null
+          portfolio_top_holdings_only?: boolean | null
           subscription_plan?: string | null
           tradershub_onboarded?: boolean
           updated_at?: string
@@ -880,7 +892,11 @@ export type Database = {
           full_name: string | null
           handle: string | null
           id: string | null
+          portfolio_followers_only: boolean | null
+          portfolio_hide_amounts: boolean | null
+          portfolio_hide_gains: boolean | null
           portfolio_public: boolean | null
+          portfolio_top_holdings_only: boolean | null
           subscription_plan: string | null
           updated_at: string | null
           user_id: string | null
@@ -895,7 +911,11 @@ export type Database = {
           full_name?: string | null
           handle?: string | null
           id?: string | null
+          portfolio_followers_only?: boolean | null
+          portfolio_hide_amounts?: boolean | null
+          portfolio_hide_gains?: boolean | null
           portfolio_public?: boolean | null
+          portfolio_top_holdings_only?: boolean | null
           subscription_plan?: string | null
           updated_at?: string | null
           user_id?: string | null
@@ -910,7 +930,11 @@ export type Database = {
           full_name?: string | null
           handle?: string | null
           id?: string | null
+          portfolio_followers_only?: boolean | null
+          portfolio_hide_amounts?: boolean | null
+          portfolio_hide_gains?: boolean | null
           portfolio_public?: boolean | null
+          portfolio_top_holdings_only?: boolean | null
           subscription_plan?: string | null
           updated_at?: string | null
           user_id?: string | null

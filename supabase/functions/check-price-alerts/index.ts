@@ -49,7 +49,8 @@ Deno.serve(async (req: Request) => {
     }
 
     // Parse and validate input
-    const { symbol, currentPrice } = await req.json();
+    const { symbol, currentPrice, exchange } = await req.json();
+    const exch = typeof exchange === 'string' && exchange.length > 0 ? exchange.toUpperCase() : 'NSE';
     
     if (!symbol || typeof symbol !== 'string' || symbol.length > 20) {
       return new Response(
@@ -68,7 +69,7 @@ Deno.serve(async (req: Request) => {
     // Sanitize symbol (uppercase, alphanumeric only)
     const sanitizedSymbol = symbol.toUpperCase().replace(/[^A-Z0-9]/g, '');
     
-    console.log('Checking alerts for authenticated user:', { userId, symbol: sanitizedSymbol, currentPrice });
+    console.log('Checking alerts for authenticated user:', { userId, symbol: sanitizedSymbol, exchange: exch, currentPrice });
 
     // Use service role client for database operations (to update alerts)
     const supabaseAdmin = createClient(
@@ -76,14 +77,19 @@ Deno.serve(async (req: Request) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Get only alerts for the authenticated user and specified symbol
+    // Get only alerts for the authenticated user and specified symbol+exchange.
+    // Also excludes indicator-based alerts (indicator IS NOT NULL) — those
+    // are evaluated by check-indicator-alerts, which calls the technical
+    // indicators engine instead of comparing against a client-supplied price.
     const { data: alerts, error } = await supabaseAdmin
       .from('price_alerts')
       .select('*')
       .eq('symbol', sanitizedSymbol)
+      .eq('exchange', exch)
       .eq('user_id', userId)
       .eq('is_active', true)
-      .is('triggered_at', null);
+      .is('triggered_at', null)
+      .is('indicator', null);
 
     if (error) {
       console.error('Error fetching alerts:', error);
@@ -113,12 +119,13 @@ Deno.serve(async (req: Request) => {
         // client code can't insert into notifications directly (RLS), but this
         // function runs with the service role which can.
         const direction = alert.alert_type === 'price_above' ? 'risen above' : 'fallen below';
+        const currency = alert.currency ?? 'KES'; // fallback covers rows from before the currency column existed
         await supabaseAdmin.from('notifications').insert({
           user_id: userId,
           type: 'alert',
           feature: 'alerts',
           title: `${alert.symbol} alert triggered`,
-          message: `${alert.symbol} has ${direction} KES ${alert.target_value} (now KES ${currentPrice})`,
+          message: `${alert.symbol} has ${direction} ${currency} ${alert.target_value} (now ${currency} ${currentPrice})`,
           action_url: `/stock/${alert.symbol}`,
           entity_id: alert.id,
           entity_type: 'price_alert',

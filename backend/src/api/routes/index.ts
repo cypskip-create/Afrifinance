@@ -10,6 +10,10 @@ import { researchRoutes } from "./research.routes.js";
 import { screenerRoutes } from "./screener.routes.js";
 import { instrumentsRoutes } from "./instruments.routes.js";
 import { indicesRoutes } from "./indices.routes.js";
+import { indicatorsRoutes } from "./indicators.routes.js";
+import { backtestRoutes } from "./backtest.routes.js";
+import { volumeProfileRoutes } from "./volumeProfile.routes.js";
+import { valuationRoutes } from "./valuation.routes.js";
 
 /** Every route is mounted under /api/v1. Versioning from day one — the app,
  *  TradersHub, and Media all consume this same v1 contract; a v2 later can
@@ -31,3 +35,7 @@ apiRouter.use(researchRoutes);
 apiRouter.use(screenerRoutes);
 apiRouter.use(instrumentsRoutes);
 apiRouter.use(indicesRoutes);
+apiRouter.use(indicatorsRoutes);
+apiRouter.use(backtestRoutes);
+apiRouter.use(volumeProfileRoutes);
+apiRouter.use(valuationRoutes);

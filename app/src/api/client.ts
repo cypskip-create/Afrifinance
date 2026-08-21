@@ -6,14 +6,10 @@
 // See docs/api/API.md for the full contract this is built against.
 
 export const AFRIFINANCE_API_URL =
-  (import.meta.env.VITE_CONTINUA_API_URL as string | undefined) ??
-  (import.meta.env.VITE_AFRIFINANCE_API_URL as string | undefined) ??
-  "http://localhost:4000/api/v1";
+  (import.meta.env.VITE_AFRIFINANCE_API_URL as string | undefined) ?? "http://localhost:4000/api/v1";
 
 export const AFRIFINANCE_WS_URL =
-  (import.meta.env.VITE_CONTINUA_WS_URL as string | undefined) ??
-  (import.meta.env.VITE_AFRIFINANCE_WS_URL as string | undefined) ??
-  "ws://localhost:4001";
+  (import.meta.env.VITE_AFRIFINANCE_WS_URL as string | undefined) ?? "ws://localhost:4001";
 
 // DEV-ONLY key, read from Vite env (see app/.env). This is a first-party key
 // for Continua's OWN backend, not an upstream NSE credential — but it is
@@ -26,9 +22,7 @@ export const AFRIFINANCE_WS_URL =
 // per-user, expiring token). Nothing else in this file or its callers needs
 // to change — swap what `getApiKey()` returns.
 function getApiKey(): string {
-  return (import.meta.env.VITE_CONTINUA_API_KEY as string | undefined) ??
-    (import.meta.env.VITE_AFRIFINANCE_API_KEY as string | undefined) ??
-    "dev-local-only-key";
+  return (import.meta.env.VITE_AFRIFINANCE_API_KEY as string | undefined) ?? "dev-local-only-key";
 }
 
 export class ContinuaApiError extends Error {
@@ -48,6 +42,11 @@ export interface ContinuaRequestOptions {
    *  of endpoints want comma-separated values specifically. */
   params?: Record<string, string | number | boolean | undefined | null>;
   signal?: AbortSignal;
+  /** Defaults to GET. POST is used for the handful of endpoints that take
+   *  a request body instead of query params — e.g. /backtest, whose
+   *  strategy params don't fit cleanly in a query string. */
+  method?: "GET" | "POST";
+  body?: unknown;
 }
 
 function buildUrl(path: string, params?: ContinuaRequestOptions["params"]): string {
@@ -70,7 +69,12 @@ export async function continuaFetch<T>(path: string, options: ContinuaRequestOpt
   let res: Response;
   try {
     res = await fetch(url, {
-      headers: { "X-API-Key": getApiKey() },
+      method: options.method ?? "GET",
+      headers: {
+        "X-API-Key": getApiKey(),
+        ...(options.body !== undefined ? { "Content-Type": "application/json" } : {}),
+      },
+      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
       signal: options.signal,
     });
   } catch (err) {

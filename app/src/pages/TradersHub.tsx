@@ -21,7 +21,8 @@ import { MediaFeed } from "@/components/social/MediaFeed";
 import { supabase } from "@/integrations/supabase/client";
 import { atHandle, getInitials } from "@/lib/handle";
 import { CommunityReaction } from "@/components/social/CommunityReactionButton";
-import { getPrice } from "@/lib/stockPrices";
+import { getPrice, getDayChange } from "@/lib/stockPrices";
+import { useLivePortfolioQuotes } from "@/hooks/useLiveQuotes";
 import { shareLink } from "@/lib/share";
 
 type FeedTab = "for-you" | "following" | "trending";
@@ -74,6 +75,7 @@ export default function TradersHub() {
   const [people, setPeople] = useState<PeopleResult[]>([]);
   const [composeOpen, setComposeOpen] = useState(false);
   const [prefillContent, setPrefillContent] = useState("");
+  const [sharePreset, setSharePreset] = useState<{ hideAmounts: boolean; hideGains: boolean; topHoldingsOnly: boolean; showDayChange: boolean } | undefined>();
   const [editing, setEditing] = useState<Post | null>(null);
   const [editDraft, setEditDraft] = useState("");
   const [disclaimerDone, setDisclaimerDone] = useState(() => {
@@ -93,6 +95,14 @@ export default function TradersHub() {
     if (searchParams.get("compose") === "true" && ticker) {
       setComposeOpen(true);
       setPrefillContent(`$${ticker.toUpperCase()} `);
+    } else if (searchParams.get("compose") === "true" && searchParams.get("attachPortfolio") === "true") {
+      setComposeOpen(true);
+      setSharePreset({
+        hideAmounts: searchParams.get("hideAmounts") === "true",
+        hideGains: searchParams.get("hideGains") === "true",
+        topHoldingsOnly: searchParams.get("topOnly") === "true",
+        showDayChange: searchParams.get("dayChange") !== "false",
+      });
     } else if (ticker) {
       setSearchQuery(`$${ticker.toUpperCase()}`);
     }
@@ -134,16 +144,41 @@ export default function TradersHub() {
     return [...counts.entries()].map(([symbol, count]) => ({ symbol, count })).sort((a, b) => b.count - a.count).slice(0, 12);
   }, [posts]);
 
+  const { liveQuotes: livePortfolioQuotes } = useLivePortfolioQuotes(portfolio.map(h => h.symbol));
+
   const portfolioSnapshot = useMemo(() => {
     if (!portfolio.length) return null;
     const holdings = portfolio.map(h => {
-      const currentPrice = getPrice(h.symbol, h.avg_cost);
-      return { symbol: h.symbol, name: h.name, shares: h.shares, avgCost: h.avg_cost, currentPrice, gain: ((currentPrice - h.avg_cost) / h.avg_cost) * 100 };
+      const quote = livePortfolioQuotes[h.symbol.toUpperCase()];
+      const currentPrice = quote?.price ?? getPrice(h.symbol, h.avg_cost);
+      const dayChangeAbs = quote?.dayChangeAbs ?? getDayChange(h.symbol).abs;
+      return {
+        symbol: h.symbol,
+        name: h.name,
+        shares: h.shares,
+        avgCost: h.avg_cost,
+        currentPrice,
+        gain: ((currentPrice - h.avg_cost) / h.avg_cost) * 100,
+        dayChangeAbs,
+        dayChangePct: currentPrice - dayChangeAbs > 0 ? (dayChangeAbs / (currentPrice - dayChangeAbs)) * 100 : 0,
+      };
     });
+    // Same maths as computePortfolioStats (lib/stockPrices.ts) — kept inline
+    // here since we also need the per-holding breakdown above for the
+    // compose card's "top holdings" list, which that helper doesn't return.
     const totalValue = holdings.reduce((s, h) => s + h.currentPrice * h.shares, 0);
     const totalCost = holdings.reduce((s, h) => s + h.avgCost * h.shares, 0);
-    return { totalValue, totalGain: totalValue - totalCost, gainPercent: totalCost > 0 ? ((totalValue - totalCost) / totalCost) * 100 : 0, holdings };
-  }, [portfolio]);
+    const todayGain = holdings.reduce((s, h) => s + h.dayChangeAbs * h.shares, 0);
+    const prevValue = totalValue - todayGain;
+    return {
+      totalValue,
+      totalGain: totalValue - totalCost,
+      gainPercent: totalCost > 0 ? ((totalValue - totalCost) / totalCost) * 100 : 0,
+      todayGain,
+      todayPercent: prevValue > 0 ? (todayGain / prevValue) * 100 : 0,
+      holdings,
+    };
+  }, [portfolio, livePortfolioQuotes]);
 
   /** Feed ranking: portfolio, watchlist, reactions, saves, follows, engagement, recency. */
   const feed = useMemo(() => {
@@ -466,9 +501,10 @@ export default function TradersHub() {
 
       <XComposeModal
         open={composeOpen}
-        onOpenChange={o => { setComposeOpen(o); if (!o) setPrefillContent(""); }}
+        onOpenChange={o => { setComposeOpen(o); if (!o) { setPrefillContent(""); setSharePreset(undefined); } }}
         user={user}
         profile={profile}
+        sharePreset={sharePreset}
         onPost={async (content, imageUrl, quotedPostId) => {
           const { error } = await createPost(content, imageUrl, quotedPostId);
           if (error) { toast({ title: "Could not publish", variant: "destructive" }); return { error }; }

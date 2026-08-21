@@ -46,5 +46,8 @@ verify_jwt = true
 [functions.check-price-alerts]
 verify_jwt = true
 
+[functions.check-indicator-alerts]
+verify_jwt = true
+
 [auth]
 enable_signup = true

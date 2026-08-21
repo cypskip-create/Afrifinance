@@ -19,6 +19,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 import { useAppLock } from "@/hooks/useAppLock";
+import { PortfolioVisibilityToggles } from "@/components/portfolio/PortfolioVisibilityToggles";
 
 const HANDLE_REGEX = /^[a-z0-9_]{3,20}$/;
 
@@ -287,16 +288,26 @@ export default function Settings() {
         {section === "th-privacy" && (
           <div className="space-y-3 pb-4">
             <Header title="Privacy & safety" back="tradershub" />
-            <Row
-              icon={<Eye className="h-4 w-4" />}
-              title="Portfolio public"
-              desc="Allow others to view your holdings on your TradersHub profile"
-              checked={portfolioOn}
-              onChange={async (v: boolean) => {
-                setPortfolioOn(v);
-                if (user) await supabase.from("profiles").update({ portfolio_public: v }).eq("user_id", user.id);
-                refetchProfile?.();
-                toast({ title: v ? "Portfolio public" : "Portfolio private" });
+            <PortfolioVisibilityToggles
+              value={{
+                portfolioPublic: portfolioOn,
+                hideAmounts: !!profile?.portfolio_hide_amounts,
+                hideGains: !!profile?.portfolio_hide_gains,
+                topHoldingsOnly: !!profile?.portfolio_top_holdings_only,
+                followersOnly: !!profile?.portfolio_followers_only,
+              }}
+              onChange={async (next) => {
+                setPortfolioOn(next.portfolioPublic);
+                if (user) {
+                  await updateProfile({
+                    portfolio_public: next.portfolioPublic,
+                    portfolio_hide_amounts: next.hideAmounts,
+                    portfolio_hide_gains: next.hideGains,
+                    portfolio_top_holdings_only: next.topHoldingsOnly,
+                    portfolio_followers_only: next.followersOnly,
+                  });
+                }
+                toast({ title: next.portfolioPublic ? "Portfolio settings saved" : "Portfolio private" });
               }}
             />
             <Separator />

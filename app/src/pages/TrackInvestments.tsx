@@ -7,14 +7,17 @@ import { PortfolioSnowflake } from "@/components/portfolio/PortfolioSnowflake";
 import { PortfolioInsights } from "@/components/portfolio/PortfolioInsights";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
-  ArrowUpRight, ArrowDownRight, Eye, EyeOff, RefreshCw, Newspaper, ChevronDown,
+  ArrowUpRight, ArrowDownRight, Eye, EyeOff, RefreshCw, Newspaper, ChevronDown, Share,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 
-import { getPrice as getSharedPrice, computePortfolioStats } from "@/lib/stockPrices";
+import { getPrice as getSharedPrice, getDayChange, computePortfolioStats } from "@/lib/stockPrices";
 import { useLivePortfolioQuotes } from "@/hooks/useLiveQuotes";
+import { useProfile } from "@/hooks/useProfile";
 import { HoldingsList } from "@/components/portfolio/HoldingsList";
+import { PortfolioVisibilityToggles } from "@/components/portfolio/PortfolioVisibilityToggles";
+import { SharePortfolioDialog } from "@/components/social/SharePortfolioDialog";
 import { ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { fx } from "@/lib/chartPalette";
 import { getMediaItemsForSymbols } from "@/data/mediaItems";
@@ -29,6 +32,7 @@ export default function TrackInvestments() {
   const { portfolio, loading, removeFromPortfolio, refetch } = usePortfolio();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { profile, updateProfile } = useProfile();
   const [showBalance, setShowBalance] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [sortBy, setSortBy] = useState<SortKey>("value");
@@ -37,6 +41,8 @@ export default function TrackInvestments() {
   const [chartMode, setChartMode] = useState<"value" | "performance">("value");
   const [allocationMode, setAllocationMode] = useState<"asset" | "sector">("sector");
   const [selectedSlice, setSelectedSlice] = useState<string | null>(null);
+  const [privacyPanelOpen, setPrivacyPanelOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
   // Live Continua Data Layer quotes — the SAME quotes HoldingsList (rendered further
   // down) uses internally, so this page's total balance / allocation chart can't disagree
@@ -48,13 +54,16 @@ export default function TrackInvestments() {
 
   const holdings = useMemo(() => {
     const items = portfolio.map(h => {
-      const price = liveQuotes[h.symbol.toUpperCase()]?.price ?? getSharedPrice(h.symbol);
+      const quote = liveQuotes[h.symbol.toUpperCase()];
+      const price = quote?.price ?? getSharedPrice(h.symbol);
       const value = price * h.shares;
       const cost = h.avg_cost * h.shares;
       const gain = value - cost;
       const gainPct = cost > 0 ? (gain / cost) * 100 : 0;
       const weight = stats.totalValue > 0 ? (value / stats.totalValue) * 100 : 0;
-      return { ...h, price, value, cost, gain, gainPct, weight };
+      const dayChangeAbs = quote?.dayChangeAbs ?? getDayChange(h.symbol).abs;
+      const dayChangePct = price - dayChangeAbs > 0 ? (dayChangeAbs / (price - dayChangeAbs)) * 100 : 0;
+      return { ...h, price, value, cost, gain, gainPct, weight, dayChangePct };
     });
     items.sort((a, b) => {
       if (sortBy === "value") return sortAsc ? a.value - b.value : b.value - a.value;
@@ -380,9 +389,76 @@ export default function TrackInvestments() {
               <AddInvestmentDialog />
             </div>
           ) : (
-            <HoldingsList holdings={holdings} showValues={showBalance} onRemove={handleDelete} />
+            <>
+              <HoldingsList holdings={holdings} showValues={showBalance} onRemove={handleDelete} />
+
+              {/* ── SHARING & PRIVACY ── same settings Settings → Privacy & safety
+                  writes to, kept right here too since this is where holdings live. */}
+              <div className="mt-5 pt-4 border-t border-border/50">
+                <button
+                  data-small-target
+                  onClick={() => setPrivacyPanelOpen(o => !o)}
+                  className="w-full flex items-center justify-between text-left"
+                >
+                  <div>
+                    <p className="text-[12px] font-semibold">Sharing & privacy</p>
+                    <p className="text-[10.5px] text-muted-foreground mt-0.5">
+                      {profile?.portfolio_public ? "Your portfolio is visible to others" : "Your portfolio is private"}
+                    </p>
+                  </div>
+                  <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${privacyPanelOpen ? "rotate-180" : ""}`} />
+                </button>
+
+                {privacyPanelOpen && (
+                  <div className="mt-4 animate-fade-in">
+                    <PortfolioVisibilityToggles
+                      compact
+                      value={{
+                        portfolioPublic: !!profile?.portfolio_public,
+                        hideAmounts: !!profile?.portfolio_hide_amounts,
+                        hideGains: !!profile?.portfolio_hide_gains,
+                        topHoldingsOnly: !!profile?.portfolio_top_holdings_only,
+                        followersOnly: !!profile?.portfolio_followers_only,
+                      }}
+                      onChange={(next) => {
+                        updateProfile({
+                          portfolio_public: next.portfolioPublic,
+                          portfolio_hide_amounts: next.hideAmounts,
+                          portfolio_hide_gains: next.hideGains,
+                          portfolio_top_holdings_only: next.topHoldingsOnly,
+                          portfolio_followers_only: next.followersOnly,
+                        });
+                      }}
+                    />
+                  </div>
+                )}
+
+                <Button
+                  className="w-full rounded-full h-11 font-bold btn-primary mt-4"
+                  onClick={() => setShareDialogOpen(true)}
+                >
+                  <Share className="h-4 w-4 mr-2" />Share Portfolio
+                </Button>
+              </div>
+            </>
           )}
         </div>
+
+        <SharePortfolioDialog
+          open={shareDialogOpen}
+          onOpenChange={setShareDialogOpen}
+          holdings={holdings.map(h => ({ symbol: h.symbol, name: (h as any).name || h.symbol, shares: h.shares, currentPrice: h.price, avgCost: h.avg_cost, dayChangePct: h.dayChangePct, gainPct: h.gainPct }))}
+          totalValue={stats.totalValue}
+          totalGain={stats.totalGain}
+          gainPercent={stats.gainPct}
+          todayGain={stats.todayGain}
+          todayPercent={stats.todayPct}
+          defaults={{
+            hideAmounts: !!profile?.portfolio_hide_amounts,
+            hideGains: !!profile?.portfolio_hide_gains,
+            topHoldingsOnly: !!profile?.portfolio_top_holdings_only,
+          }}
+        />
 
         {/* ── INSIGHTS ── */}
         {holdings.length > 0 && (

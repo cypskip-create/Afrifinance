@@ -12,6 +12,10 @@ export interface Profile {
   bio: string | null;
   handle: string | null;
   portfolio_public: boolean | null;
+  portfolio_hide_amounts: boolean | null;
+  portfolio_hide_gains: boolean | null;
+  portfolio_top_holdings_only: boolean | null;
+  portfolio_followers_only: boolean | null;
   followers_count: number | null;
   following_count: number | null;
   subscription_plan: string;
@@ -53,7 +57,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, user_id, full_name, avatar_url, banner_url, bio, handle, portfolio_public, followers_count, following_count, subscription_plan, tradershub_onboarded, created_at, updated_at')
+        .select('id, user_id, full_name, avatar_url, banner_url, bio, handle, portfolio_public, portfolio_hide_amounts, portfolio_hide_gains, portfolio_top_holdings_only, portfolio_followers_only, followers_count, following_count, subscription_plan, tradershub_onboarded, created_at, updated_at')
         .eq('user_id', user.id)
         .single();
 
@@ -77,7 +81,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         .from('profiles')
         .update(updates as any)
         .eq('user_id', user.id)
-        .select('id, user_id, full_name, avatar_url, banner_url, bio, handle, portfolio_public, followers_count, following_count, subscription_plan, tradershub_onboarded, created_at, updated_at')
+        .select('id, user_id, full_name, avatar_url, banner_url, bio, handle, portfolio_public, portfolio_hide_amounts, portfolio_hide_gains, portfolio_top_holdings_only, portfolio_followers_only, followers_count, following_count, subscription_plan, tradershub_onboarded, created_at, updated_at')
         .single();
 
       if (error) {

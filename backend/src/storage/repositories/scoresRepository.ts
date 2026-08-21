@@ -57,4 +57,28 @@ export const scoresRepository = {
     );
     return res.rows[0] ?? null;
   },
+
+  /** Average P/E and dividend yield across a security's sector, on the
+   *  same exchange, excluding the security itself and any nulls/negative
+   *  P/Es (a loss-making company's negative P/E would otherwise drag a
+   *  sector "average" to a meaningless number) — used by
+   *  services/technical/valuationService.ts's relative-valuation model. */
+  async getSectorAverageRatios(exchange: string, sectorId: string, excludeSecurityId: string): Promise<{ avgPe: number | null; avgDividendYield: number | null; sampleSize: number }> {
+    const res = await query<any>(
+      `SELECT AVG(r.pe) FILTER (WHERE r.pe > 0) as "avgPe",
+              AVG(r.dividend_yield) as "avgDividendYield",
+              COUNT(*) FILTER (WHERE r.pe > 0) as "sampleSize"
+       FROM market.computed_ratios r
+       JOIN market.securities s ON s.id = r.security_id
+       JOIN market.companies c ON c.id = s.company_id
+       WHERE s.exchange = $1 AND c.sector_id = $2 AND s.id != $3`,
+      [exchange, sectorId, excludeSecurityId]
+    );
+    const row = res.rows[0];
+    return {
+      avgPe: row?.avgPe != null ? Number(row.avgPe) : null,
+      avgDividendYield: row?.avgDividendYield != null ? Number(row.avgDividendYield) : null,
+      sampleSize: row?.sampleSize != null ? Number(row.sampleSize) : 0,
+    };
+  },
 };

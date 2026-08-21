@@ -56,4 +56,14 @@ export const ScreenerQuerySchema = ExchangeQuery.extend({
   limit: z.coerce.number().int().min(1).max(200).default(50),
 });
 
+export const IndicatorQuerySchema = ExchangeQuery.extend({
+  type: z.enum(["SMA", "EMA", "RSI", "MACD"]),
+  period: z.coerce.number().int().positive().max(500).optional(),
+  fast: z.coerce.number().int().positive().max(500).optional(),
+  slow: z.coerce.number().int().positive().max(500).optional(),
+  signal: z.coerce.number().int().positive().max(500).optional(),
+  from: isoDateString.optional(),
+  to: isoDateString.optional(),
+});
+
 export { ExchangeQuery };

@@ -52,11 +52,11 @@ export const securitiesRepository = {
     return res.rows;
   },
 
-  async getCompanyProfile(exchange: string, symbol: string): Promise<(Security & { company: Company & { sectorName?: string } }) | null> {
+  async getCompanyProfile(exchange: string, symbol: string): Promise<(Security & { company: Company & { sectorName?: string; sectorId?: string } }) | null> {
     const res = await query<any>(
       `SELECT s.id, s.symbol, s.exchange, s.company_id as "companyId", s.currency, s.status, s.isin, s.listed_at as "listedAt",
               c.name as "companyName", c.description, c.headquarters, c.ceo, c.employees, c.founded, c.website,
-              sec.name as "sectorName"
+              c.sector_id as "sectorId", sec.name as "sectorName"
        FROM market.securities s
        JOIN market.companies c ON c.id = s.company_id
        LEFT JOIN market.sectors sec ON sec.id = c.sector_id
@@ -70,7 +70,8 @@ export const securitiesRepository = {
       currency: row.currency, status: row.status, isin: row.isin, listedAt: row.listedAt,
       company: {
         id: row.companyId, name: row.companyName, description: row.description, headquarters: row.headquarters,
-        ceo: row.ceo, employees: row.employees, founded: row.founded, website: row.website, sectorName: row.sectorName,
+        ceo: row.ceo, employees: row.employees, founded: row.founded, website: row.website,
+        sectorName: row.sectorName, sectorId: row.sectorId,
       },
     };
   },

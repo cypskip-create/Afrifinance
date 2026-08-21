@@ -6,8 +6,17 @@ export interface PriceAlert {
   id: string;
   user_id: string;
   symbol: string;
-  alert_type: 'price_above' | 'price_below' | 'volume_spike' | 'dividend' | 'news';
+  exchange: string;
+  currency: string;
+  alert_type: 'price_above' | 'price_below' | 'volume_spike' | 'dividend' | 'news' | 'rsi_above' | 'rsi_below';
   target_value: number | null;
+  /** Set only for indicator alerts (RSI/SMA_CROSS/EMA_CROSS). null for
+   *  plain price alerts — see supabase/migrations/033_alerts_multi_exchange_and_indicators.sql */
+  indicator: 'RSI' | 'SMA_CROSS' | 'EMA_CROSS' | null;
+  /** Shape depends on `indicator`:
+   *   RSI: { period, threshold }
+   *   SMA_CROSS/EMA_CROSS: { fastPeriod, slowPeriod, direction: 1 | -1 } (1 = bullish, -1 = bearish) */
+  indicator_params: Record<string, number> | null;
   is_active: boolean;
   triggered_at: string | null;
   created_at: string;
@@ -59,7 +68,7 @@ export function usePriceAlerts() {
         .insert({
           ...alertData,
           user_id: user.id,
-        })
+        } as any)
         .select()
         .single();
 
@@ -99,13 +108,13 @@ export function usePriceAlerts() {
     }
   };
 
-  const updateAlert = async (id: string, changes: Partial<Pick<PriceAlert, 'alert_type' | 'target_value' | 'is_active'>>) => {
+  const updateAlert = async (id: string, changes: Partial<Pick<PriceAlert, 'alert_type' | 'target_value' | 'is_active' | 'indicator' | 'indicator_params'>>) => {
     if (!user) return { error: new Error('Not authenticated') };
 
     try {
       const { data, error } = await supabase
         .from('price_alerts')
-        .update(changes)
+        .update(changes as any)
         .eq('id', id)
         .eq('user_id', user.id)
         .select()

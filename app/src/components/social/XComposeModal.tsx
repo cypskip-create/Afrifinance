@@ -12,7 +12,11 @@ interface PortfolioSnapshot {
   totalValue: number;
   totalGain: number;
   gainPercent: number;
-  holdings: { symbol: string; name: string; shares: number; avgCost: number; currentPrice: number; gain: number }[];
+  /** Today's move only (price vs previous close) — distinct from totalGain,
+   *  which is all-time unrealized P/L since purchase. */
+  todayGain: number;
+  todayPercent: number;
+  holdings: { symbol: string; name: string; shares: number; avgCost: number; currentPrice: number; gain: number; dayChangePct: number }[];
 }
 
 interface XComposeModalProps {
@@ -28,12 +32,17 @@ interface XComposeModalProps {
    *  article-length post (Moomoo-style long-form). Enforced server-side too
    *  — see enforce_post_length_by_plan() — this just keeps the compose UX honest. */
   isPremium?: boolean;
+  /** Carries the toggle choices made in SharePortfolioDialog when compose is
+   *  opened via its "Post to TradersHub" action (deep-linked through
+   *  /tradershub?compose=true&attachPortfolio=true&...) so what gets posted
+   *  matches what was previewed there, not this modal's own defaults. */
+  sharePreset?: { hideAmounts: boolean; hideGains: boolean; topHoldingsOnly: boolean; showDayChange: boolean };
 }
 
 const FREE_MAX_CHARS = 500;
 const PREMIUM_MAX_CHARS = 5000;
 
-export function XComposeModal({ open, onOpenChange, user, profile, onPost, portfolioSnapshot, prefillContent, quotedPost, isPremium = false }: XComposeModalProps) {
+export function XComposeModal({ open, onOpenChange, user, profile, onPost, portfolioSnapshot, prefillContent, quotedPost, isPremium = false, sharePreset }: XComposeModalProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -44,14 +53,28 @@ export function XComposeModal({ open, onOpenChange, user, profile, onPost, portf
   const [attachedPortfolio, setAttachedPortfolio] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
 
+  // The masked/filtered view of portfolioSnapshot actually used for the
+  // "Portfolio Snapshot" attach — respects sharePreset when compose was
+  // opened from Share Portfolio, otherwise shows everything (this modal's
+  // own default when attaching from the composer directly).
+  const displaySnapshot = (() => {
+    if (!portfolioSnapshot) return null;
+    const holdings = sharePreset?.topHoldingsOnly ? portfolioSnapshot.holdings.slice(0, 5) : portfolioSnapshot.holdings;
+    return { ...portfolioSnapshot, holdings, hideAmounts: !!sharePreset?.hideAmounts, hideGains: !!sharePreset?.hideGains, useDayChange: sharePreset?.showDayChange ?? true };
+  })();
+
   useEffect(() => {
     if (open) {
       if (prefillContent && !content) {
         setContent(prefillContent);
       }
+      if (sharePreset) {
+        setAttachedPortfolio(true);
+      }
       setTimeout(() => textareaRef.current?.focus(), 100);
     }
-  }, [open, prefillContent]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, prefillContent, sharePreset]);
 
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setContent(e.target.value);
@@ -82,12 +105,22 @@ export function XComposeModal({ open, onOpenChange, user, profile, onPost, portf
     let finalContent = content;
 
     if (attachedPL && portfolioSnapshot) {
-      const plText = `\n\n📊 Today's P/L: ${portfolioSnapshot.totalGain >= 0 ? "+" : ""}KES ${portfolioSnapshot.totalGain.toLocaleString()} (${portfolioSnapshot.totalGain >= 0 ? "+" : ""}${portfolioSnapshot.gainPercent.toFixed(1)}%)\nTop holdings: ${portfolioSnapshot.holdings.slice(0, 3).map(h => `$${h.symbol}`).join(", ")}`;
+      const plText = `\n\n📊 Today's P/L: ${portfolioSnapshot.todayGain >= 0 ? "+" : ""}KES ${portfolioSnapshot.todayGain.toLocaleString()} (${portfolioSnapshot.todayGain >= 0 ? "+" : ""}${portfolioSnapshot.todayPercent.toFixed(1)}%)\nTop holdings: ${portfolioSnapshot.holdings.slice(0, 3).map(h => `$${h.symbol}`).join(", ")}`;
       finalContent += plText;
     }
 
-    if (attachedPortfolio && portfolioSnapshot) {
-      const pText = `\n\n💼 Portfolio Snapshot\nTotal Value: KES ${portfolioSnapshot.totalValue.toLocaleString()}\nP/L: ${portfolioSnapshot.totalGain >= 0 ? "+" : ""}KES ${portfolioSnapshot.totalGain.toLocaleString()} (${portfolioSnapshot.gainPercent.toFixed(1)}%)\n${portfolioSnapshot.holdings.slice(0, 5).map(h => `$${h.symbol}: ${h.shares} shares (${h.gain >= 0 ? "+" : ""}${h.gain.toFixed(1)}%)`).join("\n")}`;
+    if (attachedPortfolio && displaySnapshot) {
+      const gainLine = displaySnapshot.hideGains
+        ? ""
+        : displaySnapshot.useDayChange
+          ? `\nToday: ${displaySnapshot.todayGain >= 0 ? "+" : ""}${displaySnapshot.hideAmounts ? "" : `KES ${displaySnapshot.todayGain.toLocaleString()} `}(${displaySnapshot.todayGain >= 0 ? "+" : ""}${displaySnapshot.todayPercent.toFixed(1)}%)`
+          : `\nAll-time: ${displaySnapshot.totalGain >= 0 ? "+" : ""}${displaySnapshot.hideAmounts ? "" : `KES ${displaySnapshot.totalGain.toLocaleString()} `}(${displaySnapshot.gainPercent.toFixed(1)}%)`;
+      const holdingsLines = displaySnapshot.holdings
+        .map(h => displaySnapshot.hideGains
+          ? `$${h.symbol}${displaySnapshot.hideAmounts ? "" : `: ${h.shares} shares`}`
+          : `$${h.symbol}${displaySnapshot.hideAmounts ? "" : `: ${h.shares} shares`} (${(displaySnapshot.useDayChange ? h.dayChangePct : h.gain) >= 0 ? "+" : ""}${(displaySnapshot.useDayChange ? h.dayChangePct : h.gain).toFixed(1)}%)`)
+        .join("\n");
+      const pText = `\n\n💼 Portfolio Snapshot\nTotal Value: ${displaySnapshot.hideAmounts ? "••••••" : `KES ${displaySnapshot.totalValue.toLocaleString()}`}${gainLine}\n${holdingsLines}`;
       finalContent += pText;
     }
 
@@ -167,17 +200,17 @@ export function XComposeModal({ open, onOpenChange, user, profile, onPost, portf
                   <TrendingUp className="h-4 w-4 text-primary" />
                   <span className="text-xs font-semibold">Today's P/L</span>
                 </div>
-                <div className={`text-xl font-bold ${portfolioSnapshot.totalGain >= 0 ? "text-bull" : "text-bear"}`}>
-                  {portfolioSnapshot.totalGain >= 0 ? "+" : ""}KES {portfolioSnapshot.totalGain.toLocaleString()}
+                <div className={`text-xl font-bold ${portfolioSnapshot.todayGain >= 0 ? "text-bull" : "text-bear"}`}>
+                  {portfolioSnapshot.todayGain >= 0 ? "+" : ""}KES {portfolioSnapshot.todayGain.toLocaleString()}
                 </div>
-                <div className={`text-sm ${portfolioSnapshot.totalGain >= 0 ? "text-bull" : "text-bear"}`}>
-                  {portfolioSnapshot.totalGain >= 0 ? "+" : ""}{portfolioSnapshot.gainPercent.toFixed(1)}%
+                <div className={`text-sm ${portfolioSnapshot.todayGain >= 0 ? "text-bull" : "text-bear"}`}>
+                  {portfolioSnapshot.todayGain >= 0 ? "+" : ""}{portfolioSnapshot.todayPercent.toFixed(1)}%
                 </div>
               </div>
             )}
 
             {/* Portfolio snapshot preview */}
-            {attachedPortfolio && portfolioSnapshot && (
+            {attachedPortfolio && displaySnapshot && (
               <div className="mt-3 p-3 rounded-xl border border-border bg-muted/30 relative">
                 <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 rounded-full" onClick={() => setAttachedPortfolio(false)} data-small-target>
                   <X className="h-3 w-3" />
@@ -186,14 +219,22 @@ export function XComposeModal({ open, onOpenChange, user, profile, onPost, portf
                   <PieChart className="h-4 w-4 text-primary" />
                   <span className="text-xs font-semibold">Portfolio Snapshot</span>
                 </div>
-                <div className="text-lg font-bold">KES {portfolioSnapshot.totalValue.toLocaleString()}</div>
+                <div className="text-lg font-bold">{displaySnapshot.hideAmounts ? "KES ••••••" : `KES ${displaySnapshot.totalValue.toLocaleString()}`}</div>
+                {!displaySnapshot.hideGains && (
+                  <div className={`text-xs font-semibold mt-0.5 ${(displaySnapshot.useDayChange ? displaySnapshot.todayGain : displaySnapshot.totalGain) >= 0 ? "text-bull" : "text-bear"}`}>
+                    {displaySnapshot.useDayChange ? "Today" : "All-time"} {(displaySnapshot.useDayChange ? displaySnapshot.todayGain : displaySnapshot.totalGain) >= 0 ? "+" : ""}
+                    {(displaySnapshot.useDayChange ? displaySnapshot.todayPercent : displaySnapshot.gainPercent).toFixed(1)}%
+                  </div>
+                )}
                 <div className="mt-2 space-y-1">
-                  {portfolioSnapshot.holdings.slice(0, 3).map(h => (
+                  {displaySnapshot.holdings.slice(0, 3).map(h => (
                     <div key={h.symbol} className="flex items-center justify-between text-xs">
                       <span className="font-medium">${h.symbol}</span>
-                      <span className={h.gain >= 0 ? "text-bull" : "text-bear"}>
-                        {h.gain >= 0 ? "+" : ""}{h.gain.toFixed(1)}%
-                      </span>
+                      {!displaySnapshot.hideGains && (
+                        <span className={(displaySnapshot.useDayChange ? h.dayChangePct : h.gain) >= 0 ? "text-bull" : "text-bear"}>
+                          {(displaySnapshot.useDayChange ? h.dayChangePct : h.gain) >= 0 ? "+" : ""}{(displaySnapshot.useDayChange ? h.dayChangePct : h.gain).toFixed(1)}%
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>
