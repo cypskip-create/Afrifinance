@@ -134,7 +134,6 @@ export function useFollows() {
   };
 
   const isFollowing = (userId: string) => followingIds.has(userId);
-
   const toggleFollow = async (targetUserId: string) => {
     if (isFollowing(targetUserId)) {
       return unfollowUser(targetUserId);
@@ -146,6 +145,7 @@ export function useFollows() {
   return {
     followers,
     following,
+    followingIds,
     loading,
     followUser,
     unfollowUser,

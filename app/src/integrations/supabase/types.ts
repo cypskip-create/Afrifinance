@@ -588,6 +588,7 @@ export type Database = {
           full_name: string | null
           handle: string | null
           id: string
+          interests: string[]
           portfolio_followers_only: boolean | null
           portfolio_hide_amounts: boolean | null
           portfolio_hide_gains: boolean | null
@@ -609,6 +610,7 @@ export type Database = {
           full_name?: string | null
           handle?: string | null
           id?: string
+          interests?: string[]
           portfolio_followers_only?: boolean | null
           portfolio_hide_amounts?: boolean | null
           portfolio_hide_gains?: boolean | null
@@ -630,6 +632,7 @@ export type Database = {
           full_name?: string | null
           handle?: string | null
           id?: string
+          interests?: string[]
           portfolio_followers_only?: boolean | null
           portfolio_hide_amounts?: boolean | null
           portfolio_hide_gains?: boolean | null

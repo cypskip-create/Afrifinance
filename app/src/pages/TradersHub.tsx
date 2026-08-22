@@ -15,7 +15,8 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { useToast } from "@/hooks/use-toast";
 import { HubPostCard } from "@/components/social/HubPostCard";
 import { XComposeModal } from "@/components/social/XComposeModal";
-import { TradersHubDisclaimer } from "@/components/social/TradersHubDisclaimer";
+import { TradersHubOnboarding, INTEREST_SECTOR_TICKERS } from "@/components/social/TradersHubOnboarding";
+import { SuggestedForYou } from "@/components/social/SuggestedForYou";
 import { PostSkeletonList } from "@/components/social/PostSkeleton";
 import { MediaFeed } from "@/components/social/MediaFeed";
 import { supabase } from "@/integrations/supabase/client";
@@ -52,9 +53,9 @@ export default function TradersHub() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
-  const { profile } = useProfile();
+  const { profile, updateProfile } = useProfile();
   const { posts, loading, createPost, bookmarkPost, reactToPost, deletePost, editPost, reportPost, hidePost } = usePosts();
-  const { isFollowing, toggleFollow } = useFollows();
+  const { isFollowing, toggleFollow, followingIds } = useFollows();
   const { portfolio } = usePortfolio();
   const { watchlist } = useWatchlist();
   const { notifications } = useNotifications();
@@ -207,6 +208,10 @@ export default function TradersHub() {
     }
 
     if (activeTab === "for-you" && !q) {
+      const myInterestSectors = new Set(profile?.interests || []);
+      const myInterestTickers = new Set(
+        [...myInterestSectors].flatMap(sector => INTEREST_SECTOR_TICKERS[sector] || [])
+      );
       return [...result].map(post => {
         let score = 0;
         const ageHours = (Date.now() - new Date(post.created_at).getTime()) / 3600000;
@@ -218,6 +223,11 @@ export default function TradersHub() {
           if (portfolioSymbols.has(sym)) score += 34;
           if (watchlistSymbols.has(sym)) score += 22;
           if (reactedTopics.has(sym)) score += 14;
+          // Sector interests chosen during TradersHub onboarding — a post
+          // mentioning a ticker from a sector someone said they follow
+          // (e.g. "Banking") gets a boost even before they've ever
+          // watchlisted or reacted to that specific ticker.
+          if (myInterestTickers.has(sym)) score += 18;
         });
         if (bookmarkedIds.has(post.id)) score += 12;
         const reacts = Object.values(post.reaction_counts || {}).reduce((s, n) => s + (n || 0), 0);
@@ -227,7 +237,7 @@ export default function TradersHub() {
     }
 
     return result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  }, [posts, searchQuery, activeTab, isFollowing, portfolioSymbols, watchlistSymbols, reactedTopics, bookmarkedIds, user]);
+  }, [posts, searchQuery, activeTab, isFollowing, portfolioSymbols, watchlistSymbols, reactedTopics, bookmarkedIds, user, profile?.interests]);
 
   // Merges into the current URL params instead of replacing them wholesale,
   // so switching tabs, searching, and the notification deep-link param
@@ -292,7 +302,14 @@ export default function TradersHub() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      {!disclaimerDone && <TradersHubDisclaimer userId={user?.id} onAccept={() => setDisclaimerDone(true)} />}
+      {!disclaimerDone && (
+        <TradersHubOnboarding
+          userId={user?.id}
+          profile={profile}
+          updateProfile={updateProfile}
+          onDone={() => setDisclaimerDone(true)}
+        />
+      )}
 
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border/60">
         <div className="flex items-center gap-2.5 px-3 py-2.5">
@@ -429,6 +446,16 @@ export default function TradersHub() {
             <Button variant="ghost" size="sm" className="h-6 text-[11px]" onClick={clearSearch}>Clear</Button>
           </div>
         </div>
+      )}
+
+      {/* Suggested people — ranked by shared TradersHub interests */}
+      {activeTab === "for-you" && !searching && (
+        <SuggestedForYou
+          currentUserId={user?.id}
+          myInterests={profile?.interests || []}
+          followingIds={followingIds}
+          onFollow={handleFollow}
+        />
       )}
 
       {/* Feed */}
