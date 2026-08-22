@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import { Search, X, Bell, Feather, Users, Flame, MessageSquare, Hash, Building2, TrendingUp, ChevronDown, Newspaper, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,6 +72,13 @@ export default function TradersHub() {
     return t === "following" || t === "trending" ? t : "for-you";
   });
   const [deepLinkArticleId, setDeepLinkArticleId] = useState<string | null>(() => searchParams.get("article"));
+  // Captured once on mount (not read live off useLocation later) — the page that
+  // linked here (e.g. Portfolio, a stock's news section) so the article's close
+  // button can return there explicitly instead of relying on browser history,
+  // which the URL cleanup below (a `replace`) can otherwise leave in a state
+  // that doesn't round-trip cleanly back to where the user actually came from.
+  const location = useLocation();
+  const [returnTo] = useState<string | null>(() => (location.state as { returnTo?: string } | null)?.returnTo ?? null);
   const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
   const [people, setPeople] = useState<PeopleResult[]>([]);
   const [composeOpen, setComposeOpen] = useState(false);
@@ -463,6 +470,7 @@ export default function TradersHub() {
         <MediaFeed
           searchQuery={searchQuery}
           deepLinkArticleId={deepLinkArticleId}
+          deepLinkReturnTo={returnTo}
           onDeepLinkConsumed={() => { setDeepLinkArticleId(null); updateParams({ article: null }); }}
         />
       ) : loading || !disclaimerDone ? (

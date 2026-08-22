@@ -2,12 +2,15 @@
 import {
   Menu, X, ArrowRight, MessageSquare, Users, Radio, TrendingUp,
   GraduationCap, Sparkles, ListChecks, Star, Bell, FolderKanban, Moon, GitCompare,
+  Zap, BarChart3, ShieldCheck, Globe2,
 } from "lucide-react";
 import { motion, useInView } from "framer-motion";
 import {
   PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line,
   Tooltip, XAxis, YAxis, BarChart, Bar,
 } from "recharts";
+import { ContinuaMark } from "@/components/shared/ContinuaMark";
+import { AfricaMap } from "@/components/shared/AfricaMap";
 
 // ============================================================
 // 1. REUSABLE ANIMATION COMPONENTS
@@ -263,6 +266,7 @@ const navSections = [
   { id: "research", label: "Research" },
   { id: "stock-page", label: "Stock page" },
   { id: "portfolio", label: "Portfolio" },
+  { id: "brand-story", label: "Our story" },
   { id: "more-features", label: "More" },
   { id: "pricing", label: "Pricing" },
   { id: "faq", label: "FAQ" },
@@ -417,12 +421,7 @@ const ContinuaLandingPage = () => {
         }
         .nav-inner{ display:flex; align-items:center; justify-content:space-between; height:52px; gap:10px; }
         .brand{ display:flex; align-items:center; gap:9px; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:16px; letter-spacing:-.01em; flex:none; }
-        .mark{
-          width:30px; height:30px; border-radius:8px; flex:none;
-          display:inline-flex; align-items:center; justify-content:center;
-          font-family:'Space Grotesk',sans-serif; font-weight:700; color:#0d775d; font-size:16px;
-          background:#f3efe6;
-        }
+        .mark{ flex:none; }
         nav.links{ display:flex; align-items:center; gap:22px; }
         nav.links a{ font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); position:relative; padding-bottom:3px; }
         nav.links a::after{ content:""; position:absolute; left:0; right:100%; bottom:0; height:1px; background:var(--accent); transition:right .2s ease; }
@@ -604,6 +603,27 @@ const ContinuaLandingPage = () => {
           border:1px solid var(--border); border-radius:24px; padding:48px 44px;
           box-shadow:0 1px 2px rgba(20,20,20,.04), 0 24px 48px -28px rgba(108,79,224,.35);
         }
+        .brand-story-section{ background:#0D1117; }
+        .brand-story-panel{
+          display:grid; grid-template-columns:1fr 1fr; gap:56px; align-items:center;
+          padding:64px 0;
+        }
+        .brand-story-copy .eyebrow{ color:#FF8A00; }
+        .brand-story-copy .eyebrow::before{ background:#FF8A00; }
+        .brand-story-copy h2{ color:#F5F6FA; }
+        .brand-story-copy p{ color:rgba(245,246,250,.72); font-size:15.5px; line-height:1.7; max-width:460px; }
+        .brand-story-chips{ display:flex; flex-wrap:wrap; gap:10px; margin-top:26px; }
+        .brand-story-chips span{
+          display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:600;
+          color:#F5F6FA; background:rgba(245,246,250,.07); border:1px solid rgba(245,246,250,.14);
+          border-radius:999px; padding:7px 13px;
+        }
+        .brand-story-chips svg{ color:#FF8A00; }
+        .brand-story-media{ position:relative; }
+        @media (max-width:860px){
+          .brand-story-panel{ grid-template-columns:1fr; padding:48px 0; gap:36px; }
+          .brand-story-copy p{ max-width:none; }
+        }
         .th-eyebrow{ color:var(--accent); }
         .th-eyebrow::before{ background:var(--accent); }
         .th-mini-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-top:40px; padding-top:36px; border-top:1px solid var(--border); }
@@ -731,7 +751,7 @@ const ContinuaLandingPage = () => {
       <header className="nav">
         <div className="wrap nav-inner">
           <div className="brand">
-            <span className="mark" aria-label="Continua logo">A</span>
+            <ContinuaMark size={30} bare className="mark" />
             <span>Continua</span>
           </div>
           <nav className="links" aria-label="Main navigation">
@@ -855,6 +875,35 @@ const ContinuaLandingPage = () => {
               </StaggerItem>
             ))}
           </StaggerContainer>
+        </div>
+      </section>
+
+      {/* ============================================================
+          BRAND STORY — mission statement + dotted map of Africa
+      ============================================================ */}
+      <section id="brand-story" className="brand-story-section">
+        <div className="wrap">
+          <Reveal>
+            <div className="brand-story-panel">
+              <div className="brand-story-copy">
+                <div className="eyebrow" style={{ justifyContent: "flex-start", color: "#FF8A00" }}>Brand story</div>
+                <h2>A movement, not just a platform</h2>
+                <p>
+                  Continua is more than a platform — it's a movement for African investors and traders to
+                  access real-time insights, make smarter decisions and grow together.
+                </p>
+                <div className="brand-story-chips">
+                  <span><Zap size={13} strokeWidth={2} /> Real-time data</span>
+                  <span><BarChart3 size={13} strokeWidth={2} /> Market opportunities</span>
+                  <span><ShieldCheck size={13} strokeWidth={2} /> Trust &amp; security</span>
+                  <span><Globe2 size={13} strokeWidth={2} /> Africa focused</span>
+                </div>
+              </div>
+              <div className="brand-story-media">
+                <AfricaMap />
+              </div>
+            </div>
+          </Reveal>
         </div>
       </section>
 
@@ -1342,7 +1391,7 @@ const ContinuaLandingPage = () => {
           <div className="foot-grid">
             <div>
               <div className="brand" style={{ marginBottom: "12px" }}>
-                <span className="mark" aria-label="Continua logo">A</span>
+                <ContinuaMark size={30} bare className="mark" />
                 <span>Continua</span>
               </div>
               <p style={{ fontSize: "13px", color: "var(--muted)", maxWidth: "260px", lineHeight: "1.6" }}>Research, track and discuss Nairobi Securities Exchange stocks in one place.</p>

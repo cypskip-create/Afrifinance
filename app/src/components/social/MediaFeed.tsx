@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -11,6 +12,12 @@ interface MediaFeedProps {
   searchQuery: string;
   /** Article id to auto-open on mount — used for notification deep links. */
   deepLinkArticleId?: string | null;
+  /** Where to send the user when they close a deep-linked article (e.g. "/track-investments"
+   *  when opened from Portfolio). Explicit destination beats browser history — `navigate(-1)`
+   *  can land somewhere unexpected depending on what else touched the history stack in
+   *  between (e.g. the URL cleanup once the deep link is read). Falls back to `navigate(-1)`
+   *  when this isn't provided (e.g. a raw shared link with no known origin page). */
+  deepLinkReturnTo?: string | null;
   onDeepLinkConsumed?: () => void;
 }
 
@@ -20,16 +27,37 @@ const sentimentColor = (s?: string) => {
   return "bg-muted text-muted-foreground";
 };
 
-export function MediaFeed({ searchQuery, deepLinkArticleId, onDeepLinkConsumed }: MediaFeedProps) {
+export function MediaFeed({ searchQuery, deepLinkArticleId, deepLinkReturnTo, onDeepLinkConsumed }: MediaFeedProps) {
+  const navigate = useNavigate();
   const [category, setCategory] = useState<MediaCategory | "all">("all");
   const [selected, setSelected] = useState<MediaItem | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  // True when the open article was reached via a deep link (e.g. "Updates for your
+  // holdings" on the Portfolio page navigating to /traders-hub?...&article=id) rather
+  // than tapped from this feed directly. Closing needs to behave differently for each:
+  // a deep link pushed a new history entry to get here, so closing should go back to
+  // wherever that link came from; a same-page tap never left this page, so closing
+  // should just dismiss the sheet and leave you right here on Media.
+  const [openedViaDeepLink, setOpenedViaDeepLink] = useState(false);
 
   const feed = useMemo(() => getMediaFeed(category, searchQuery), [category, searchQuery]);
   const breaking = useMemo(() => feed.find((m) => m.isBreaking) || feed[0], [feed]);
   const rest = useMemo(() => feed.filter((m) => m.id !== breaking?.id), [feed, breaking]);
 
-  const openItem = (item: MediaItem) => { setSelected(item); setDetailOpen(true); };
+  const openItem = (item: MediaItem) => { setSelected(item); setOpenedViaDeepLink(false); setDetailOpen(true); };
+
+  const closeDetail = (nextOpen: boolean) => {
+    if (nextOpen) { setDetailOpen(true); return; }
+    if (openedViaDeepLink) {
+      // Navigate straight to the known origin page. Using `replace` here (not a
+      // plain push) so we don't leave the now-meaningless "/traders-hub?tab=media"
+      // entry sitting in history between the origin page and wherever the user
+      // goes next.
+      if (deepLinkReturnTo) navigate(deepLinkReturnTo, { replace: true });
+      else navigate(-1); // no known origin (e.g. a raw shared link) — best effort
+    }
+    setDetailOpen(false);
+  };
 
   // Notification deep-link: /traders-hub?tab=media&article=<id>
   useEffect(() => {
@@ -37,6 +65,7 @@ export function MediaFeed({ searchQuery, deepLinkArticleId, onDeepLinkConsumed }
     const target = getMediaFeed("all", "").find((m) => m.id === deepLinkArticleId);
     if (target) {
       setSelected(target);
+      setOpenedViaDeepLink(true);
       setDetailOpen(true);
     }
     onDeepLinkConsumed?.();
@@ -159,7 +188,7 @@ export function MediaFeed({ searchQuery, deepLinkArticleId, onDeepLinkConsumed }
         </>
       )}
 
-      <MediaDetailDialog item={selected} open={detailOpen} onOpenChange={setDetailOpen} />
+      <MediaDetailDialog item={selected} open={detailOpen} onOpenChange={closeDetail} />
     </div>
   );
 }

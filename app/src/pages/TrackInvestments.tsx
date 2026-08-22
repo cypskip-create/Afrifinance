@@ -243,7 +243,7 @@ export default function TrackInvestments() {
                 <button
                   key={item.id}
                   data-small-target
-                  onClick={() => navigate(`/traders-hub?tab=media&article=${item.id}`)}
+                  onClick={() => navigate(`/traders-hub?tab=media&article=${item.id}`, { state: { returnTo: "/track-investments" } })}
                   className="w-full flex items-start gap-3 py-3 border-b border-border/40 text-left active:opacity-70 transition-opacity"
                 >
                   <Newspaper className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />

@@ -252,8 +252,12 @@ export default function StockDetail() {
     topShareholders: liveTopShareholders.length > 0 ? liveTopShareholders : fundamentals.topShareholders,
   };
   const stockNews = getMediaItemsForSymbol(symbol || "");
-  // Opens the full story on the TradersHub Media tab.
-  const openNewsItem = (item: MediaItem) => navigate(`/traders-hub?tab=media&article=${item.id}`);
+  // Opens the full story on the TradersHub Media tab. Passes where we came from
+  // explicitly (rather than relying on browser history for the way back) so the
+  // article's close button returns here reliably regardless of what else has
+  // touched the history stack in between (e.g. the URL cleanup once the deep
+  // link is read).
+  const openNewsItem = (item: MediaItem) => navigate(`/traders-hub?tab=media&article=${item.id}`, { state: { returnTo: `/stock/${symbol}` } });
 
   // Section refs — sticky sub-nav scrolls to them
   const refs = {

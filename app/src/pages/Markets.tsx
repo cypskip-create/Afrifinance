@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { TopBar } from "@/components/shared/TopBar";
 import { SparklineChart } from "@/components/shared/SparklineChart";
 import { MarketStatusIndicator } from "@/components/shared/MarketStatusIndicator";
+import { AfricaMap } from "@/components/shared/AfricaMap";
 import { AllStocksList } from "@/components/markets/AllStocksList";
 import { StockHeatmap } from "@/components/home/StockHeatmap";
 import { CANONICAL_SYMBOLS, STOCK_META, getPrice, getDayChange, relativeDate } from "@/lib/stockPrices";
@@ -246,7 +247,8 @@ export default function Markets() {
       </div>
 
       <div className="px-4 pt-4 space-y-5 animate-fade-in">
-        {/* ── INTERACTIVE ANALYSIS TOOLS ── shown on every Markets tab */}
+        {/* ── INTERACTIVE ANALYSIS TOOLS ── shown on every Markets tab except Overview */}
+        {activeTab !== "Overview" && (
         <div>
           <h2 className="text-sm font-bold mb-3 flex items-center gap-2">
             <Filter className="h-4 w-4 text-primary" />
@@ -271,9 +273,24 @@ export default function Markets() {
             ))}
           </div>
         </div>
+        )}
 
         {activeTab === "Overview" && (
           <>
+            {/* Continua brand strip — dotted Africa map, Pan-African positioning */}
+            <Card className="soft-card overflow-hidden relative">
+              <div className="absolute inset-0 bg-[#0D1117]" />
+              <div className="relative px-4 py-5 flex items-center gap-4">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#FF8A00] mb-1.5">Continua</p>
+                  <p className="text-sm font-semibold text-[#F5F6FA] leading-snug">Markets, insights and growth — built for African investors.</p>
+                </div>
+                <div className="w-28 shrink-0">
+                  <AfricaMap showOrbit={false} />
+                </div>
+              </div>
+            </Card>
+
             {/* Market Status */}
             <div className="flex items-center justify-between">
               <MarketStatusIndicator />
