@@ -14,6 +14,7 @@ export interface ValuationResult {
   symbol: string;
   exchange: string;
   currentPrice: number;
+  currency: string;
   models: ValuationModel[];
   caveat: string;
 }

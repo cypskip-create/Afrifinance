@@ -36,6 +36,7 @@ export interface ValuationResult {
   symbol: string;
   exchange: ExchangeCode;
   currentPrice: number;
+  currency: string;
   models: ValuationModel[];
   caveat: string;
 }
@@ -67,7 +68,7 @@ export const valuationService = {
       dividendDiscountModel(currentPrice, dividends),
     ];
 
-    return { symbol, exchange, currentPrice, models, caveat: CAVEAT };
+    return { symbol, exchange, currentPrice, currency: quote.currency, models, caveat: CAVEAT };
   },
 };
 

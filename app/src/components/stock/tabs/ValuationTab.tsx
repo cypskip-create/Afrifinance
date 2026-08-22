@@ -2,16 +2,18 @@ import { Badge } from "@/components/ui/badge";
 import { Fundamentals } from "@/data/stockFundamentals";
 import { fx } from "@/lib/chartPalette";
 import { BarChartBlock } from "@/components/charts/BarChartBlock";
+import { useValuation } from "@/hooks/useValuation";
+import { Loader2, Info } from "lucide-react";
 
 
 
-interface Props { price: number; pe: string; fundamentals: Fundamentals; onSeePerformance?: () => void }
+interface Props { price: number; pe: string; fundamentals: Fundamentals; symbol: string; onSeePerformance?: () => void }
 
 const Eyebrow = ({ children }: { children: React.ReactNode }) => (
   <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground mb-2">{children}</p>
 );
 
-export function ValuationTab({ price, pe, fundamentals, onSeePerformance }: Props) {
+export function ValuationTab({ price, pe, fundamentals, symbol, onSeePerformance }: Props) {
   const fair = fundamentals.fairValue;
   const upside = ((fair - price) / price) * 100;
   const tag = upside > 10 ? "Undervalued" : upside < -10 ? "Overvalued" : "Fairly Valued";
@@ -31,9 +33,57 @@ export function ValuationTab({ price, pe, fundamentals, onSeePerformance }: Prop
   ];
 
   const targets = fundamentals.analystTargets;
+  const { valuation, isLoading: valuationLoading } = useValuation(symbol);
 
   return (
     <div className="space-y-8">
+      {/* Real, data-backed valuation models — separate from the fair-value
+          gauge below, which currently runs on demo data (see
+          data/stockFundamentals.ts). See backend/src/services/technical/
+          valuationService.ts: each model returns null with a stated
+          reason rather than a guess when it can't compute. */}
+      <div>
+        <Eyebrow>Model-Based Estimates</Eyebrow>
+        {valuationLoading ? (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground border-t border-border/60 pt-3">
+            <Loader2 className="h-3 w-3 animate-spin" /> Computing valuation models…
+          </div>
+        ) : !valuation ? (
+          <p className="text-xs text-muted-foreground border-t border-border/60 pt-3">Not enough data on file to compute valuation models for {symbol} yet.</p>
+        ) : (
+          <div className="border-t border-border/60 divide-y divide-border/40">
+            {valuation.models.map((model) => (
+              <div key={model.model} className="py-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold">{model.model}</p>
+                  {model.fairValue != null ? (
+                    <div className="text-right">
+                      <p className="text-sm font-bold tabular">{valuation.currency} {model.fairValue.toFixed(2)}</p>
+                      {model.upsidePercent != null && (
+                        <p className={`text-[10px] font-semibold tabular ${model.upsidePercent >= 0 ? 'text-bull' : 'text-bear'}`}>
+                          {model.upsidePercent >= 0 ? '+' : ''}{model.upsidePercent.toFixed(1)}%
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <Badge variant="outline" className="text-[9px]">N/A</Badge>
+                  )}
+                </div>
+                {model.unavailableReason ? (
+                  <p className="text-[10px] text-muted-foreground mt-1">{model.unavailableReason}</p>
+                ) : (
+                  <div className="flex items-start gap-1 mt-1">
+                    <Info className="h-2.5 w-2.5 text-muted-foreground mt-0.5 shrink-0" />
+                    <p className="text-[10px] text-muted-foreground leading-snug">{model.methodology}</p>
+                  </div>
+                )}
+              </div>
+            ))}
+            <p className="text-[10px] text-muted-foreground pt-2">{valuation.caveat}</p>
+          </div>
+        )}
+      </div>
+
       {/* Fair value gauge */}
       <div>
         <Eyebrow>Fair Value Estimate</Eyebrow>

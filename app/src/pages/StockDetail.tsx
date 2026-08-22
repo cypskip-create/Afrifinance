@@ -19,6 +19,7 @@ import { AIThesisCard } from "@/components/stock/AIThesisCard";
 import { getFundamentals } from "@/data/stockFundamentals";
 import { STOCK_META, getPrice, getDayChange, DIV_YIELD, getStockFundamentals } from "@/lib/stockPrices";
 import { ValuationTab } from "@/components/stock/tabs/ValuationTab";
+import { TechnicalsTab } from "@/components/stock/tabs/TechnicalsTab";
 import { GrowthTab } from "@/components/stock/tabs/GrowthTab";
 import { HealthTab } from "@/components/stock/tabs/HealthTab";
 import { DividendsTab } from "@/components/stock/tabs/DividendsTab";
@@ -37,6 +38,7 @@ import { useHistoricalCandles } from "@/hooks/useHistoricalCandles";
 import { useDividendHistory } from "@/hooks/useDividendHistory";
 import { useOwnership } from "@/hooks/useOwnership";
 import { useCorporateActions } from "@/hooks/useCorporateActions";
+import { useExchange } from "@/hooks/useExchange";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { ContinuaScores } from "@/components/stock/ContinuaScore";
 
@@ -64,6 +66,7 @@ const SUB_NAV: { id: SubSection; label: string }[] = [
 ];
 
 export default function StockDetail() {
+  const { exchangeMeta } = useExchange();
   const navigate = useNavigate();
   const { symbol } = useParams();
   const [selectedTimeframe, setSelectedTimeframe] = useState("1D");
@@ -74,7 +77,7 @@ export default function StockDetail() {
   const [hoverPrice, setHoverPrice] = useState<number | null>(null);
   const [hoverDate, setHoverDate] = useState<string | null>(null);
   const [section, setSection] = useState<SubSection>("overview");
-  const [researchGroup, setResearchGroup] = useState<"valuation" | "performance" | "growth" | "health" | "dividends" | "scores" | "ownership" | "risk">("valuation");
+  const [researchGroup, setResearchGroup] = useState<"valuation" | "performance" | "growth" | "health" | "dividends" | "scores" | "ownership" | "risk" | "technicals">("valuation");
   const { addToWatchlist, removeFromWatchlist, isInWatchlist } = useWatchlist();
   const { portfolio } = usePortfolio();
   const { toast } = useToast();
@@ -600,7 +603,7 @@ export default function StockDetail() {
           {/* Second-level sticky nav — sits directly under the primary sub-nav */}
           <div className="sticky top-[97px] z-20 -mx-4 px-4 py-2 bg-background/92 backdrop-blur-xl border-b border-border/60">
             <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
-              {(["valuation", "performance", "growth", "health", "dividends", "scores", "ownership", "risk"] as const).map(g => (
+              {(["valuation", "technicals", "performance", "growth", "health", "dividends", "scores", "ownership", "risk"] as const).map(g => (
                 <button
                   key={g}
                   data-small-target
@@ -613,7 +616,8 @@ export default function StockDetail() {
             </div>
           </div>
           <div className="research-flow pt-2">
-          {researchGroup === "valuation" && <ValuationTab price={stock.price} pe={stock.pe} fundamentals={liveFundamentals} onSeePerformance={() => setResearchGroup("performance")} />}
+          {researchGroup === "valuation" && <ValuationTab price={stock.price} pe={stock.pe} fundamentals={liveFundamentals} symbol={symbol || ""} onSeePerformance={() => setResearchGroup("performance")} />}
+          {researchGroup === "technicals" && <TechnicalsTab symbol={symbol || ""} currency={exchangeMeta.currency} />}
           {researchGroup === "performance" && <PerformanceTab symbol={symbol || ""} price={stock.price} fundamentals={liveFundamentals} />}
           {researchGroup === "growth" && <GrowthTab fundamentals={liveFundamentals} />}
           {researchGroup === "health" && <HealthTab fundamentals={liveFundamentals} />}
