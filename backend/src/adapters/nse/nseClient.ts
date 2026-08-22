@@ -14,6 +14,7 @@
  *                      NSE_CLIENT_MODE=live in .env.
  */
 import { env } from "../../config/index.js";
+import { logger } from "../../monitoring/logger.js";
 import https from "node:https";
 import type {
   NseRawSecurity, NseRawQuote, NseRawCandle, NseRawCompanyProfile,
@@ -390,8 +391,19 @@ export class RealNseClient implements INseClient {
   async fetchQuotes(symbols: string[]): Promise<NseRawQuote[]> {
     const requested = new Set(symbols.map((symbol) => symbol.toUpperCase()));
     const movers = await this.fetchMovers();
-    return movers
-      .filter((mover) => !requested.size || requested.has(mover.ticker.toUpperCase()))
+    const matched = movers.filter((mover) => !requested.size || requested.has(mover.ticker.toUpperCase()));
+
+    // TEMPORARY — remove once we've confirmed whether Mansa's movers feed
+    // ever actually includes our tracked NSE symbols. Prices staying frozen
+    // at seed values despite successful (200 OK) polls points to `matched`
+    // being empty every time, meaning the free-tier movers endpoint simply
+    // never surfaces these tickers — not a bug in this filter itself.
+    logger.info(
+      { requestedCount: requested.size, moversReturned: movers.length, matchedCount: matched.length, moversTickers: movers.map((m) => m.ticker) },
+      "Mansa movers vs requested NSE symbols",
+    );
+
+    return matched
       .map((mover) => {
         const change = mover.change ?? 0;
         const previousClose = mover.price - change;
