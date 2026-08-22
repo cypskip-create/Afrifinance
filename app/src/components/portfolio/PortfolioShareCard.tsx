@@ -7,20 +7,45 @@ import { TrendingUp, TrendingDown } from "lucide-react";
  * references in the card's inline style.
  *
  * Why: html-to-image (used by SharePortfolioDialog to turn this card into a
- * PNG) clones this node and serializes it into a standalone SVG
- * <foreignObject> for rasterization. That clone doesn't reliably carry the
- * live cascade needed to resolve `var(--primary)` etc., so any gradient stop
- * built from an unresolved variable parses as an invalid color — which
- * canvas rendering paints as solid black. That's the dark diagonal "shadow"
- * across the top of downloaded/shared images in light mode, and it's also
- * why the card doesn't read the AMOLED palette correctly in an export: the
- * fallback color has nothing to do with the active theme.
+ * PNG) clones this node into an SVG <foreignObject> for rasterization. On
+ * WebKit (iOS Safari / iOS WebViews) that foreignObject renderer doesn't
+ * reliably support the modern comma-less `hsl(H S% L% / A)` syntax with a
+ * slash-separated alpha — it silently treats it as an invalid color, which
+ * paints as solid black. That's the dark diagonal "shadow" across the top of
+ * downloaded/shared images, and it also breaks the AMOLED palette in
+ * exports, since the fallback has nothing to do with the active theme.
  *
- * Baking in literal `hsl(H S% L% / A)` strings (no var()) makes the card
- * theme-correct AND safe to rasterize, on-screen and in the exported image.
+ * The fix here goes one step further than just resolving the variables: we
+ * convert the resolved HSL all the way down to a plain `rgb(r, g, b)` string
+ * (with any translucency pre-blended against the card color in JS, not left
+ * as a CSS alpha channel). Plain comma-syntax rgb() has universal support,
+ * on-screen and in every rasterization path, so nothing here can render as
+ * an unsupported color again.
  */
+function hslToRgb(h: number, s: number, l: number): [number, number, number] {
+  s /= 100;
+  l /= 100;
+  const k = (n: number) => (n + h / 30) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n: number) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  return [Math.round(f(0) * 255), Math.round(f(8) * 255), Math.round(f(4) * 255)];
+}
+
+function parseHslTriplet(value: string): [number, number, number] {
+  const [h, s, l] = value.split(" ").map(part => parseFloat(part));
+  return [h || 0, s || 0, l || 0];
+}
+
+function blend(a: [number, number, number], b: [number, number, number], aWeight: number): [number, number, number] {
+  return [
+    Math.round(a[0] * aWeight + b[0] * (1 - aWeight)),
+    Math.round(a[1] * aWeight + b[1] * (1 - aWeight)),
+    Math.round(a[2] * aWeight + b[2] * (1 - aWeight)),
+  ];
+}
+
 function useResolvedThemeColors() {
-  const [colors, setColors] = useState({ primary: "252 70% 52%", card: "0 0% 100%", isAmoled: false });
+  const [colors, setColors] = useState({ primary: "252 70% 52%", primaryForeground: "0 0% 100%", card: "0 0% 100%", border: "220 13% 91%", muted: "220 14% 96%", isAmoled: false });
 
   useEffect(() => {
     const read = () => {
@@ -28,7 +53,10 @@ function useResolvedThemeColors() {
       const styles = getComputedStyle(root);
       setColors({
         primary: styles.getPropertyValue("--primary").trim() || "252 70% 52%",
+        primaryForeground: styles.getPropertyValue("--primary-foreground").trim() || "0 0% 100%",
         card: styles.getPropertyValue("--card").trim() || "0 0% 100%",
+        border: styles.getPropertyValue("--border").trim() || "220 13% 91%",
+        muted: styles.getPropertyValue("--muted").trim() || "220 14% 96%",
         isAmoled: root.classList.contains("amoled"),
       });
     };
@@ -79,22 +107,36 @@ export const PortfolioShareCard = forwardRef<HTMLDivElement, PortfolioShareCardP
     const shown = topHoldingsOnly ? holdings.slice(0, 5) : holdings;
     const primaryGain = showDayChange ? todayGain : totalGain;
     const primaryPct = showDayChange ? todayPercent : gainPercent;
-    const { primary, card, isAmoled } = useResolvedThemeColors();
+    const { primary, primaryForeground, card, border, muted, isAmoled } = useResolvedThemeColors();
     // AMOLED keeps every surface flat true-black-or-near-black (see index.css
     // "AMOLED consistency") — no lifted gradients — so the card matches the
     // rest of the app instead of standing out with a violet-tinted sheen.
-    const cardBackground = isAmoled ? `hsl(${card})` : `linear-gradient(165deg, hsl(${primary} / 0.08), hsl(${card}) 55%)`;
+    const cardRgb = hslToRgb(...parseHslTriplet(card));
+    const primaryRgb = hslToRgb(...parseHslTriplet(primary));
+    const primaryForegroundRgb = hslToRgb(...parseHslTriplet(primaryForeground));
+    const borderRgb = hslToRgb(...parseHslTriplet(border));
+    const mutedRgb = hslToRgb(...parseHslTriplet(muted));
+    // Every one of these is a translucent color over the card in the original
+    // design (an alpha channel) — pre-blended here into solid rgb() so nothing
+    // in this card depends on the renderer supporting CSS alpha colors.
+    const tintedRgb = blend(primaryRgb, cardRgb, 0.08);
+    const borderOnCardRgb = blend(borderRgb, cardRgb, 0.6);
+    const footerBgRgb = blend(mutedRgb, cardRgb, 0.2);
+    const cardBackground = isAmoled
+      ? `rgb(${cardRgb.join(", ")})`
+      : `linear-gradient(165deg, rgb(${tintedRgb.join(", ")}), rgb(${cardRgb.join(", ")}) 55%)`;
+    const rgb = (c: [number, number, number]) => `rgb(${c.join(", ")})`;
 
     return (
       <div
         ref={ref}
-        className="w-[360px] rounded-3xl overflow-hidden border border-border"
-        style={{ background: cardBackground }}
+        className="w-[360px] rounded-3xl overflow-hidden"
+        style={{ background: cardBackground, border: `1px solid ${rgb(borderRgb)}` }}
       >
         <div className="p-5 pb-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-1.5">
-              <div className="h-6 w-6 rounded-md bg-primary text-primary-foreground flex items-center justify-center text-[12px] font-bold">C</div>
+              <div className="h-6 w-6 rounded-md flex items-center justify-center text-[12px] font-bold" style={{ background: rgb(primaryRgb), color: rgb(primaryForegroundRgb) }}>C</div>
               <span className="text-[13px] font-bold tracking-tight">Continua</span>
             </div>
             <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">NSE Portfolio</span>
@@ -119,7 +161,7 @@ export const PortfolioShareCard = forwardRef<HTMLDivElement, PortfolioShareCardP
             {shown.map((h) => (
               <div key={h.symbol} className="flex items-center justify-between">
                 <div className="flex items-center gap-2 min-w-0">
-                  <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-[9px] font-bold shrink-0">
+                  <div className="h-7 w-7 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0" style={{ background: rgb(mutedRgb) }}>
                     {h.symbol.slice(0, 2)}
                   </div>
                   <div className="min-w-0">
@@ -138,7 +180,7 @@ export const PortfolioShareCard = forwardRef<HTMLDivElement, PortfolioShareCardP
           </div>
         )}
 
-        <div className="px-5 py-3 border-t border-border/60 bg-muted/20">
+        <div className="px-5 py-3" style={{ borderTop: `1px solid ${rgb(borderOnCardRgb)}`, background: rgb(footerBgRgb) }}>
           <p className="text-[9.5px] text-center text-muted-foreground">Track NSE stocks on Continua</p>
         </div>
       </div>
