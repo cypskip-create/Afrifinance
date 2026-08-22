@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toPng, toBlob } from "html-to-image";
-import { Dialog, DialogContent, DialogClose, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetClose, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
@@ -108,21 +108,23 @@ export function SharePortfolioDialog({ open, onOpenChange, holdings, totalValue,
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* Full-screen, top-anchored (not center-translated) so it never "jumps" as the
-       *  mobile browser chrome shows/hides and 100dvh recalculates. Header and the
-       *  action buttons are pinned in place; only the middle (preview + toggles) area
-       *  scrolls, and only if a given screen is too short to show everything at once. */}
-      <DialogContent
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      {/* Full-screen bottom sheet — slides up from the bottom at the same speed as the
+       *  Chart Indicators sheet (both share the same Sheet primitive/timing), instead of
+       *  the old center-dialog motion. Header and the action buttons are pinned in
+       *  place; only the middle (preview + toggles) area scrolls, and only if a given
+       *  screen is too short to show everything at once. */}
+      <SheetContent
+        side="bottom"
         hideClose
-        className="max-w-none w-screen h-[100dvh] max-h-[100dvh] top-0 left-0 translate-x-0 translate-y-0 rounded-none border-0 p-0 gap-0 flex flex-col overflow-hidden sm:rounded-none data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100 data-[state=open]:slide-in-from-left-0 data-[state=open]:slide-in-from-top-0 data-[state=closed]:slide-out-to-left-0 data-[state=closed]:slide-out-to-top-0"
+        className="max-w-none w-screen h-[100dvh] max-h-[100dvh] inset-x-0 bottom-0 top-auto rounded-none border-0 border-t-0 p-0 gap-0 flex flex-col overflow-hidden"
       >
         <div className="flex items-center justify-between px-4 h-12 border-b border-border shrink-0">
-          <DialogTitle className="text-base">Share Portfolio</DialogTitle>
-          <DialogClose className="rounded-full p-1.5 opacity-70 hover:opacity-100 hover:bg-muted transition">
+          <SheetTitle className="text-base">Share Portfolio</SheetTitle>
+          <SheetClose className="rounded-full p-1.5 opacity-70 hover:opacity-100 hover:bg-muted transition">
             <X className="h-4 w-4" />
             <span className="sr-only">Close</span>
-          </DialogClose>
+          </SheetClose>
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto">
@@ -154,8 +156,8 @@ export function SharePortfolioDialog({ open, onOpenChange, holdings, totalValue,
             </Button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
 

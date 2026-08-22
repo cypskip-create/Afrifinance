@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -39,10 +39,14 @@ export function MediaDetailDialog({ item, open, onOpenChange }: MediaDetailDialo
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) setPlaying(false); }}>
-      <DialogContent
+    <Sheet open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) setPlaying(false); }}>
+      {/* Slides up from the bottom at the same speed as the Chart Indicators sheet
+       *  (both share the same Sheet primitive/timing), instead of the old
+       *  center-dialog motion. Own close button below replaces the default one. */}
+      <SheetContent
+        side="bottom"
         hideClose
-        className="max-w-none w-screen h-[100dvh] inset-0 top-0 left-0 translate-x-0 translate-y-0 rounded-none border-0 p-0 gap-0 overflow-hidden"
+        className="max-w-none w-screen h-[100dvh] max-h-[100dvh] inset-x-0 bottom-0 top-auto rounded-none border-0 border-t-0 p-0 gap-0 overflow-hidden"
       >
         <ScrollArea className="h-[100dvh]">
           {/* Hero — image, or inline video player when this is a video item */}
@@ -162,7 +166,7 @@ export function MediaDetailDialog({ item, open, onOpenChange }: MediaDetailDialo
             </Button>
           </div>
         </ScrollArea>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
