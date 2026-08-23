@@ -277,17 +277,10 @@ export default function Markets() {
 
         {activeTab === "Overview" && (
           <>
-            {/* Continua brand strip — dotted Africa map, Pan-African positioning */}
-            <Card className="soft-card overflow-hidden relative">
-              <div className="absolute inset-0 bg-[#0D1117]" />
-              <div className="relative px-4 py-5 flex items-center gap-4">
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#FF8A00] mb-1.5">Continua</p>
-                  <p className="text-sm font-semibold text-[#F5F6FA] leading-snug">Markets, insights and growth — built for African investors.</p>
-                </div>
-                <div className="w-28 shrink-0">
-                  <AfricaMap showOrbit={false} />
-                </div>
+            {/* Continua brand strip — dotted Africa globe, centered, theme-matched */}
+            <Card className="soft-card overflow-hidden">
+              <div className="w-full max-w-[220px] mx-auto py-4">
+                <AfricaMap variant="compact" />
               </div>
             </Card>
 
