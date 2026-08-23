@@ -47,13 +47,13 @@ const TRENDING_STOCKS: TrendingStock[] = [
     reason: 'Regional expansion'
   },
   {
-    symbol: 'BAMB',
-    name: 'Bamburi Cement',
-    price: 89.75,
-    change: 3.15,
-    volume: '5.2M',
+    symbol: 'PORT',
+    name: 'East African Portland Cement',
+    price: 116.50,
+    change: -2.51,
+    volume: '3.4K',
     mentions: 432,
-    sparkline: [85, 86, 87, 86.5, 88, 89, 88.5, 89.75],
+    sparkline: [122, 121, 120.5, 119.5, 118, 117.5, 117, 116.5],
     reason: 'Infrastructure deals'
   },
 ];

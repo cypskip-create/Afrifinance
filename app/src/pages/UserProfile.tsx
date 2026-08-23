@@ -47,11 +47,6 @@ interface PortfolioHolding {
   symbol: string; name: string; shares: number; avg_cost: number; sector: string | null;
 }
 
-const MOCK_PRICES: Record<string, number> = {
-  SCOM: 12.85, SAFCOM: 12.85, EQTY: 62.50, KCB: 45.30, COOP: 15.20,
-  SCBK: 185.00, BAMB: 89.75, EABL: 155.00, BAT: 320.00, ABSA: 14.10,
-};
-
 export default function UserProfile() {
   const { userId } = useParams();
   const navigate = useNavigate();

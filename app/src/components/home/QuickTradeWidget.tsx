@@ -9,7 +9,7 @@ import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 // Continua Data Layer quotes wherever available (falling back to the
 // shared static price source, src/lib/stockPrices.ts, per-symbol), so this
 // marquee can never contradict the Portfolio page or a stock's own detail page.
-const QUICK_SYMBOLS = ["SAFCOM", "EQTY", "KCB", "SCBK", "EABL", "COOP", "ABSA", "NCBA", "BAMB", "BRIT", "KPLC"];
+const QUICK_SYMBOLS = ["SAFCOM", "EQTY", "KCB", "SCBK", "EABL", "COOP", "ABSA", "NCBA", "PORT", "BRIT", "KPLC"];
 
 export function QuickTradeWidget() {
   const navigate = useNavigate();

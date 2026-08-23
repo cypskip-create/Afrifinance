@@ -28,7 +28,7 @@ import SectorHeatmap from "./pages/SectorHeatmap";
 import TrackInvestments from "./pages/TrackInvestments";
 import TradersHub from "./pages/TradersHub";
 import Rooms from "./pages/Rooms";
-import StockScreener from "./pages/StockScreener";
+import { StockScreener } from "./pages/StockScreener";
 import StockCompare from "./pages/StockCompare";
 import UserProfile from "./pages/UserProfile";
 import Settings from "./pages/Settings";

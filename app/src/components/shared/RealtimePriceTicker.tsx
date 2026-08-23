@@ -26,7 +26,7 @@ export function RealtimePriceTicker({
     SAFCOM: 12.85,
     EQTY: 62.50,
     SCBK: 185.00,
-    BAMB: 89.75,
+    PORT: 116.50,
     KCB: 45.30,
     COOP: 15.20,
     EABL: 142.00,

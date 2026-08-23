@@ -44,7 +44,7 @@ interface PeopleResult {
 const NSE_NAMES: Record<string, string> = {
   SCOM: "Safaricom PLC", SAFCOM: "Safaricom PLC", EQTY: "Equity Group Holdings",
   KCB: "KCB Group PLC", COOP: "Co-operative Bank", SCBK: "Standard Chartered Kenya",
-  BAMB: "Bamburi Cement", EABL: "East African Breweries", BAT: "BAT Kenya",
+  PORT: "East African Portland Cement", EABL: "East African Breweries", BAT: "BAT Kenya",
   ABSA: "ABSA Bank Kenya", NCBA: "NCBA Group", JUB: "Jubilee Holdings",
   BRIT: "Britam Holdings", DTK: "Diamond Trust Bank", KEGN: "KenGen PLC", KPLC: "Kenya Power",
 };

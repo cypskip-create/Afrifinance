@@ -34,7 +34,7 @@ export const investmentThemes: InvestmentTheme[] = [
     slug: "power-infrastructure",
     title: "Power & Infrastructure",
     desc: "Grid, generation and construction inputs",
-    stocks: ["KPLC", "BAMB"],
+    stocks: ["KPLC", "PORT"],
     icon: "⚡",
     why: "Tariff review and public works pipeline drive earnings",
   },

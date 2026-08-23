@@ -1,16 +1,12 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
-import { Input } from "@/components/ui/input";
-import { ArrowLeft, Filter, TrendingUp, TrendingDown, ChevronRight, RotateCcw, Sparkles, Search, ArrowUpDown, SlidersHorizontal, BarChart3, LineChart } from "lucide-react";
+import { Filter, TrendingUp, TrendingDown, ChevronRight, RotateCcw, Sparkles } from "lucide-react";
 import { SparklineChart } from "@/components/shared/SparklineChart";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CANONICAL_SYMBOLS, STOCK_META, getPrice, getDayChange, DIV_YIELD, getStockFundamentals, parseMagnitude, tickerSeed } from "@/lib/stockPrices";
-import { useAfriScreener } from "@/hooks/useAfriScreener";
 
 interface ScreenerFilters {
   sector: string;
@@ -18,90 +14,56 @@ interface ScreenerFilters {
   maxChange: number;
   minPrice: number;
   maxPrice: number;
-  minPE: number;
-  maxPE: number;
-  minVolume: string;
-  marketCapRange: string;
-  minDividendYield: number;
-  maxDividendYield: number;
-  minVolumeM: number;
-  minBeta: number;
-  maxBeta: number;
-  minRSI: number;
-  maxRSI: number;
   sortBy: string;
   sortOrder: 'asc' | 'desc';
 }
 
-const MARKET_CAP_BUCKETS: Record<string, { min: number; max: number }> = {
-  all: { min: 0, max: Infinity },
-  large: { min: 50, max: Infinity }, // >50B
-  mid: { min: 5, max: 50 },          // 5B–50B
-  small: { min: 0, max: 5 },         // <5B
-};
-
-const sectors = ["All Sectors", ...Array.from(new Set(Object.values(STOCK_META).map(m => m.sector))).sort()];
-
-// Volume, beta and RSI come from the shared static fundamentals table used by StockDetail
-// and Compare (the Data Layer doesn't compute RSI). Price, market cap, P/E, dividend yield
-// and AfriScore are overlaid live below via useAfriScreener wherever the Data Layer covers
-// a symbol.
-function buildStaticStocks() {
-  return CANONICAL_SYMBOLS.map(symbol => {
-    const { pct } = getDayChange(symbol);
-    const meta = getStockFundamentals(symbol);
-    return {
-      symbol,
-      name: STOCK_META[symbol].name,
-      sector: STOCK_META[symbol].sector,
-      price: getPrice(symbol),
-      change: +pct.toFixed(2),
-      dividendYield: DIV_YIELD[symbol] ?? 0,
-      volume: meta.volume,
-      volumeM: parseMagnitude(meta.volume) / 1e6,
-      marketCap: meta.marketCap,
-      pe: meta.pe,
-      beta: meta.beta,
-      rsi: 30 + (tickerSeed(symbol) % 45),
-      afriScore: undefined as number | undefined,
-    };
-  });
-}
-
-const presetFilters = [
-  { name: "🔥 Top Gainers", icon: TrendingUp, filters: { sector: "All Sectors", minChange: 1, maxChange: 100, sortBy: "change", sortOrder: "desc" as const } },
-  { name: "📉 Top Losers", icon: TrendingDown, filters: { sector: "All Sectors", minChange: -100, maxChange: -0.1, sortBy: "change", sortOrder: "asc" as const } },
-  { name: "💰 High Dividend", icon: BarChart3, filters: { sector: "All Sectors", minChange: -100, maxChange: 100, sortBy: "dividendYield", sortOrder: "desc" as const } },
-  { name: "📊 High Volume", icon: LineChart, filters: { sector: "All Sectors", minChange: -100, maxChange: 100, sortBy: "volume", sortOrder: "desc" as const } },
-  { name: "🏦 Banking", icon: Filter, filters: { sector: "Banking", minChange: -100, maxChange: 100, sortBy: "marketCap", sortOrder: "desc" as const } },
-  { name: "⚡ Oversold (RSI<40)", icon: Sparkles, filters: { sector: "All Sectors", minChange: -100, maxChange: 100, minRSI: 0, maxRSI: 40, sortBy: "rsi", sortOrder: "asc" as const } },
-  { name: "🎯 Top AfriScore", icon: Sparkles, filters: { sector: "All Sectors", minChange: -100, maxChange: 100, sortBy: "afriScore", sortOrder: "desc" as const } },
-  { name: "🏛️ Large Cap", icon: BarChart3, filters: { sector: "All Sectors", minChange: -100, maxChange: 100, marketCapRange: "large", sortBy: "marketCap", sortOrder: "desc" as const } },
-  { name: "🐣 Small Cap", icon: Sparkles, filters: { sector: "All Sectors", minChange: -100, maxChange: 100, marketCapRange: "small", sortBy: "marketCap", sortOrder: "desc" as const } },
-  { name: "🛡️ Low Volatility (Beta<0.8)", icon: Filter, filters: { sector: "All Sectors", minChange: -100, maxChange: 100, minBeta: 0, maxBeta: 0.8, sortBy: "marketCap", sortOrder: "desc" as const } },
+const sectors = [
+  "All Sectors",
+  "Banking",
+  "Telecommunications",
+  "Manufacturing",
+  "Energy",
+  "Consumer Goods",
+  "Insurance",
+  "Real Estate",
+  "Agriculture",
 ];
 
-export default function StockScreenerPage() {
+const allStocks = [
+  { symbol: "SAFCOM", name: "Safaricom PLC", price: 12.85, change: 2.4, volume: "12.5M", marketCap: "1.2T", pe: 14.2, sector: "Telecommunications" },
+  { symbol: "EQTY", name: "Equity Group Holdings", price: 62.50, change: 3.8, volume: "8.2M", marketCap: "285B", pe: 8.5, sector: "Banking" },
+  { symbol: "SCBK", name: "Standard Chartered Bank", price: 185.00, change: 1.1, volume: "1.5M", marketCap: "125B", pe: 11.2, sector: "Banking" },
+  { symbol: "KCB", name: "KCB Group PLC", price: 45.30, change: -0.8, volume: "6.8M", marketCap: "145B", pe: 7.8, sector: "Banking" },
+  { symbol: "COOP", name: "Co-operative Bank", price: 15.20, change: -1.5, volume: "4.2M", marketCap: "89B", pe: 9.1, sector: "Banking" },
+  { symbol: "EABL", name: "East African Breweries", price: 142.00, change: 2.1, volume: "850K", marketCap: "112B", pe: 18.5, sector: "Consumer Goods" },
+  { symbol: "PORT", name: "East African Portland Cement", price: 116.50, change: -3.0, volume: "3.4K", marketCap: "5B", pe: 9.8, sector: "Construction" },
+  { symbol: "DTB", name: "Diamond Trust Bank", price: 115.50, change: 0.5, volume: "180K", marketCap: "32B", pe: 10.4, sector: "Banking" },
+  { symbol: "ABSA", name: "ABSA Bank Kenya", price: 13.85, change: 1.9, volume: "5.5M", marketCap: "75B", pe: 7.2, sector: "Banking" },
+  { symbol: "NCBA", name: "NCBA Group", price: 42.50, change: 0.7, volume: "2.1M", marketCap: "68B", pe: 8.9, sector: "Banking" },
+  { symbol: "BRIT", name: "Britam Holdings", price: 6.85, change: -1.2, volume: "1.8M", marketCap: "17B", pe: 15.6, sector: "Insurance" },
+  { symbol: "NMG", name: "Nation Media Group", price: 25.40, change: -0.3, volume: "420K", marketCap: "4.8B", pe: 22.1, sector: "Consumer Goods" },
+  { symbol: "KPLC", name: "Kenya Power", price: 1.95, change: 4.2, volume: "15.2M", marketCap: "3.8B", pe: 6.5, sector: "Energy" },
+  { symbol: "TOTL", name: "TotalEnergies", price: 24.80, change: 1.5, volume: "280K", marketCap: "4.5B", pe: 13.2, sector: "Energy" },
+  { symbol: "JUB", name: "Jubilee Holdings", price: 245.00, change: -0.9, volume: "45K", marketCap: "17B", pe: 11.8, sector: "Insurance" },
+];
+
+const presetFilters = [
+  { name: "Top Gainers", filters: { sector: "All Sectors", minChange: 1, maxChange: 100, sortBy: "change", sortOrder: "desc" as const } },
+  { name: "Top Losers", filters: { sector: "All Sectors", minChange: -100, maxChange: -0.1, sortBy: "change", sortOrder: "asc" as const } },
+  { name: "High Volume", filters: { sector: "All Sectors", minChange: -100, maxChange: 100, sortBy: "volume", sortOrder: "desc" as const } },
+  { name: "Banking", filters: { sector: "Banking", minChange: -100, maxChange: 100, sortBy: "marketCap", sortOrder: "desc" as const } },
+];
+
+export function StockScreener() {
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<ScreenerFilters>({
     sector: "All Sectors",
     minChange: -10,
     maxChange: 10,
     minPrice: 0,
     maxPrice: 500,
-    minPE: 0,
-    maxPE: 50,
-    minVolume: "0",
-    marketCapRange: "all",
-    minDividendYield: 0,
-    maxDividendYield: 15,
-    minVolumeM: 0,
-    minBeta: 0,
-    maxBeta: 2,
-    minRSI: 0,
-    maxRSI: 100,
     sortBy: "marketCap",
     sortOrder: "desc",
   });
@@ -117,374 +79,173 @@ export default function StockScreenerPage() {
       maxChange: 10,
       minPrice: 0,
       maxPrice: 500,
-      minPE: 0,
-      maxPE: 50,
-      minVolume: "0",
-      marketCapRange: "all",
-      minDividendYield: 0,
-      maxDividendYield: 15,
-      minVolumeM: 0,
-      minBeta: 0,
-      maxBeta: 2,
-      minRSI: 0,
-      maxRSI: 100,
       sortBy: "marketCap",
       sortOrder: "desc",
     });
-    setSearchQuery("");
   };
-
-  // Real marketCap/PE/dividendYield/AfriScore from the Data Layer's
-  // /screener endpoint (one batched call), plus live price/change from the
-  // same shared quote hook every other page uses. Volume, beta, and RSI
-  // stay on the static table below — the Data Layer doesn't compute those
-  // yet — so sliders for them keep working, just against static ranges.
-  const { bySymbol: liveScreener } = useAfriScreener(CANONICAL_SYMBOLS);
-  const allStocks = useMemo(() => {
-    const base = buildStaticStocks();
-    return base.map(s => {
-      const live = liveScreener[s.symbol];
-      if (!live) return s;
-      return {
-        ...s,
-        price: live.price ?? s.price,
-        change: live.changePercent != null ? +live.changePercent.toFixed(2) : s.change,
-        marketCap: live.marketCap,
-        pe: live.pe,
-        dividendYield: live.dividendYield,
-        afriScore: live.afriScore,
-      };
-    });
-  }, [liveScreener]);
 
   const filteredStocks = allStocks
     .filter(stock => {
-      if (searchQuery && !stock.symbol.toLowerCase().includes(searchQuery.toLowerCase()) && 
-          !stock.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       if (filters.sector !== "All Sectors" && stock.sector !== filters.sector) return false;
       if (stock.change < filters.minChange || stock.change > filters.maxChange) return false;
       if (stock.price < filters.minPrice || stock.price > filters.maxPrice) return false;
-      if (stock.pe < filters.minPE || stock.pe > filters.maxPE) return false;
-      if (stock.dividendYield < filters.minDividendYield || stock.dividendYield > filters.maxDividendYield) return false;
-      if (stock.volumeM < filters.minVolumeM) return false;
-      if (stock.beta < filters.minBeta || stock.beta > filters.maxBeta) return false;
-      if (stock.rsi < filters.minRSI || stock.rsi > filters.maxRSI) return false;
-      const capBucket = MARKET_CAP_BUCKETS[filters.marketCapRange] ?? MARKET_CAP_BUCKETS.all;
-      const marketCapB = parseMagnitude(stock.marketCap) / 1e9;
-      if (marketCapB < capBucket.min || marketCapB > capBucket.max) return false;
       return true;
     })
     .sort((a, b) => {
-      let aVal: number, bVal: number;
-      switch (filters.sortBy) {
-        case 'change': aVal = a.change; bVal = b.change; break;
-        case 'price': aVal = a.price; bVal = b.price; break;
-        case 'volume': aVal = parseMagnitude(a.volume); bVal = parseMagnitude(b.volume); break;
-        case 'pe': aVal = a.pe; bVal = b.pe; break;
-        case 'dividendYield': aVal = a.dividendYield; bVal = b.dividendYield; break;
-        case 'rsi': aVal = a.rsi; bVal = b.rsi; break;
-        case 'beta': aVal = a.beta; bVal = b.beta; break;
-        case 'afriScore': aVal = a.afriScore ?? 0; bVal = b.afriScore ?? 0; break;
-        default: aVal = parseMagnitude(a.marketCap); bVal = parseMagnitude(b.marketCap);
-      }
+      const aVal = filters.sortBy === 'change' ? a.change : 
+                   filters.sortBy === 'price' ? a.price : 
+                   filters.sortBy === 'volume' ? parseFloat(a.volume) : parseFloat(a.marketCap);
+      const bVal = filters.sortBy === 'change' ? b.change : 
+                   filters.sortBy === 'price' ? b.price : 
+                   filters.sortBy === 'volume' ? parseFloat(b.volume) : parseFloat(b.marketCap);
       return filters.sortOrder === 'desc' ? bVal - aVal : aVal - bVal;
     });
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border">
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="tap-scale">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div>
-              <h1 className="text-lg font-bold">Stock Screener</h1>
-              <p className="text-xs text-muted-foreground">Discover your next investment</p>
-            </div>
-          </div>
-          <Button 
-            variant="ghost" 
+    <Card className="card-gradient">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-accent" />
+            <span>Stock Screener</span>
+          </CardTitle>
+          <Button
+            variant="ghost"
             size="sm"
-            onClick={() => setShowAdvanced(!showAdvanced)}
+            onClick={() => setShowFilters(!showFilters)}
             className="text-xs"
           >
-            <SlidersHorizontal className="h-4 w-4 mr-1" />
-            {showAdvanced ? 'Simple' : 'Advanced'}
+            <Filter className="h-3.5 w-3.5 mr-1" />
+            {showFilters ? 'Hide' : 'Filters'}
           </Button>
         </div>
-      </header>
-
-      <div className="p-4 space-y-4">
-        {/* Search Bar */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search stocks by name or symbol..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 h-11 bg-muted/20"
-          />
-        </div>
-
+        
         {/* Quick Presets */}
-        <div className="overflow-x-auto -mx-4 px-4">
-          <div className="flex gap-2 pb-2">
-            {presetFilters.map((preset) => (
-              <Badge
-                key={preset.name}
-                variant="secondary"
-                className="cursor-pointer hover:bg-primary/20 transition-colors whitespace-nowrap text-xs py-1.5 px-3 tap-scale"
-                onClick={() => applyPreset(preset)}
-              >
-                {preset.name}
-              </Badge>
-            ))}
-          </div>
+        <div className="flex gap-2 mt-3 overflow-x-auto pb-1 scrollbar-hide">
+          {presetFilters.map((preset) => (
+            <Badge
+              key={preset.name}
+              variant="secondary"
+              className="cursor-pointer hover:bg-primary/20 transition-colors whitespace-nowrap text-xs py-1 px-2"
+              onClick={() => applyPreset(preset)}
+            >
+              {preset.name}
+            </Badge>
+          ))}
         </div>
+      </CardHeader>
 
-        {/* Filters — flat canvas */}
-        <div className="pt-1">
-          <div className="flex items-center justify-between border-b border-border/60 pb-2">
-            <p className="section-eyebrow flex items-center gap-2">
-              <Filter className="h-3.5 w-3.5 text-primary" />
-              Filters
-            </p>
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] text-muted-foreground tabular">{filteredStocks.length} results</span>
-              <Button variant="ghost" size="sm" onClick={resetFilters} className="text-[11px] h-7 px-2" aria-label="Reset filters">
-                <RotateCcw className="h-3 w-3 mr-1" />
-                Reset
-              </Button>
+      {showFilters && (
+        <div className="px-4 pb-4 space-y-4 border-b border-border">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-muted-foreground mb-1.5 block">Sector</label>
+              <Select
+                value={filters.sector}
+                onValueChange={(val) => setFilters(prev => ({ ...prev, sector: val }))}
+              >
+                <SelectTrigger className="h-9 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {sectors.map(sector => (
+                    <SelectItem key={sector} value={sector} className="text-xs">
+                      {sector}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1.5 block">Sort By</label>
+              <Select
+                value={filters.sortBy}
+                onValueChange={(val) => setFilters(prev => ({ ...prev, sortBy: val }))}
+              >
+                <SelectTrigger className="h-9 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="marketCap" className="text-xs">Market Cap</SelectItem>
+                  <SelectItem value="change" className="text-xs">% Change</SelectItem>
+                  <SelectItem value="price" className="text-xs">Price</SelectItem>
+                  <SelectItem value="volume" className="text-xs">Volume</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
-          <div className="space-y-4 pt-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block">Sector</label>
-                <Select
-                  value={filters.sector}
-                  onValueChange={(val) => setFilters(prev => ({ ...prev, sector: val }))}
-                >
-                  <SelectTrigger className="h-9 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sectors.map(sector => (
-                      <SelectItem key={sector} value={sector} className="text-xs">
-                        {sector}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block">Sort By</label>
-                <Select
-                  value={filters.sortBy}
-                  onValueChange={(val) => setFilters(prev => ({ ...prev, sortBy: val }))}
-                >
-                  <SelectTrigger className="h-9 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="marketCap" className="text-xs">Market Cap</SelectItem>
-                    <SelectItem value="change" className="text-xs">% Change</SelectItem>
-                    <SelectItem value="price" className="text-xs">Price</SelectItem>
-                    <SelectItem value="volume" className="text-xs">Volume</SelectItem>
-                    <SelectItem value="pe" className="text-xs">P/E Ratio</SelectItem>
-                    <SelectItem value="dividendYield" className="text-xs">Dividend Yield</SelectItem>
-                    <SelectItem value="rsi" className="text-xs">RSI</SelectItem>
-                    <SelectItem value="beta" className="text-xs">Beta</SelectItem>
-                    <SelectItem value="afriScore" className="text-xs">AfriScore</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div>
-              <label className="text-xs text-muted-foreground mb-2 block">
-                Price Change: {filters.minChange}% to {filters.maxChange}%
-              </label>
+          <div>
+            <label className="text-xs text-muted-foreground mb-2 block">
+              Change Range: {filters.minChange}% to {filters.maxChange}%
+            </label>
+            <div className="flex items-center gap-3">
               <Slider
                 value={[filters.minChange, filters.maxChange]}
                 min={-10}
                 max={10}
                 step={0.5}
                 onValueChange={([min, max]) => setFilters(prev => ({ ...prev, minChange: min, maxChange: max }))}
+                className="flex-1"
               />
             </div>
+          </div>
 
-            {showAdvanced && (
-              <>
-                <div>
-                  <label className="text-xs text-muted-foreground mb-2 block">
-                    Price Range: KES {filters.minPrice} to KES {filters.maxPrice}
-                  </label>
-                  <Slider
-                    value={[filters.minPrice, filters.maxPrice]}
-                    min={0}
-                    max={500}
-                    step={5}
-                    onValueChange={([min, max]) => setFilters(prev => ({ ...prev, minPrice: min, maxPrice: max }))}
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs text-muted-foreground mb-2 block">
-                    P/E Ratio: {filters.minPE} to {filters.maxPE}
-                  </label>
-                  <Slider
-                    value={[filters.minPE, filters.maxPE]}
-                    min={0}
-                    max={50}
-                    step={1}
-                    onValueChange={([min, max]) => setFilters(prev => ({ ...prev, minPE: min, maxPE: max }))}
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs text-muted-foreground mb-2 block">
-                    Dividend Yield: {filters.minDividendYield}% to {filters.maxDividendYield}%
-                  </label>
-                  <Slider
-                    value={[filters.minDividendYield, filters.maxDividendYield]}
-                    min={0}
-                    max={15}
-                    step={0.5}
-                    onValueChange={([min, max]) => setFilters(prev => ({ ...prev, minDividendYield: min, maxDividendYield: max }))}
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs text-muted-foreground mb-2 block">
-                    Beta (volatility): {filters.minBeta.toFixed(1)} to {filters.maxBeta.toFixed(1)}
-                  </label>
-                  <Slider
-                    value={[filters.minBeta, filters.maxBeta]}
-                    min={0}
-                    max={2}
-                    step={0.05}
-                    onValueChange={([min, max]) => setFilters(prev => ({ ...prev, minBeta: min, maxBeta: max }))}
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs text-muted-foreground mb-2 block">
-                    RSI: {filters.minRSI} to {filters.maxRSI} {filters.maxRSI <= 40 ? "(oversold)" : filters.minRSI >= 70 ? "(overbought)" : ""}
-                  </label>
-                  <Slider
-                    value={[filters.minRSI, filters.maxRSI]}
-                    min={0}
-                    max={100}
-                    step={1}
-                    onValueChange={([min, max]) => setFilters(prev => ({ ...prev, minRSI: min, maxRSI: max }))}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs text-muted-foreground mb-1.5 block">Market Cap</label>
-                    <Select
-                      value={filters.marketCapRange}
-                      onValueChange={(val) => setFilters(prev => ({ ...prev, marketCapRange: val }))}
-                    >
-                      <SelectTrigger className="h-9 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all" className="text-xs">All Sizes</SelectItem>
-                        <SelectItem value="large" className="text-xs">Large Cap (&gt;50B)</SelectItem>
-                        <SelectItem value="mid" className="text-xs">Mid Cap (5B–50B)</SelectItem>
-                        <SelectItem value="small" className="text-xs">Small Cap (&lt;5B)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="text-xs text-muted-foreground mb-1.5 block">Min Volume</label>
-                    <Select
-                      value={String(filters.minVolumeM)}
-                      onValueChange={(val) => setFilters(prev => ({ ...prev, minVolumeM: Number(val) }))}
-                    >
-                      <SelectTrigger className="h-9 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="0" className="text-xs">Any</SelectItem>
-                        <SelectItem value="0.1" className="text-xs">&gt;100K</SelectItem>
-                        <SelectItem value="0.5" className="text-xs">&gt;500K</SelectItem>
-                        <SelectItem value="1" className="text-xs">&gt;1M</SelectItem>
-                        <SelectItem value="5" className="text-xs">&gt;5M</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </>
-            )}
-
-            <div className="flex items-center justify-between pt-2 border-t border-border/60">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setFilters(prev => ({ ...prev, sortOrder: prev.sortOrder === 'asc' ? 'desc' : 'asc' }))}
-                className="text-xs"
-              >
-                <ArrowUpDown className="h-3 w-3 mr-1" />
-                {filters.sortOrder === 'desc' ? 'Descending' : 'Ascending'}
-              </Button>
-            </div>
+          <div className="flex justify-between">
+            <Button variant="ghost" size="sm" onClick={resetFilters} className="text-xs">
+              <RotateCcw className="h-3 w-3 mr-1" />
+              Reset
+            </Button>
+            <Badge variant="outline" className="text-xs">
+              {filteredStocks.length} stocks
+            </Badge>
           </div>
         </div>
+      )}
 
-        {/* Results — hairline rows, no cards */}
-        <div className="-mx-4 border-t border-border/60">
-          {filteredStocks.map((stock) => (
-            <button
+      <CardContent className="pt-3">
+        <div className="space-y-2 max-h-[400px] overflow-y-auto">
+          {filteredStocks.slice(0, 10).map((stock) => (
+            <div
               key={stock.symbol}
               onClick={() => navigate(`/stock/${stock.symbol}`)}
-              className="w-full text-left px-4 py-3 border-b border-border/40 hover:bg-muted/25 transition-colors"
+              className="flex items-center justify-between p-2.5 rounded-lg bg-muted/20 cursor-pointer hover:bg-muted/40 transition-all tap-scale group"
             >
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="font-semibold text-sm">{stock.symbol}</span>
-                    <span className="text-[9px] text-muted-foreground uppercase tracking-wider">{stock.sector}</span>
-                  </div>
-                  <div className="text-xs text-muted-foreground truncate mb-1.5">{stock.name}</div>
-                  <div className="flex gap-3 flex-wrap text-[10px] text-muted-foreground tabular">
-                    <span>Vol {stock.volume}</span>
-                    <span>P/E {stock.pe}</span>
-                    <span>Div {stock.dividendYield}%</span>
-                    <span>RSI {stock.rsi}</span>
-                  </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-sm">{stock.symbol}</span>
+                  <Badge variant="outline" className="text-[9px] py-0 px-1 hidden sm:inline-flex">
+                    {stock.sector}
+                  </Badge>
                 </div>
-
-                <div className="flex items-center gap-3 shrink-0">
-                  <SparklineChart isPositive={stock.change >= 0} width={50} height={22} />
-                  <div className="text-right min-w-[75px]">
-                    <div className="font-semibold text-sm tabular">KES {stock.price.toFixed(2)}</div>
-                    <div className={`text-xs flex items-center justify-end gap-0.5 tabular ${stock.change >= 0 ? 'text-bull' : 'text-bear'}`}>
-                      {stock.change >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                      {stock.change >= 0 ? '+' : ''}{stock.change}%
-                    </div>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <div className="text-xs text-muted-foreground truncate">{stock.name}</div>
+                <div className="flex gap-3 mt-1">
+                  <span className="text-[10px] text-muted-foreground">Vol: {stock.volume}</span>
+                  <span className="text-[10px] text-muted-foreground">P/E: {stock.pe}</span>
                 </div>
               </div>
-            </button>
+              
+              <div className="flex items-center gap-2">
+                <SparklineChart isPositive={stock.change >= 0} width={40} height={18} />
+                <div className="text-right min-w-[65px]">
+                  <div className="font-semibold text-sm">KES {stock.price}</div>
+                  <div className={`text-xs flex items-center justify-end gap-0.5 ${stock.change >= 0 ? 'text-bull' : 'text-bear'}`}>
+                    {stock.change >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                    {stock.change >= 0 ? '+' : ''}{stock.change}%
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+            </div>
           ))}
         </div>
-
+        
         {filteredStocks.length === 0 && (
-          <div className="py-14 text-center">
-            <Search className="h-10 w-10 mx-auto mb-3 text-muted-foreground/40" />
-            <p className="text-sm font-medium mb-1">No stocks found</p>
-            <p className="text-xs text-muted-foreground">Try adjusting your filters</p>
+          <div className="text-center py-8 text-muted-foreground text-sm">
+            No stocks match your filters
           </div>
         )}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -12,8 +12,8 @@ const movers = [
 ];
 
 const losers = [
-  { symbol: "BAMB", name: "Bamburi Cement", price: 89.75, change: -3.2, isUp: false },
-  { symbol: "KENGEN", name: "KenGen", price: 3.45, change: -2.8, isUp: false },
+  { symbol: "PORT", name: "East African Portland Cement", price: 116.50, change: -3.0, isUp: false },
+  { symbol: "KEGN", name: "KenGen", price: 11.25, change: -2.8, isUp: false },
   { symbol: "EABL", name: "East African Breweries", price: 156.00, change: -2.1, isUp: false },
   { symbol: "DTB", name: "Diamond Trust Bank", price: 67.50, change: -1.8, isUp: false },
   { symbol: "BRIT", name: "Britam Holdings", price: 8.90, change: -1.5, isUp: false },

@@ -132,7 +132,7 @@ const earningsCalendar = [
   { symbol: "EABL", name: "EABL", date: fmtDate(5), time: "2:00 PM EAT", expected: "KES 9.80", impact: "high" as const },
   { symbol: "SAFCOM", name: "Safaricom", date: fmtDate(12), time: "10:00 AM EAT", expected: "KES 1.08", impact: "high" as const },
   { symbol: "KCB", name: "KCB Group", date: fmtDate(19), time: "11:00 AM EAT", expected: "KES 7.20", impact: "medium" as const },
-  { symbol: "BAMB", name: "Bamburi", date: fmtDate(30), time: "3:00 PM EAT", expected: "KES 2.30", impact: "low" as const },
+  { symbol: "PORT", name: "East African Portland Cement", date: fmtDate(30), time: "3:00 PM EAT", expected: "KES 2.30", impact: "low" as const },
 ];
 
 const volumeLeaders = [

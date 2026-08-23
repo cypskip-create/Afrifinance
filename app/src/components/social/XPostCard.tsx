@@ -19,7 +19,7 @@ const NSE_PRICES: Record<string, { price: number; change: number }> = {
   SCOM: { price: 12.85, change: 2.4 }, SAFCOM: { price: 12.85, change: 2.4 },
   EQTY: { price: 62.50, change: -1.2 }, KCB: { price: 45.30, change: 0.8 },
   COOP: { price: 15.20, change: -0.5 }, SCBK: { price: 185.00, change: 1.1 },
-  BAMB: { price: 89.75, change: 3.2 }, EABL: { price: 155.00, change: -2.1 },
+  PORT: { price: 116.50, change: -3.0 }, EABL: { price: 155.00, change: -2.1 },
   BAT: { price: 320.00, change: 0.3 }, ABSA: { price: 14.10, change: 1.5 },
   NCBA: { price: 42.50, change: -0.7 }, SBIC: { price: 8.90, change: 4.2 },
   JUB: { price: 380.00, change: 0.9 }, BRIT: { price: 6.50, change: -1.8 },

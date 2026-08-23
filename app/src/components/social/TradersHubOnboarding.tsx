@@ -17,7 +17,7 @@ interface Props {
 const INTEREST_OPTIONS = [
   { id: "banking", label: "Banking", tickers: ["EQTY", "KCB", "COOP", "SCBK", "ABSA", "NCBA", "DTK"] },
   { id: "telecoms", label: "Telecoms", tickers: ["SAFCOM", "SCOM"] },
-  { id: "manufacturing", label: "Manufacturing", tickers: ["BAMB", "BAT"] },
+  { id: "manufacturing", label: "Manufacturing", tickers: ["PORT", "BAT"] },
   { id: "consumer", label: "Consumer & drinks", tickers: ["EABL"] },
   { id: "energy", label: "Energy & utilities", tickers: ["KEGN", "KPLC"] },
   { id: "insurance", label: "Insurance", tickers: ["JUB", "BRIT"] },

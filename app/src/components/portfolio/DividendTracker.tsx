@@ -20,7 +20,7 @@ const DIVIDEND_DATA: { [key: string]: { yield: number; frequency: string; nextDa
   SAFCOM: { yield: 5.2, frequency: 'Annual', nextDate: '2026-06-15', amount: 0.64 },
   EQTY: { yield: 4.8, frequency: 'Annual', nextDate: '2026-05-20', amount: 3.00 },
   SCBK: { yield: 3.5, frequency: 'Annual', nextDate: '2026-04-10', amount: 6.50 },
-  BAMB: { yield: 2.1, frequency: 'Annual', nextDate: '2026-07-25', amount: 1.88 },
+  PORT: { yield: 2.1, frequency: 'Annual', nextDate: '2026-07-25', amount: 1.88 },
   KCB: { yield: 6.2, frequency: 'Annual', nextDate: '2026-03-30', amount: 2.81 },
   COOP: { yield: 4.1, frequency: 'Annual', nextDate: '2026-05-05', amount: 0.62 },
 };

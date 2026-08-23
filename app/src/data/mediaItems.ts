@@ -393,7 +393,7 @@ export const MEDIA_ITEMS: MediaItem[] = [
     readTime: "4 min",
     views: 1290,
     comments: 10,
-    stockMentions: ["BAMB"],
+    stockMentions: ["PORT"],
     sentiment: "bullish",
   },
   {
