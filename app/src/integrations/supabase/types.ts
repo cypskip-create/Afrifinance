@@ -586,6 +586,7 @@ export type Database = {
           followers_count: number | null
           following_count: number | null
           full_name: string | null
+          gender: string | null
           handle: string | null
           id: string
           interests: string[]
@@ -596,6 +597,7 @@ export type Database = {
           portfolio_top_holdings_only: boolean | null
           subscription_plan: string | null
           tradershub_onboarded: boolean
+          trading_experience: string | null
           updated_at: string
           user_id: string
         }
@@ -608,6 +610,7 @@ export type Database = {
           followers_count?: number | null
           following_count?: number | null
           full_name?: string | null
+          gender?: string | null
           handle?: string | null
           id?: string
           interests?: string[]
@@ -618,6 +621,7 @@ export type Database = {
           portfolio_top_holdings_only?: boolean | null
           subscription_plan?: string | null
           tradershub_onboarded?: boolean
+          trading_experience?: string | null
           updated_at?: string
           user_id: string
         }
@@ -630,6 +634,7 @@ export type Database = {
           followers_count?: number | null
           following_count?: number | null
           full_name?: string | null
+          gender?: string | null
           handle?: string | null
           id?: string
           interests?: string[]
@@ -640,6 +645,7 @@ export type Database = {
           portfolio_top_holdings_only?: boolean | null
           subscription_plan?: string | null
           tradershub_onboarded?: boolean
+          trading_experience?: string | null
           updated_at?: string
           user_id?: string
         }

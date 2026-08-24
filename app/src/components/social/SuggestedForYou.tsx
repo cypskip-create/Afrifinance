@@ -52,6 +52,7 @@ export function SuggestedForYou({ currentUserId, myInterests, followingIds, onFo
       const { data } = await supabase
         .from("profiles")
         .select("user_id, full_name, handle, avatar_url, bio, interests, followers_count")
+        .eq("tradershub_onboarded", true)
         .neq("user_id", currentUserId)
         .order("followers_count", { ascending: false })
         .limit(40);

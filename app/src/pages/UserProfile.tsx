@@ -22,6 +22,7 @@ import { XCommentSheet } from "@/components/social/XCommentSheet";
 import { getPrice } from "@/lib/stockPrices";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { atHandle } from "@/lib/handle";
+import { EXPERIENCE_LABELS } from "@/lib/tradersHubOnboarding";
 import { shareLink } from "@/lib/share";
 import { ImageViewer } from "@/components/social/ImageViewer";
 
@@ -32,7 +33,7 @@ interface UserProfileData {
   portfolio_hide_amounts?: boolean | null; portfolio_hide_gains?: boolean | null;
   portfolio_top_holdings_only?: boolean | null; portfolio_followers_only?: boolean | null;
   followers_count: number; following_count: number; created_at: string;
-  handle?: string | null;
+  handle?: string | null; trading_experience?: string | null;
 }
 
 interface UserPost {
@@ -131,12 +132,15 @@ export default function UserProfile() {
     if (!userId) return;
     setLoading(true);
     try {
-      const { data } = await supabase.from("profiles_public").select("id, user_id, full_name, avatar_url, banner_url, bio, portfolio_public, portfolio_hide_amounts, portfolio_hide_gains, portfolio_top_holdings_only, portfolio_followers_only, followers_count, following_count, created_at, handle").eq("user_id", userId).maybeSingle();
+      // profiles_public only ever contains rows for people who have actually
+      // completed TradersHub onboarding (see 20260824090000) — there is
+      // deliberately no fallback to the raw `profiles` table here. Falling
+      // back would resurrect a "ghost" TradersHub presence (real name,
+      // photo, and a default-public portfolio) for someone who never chose
+      // to create one; a null result correctly renders the "not found"
+      // state below instead.
+      const { data } = await supabase.from("profiles_public").select("id, user_id, full_name, avatar_url, banner_url, bio, portfolio_public, portfolio_hide_amounts, portfolio_hide_gains, portfolio_top_holdings_only, portfolio_followers_only, followers_count, following_count, created_at, handle, trading_experience").eq("user_id", userId).maybeSingle();
       if (data) setProfileData(data as UserProfileData);
-      else {
-        const { data: fb } = await supabase.from("profiles").select("id, user_id, full_name, avatar_url, banner_url, bio, portfolio_public, portfolio_hide_amounts, portfolio_hide_gains, portfolio_top_holdings_only, portfolio_followers_only, followers_count, following_count, created_at, handle").eq("user_id", userId).maybeSingle();
-        if (fb) setProfileData(fb as UserProfileData);
-      }
     } catch (err) { console.error(err); }
     setLoading(false);
   };
@@ -379,7 +383,7 @@ export default function UserProfile() {
           </div>
         </header>
         <div className="p-8 text-center text-muted-foreground">
-          <p>This profile doesn't exist.</p>
+          <p>This profile doesn't exist, or this person hasn't set up TradersHub yet.</p>
           <Button variant="outline" className="mt-4 rounded-full" onClick={() => navigate("/traders-hub")}>Back to TradersHub</Button>
         </div>
       </div>
@@ -457,7 +461,14 @@ export default function UserProfile() {
             {profileData.full_name || "User"}
             <Verified className="h-4 w-4 text-primary fill-primary" />
           </h2>
-          <p className="text-[13.5px] text-muted-foreground leading-tight">{atHandle(profileData)}</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-[13.5px] text-muted-foreground leading-tight">{atHandle(profileData)}</p>
+            {profileData.trading_experience && (
+              <span className="text-[10.5px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                {EXPERIENCE_LABELS[profileData.trading_experience] || profileData.trading_experience}
+              </span>
+            )}
+          </div>
 
           {profileData.bio && <p className="mt-2 text-[14px] leading-snug">{profileData.bio}</p>}
 

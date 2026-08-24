@@ -1,10 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ShieldAlert, Check, Loader2, AtSign, Sparkles, ChevronLeft } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  ShieldAlert, Check, Loader2, AtSign, Sparkles, ChevronLeft, Camera,
+  User, PenLine, Users, ShieldCheck, UserPlus, CheckCircle2,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { normalizeHandle, fallbackHandle } from "@/lib/handle";
+import { normalizeHandle, fallbackHandle, atHandle, getInitials } from "@/lib/handle";
+import { EXPERIENCE_OPTIONS, GENDER_OPTIONS } from "@/lib/tradersHubOnboarding";
+import { PortfolioVisibilityToggles, type PortfolioVisibilitySettings } from "@/components/portfolio/PortfolioVisibilityToggles";
 import type { Profile } from "@/hooks/useProfile";
 
 interface Props {
@@ -27,25 +34,96 @@ const INTEREST_OPTIONS = [
   { id: "ipos", label: "New listings & IPOs" },
 ];
 
-type Step = "welcome" | "handle" | "interests";
+const CREATING_MESSAGES = [
+  "Reserving your handle…",
+  "Setting up your TradersHub profile…",
+  "Applying your privacy settings…",
+  "Personalizing your feed…",
+];
+
+// Minimum time the "creating" step stays on screen, regardless of how fast
+// the network call actually finishes — the point (per Cyprian) is that this
+// reads as a real account being created, not an instant flag flip.
+const MIN_CREATING_MS = 2600;
+
+interface SuggestedPerson {
+  user_id: string;
+  full_name: string | null;
+  handle: string | null;
+  avatar_url: string | null;
+  bio: string | null;
+  followers_count: number | null;
+}
+
+type Step =
+  | "welcome"
+  | "handle"
+  | "photo"
+  | "bio"
+  | "about"
+  | "interests"
+  | "privacy"
+  | "people"
+  | "creating";
+
+// Steps that count toward the progress dots — welcome is a cover screen,
+// creating is the outcome, neither is a "step" the person fills in.
+const PROGRESS_STEPS: Step[] = ["handle", "photo", "bio", "about", "interests", "privacy", "people"];
+
+const DEFAULT_PRIVACY: PortfolioVisibilitySettings = {
+  portfolioPublic: true,
+  hideAmounts: false,
+  hideGains: false,
+  topHoldingsOnly: false,
+  followersOnly: false,
+};
 
 /**
- * First-time-only TradersHub account setup — Moomoo-style: a real handle and
- * a set of interests are chosen up front, rather than the app silently
- * standing in a synthesized identity (see lib/handle.ts's fallbackHandle,
- * which is what every screen showed before someone ever explicitly picked
- * a handle). Gated the same way the old disclaimer was: by
- * profiles.tradershub_onboarded, with a localStorage mirror so it never
- * re-flashes on a slow network re-check.
+ * First-time-only TradersHub account setup. This is the ONLY place a
+ * TradersHub identity is ever created — `finish()` below is the single
+ * write that flips `tradershub_onboarded` to true, and until it succeeds,
+ * nothing about this person is visible anywhere TradersHub-facing (see
+ * migration 20260824090000: every public profile surface requires
+ * tradershub_onboarded = true). Gated by profiles.tradershub_onboarded,
+ * with a localStorage mirror so it never re-flashes on a slow network
+ * re-check.
  */
 export function TradersHubOnboarding({ userId, profile, updateProfile, onDone }: Props) {
   const [show, setShow] = useState(false);
   const [step, setStep] = useState<Step>("welcome");
+  const stepHistory = useRef<Step[]>([]);
+
+  // Step: handle
   const [handle, setHandle] = useState("");
   const [handleTouched, setHandleTouched] = useState(false);
   const [handleStatus, setHandleStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
+
+  // Step: photo
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [avatarUploading, setAvatarUploading] = useState(false);
+
+  // Step: bio
+  const [bio, setBio] = useState("");
+
+  // Step: about (experience + gender)
+  const [experience, setExperience] = useState<string | null>(null);
+  const [gender, setGender] = useState<string | null>(null);
+
+  // Step: interests
   const [interests, setInterests] = useState<Set<string>>(new Set());
-  const [saving, setSaving] = useState(false);
+
+  // Step: privacy
+  const [privacy, setPrivacy] = useState<PortfolioVisibilitySettings>(DEFAULT_PRIVACY);
+
+  // Step: people
+  const [suggested, setSuggested] = useState<SuggestedPerson[]>([]);
+  const [suggestedLoading, setSuggestedLoading] = useState(false);
+  const [toFollow, setToFollow] = useState<Set<string>>(new Set());
+
+  // Step: creating
+  const [creatingMessageIdx, setCreatingMessageIdx] = useState(0);
+  const [creatingDone, setCreatingDone] = useState(false);
+  const [creatingError, setCreatingError] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -68,12 +146,14 @@ export function TradersHubOnboarding({ userId, profile, updateProfile, onDone }:
     return () => { cancelled = true; };
   }, [userId]);
 
-  // Prefill with a suggested handle once we know the profile, so the field
-  // is never empty — just easy to change before it's claimed for real.
+  // Prefill with a suggested handle and any existing avatar once we know the
+  // profile, so neither field is ever empty to start — just easy to change.
   useEffect(() => {
-    if (profile && !handleTouched) setHandle(profile.handle || fallbackHandle(profile));
+    if (!profile) return;
+    if (!handleTouched) setHandle(profile.handle || fallbackHandle(profile));
+    if (!avatarUrl && profile.avatar_url) setAvatarUrl(profile.avatar_url);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile?.handle, profile?.full_name]);
+  }, [profile?.handle, profile?.full_name, profile?.avatar_url]);
 
   // Live availability check as the person types their handle.
   useEffect(() => {
@@ -96,6 +176,15 @@ export function TradersHubOnboarding({ userId, profile, updateProfile, onDone }:
   const cleanHandle = useMemo(() => normalizeHandle(handle), [handle]);
   const canContinueFromHandle = handleStatus === "available" && cleanHandle.length >= 3;
 
+  const goTo = (next: Step) => {
+    stepHistory.current.push(step);
+    setStep(next);
+  };
+  const goBack = () => {
+    const prev = stepHistory.current.pop();
+    if (prev) setStep(prev);
+  };
+
   const toggleInterest = (id: string) => {
     setInterests(prev => {
       const next = new Set(prev);
@@ -104,24 +193,122 @@ export function TradersHubOnboarding({ userId, profile, updateProfile, onDone }:
     });
   };
 
-  const finish = async () => {
-    if (!userId) return;
-    setSaving(true);
-    const { error } = await updateProfile({
-      handle: cleanHandle,
-      interests: [...interests],
-      tradershub_onboarded: true,
-    } as Partial<Profile>);
-    setSaving(false);
-    if (error) return; // updateProfile's own toast/logging covers surfacing this
-    localStorage.setItem(`tradershub_disclaimer_${userId}`, "true");
-    setShow(false);
-    onDone();
+  const toggleFollowCandidate = (id: string) => {
+    setToFollow(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
   };
+
+  const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !userId) return;
+    if (!file.type.startsWith("image/")) return;
+    if (file.size > 5 * 1024 * 1024) return;
+
+    setAvatarUploading(true);
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${userId}/avatar-${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(fileName, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(fileName);
+      setAvatarUrl(publicUrl);
+    } catch {
+      // Non-fatal — the person can just try again or skip the step entirely.
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
+  // Entering the "people" step: pull a handful of already-onboarded traders,
+  // ranked by follower count. Queries profiles_public, which (as of
+  // migration 20260824090000) only ever contains people who have themselves
+  // completed this same onboarding flow.
+  const enterPeopleStep = async () => {
+    goTo("people");
+    if (suggested.length > 0 || !userId) return;
+    setSuggestedLoading(true);
+    const { data } = await supabase
+      .from("profiles_public")
+      .select("user_id, full_name, handle, avatar_url, bio, followers_count")
+      .neq("user_id", userId)
+      .order("followers_count", { ascending: false })
+      .limit(20);
+    setSuggested((data as SuggestedPerson[]) || []);
+    setSuggestedLoading(false);
+  };
+
+  const finish = async () => {
+    goTo("creating");
+    setCreatingDone(false);
+    setCreatingError(false);
+    setCreatingMessageIdx(0);
+
+    const messageTimer = setInterval(() => {
+      setCreatingMessageIdx(i => Math.min(i + 1, CREATING_MESSAGES.length - 1));
+    }, MIN_CREATING_MS / CREATING_MESSAGES.length);
+
+    const minDelay = new Promise(resolve => setTimeout(resolve, MIN_CREATING_MS));
+
+    const createAccount = (async () => {
+      const { error } = await updateProfile({
+        handle: cleanHandle,
+        avatar_url: avatarUrl || null,
+        bio: bio.trim() || null,
+        trading_experience: experience,
+        gender,
+        interests: [...interests],
+        portfolio_public: privacy.portfolioPublic,
+        portfolio_hide_amounts: privacy.hideAmounts,
+        portfolio_hide_gains: privacy.hideGains,
+        portfolio_top_holdings_only: privacy.topHoldingsOnly,
+        portfolio_followers_only: privacy.followersOnly,
+        tradershub_onboarded: true,
+      } as Partial<Profile>);
+      if (error) throw error;
+
+      if (userId && toFollow.size > 0) {
+        await supabase.from("user_follows").insert(
+          [...toFollow].map(following_id => ({ follower_id: userId, following_id }))
+        );
+      }
+    })();
+
+    try {
+      await Promise.all([createAccount, minDelay]);
+      clearInterval(messageTimer);
+      setCreatingDone(true);
+      if (userId) localStorage.setItem(`tradershub_disclaimer_${userId}`, "true");
+      setTimeout(() => {
+        setShow(false);
+        onDone();
+      }, 700);
+    } catch {
+      clearInterval(messageTimer);
+      setCreatingError(true);
+    }
+  };
+
+  const currentProgressIdx = PROGRESS_STEPS.indexOf(step);
 
   return (
     <Dialog open={show} onOpenChange={() => {}}>
       <DialogContent className="max-w-sm rounded-3xl p-0 gap-0 [&>button]:hidden">
+        {currentProgressIdx >= 0 && (
+          <div className="flex items-center gap-1.5 px-8 pt-6">
+            {PROGRESS_STEPS.map((s, i) => (
+              <div
+                key={s}
+                className={`h-1 flex-1 rounded-full transition-colors ${i <= currentProgressIdx ? "bg-primary" : "bg-muted"}`}
+              />
+            ))}
+          </div>
+        )}
+
         {step === "welcome" && (
           <div className="p-8 text-center space-y-5">
             <div className="w-16 h-16 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto">
@@ -132,9 +319,9 @@ export function TradersHubOnboarding({ userId, profile, updateProfile, onDone }:
               Posts here are personal opinions, not financial advice. Always do your own research before making investment decisions.
             </p>
             <p className="text-[12px] text-muted-foreground">
-              Next, let's set up your TradersHub identity — it only takes a moment.
+              Next, let's set up your TradersHub identity — it takes about a minute.
             </p>
-            <Button className="w-full h-12 rounded-full font-bold text-base" onClick={() => setStep("handle")}>
+            <Button className="w-full h-12 rounded-full font-bold text-base" onClick={() => goTo("handle")}>
               Get Started
             </Button>
           </div>
@@ -142,7 +329,7 @@ export function TradersHubOnboarding({ userId, profile, updateProfile, onDone }:
 
         {step === "handle" && (
           <div className="p-8 space-y-5">
-            <button onClick={() => setStep("welcome")} className="text-muted-foreground -ml-1.5 flex items-center gap-0.5 text-xs">
+            <button onClick={goBack} className="text-muted-foreground -ml-1.5 flex items-center gap-0.5 text-xs">
               <ChevronLeft className="h-3.5 w-3.5" />Back
             </button>
             <div className="text-center space-y-1.5">
@@ -171,15 +358,136 @@ export function TradersHubOnboarding({ userId, profile, updateProfile, onDone }:
                 {handleStatus === "invalid" && cleanHandle.length > 0 && <span className="text-muted-foreground">At least 3 characters — letters, numbers, underscores</span>}
               </div>
             </div>
-            <Button className="w-full h-12 rounded-full font-bold text-base" disabled={!canContinueFromHandle} onClick={() => setStep("interests")}>
+            <Button className="w-full h-12 rounded-full font-bold text-base" disabled={!canContinueFromHandle} onClick={() => goTo("photo")}>
               Continue
+            </Button>
+          </div>
+        )}
+
+        {step === "photo" && (
+          <div className="p-8 space-y-5">
+            <button onClick={goBack} className="text-muted-foreground -ml-1.5 flex items-center gap-0.5 text-xs">
+              <ChevronLeft className="h-3.5 w-3.5" />Back
+            </button>
+            <div className="text-center space-y-1.5">
+              <h2 className="text-lg font-extrabold">Add a profile photo</h2>
+              <p className="text-[12.5px] text-muted-foreground">Posts with a real photo get more trust — and more replies.</p>
+            </div>
+            <div className="flex flex-col items-center gap-3">
+              <div className="relative group">
+                <Avatar className="h-28 w-28 ring-4 ring-primary/15">
+                  <AvatarImage src={avatarUrl} className="object-cover" />
+                  <AvatarFallback className="bg-gradient-primary text-primary-foreground text-3xl font-bold">
+                    {handle ? getInitials(handle) : <User className="h-12 w-12" />}
+                  </AvatarFallback>
+                </Avatar>
+                <label
+                  htmlFor="onboarding-avatar-input"
+                  className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                >
+                  {avatarUploading ? <Loader2 className="h-8 w-8 text-white animate-spin" /> : <Camera className="h-8 w-8 text-white" />}
+                </label>
+                <input id="onboarding-avatar-input" type="file" accept="image/*" className="hidden" onChange={handleAvatarPick} />
+              </div>
+              <label htmlFor="onboarding-avatar-input">
+                <Button variant="outline" size="sm" className="gap-2" disabled={avatarUploading} asChild>
+                  <span>{avatarUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}{avatarUrl ? "Change photo" : "Upload photo"}</span>
+                </Button>
+              </label>
+            </div>
+            <Button className="w-full h-12 rounded-full font-bold text-base" disabled={avatarUploading} onClick={() => goTo("bio")}>
+              {avatarUrl ? "Continue" : "Skip for now"}
+            </Button>
+          </div>
+        )}
+
+        {step === "bio" && (
+          <div className="p-8 space-y-5">
+            <button onClick={goBack} className="text-muted-foreground -ml-1.5 flex items-center gap-0.5 text-xs">
+              <ChevronLeft className="h-3.5 w-3.5" />Back
+            </button>
+            <div className="text-center space-y-1.5">
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+                <PenLine className="h-7 w-7 text-primary" />
+              </div>
+              <h2 className="text-lg font-extrabold">Tell people about you</h2>
+              <p className="text-[12.5px] text-muted-foreground">A short bio helps other traders know who they're following.</p>
+            </div>
+            <div>
+              <Textarea
+                autoFocus
+                value={bio}
+                onChange={e => setBio(e.target.value.slice(0, 160))}
+                placeholder="e.g. Long-term NSE investor, banking & telco sector watcher"
+                className="min-h-[90px] resize-none rounded-2xl"
+                maxLength={160}
+              />
+              <p className="text-[11px] text-muted-foreground text-right mt-1">{bio.length}/160</p>
+            </div>
+            <Button className="w-full h-12 rounded-full font-bold text-base" onClick={() => goTo("about")}>
+              {bio.trim() ? "Continue" : "Skip for now"}
+            </Button>
+          </div>
+        )}
+
+        {step === "about" && (
+          <div className="p-8 space-y-5">
+            <button onClick={goBack} className="text-muted-foreground -ml-1.5 flex items-center gap-0.5 text-xs">
+              <ChevronLeft className="h-3.5 w-3.5" />Back
+            </button>
+            <div className="text-center space-y-1.5">
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+                <Users className="h-7 w-7 text-primary" />
+              </div>
+              <h2 className="text-lg font-extrabold">A couple quick questions</h2>
+              <p className="text-[12.5px] text-muted-foreground">Both optional — this just helps us tailor TradersHub.</p>
+            </div>
+
+            <div className="space-y-2.5">
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Trading experience</p>
+              <p className="text-[11px] text-muted-foreground -mt-1.5">Shown on your profile as a badge.</p>
+              <div className="flex flex-wrap gap-2">
+                {EXPERIENCE_OPTIONS.map(opt => (
+                  <button
+                    key={opt.id}
+                    onClick={() => setExperience(prev => prev === opt.id ? null : opt.id)}
+                    className={`h-9 px-3.5 rounded-full text-[13px] font-semibold border transition-colors ${
+                      experience === opt.id ? "bg-primary text-primary-foreground border-primary" : "bg-muted/40 text-foreground border-border"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2.5">
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Gender</p>
+              <p className="text-[11px] text-muted-foreground -mt-1.5">Used only for aggregate analysis of the TradersHub community — never shown on your profile or to other users.</p>
+              <div className="flex flex-wrap gap-2">
+                {GENDER_OPTIONS.map(opt => (
+                  <button
+                    key={opt.id}
+                    onClick={() => setGender(prev => prev === opt.id ? null : opt.id)}
+                    className={`h-9 px-3.5 rounded-full text-[13px] font-semibold border transition-colors ${
+                      gender === opt.id ? "bg-primary text-primary-foreground border-primary" : "bg-muted/40 text-foreground border-border"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <Button className="w-full h-12 rounded-full font-bold text-base" onClick={() => goTo("interests")}>
+              {experience || gender ? "Continue" : "Skip for now"}
             </Button>
           </div>
         )}
 
         {step === "interests" && (
           <div className="p-8 space-y-5">
-            <button onClick={() => setStep("handle")} className="text-muted-foreground -ml-1.5 flex items-center gap-0.5 text-xs">
+            <button onClick={goBack} className="text-muted-foreground -ml-1.5 flex items-center gap-0.5 text-xs">
               <ChevronLeft className="h-3.5 w-3.5" />Back
             </button>
             <div className="text-center space-y-1.5">
@@ -205,9 +513,117 @@ export function TradersHubOnboarding({ userId, profile, updateProfile, onDone }:
                 );
               })}
             </div>
-            <Button className="w-full h-12 rounded-full font-bold text-base" disabled={saving} onClick={finish}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : interests.size > 0 ? "Start exploring" : "Skip for now"}
+            <Button className="w-full h-12 rounded-full font-bold text-base" onClick={() => goTo("privacy")}>
+              {interests.size > 0 ? "Continue" : "Skip for now"}
             </Button>
+          </div>
+        )}
+
+        {step === "privacy" && (
+          <div className="p-8 space-y-5">
+            <button onClick={goBack} className="text-muted-foreground -ml-1.5 flex items-center gap-0.5 text-xs">
+              <ChevronLeft className="h-3.5 w-3.5" />Back
+            </button>
+            <div className="text-center space-y-1.5">
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+                <ShieldCheck className="h-7 w-7 text-primary" />
+              </div>
+              <h2 className="text-lg font-extrabold">Your portfolio, your call</h2>
+              <p className="text-[12.5px] text-muted-foreground">Choose who can see your holdings. You can change this anytime in Settings.</p>
+            </div>
+            <div className="max-h-[280px] overflow-y-auto pr-0.5">
+              <PortfolioVisibilityToggles value={privacy} onChange={setPrivacy} />
+            </div>
+            <Button className="w-full h-12 rounded-full font-bold text-base" onClick={enterPeopleStep}>
+              Continue
+            </Button>
+          </div>
+        )}
+
+        {step === "people" && (
+          <div className="p-8 space-y-5">
+            <button onClick={goBack} className="text-muted-foreground -ml-1.5 flex items-center gap-0.5 text-xs">
+              <ChevronLeft className="h-3.5 w-3.5" />Back
+            </button>
+            <div className="text-center space-y-1.5">
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+                <UserPlus className="h-7 w-7 text-primary" />
+              </div>
+              <h2 className="text-lg font-extrabold">Follow a few traders</h2>
+              <p className="text-[12.5px] text-muted-foreground">Your feed works better once you're following someone. Optional.</p>
+            </div>
+
+            <div className="max-h-[300px] overflow-y-auto space-y-1 -mx-2 px-2">
+              {suggestedLoading && (
+                <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+              )}
+              {!suggestedLoading && suggested.length === 0 && (
+                <p className="text-center text-[12.5px] text-muted-foreground py-6">No one to suggest yet — you can find people from Discover later.</p>
+              )}
+              {!suggestedLoading && suggested.slice(0, 8).map(p => {
+                const selected = toFollow.has(p.user_id);
+                return (
+                  <div key={p.user_id} className="flex items-center gap-2.5 py-2">
+                    <Avatar className="h-10 w-10 shrink-0">
+                      <AvatarImage src={p.avatar_url || ""} className="object-cover" />
+                      <AvatarFallback className="text-[12px] font-bold bg-primary/10 text-primary">{getInitials(p.full_name)}</AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13.5px] font-bold truncate">{p.full_name || atHandle(p)}</p>
+                      <p className="text-[12px] text-muted-foreground truncate">{atHandle(p)}</p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant={selected ? "outline" : "default"}
+                      className="h-8 rounded-full text-xs font-bold shrink-0"
+                      onClick={() => toggleFollowCandidate(p.user_id)}
+                    >
+                      {selected ? <><Check className="h-3.5 w-3.5 mr-1" />Following</> : "Follow"}
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+
+            <Button className="w-full h-12 rounded-full font-bold text-base" onClick={finish}>
+              {toFollow.size > 0 ? "Finish setup" : "Skip for now"}
+            </Button>
+          </div>
+        )}
+
+        {step === "creating" && (
+          <div className="p-10 text-center space-y-6 min-h-[320px] flex flex-col items-center justify-center">
+            {!creatingDone && !creatingError && (
+              <>
+                <Loader2 className="h-10 w-10 text-primary animate-spin" />
+                <div className="space-y-1.5">
+                  <h2 className="text-lg font-extrabold">Setting up your TradersHub account…</h2>
+                  <p className="text-[12.5px] text-muted-foreground min-h-[16px]">{CREATING_MESSAGES[creatingMessageIdx]}</p>
+                </div>
+              </>
+            )}
+            {creatingDone && (
+              <>
+                <div className="w-16 h-16 rounded-full bg-bull/10 flex items-center justify-center">
+                  <CheckCircle2 className="h-9 w-9 text-bull" />
+                </div>
+                <h2 className="text-lg font-extrabold">You're all set, {atHandle({ handle: cleanHandle })}!</h2>
+              </>
+            )}
+            {creatingError && (
+              <>
+                <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
+                  <ShieldAlert className="h-9 w-9 text-destructive" />
+                </div>
+                <div className="space-y-1.5">
+                  <h2 className="text-lg font-extrabold">Something went wrong</h2>
+                  <p className="text-[12.5px] text-muted-foreground">We couldn't finish setting up your account. Please try again.</p>
+                </div>
+                <Button className="w-full h-12 rounded-full font-bold text-base" onClick={finish}>
+                  Try again
+                </Button>
+              </>
+            )}
           </div>
         )}
       </DialogContent>
