@@ -377,8 +377,9 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
           >
             <defs>
               <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={lineColor} stopOpacity={0.14} />
-                <stop offset="100%" stopColor={lineColor} stopOpacity={0} />
+                <stop offset="0%" stopColor={lineColor} stopOpacity={0.45} />
+                <stop offset="35%" stopColor={lineColor} stopOpacity={0.18} />
+                <stop offset="100%" stopColor={lineColor} stopOpacity={0.02} />
               </linearGradient>
               <linearGradient id={crosshairGradId} x1="0" y1="0" x2="1" y2="0">
                 <stop offset={0} stopColor={lineColor} />

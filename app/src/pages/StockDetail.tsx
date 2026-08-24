@@ -12,7 +12,6 @@ import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { PriceAlertsManager } from "@/components/alerts/PriceAlertsManager";
 import { StockAlertDialog } from "@/components/alerts/StockAlertDialog";
 import { usePortfolio } from "@/hooks/usePortfolio";
-import { MarketStatusIndicator } from "@/components/shared/MarketStatusIndicator";
 import { AddInvestmentDialog } from "@/components/portfolio/AddInvestmentDialog";
 import { ContinuaScoreCard, computeScores } from "@/components/stock/ContinuaScore";
 import { AIThesisCard } from "@/components/stock/AIThesisCard";
@@ -194,12 +193,19 @@ export default function StockDetail() {
   // otherwise show the full period's change. Percent is scaled onto the real quoted price
   // (mock series lives on its own price scale) so the KES amount shown stays consistent
   // with the price displayed elsewhere on the page.
-  const activeChangePercent = hoverPrice !== null && hoverChangePercent !== null ? hoverChangePercent : periodChangePercent;
-  const activeIsUp = hoverPrice !== null && hoverIsUp !== null ? hoverIsUp : periodIsUp;
+  const isScrubbing = hoverPrice !== null && hoverChangePercent !== null;
+  const activeChangePercent = isScrubbing ? hoverChangePercent! : periodChangePercent;
+  const activeIsUp = isScrubbing && hoverIsUp !== null ? hoverIsUp : periodIsUp;
   const priceChange = stock.price * (activeChangePercent / 100);
   const priceChangePercent = activeChangePercent.toFixed(2);
   const displayIsUp = activeIsUp;
-  const displayPrice = stock.price + priceChange;
+  // The big hero number is always the CURRENT market price — switching the timeframe
+  // pill (1D/1W/1M/...) only changes the period's KES/% move shown underneath it, never
+  // the price itself. The only time the number under the finger should actually move is
+  // while the person is dragging a finger/cursor along the chart (scrubbing), where it
+  // reflects the price at that specific point in history. Release the drag (or just tap
+  // a different timeframe pill) and it snaps straight back to the live quote.
+  const displayPrice = isScrubbing ? stock.price + priceChange : stock.price;
 
   // stock.changePercent is stored as a pre-formatted string (see the `stock` object
   // above, built with `.toFixed(2)`), not a number — so it needs to be coerced to a
@@ -289,6 +295,10 @@ export default function StockDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Whether the hero price (above the chart) is still on screen. The sticky
+  // header's price/change block only appears once this goes false — i.e.
+  // once the person has actually scrolled the hero price out of view —
+  // rather than sitting there permanently.
   const [priceVisible, setPriceVisible] = useState(true);
   const heroPriceRef = useRef<HTMLDivElement>(null);
   const STICKY_HEADER_HEIGHT = 53; // matches the header's own height (see sticky top-[53px] sub-nav below)
@@ -310,38 +320,41 @@ export default function StockDetail() {
 
   return (
     <div className="page-canvas min-h-screen bg-background pb-28">
-      {/* Slim sticky header */}
+      {/* Slim sticky header. Before the hero price scrolls out of view, this
+          shows a bigger ticker symbol + the full company name underneath —
+          filling the space that would otherwise sit empty. Once the hero
+          price is gone, the ticker shrinks back down, the company name is
+          replaced by the market price, and the day's KES/% change fades in
+          on the right (where the market-open badge used to sit). */}
       <header className="sticky top-0 z-40 bg-background/90 backdrop-blur-xl border-b border-border/50">
         <div className="flex items-center justify-between px-3 py-2">
           <div className="flex items-center gap-2 min-w-0">
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="tap-scale h-9 w-9 shrink-0">
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-sm tracking-tight">{symbol}</span>
-                <span className="text-[10px] text-muted-foreground">{stock.exchange}</span>
-                <MarketStatusIndicator />
-              </div>
-              <div className="relative h-[15px] min-w-0">
-                <p
-                  className={`absolute inset-0 text-[11px] text-muted-foreground truncate transition-opacity duration-200 ${priceVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-                >
-                  {stock.name}
-                </p>
-                <div
-                  className={`absolute inset-0 flex items-center gap-1.5 transition-opacity duration-200 ${priceVisible ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
-                >
-                  {/* Always the day's change here, regardless of which timeframe pill is
-                      selected or whether the person is scrubbing the chart — the hero
-                      price below reflects the active timeframe, this collapsed header
-                      is meant to answer "how did today go". */}
-                  <span className="text-sm font-bold tabular">{stock.price.toFixed(2)}</span>
-                  <span className={`text-xs font-semibold flex items-center gap-0.5 tabular ${dayChangeIsUp ? 'text-bull' : 'text-bear'}`}>
-                    {dayChangeIsUp ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
-                    {dayChangeIsUp ? '+' : ''}{stock.changePercent}%
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className={`font-semibold tracking-tight transition-all duration-200 ${priceVisible ? 'text-lg' : 'text-sm'}`}>{symbol}</span>
+                  <span className="text-[10px] text-muted-foreground">{stock.exchange}</span>
+                </div>
+                <div className="relative h-[15px] min-w-0">
+                  <p className={`absolute inset-0 text-[11px] text-muted-foreground truncate transition-opacity duration-200 ${priceVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                    {stock.name}
+                  </p>
+                  <span className={`absolute inset-0 text-sm font-bold tabular leading-tight transition-opacity duration-200 ${priceVisible ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+                    {stock.price.toFixed(2)}
                   </span>
                 </div>
+              </div>
+              <div className={`flex flex-col leading-tight shrink-0 transition-opacity duration-200 ${priceVisible ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+                <span className={`text-xs font-semibold tabular ${dayChangeIsUp ? 'text-bull' : 'text-bear'}`}>
+                  {dayChangeIsUp ? '+' : ''}{stock.change.toFixed(2)}
+                </span>
+                <span className={`text-[11px] font-medium tabular flex items-center gap-0.5 ${dayChangeIsUp ? 'text-bull' : 'text-bear'}`}>
+                  {dayChangeIsUp ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
+                  {dayChangeIsUp ? '+' : ''}{stock.changePercent}%
+                </span>
               </div>
             </div>
           </div>

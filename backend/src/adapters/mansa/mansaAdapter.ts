@@ -27,6 +27,7 @@ import { MansaClient, MansaApiError, type IMansaClient } from "./mansaClient.js"
 import {
   mapSecurity, mapQuote, mapCandle, mapFundamentalsBundle, mapDividendToCorporateAction, mapIndex,
 } from "./mansaMapper.js";
+import { logger } from "../../monitoring/logger.js";
 
 const POLL_FLOOR_MS = 60_000; // never poll Mansa more often than this, regardless of what's requested
 
@@ -43,11 +44,32 @@ export class MansaAdapter implements IExchangeAdapter {
     const securities: Security[] = [];
     let offset = 0;
     const limit = 200; // Mansa's documented per-page cap
+    let reportedTotal: number | undefined;
     for (;;) {
       const page = await this.client.fetchStocks(this.exchange, { limit, offset });
+      // `page.meta.count`, when Mansa sends it, is the TOTAL number of
+      // securities Mansa has for this exchange — independent of how many
+      // came back on this page. We only ever paginated off `page.data.length`
+      // before, so a short page (e.g. 17 rows) looked identical whether
+      // Mansa's whole NSE universe really is 17 names, or whether it's
+      // bigger and something (tier gating, a quota-throttled response,
+      // etc.) truncated this call. Logging both numbers turns that from a
+      // guess into something visible in the boot log.
+      reportedTotal = page.meta?.count ?? reportedTotal;
       securities.push(...page.data.map((raw) => mapSecurity(this.exchange, raw)));
       if (page.data.length < limit) break;
       offset += limit;
+    }
+    if (reportedTotal !== undefined && reportedTotal !== securities.length) {
+      logger.warn(
+        { exchange: this.exchange, received: securities.length, mansaReportedTotal: reportedTotal },
+        "Mansa's listSecurities returned fewer securities than its own meta.count reports — likely tier gating or a truncated response, not the full exchange universe."
+      );
+    } else {
+      logger.info(
+        { exchange: this.exchange, received: securities.length, mansaReportedTotal: reportedTotal ?? "not provided by Mansa" },
+        "Mansa listSecurities result"
+      );
     }
     return securities;
   }
