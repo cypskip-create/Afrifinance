@@ -25,7 +25,7 @@ const TAGLINES = [
 // Purely decorative background chips — a little nod to the exchange board
 // on the landing page, drifting past behind the card. Not real data.
 const FLOATING_CHIPS = [
-  { symbol: 'SAFCOM', change: 1.7, className: 'top-[12%] left-[8%]', delay: 0 },
+  { symbol: 'SCOM', change: 1.7, className: 'top-[12%] left-[8%]', delay: 0 },
   { symbol: 'EQTY', change: -0.9, className: 'top-[22%] right-[10%]', delay: 1.4 },
   { symbol: 'KCB', change: 2.3, className: 'bottom-[24%] left-[12%]', delay: 2.8 },
   { symbol: 'EABL', change: 0.6, className: 'bottom-[14%] right-[8%]', delay: 4.1 },

@@ -11,6 +11,7 @@ import {
 } from "recharts";
 import { ContinuaMark } from "@/components/shared/ContinuaMark";
 import { AfricaMap } from "@/components/shared/AfricaMap";
+import { getPrice, getStockName, getDayChange } from "@/lib/stockPrices";
 
 // ============================================================
 // 1. REUSABLE ANIMATION COMPONENTS
@@ -196,39 +197,26 @@ const DrawnLine = ({ points, stroke, viewBox }: { points: string; stroke: string
 );
 
 // ============================================================
-// 2. TICKER DATA (unchanged)
+// 2. TICKER DATA — symbol selection is curated, price/change come from
+//    the canonical data (lib/stockPrices.ts -> data/nseSecurities.ts)
 // ============================================================
 
-const tickerSymbols = [
-  ["SAFCOM", 17.85, 1.7],
-  ["EQTY", 48.50, -1.2],
-  ["KCB", 38.20, 0.9],
-  ["SCBK", 215.75, 0.4],
-  ["COOP", 16.45, 2.1],
-  ["EABL", 165.50, -0.6],
-  ["ABSA", 17.10, 1.1],
-  ["NCBA", 49.85, -0.3],
-  ["PORT", 116.50, -2.51],
-  ["BRIT", 5.42, 3.2],
-  ["KPLC", 4.18, -2.4],
-  ["BAT", 320.00, 0.8],
-  ["JUB", 380.00, -0.8],
-  ["DTK", 82.00, 1.4],
-  ["SBIC", 8.90, 2.0],
-] as const;
+const TICKER_WATCHLIST = ["SCOM", "EQTY", "KCB", "SCBK", "COOP", "EABL", "ABSA", "NCBA", "PORT", "BRIT", "KPLC", "BAT", "JUB", "DTK", "SBIC"] as const;
+
+const tickerSymbols = TICKER_WATCHLIST.map(
+  (symbol) => [symbol, getPrice(symbol), +getDayChange(symbol).pct.toFixed(1)] as const
+);
 
 const tickerItems = [
   ...tickerSymbols.map(([symbol, price, change]) => ({ symbol, price, change })),
   ...tickerSymbols.map(([symbol, price, change]) => ({ symbol, price, change })),
 ];
 
-const boardRows = [
-  ["SAFCOM", "Safaricom PLC", 17.85, 1.7],
-  ["EQTY", "Equity Group", 48.50, -1.2],
-  ["KCB", "KCB Group", 38.20, 0.9],
-  ["EABL", "EA Breweries", 165.50, -0.6],
-  ["COOP", "Co-op Bank", 16.45, 2.1],
-] as const;
+const BOARD_WATCHLIST = ["SCOM", "EQTY", "KCB", "EABL", "COOP"] as const;
+
+const boardRows = BOARD_WATCHLIST.map(
+  (symbol) => [symbol, getStockName(symbol), getPrice(symbol), +getDayChange(symbol).pct.toFixed(1)] as const
+);
 
 const researchModules = [
   { code: "R.01", title: "Valuation & performance", body: "Fair value estimates, valuation multiples against the sector, analyst price targets and how the stock has actually performed against a benchmark." },
@@ -971,7 +959,7 @@ const ContinuaLandingPage = () => {
                     </div>
                     <div className="post-line" style={{ width: "96%" }}></div>
                     <div className="post-line" style={{ width: "60%" }}></div>
-                    <span className="pf-chip">$SAFCOM +3.4%</span>
+                    <span className="pf-chip">$SCOM +3.4%</span>
                     <div className="quote-chart">
                       <QuoteSpark points="0,50 25,44 50,48 75,30 100,36 125,18 150,26 175,10 200,20 225,6 260,14" viewBox="0 0 260 64" />
                     </div>
@@ -1050,7 +1038,7 @@ const ContinuaLandingPage = () => {
             <Reveal delay={0.1} className="showcase-media">
               <div className="media-card">
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "12px" }}>
-                  <div className="post-name" style={{ fontSize: "15px" }}>SAFCOM <span className="post-handle">Safaricom PLC</span></div>
+                  <div className="post-name" style={{ fontSize: "15px" }}>SCOM <span className="post-handle">Safaricom PLC</span></div>
                   <div style={{ textAlign: "right" }}>
                     <div className="pf-value" style={{ fontSize: "18px" }}>KES 17.85</div>
                     <span className="pf-chip">+1.7% today</span>

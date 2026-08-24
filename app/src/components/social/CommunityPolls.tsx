@@ -26,7 +26,7 @@ interface Poll {
 const pollsData: Poll[] = [
   {
     id: "1",
-    question: "Where do you see SAFCOM stock by end of Q1 2025?",
+    question: "Where do you see SCOM stock by end of Q1 2025?",
     options: [
       { id: "1a", text: "Above KES 15", votes: 342 },
       { id: "1b", text: "KES 12-15", votes: 456 },
@@ -34,7 +34,7 @@ const pollsData: Poll[] = [
     ],
     totalVotes: 921,
     endsIn: "2 days",
-    stockMention: "SAFCOM",
+    stockMention: "SCOM",
   },
   {
     id: "2",

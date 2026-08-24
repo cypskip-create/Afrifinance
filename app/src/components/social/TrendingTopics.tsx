@@ -2,24 +2,31 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, Hash } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useMemo } from "react";
+import { getStockName, getDayChange } from "@/lib/stockPrices";
 
 const trendingTopics = [
   { tag: "#NSEMarkets", posts: 234, trend: "+15%" },
-  { tag: "#SAFCOM", posts: 189, trend: "+22%" },
+  { tag: "#SCOM", posts: 189, trend: "+22%" },
   { tag: "#BankingStocks", posts: 156, trend: "+8%" },
   { tag: "#DividendInvesting", posts: 134, trend: "+12%" },
   { tag: "#KenyaEconomy", posts: 98, trend: "+5%" },
 ];
 
-const trendingStocks = [
-  { symbol: "EQTY", name: "Equity Group", change: "+13.2%" },
-  { symbol: "SAFCOM", name: "Safaricom", change: "+1.2%" },
-  { symbol: "KCB", name: "KCB Group", change: "+3.5%" },
-  { symbol: "COOP", name: "Co-op Bank", change: "+2.1%" },
-];
+// Only the symbol selection is curated — name/change come from the
+// canonical price data at render time.
+const TRENDING_STOCK_SYMBOLS = ["EQTY", "SCOM", "KCB", "COOP"];
 
 export function TrendingTopics() {
   const navigate = useNavigate();
+  const trendingStocks = useMemo(
+    () =>
+      TRENDING_STOCK_SYMBOLS.map((symbol) => {
+        const { pct } = getDayChange(symbol);
+        return { symbol, name: getStockName(symbol), change: `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%` };
+      }),
+    []
+  );
 
   return (
     <div className="space-y-4">

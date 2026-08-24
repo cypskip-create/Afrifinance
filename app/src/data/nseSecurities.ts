@@ -20,6 +20,13 @@
  *   - ARM (ARM Cement) and NBK (National Bank of Kenya) — both delisted /
  *     absorbed in real life (NBK was acquired by KCB in 2019), so their
  *     absence here also happens to be correct, not just an API limitation.
+ *
+ * THIS IS THE ONLY FILE THAT SHOULD CONTAIN HARDCODED TICKER/PRICE DATA.
+ * Everything else in the app — components, pages, other data files — should
+ * import from here (directly, or via lib/stockPrices.ts's helper functions)
+ * rather than declaring its own ticker/price literals. If you find yourself
+ * typing a ticker symbol next to a price number anywhere else, that's a sign
+ * the data should be coming from here instead.
  */
 
 export interface NseSecurityRecord {

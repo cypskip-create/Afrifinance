@@ -10,7 +10,7 @@ import { MarketStatusIndicator } from "@/components/shared/MarketStatusIndicator
 import { AfricaMap } from "@/components/shared/AfricaMap";
 import { AllStocksList } from "@/components/markets/AllStocksList";
 import { StockHeatmap } from "@/components/home/StockHeatmap";
-import { CANONICAL_SYMBOLS, STOCK_META, getPrice, getDayChange, relativeDate } from "@/lib/stockPrices";
+import { CANONICAL_SYMBOLS, STOCK_META, getPrice, getDayChange, getDivYield, relativeDate } from "@/lib/stockPrices";
 import { useMovers } from "@/hooks/useMovers";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { useIndices } from "@/hooks/useIndices";
@@ -95,20 +95,21 @@ const recentIPOs = [
 ];
 
 const dividendCalendar = [
-  { symbol: "SAFCOM", name: "Safaricom", exDate: fmtDate(15), payDate: fmtDate(40), amount: 0.64, yield: 5.8, type: "Final" },
+  { symbol: "SCOM", name: "Safaricom", exDate: fmtDate(15), payDate: fmtDate(40), amount: 0.64, yield: 5.8, type: "Final" },
   { symbol: "EQTY", name: "Equity Group", exDate: fmtDate(20), payDate: fmtDate(45), amount: 4.00, yield: 4.2, type: "Final" },
   { symbol: "SCBK", name: "Std Chartered", exDate: fmtDate(25), payDate: fmtDate(50), amount: 17.00, yield: 6.2, type: "Final" },
   { symbol: "EABL", name: "EABL", exDate: fmtDate(32), payDate: fmtDate(57), amount: 11.00, yield: 7.1, type: "Interim" },
   { symbol: "KCB", name: "KCB Group", exDate: fmtDate(38), payDate: fmtDate(63), amount: 2.50, yield: 3.9, type: "Final" },
 ];
 
-const highDividendStocks = [
-  { symbol: "EABL", name: "EABL", yield: 7.1, amount: 11.00, price: getPrice("EABL"), frequency: "Semi-annual" },
-  { symbol: "SCBK", name: "Std Chartered", yield: 6.2, amount: 17.00, price: getPrice("SCBK"), frequency: "Annual" },
-  { symbol: "SAFCOM", name: "Safaricom", yield: 5.8, amount: 0.64, price: getPrice("SAFCOM"), frequency: "Annual" },
-  { symbol: "ABSA", name: "ABSA Bank", yield: 5.1, amount: 1.10, price: getPrice("ABSA"), frequency: "Annual" },
-  { symbol: "COOP", name: "Co-op Bank", yield: 4.8, amount: 1.00, price: getPrice("COOP"), frequency: "Annual" },
-];
+const highDividendStocks = ["EABL", "SCBK", "SCOM", "ABSA", "COOP"].map((symbol) => ({
+  symbol,
+  name: STOCK_META[symbol]?.name ?? symbol,
+  yield: getDivYield(symbol),
+  price: getPrice(symbol),
+  frequency: symbol === "EABL" ? "Semi-annual" : "Annual",
+  amount: symbol === "EABL" ? 11.00 : symbol === "SCBK" ? 17.00 : symbol === "SCOM" ? 0.64 : symbol === "ABSA" ? 1.50 : 2.00,
+}));
 
 // featuredLists now comes from the shared data/featuredLists.ts module (imported above) so
 // the Overview cards and the list's own detail page can't show different member stocks.
@@ -130,23 +131,23 @@ const themesWithChange = investmentThemes.map(theme => {
 
 const earningsCalendar = [
   { symbol: "EABL", name: "EABL", date: fmtDate(5), time: "2:00 PM EAT", expected: "KES 9.80", impact: "high" as const },
-  { symbol: "SAFCOM", name: "Safaricom", date: fmtDate(12), time: "10:00 AM EAT", expected: "KES 1.08", impact: "high" as const },
+  { symbol: "SCOM", name: "Safaricom", date: fmtDate(12), time: "10:00 AM EAT", expected: "KES 1.08", impact: "high" as const },
   { symbol: "KCB", name: "KCB Group", date: fmtDate(19), time: "11:00 AM EAT", expected: "KES 7.20", impact: "medium" as const },
   { symbol: "PORT", name: "East African Portland Cement", date: fmtDate(30), time: "3:00 PM EAT", expected: "KES 2.30", impact: "low" as const },
 ];
 
 const volumeLeaders = [
   { symbol: "KPLC", name: "Kenya Power", volume: "15.2M", avgVolume: "8.5M", ratio: 1.79, price: getPrice("KPLC"), change: getDayChange("KPLC").pct },
-  { symbol: "SAFCOM", name: "Safaricom", volume: "8.1M", avgVolume: "6.2M", ratio: 1.31, price: getPrice("SAFCOM"), change: getDayChange("SAFCOM").pct },
+  { symbol: "SCOM", name: "Safaricom", volume: "8.1M", avgVolume: "6.2M", ratio: 1.31, price: getPrice("SCOM"), change: getDayChange("SCOM").pct },
   { symbol: "EQTY", name: "Equity Group", volume: "2.4M", avgVolume: "1.8M", ratio: 1.33, price: getPrice("EQTY"), change: getDayChange("EQTY").pct },
   { symbol: "BRIT", name: "Britam", volume: "1.8M", avgVolume: "950K", ratio: 1.89, price: getPrice("BRIT"), change: getDayChange("BRIT").pct },
 ];
 
 const analystRatings = [
-  { symbol: "SAFCOM", rating: "Buy", target: 20.50, current: getPrice("SAFCOM"), firm: "Genghis Capital" },
-  { symbol: "EQTY", rating: "Strong Buy", target: 58.00, current: getPrice("EQTY"), firm: "SBG Securities" },
-  { symbol: "KCB", rating: "Hold", target: 42.00, current: getPrice("KCB"), firm: "Dyer & Blair" },
-  { symbol: "SCBK", rating: "Sell", target: 190.00, current: getPrice("SCBK"), firm: "Standard Investment" },
+  { symbol: "SCOM", rating: "Buy", target: 40.50, current: getPrice("SCOM"), firm: "Genghis Capital" },
+  { symbol: "EQTY", rating: "Strong Buy", target: 108.00, current: getPrice("EQTY"), firm: "SBG Securities" },
+  { symbol: "KCB", rating: "Hold", target: 98.00, current: getPrice("KCB"), firm: "Dyer & Blair" },
+  { symbol: "SCBK", rating: "Sell", target: 320.00, current: getPrice("SCBK"), firm: "Standard Investment" },
 ].map(r => ({ ...r, upside: +(((r.target - r.current) / r.current) * 100).toFixed(1) }));
 
 function StockRow({ stock, onTap }: { stock: { symbol: string; name: string; price: number; change: number }; onTap: () => void }) {

@@ -13,18 +13,10 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { CommunityReactionButton, CommunityReaction } from "./CommunityReactionButton";
 import { atHandle, getHandle } from "@/lib/handle";
+import { getPrice, getDayChange, NSE_TICKER_SET, ALIAS_OF } from "@/lib/stockPrices";
 
 
-const NSE_PRICES: Record<string, { price: number; change: number }> = {
-  SCOM: { price: 12.85, change: 2.4 }, SAFCOM: { price: 12.85, change: 2.4 },
-  EQTY: { price: 62.50, change: -1.2 }, KCB: { price: 45.30, change: 0.8 },
-  COOP: { price: 15.20, change: -0.5 }, SCBK: { price: 185.00, change: 1.1 },
-  PORT: { price: 116.50, change: -3.0 }, EABL: { price: 155.00, change: -2.1 },
-  BAT: { price: 320.00, change: 0.3 }, ABSA: { price: 14.10, change: 1.5 },
-  NCBA: { price: 42.50, change: -0.7 }, SBIC: { price: 8.90, change: 4.2 },
-  JUB: { price: 380.00, change: 0.9 }, BRIT: { price: 6.50, change: -1.8 },
-  DTK: { price: 82.00, change: 2.0 },
-};
+
 
 interface XPostCardProps {
   post: Post;
@@ -93,7 +85,9 @@ export function XPostCard({ post, currentUserId, onComment, onBookmark, onShare,
     return content.split(/(\$[A-Z]+|#\w+)/g).map((part, i) => {
       if (part.startsWith("$")) {
         const symbol = part.slice(1);
-        const priceData = NSE_PRICES[symbol];
+        const upper = symbol.toUpperCase();
+        const isRealTicker = NSE_TICKER_SET.has(upper) || !!ALIAS_OF[upper];
+        const priceData = isRealTicker ? { price: getPrice(symbol), change: getDayChange(symbol).pct } : null;
         return (
           <span key={i} className="inline-flex items-center">
             <span className="text-primary font-semibold cursor-pointer hover:underline" onClick={(e) => { e.stopPropagation(); navigate(`/stock/${symbol}`); }}>
@@ -188,11 +182,13 @@ export function XPostCard({ post, currentUserId, onComment, onBookmark, onShare,
             {post.stock_mentions && post.stock_mentions.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-2">
                 {post.stock_mentions.map(stock => {
-                  const priceData = NSE_PRICES[stock];
+                  const upper = stock.toUpperCase();
+                  const isRealTicker = NSE_TICKER_SET.has(upper) || !!ALIAS_OF[upper];
+                  const change = isRealTicker ? getDayChange(stock).pct : null;
                   return (
                     <Badge key={stock} variant="secondary" className="text-[11px] px-2 py-0.5 cursor-pointer hover:bg-primary/10 rounded-full gap-1 border-0" onClick={(e) => { e.stopPropagation(); navigate(`/stock/${stock}`); }}>
                       ${stock}
-                      {priceData && <span className={priceData.change >= 0 ? "text-bull" : "text-bear"}>{priceData.change >= 0 ? "+" : ""}{priceData.change.toFixed(1)}%</span>}
+                      {change !== null && <span className={change >= 0 ? "text-bull" : "text-bear"}>{change >= 0 ? "+" : ""}{change.toFixed(1)}%</span>}
                     </Badge>
                   );
                 })}

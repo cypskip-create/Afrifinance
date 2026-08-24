@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Banknote, Calendar, TrendingUp, ChevronRight } from "lucide-react";
+import { getDivYield, getPrice, tickerSeed, relativeDate } from "@/lib/stockPrices";
 
 interface PortfolioItem {
   id: string;
@@ -15,28 +16,23 @@ interface DividendTrackerProps {
   portfolio: PortfolioItem[];
 }
 
-// Mock dividend data - in real app, this would come from API
-const DIVIDEND_DATA: { [key: string]: { yield: number; frequency: string; nextDate: string; amount: number } } = {
-  SAFCOM: { yield: 5.2, frequency: 'Annual', nextDate: '2026-06-15', amount: 0.64 },
-  EQTY: { yield: 4.8, frequency: 'Annual', nextDate: '2026-05-20', amount: 3.00 },
-  SCBK: { yield: 3.5, frequency: 'Annual', nextDate: '2026-04-10', amount: 6.50 },
-  PORT: { yield: 2.1, frequency: 'Annual', nextDate: '2026-07-25', amount: 1.88 },
-  KCB: { yield: 6.2, frequency: 'Annual', nextDate: '2026-03-30', amount: 2.81 },
-  COOP: { yield: 4.1, frequency: 'Annual', nextDate: '2026-05-05', amount: 0.62 },
-};
-
 export function DividendTracker({ portfolio }: DividendTrackerProps) {
-  // Calculate total expected dividends
+  // Dividend yield comes from the canonical data (lib/stockPrices.ts ->
+  // data/nseSecurities.ts) — no separate hardcoded dividend table here.
+  // Per-share amount and next-payment date are estimates derived from that
+  // yield and a stable per-ticker offset, not fabricated literals, so a
+  // stock genuinely without a known dividend yield correctly shows nothing
+  // here instead of a made-up number.
   const dividendStats = portfolio.map(item => {
-    const dividendInfo = DIVIDEND_DATA[item.symbol];
-    if (!dividendInfo) return null;
-    
-    const annualDividend = dividendInfo.amount * item.shares;
-    return {
-      ...item,
-      ...dividendInfo,
-      annualDividend,
-    };
+    const yieldPct = getDivYield(item.symbol);
+    if (!yieldPct) return null;
+
+    const price = getPrice(item.symbol);
+    const amount = +((price * yieldPct) / 100).toFixed(2);
+    const nextDate = relativeDate(30 + (tickerSeed(item.symbol) % 300));
+    const annualDividend = amount * item.shares;
+
+    return { ...item, yield: yieldPct, frequency: "Annual", nextDate, amount, annualDividend };
   }).filter(Boolean);
 
   const totalAnnualDividends = dividendStats.reduce((sum, item) => sum + (item?.annualDividend || 0), 0);
@@ -47,7 +43,7 @@ export function DividendTracker({ portfolio }: DividendTrackerProps) {
   // Sort by next dividend date
   const upcomingDividends = [...dividendStats].sort((a, b) => {
     if (!a?.nextDate || !b?.nextDate) return 0;
-    return new Date(a.nextDate).getTime() - new Date(b.nextDate).getTime();
+    return a.nextDate.getTime() - b.nextDate.getTime();
   });
 
   if (portfolio.length === 0) {
@@ -113,7 +109,7 @@ export function DividendTracker({ portfolio }: DividendTrackerProps) {
         <CardContent className="space-y-2">
           {upcomingDividends.slice(0, 4).map((item) => {
             if (!item) return null;
-            const daysUntil = Math.ceil((new Date(item.nextDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+            const daysUntil = Math.ceil((item.nextDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
             
             return (
               <div 

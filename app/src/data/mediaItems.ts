@@ -94,7 +94,7 @@ export const MEDIA_ITEMS: MediaItem[] = [
     readTime: "5 min",
     views: 8920,
     comments: 56,
-    stockMentions: ["SAFCOM", "SCOM"],
+    stockMentions: ["SCOM"],
     sentiment: "bullish",
   },
   {
@@ -253,7 +253,7 @@ export const MEDIA_ITEMS: MediaItem[] = [
     readTime: "3 min",
     views: 1340,
     comments: 8,
-    stockMentions: ["DTB", "DTK"],
+    stockMentions: ["DTK"],
     sentiment: "neutral",
   },
   {
@@ -273,7 +273,7 @@ export const MEDIA_ITEMS: MediaItem[] = [
     readTime: "3 min",
     views: 1120,
     comments: 6,
-    stockMentions: ["STANBIC"],
+    stockMentions: ["SBIC"],
     sentiment: "bullish",
   },
   {
@@ -414,7 +414,7 @@ export const MEDIA_ITEMS: MediaItem[] = [
     guest: "CEO, Safaricom PLC",
     views: 15200,
     comments: 64,
-    stockMentions: ["SAFCOM", "SCOM"],
+    stockMentions: ["SCOM"],
     sentiment: "bullish",
   },
   {

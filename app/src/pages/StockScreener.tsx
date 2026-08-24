@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { Filter, TrendingUp, TrendingDown, ChevronRight, RotateCcw, Sparkles } from "lucide-react";
 import { SparklineChart } from "@/components/shared/SparklineChart";
+import { CANONICAL_SYMBOLS, getStockName, getStockSector, getPrice, getDayChange, getStockFundamentals, parseMagnitude } from "@/lib/stockPrices";
 
 interface ScreenerFilters {
   sector: string;
@@ -17,36 +18,6 @@ interface ScreenerFilters {
   sortBy: string;
   sortOrder: 'asc' | 'desc';
 }
-
-const sectors = [
-  "All Sectors",
-  "Banking",
-  "Telecommunications",
-  "Manufacturing",
-  "Energy",
-  "Consumer Goods",
-  "Insurance",
-  "Real Estate",
-  "Agriculture",
-];
-
-const allStocks = [
-  { symbol: "SAFCOM", name: "Safaricom PLC", price: 12.85, change: 2.4, volume: "12.5M", marketCap: "1.2T", pe: 14.2, sector: "Telecommunications" },
-  { symbol: "EQTY", name: "Equity Group Holdings", price: 62.50, change: 3.8, volume: "8.2M", marketCap: "285B", pe: 8.5, sector: "Banking" },
-  { symbol: "SCBK", name: "Standard Chartered Bank", price: 185.00, change: 1.1, volume: "1.5M", marketCap: "125B", pe: 11.2, sector: "Banking" },
-  { symbol: "KCB", name: "KCB Group PLC", price: 45.30, change: -0.8, volume: "6.8M", marketCap: "145B", pe: 7.8, sector: "Banking" },
-  { symbol: "COOP", name: "Co-operative Bank", price: 15.20, change: -1.5, volume: "4.2M", marketCap: "89B", pe: 9.1, sector: "Banking" },
-  { symbol: "EABL", name: "East African Breweries", price: 142.00, change: 2.1, volume: "850K", marketCap: "112B", pe: 18.5, sector: "Consumer Goods" },
-  { symbol: "PORT", name: "East African Portland Cement", price: 116.50, change: -3.0, volume: "3.4K", marketCap: "5B", pe: 9.8, sector: "Construction" },
-  { symbol: "DTB", name: "Diamond Trust Bank", price: 115.50, change: 0.5, volume: "180K", marketCap: "32B", pe: 10.4, sector: "Banking" },
-  { symbol: "ABSA", name: "ABSA Bank Kenya", price: 13.85, change: 1.9, volume: "5.5M", marketCap: "75B", pe: 7.2, sector: "Banking" },
-  { symbol: "NCBA", name: "NCBA Group", price: 42.50, change: 0.7, volume: "2.1M", marketCap: "68B", pe: 8.9, sector: "Banking" },
-  { symbol: "BRIT", name: "Britam Holdings", price: 6.85, change: -1.2, volume: "1.8M", marketCap: "17B", pe: 15.6, sector: "Insurance" },
-  { symbol: "NMG", name: "Nation Media Group", price: 25.40, change: -0.3, volume: "420K", marketCap: "4.8B", pe: 22.1, sector: "Consumer Goods" },
-  { symbol: "KPLC", name: "Kenya Power", price: 1.95, change: 4.2, volume: "15.2M", marketCap: "3.8B", pe: 6.5, sector: "Energy" },
-  { symbol: "TOTL", name: "TotalEnergies", price: 24.80, change: 1.5, volume: "280K", marketCap: "4.5B", pe: 13.2, sector: "Energy" },
-  { symbol: "JUB", name: "Jubilee Holdings", price: 245.00, change: -0.9, volume: "45K", marketCap: "17B", pe: 11.8, sector: "Insurance" },
-];
 
 const presetFilters = [
   { name: "Top Gainers", filters: { sector: "All Sectors", minChange: 1, maxChange: 100, sortBy: "change", sortOrder: "desc" as const } },
@@ -67,6 +38,35 @@ export function StockScreener() {
     sortBy: "marketCap",
     sortOrder: "desc",
   });
+
+  // Every NSE security, computed live from the canonical price data
+  // (data/nseSecurities.ts) — no separate hardcoded stock list to drift
+  // out of sync with it.
+  const allStocks = useMemo(
+    () =>
+      CANONICAL_SYMBOLS.map((symbol) => {
+        const fundamentals = getStockFundamentals(symbol);
+        return {
+          symbol,
+          name: getStockName(symbol),
+          price: getPrice(symbol),
+          change: +getDayChange(symbol).pct.toFixed(2),
+          volume: fundamentals.volume,
+          marketCap: fundamentals.marketCap,
+          pe: fundamentals.pe,
+          sector: getStockSector(symbol),
+        };
+      }),
+    []
+  );
+
+  // Sector filter list derived from whatever sectors actually exist in the
+  // canonical data, instead of a hand-typed list that can miss real sectors
+  // or include ones nothing is actually tagged with.
+  const sectors = useMemo(
+    () => ["All Sectors", ...Array.from(new Set(allStocks.map((s) => s.sector))).sort()],
+    [allStocks]
+  );
 
   const applyPreset = (preset: typeof presetFilters[0]) => {
     setFilters(prev => ({ ...prev, ...preset.filters }));
@@ -92,12 +92,12 @@ export function StockScreener() {
       return true;
     })
     .sort((a, b) => {
-      const aVal = filters.sortBy === 'change' ? a.change : 
-                   filters.sortBy === 'price' ? a.price : 
-                   filters.sortBy === 'volume' ? parseFloat(a.volume) : parseFloat(a.marketCap);
-      const bVal = filters.sortBy === 'change' ? b.change : 
-                   filters.sortBy === 'price' ? b.price : 
-                   filters.sortBy === 'volume' ? parseFloat(b.volume) : parseFloat(b.marketCap);
+      const aVal = filters.sortBy === 'change' ? a.change :
+                   filters.sortBy === 'price' ? a.price :
+                   filters.sortBy === 'volume' ? parseMagnitude(a.volume) : parseMagnitude(a.marketCap);
+      const bVal = filters.sortBy === 'change' ? b.change :
+                   filters.sortBy === 'price' ? b.price :
+                   filters.sortBy === 'volume' ? parseMagnitude(b.volume) : parseMagnitude(b.marketCap);
       return filters.sortOrder === 'desc' ? bVal - aVal : aVal - bVal;
     });
 
@@ -228,7 +228,7 @@ export function StockScreener() {
               <div className="flex items-center gap-2">
                 <SparklineChart isPositive={stock.change >= 0} width={40} height={18} />
                 <div className="text-right min-w-[65px]">
-                  <div className="font-semibold text-sm">KES {stock.price}</div>
+                  <div className="font-semibold text-sm">KES {stock.price.toFixed(2)}</div>
                   <div className={`text-xs flex items-center justify-end gap-0.5 ${stock.change >= 0 ? 'text-bull' : 'text-bear'}`}>
                     {stock.change >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
                     {stock.change >= 0 ? '+' : ''}{stock.change}%

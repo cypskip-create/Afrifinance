@@ -11,10 +11,10 @@ import { getFundamentals } from "@/data/stockFundamentals";
 // to rank "picks" from — so each section surfaces whichever stocks the
 // underlying data actually supports today, instead of hand-picked symbols
 // that might not even qualify (e.g. an "undervalued" pick with no upside).
-const STOCK_POOL = ["SAFCOM", "EQTY", "KCB", "SCBK", "COOP", "EABL", "ABSA", "NCBA", "PORT", "BRIT", "KPLC", "BAT", "JUB", "DTB", "STANBIC"];
+const STOCK_POOL = ["SCOM", "EQTY", "KCB", "SCBK", "COOP", "EABL", "ABSA", "NCBA", "PORT", "BRIT", "KPLC", "BAT", "JUB", "DTK", "SBIC"];
 
 const upcomingEarnings = [
-  { symbol: "SAFCOM", date: "Tomorrow", time: "9:00 AM" },
+  { symbol: "SCOM", date: "Tomorrow", time: "9:00 AM" },
   { symbol: "EQTY",   date: "Fri",      time: "Pre-market" },
   { symbol: "KCB",    date: "Next Mon", time: "Post-market" },
 ];

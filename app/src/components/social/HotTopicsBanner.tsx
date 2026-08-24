@@ -5,7 +5,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 const hotTopics = [
   { id: "1", tag: "#NSEMarkets", posts: 234, isHot: true },
-  { id: "2", tag: "#SAFCOM", posts: 189, isHot: true },
+  { id: "2", tag: "#SCOM", posts: 189, isHot: true },
   { id: "3", tag: "#BankingStocks", posts: 156, isHot: false },
   { id: "4", tag: "#DividendInvesting", posts: 134, isHot: false },
   { id: "5", tag: "#KenyaEconomy", posts: 98, isHot: false },

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getPrice } from "@/lib/stockPrices";
 
 interface RealtimePriceTickerProps {
   symbol: string;
@@ -12,31 +13,17 @@ interface RealtimePriceTickerProps {
 
 export function RealtimePriceTicker({ 
   symbol, 
-  initialPrice = 0,
+  initialPrice,
   className,
   showChange = true,
   size = 'md'
 }: RealtimePriceTickerProps) {
-  const [price, setPrice] = useState(initialPrice);
-  const [prevPrice, setPrevPrice] = useState(initialPrice);
+  const [price, setPrice] = useState(() => getPrice(symbol, initialPrice));
+  const [prevPrice, setPrevPrice] = useState(price);
   const [flash, setFlash] = useState<'up' | 'down' | null>(null);
-  
-  // Base prices for simulation
-  const basePrices: Record<string, number> = {
-    SAFCOM: 12.85,
-    EQTY: 62.50,
-    SCBK: 185.00,
-    PORT: 116.50,
-    KCB: 45.30,
-    COOP: 15.20,
-    EABL: 142.00,
-    DTB: 115.50,
-    BTC: 43250,
-    ETH: 2580,
-  };
 
   useEffect(() => {
-    const basePrice = basePrices[symbol] || initialPrice || 100;
+    const basePrice = getPrice(symbol, initialPrice);
     setPrice(basePrice);
     setPrevPrice(basePrice);
 

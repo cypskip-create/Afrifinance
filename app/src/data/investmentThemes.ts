@@ -26,7 +26,7 @@ export const investmentThemes: InvestmentTheme[] = [
     slug: "mobile-money",
     title: "Mobile Money",
     desc: "M-Pesa ecosystem and payment rails",
-    stocks: ["SAFCOM", "NCBA", "ABSA"],
+    stocks: ["SCOM", "NCBA", "ABSA"],
     icon: "💳",
     why: "Transaction volumes compounding at double digits",
   },

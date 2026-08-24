@@ -1,8 +1,21 @@
+import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, Flame, Eye, ArrowUpRight, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { SparklineChart } from "@/components/shared/SparklineChart";
+import { getStockName, getPrice, getDayChange, getStockFundamentals } from "@/lib/stockPrices";
+
+// Only the editorial part — which stocks are "trending" and why — is curated
+// here. Price, change, and volume all come from the canonical data in
+// data/nseSecurities.ts (via stockPrices.ts) at render time, not hardcoded,
+// so this widget can never show a stale/wrong number for a real ticker.
+const TRENDING_PICKS: { symbol: string; reason: string; mentions: number }[] = [
+  { symbol: "SCOM", reason: "M-Pesa expansion news", mentions: 1250 },
+  { symbol: "EQTY", reason: "Strong Q4 earnings", mentions: 890 },
+  { symbol: "KCB", reason: "Regional expansion", mentions: 654 },
+  { symbol: "PORT", reason: "Infrastructure deals", mentions: 432 },
+];
 
 interface TrendingStock {
   symbol: string;
@@ -15,51 +28,35 @@ interface TrendingStock {
   reason: string;
 }
 
-const TRENDING_STOCKS: TrendingStock[] = [
-  {
-    symbol: 'SAFCOM',
-    name: 'Safaricom PLC',
-    price: 12.85,
-    change: 4.52,
-    volume: '45.2M',
-    mentions: 1250,
-    sparkline: [10, 11, 10.5, 11.5, 12, 11.8, 12.5, 12.85],
-    reason: 'M-Pesa expansion news'
-  },
-  {
-    symbol: 'EQTY',
-    name: 'Equity Group',
-    price: 62.50,
-    change: 2.89,
-    volume: '12.8M',
-    mentions: 890,
-    sparkline: [58, 59, 60, 59.5, 61, 62, 61.5, 62.5],
-    reason: 'Strong Q4 earnings'
-  },
-  {
-    symbol: 'KCB',
-    name: 'KCB Group',
-    price: 45.30,
-    change: -1.24,
-    volume: '8.5M',
-    mentions: 654,
-    sparkline: [47, 46.5, 46, 45.8, 45.5, 45.2, 45.4, 45.3],
-    reason: 'Regional expansion'
-  },
-  {
-    symbol: 'PORT',
-    name: 'East African Portland Cement',
-    price: 116.50,
-    change: -2.51,
-    volume: '3.4K',
-    mentions: 432,
-    sparkline: [122, 121, 120.5, 119.5, 118, 117.5, 117, 116.5],
-    reason: 'Infrastructure deals'
-  },
-];
+/** A short illustrative sparkline that actually ends at the real current price —
+ *  there's no real intraday history in the data layer yet, so this is a stand-in
+ *  shape, not real historical data, but at least it's honest about where it ends up. */
+function buildSparkline(price: number, changePct: number): number[] {
+  const start = changePct !== 0 ? price / (1 + changePct / 100) : price;
+  return Array.from({ length: 8 }, (_, i) => +(start + ((price - start) * i) / 7).toFixed(2));
+}
 
 export function TrendingStocks() {
   const navigate = useNavigate();
+
+  const stocks: TrendingStock[] = useMemo(
+    () =>
+      TRENDING_PICKS.map((pick) => {
+        const price = getPrice(pick.symbol);
+        const { pct } = getDayChange(pick.symbol);
+        return {
+          symbol: pick.symbol,
+          name: getStockName(pick.symbol),
+          price,
+          change: +pct.toFixed(2),
+          volume: getStockFundamentals(pick.symbol).volume,
+          mentions: pick.mentions,
+          sparkline: buildSparkline(price, pct),
+          reason: pick.reason,
+        };
+      }),
+    []
+  );
 
   return (
     <Card className="card-gradient">
@@ -76,7 +73,7 @@ export function TrendingStocks() {
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        {TRENDING_STOCKS.map((stock, index) => (
+        {stocks.map((stock, index) => (
           <div
             key={stock.symbol}
             onClick={() => navigate(`/stock/${stock.symbol}`)}

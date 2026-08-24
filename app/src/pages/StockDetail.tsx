@@ -49,7 +49,7 @@ import type { ContinuaScores } from "@/components/stock/ContinuaScore";
 // every NSE symbol in STOCK_META gets real stats here instead of falling back to "N/A".
 
 const companyInfo: Record<string, { description: string; headquarters: string; ceo: string; employees: string; founded: string }> = {
-  SAFCOM: { description: "Safaricom PLC is Kenya's largest mobile network operator, best known for M-Pesa mobile money, voice, data and fibre.", headquarters: "Nairobi, Kenya", ceo: "Peter Ndegwa", employees: "6,500+", founded: "1997" },
+  SCOM: { description: "Safaricom PLC is Kenya's largest mobile network operator, best known for M-Pesa mobile money, voice, data and fibre.", headquarters: "Nairobi, Kenya", ceo: "Peter Ndegwa", employees: "6,500+", founded: "1997" },
   EQTY:   { description: "Equity Group Holdings is a leading pan-African financial services group offering banking, insurance and investment products across seven markets.", headquarters: "Nairobi, Kenya", ceo: "James Mwangi", employees: "15,000+", founded: "1984" },
   KCB:    { description: "KCB Group is the largest commercial bank in East Africa by assets, serving retail, corporate and government clients across the region.", headquarters: "Nairobi, Kenya", ceo: "Paul Russo", employees: "10,000+", founded: "1896" },
   EABL:   { description: "East African Breweries produces and distributes beer and spirits including Tusker, Guinness and Bell across East Africa.", headquarters: "Nairobi, Kenya", ceo: "Jane Karuku", employees: "4,000+", founded: "1922" },

@@ -5,8 +5,14 @@
 // The actual ticker/name/price/sector data lives in data/nseSecurities.ts, verified
 // against Mansa's real /exchanges/NSE/stocks response — everything below is derived
 // from that file, not hand-duplicated, so it can't drift out of sync with it again.
+//
+// EVERY function in this file that a component calls for a ticker's price, name,
+// sector, or fundamentals resolves through data/nseSecurities.ts (directly or via
+// ALIAS_OF). No other file in the app should declare its own ticker/price literal —
+// if a component needs stock data, it imports a function from here instead.
 
-import { NSE_SECURITIES, LEGACY_TICKER_ALIASES } from "@/data/nseSecurities";
+import { NSE_SECURITIES, LEGACY_TICKER_ALIASES, NSE_TICKER_SET } from "@/data/nseSecurities";
+export { NSE_TICKER_SET };
 
 export const MOCK_PRICES: Record<string, number> = Object.fromEntries(
   NSE_SECURITIES.map((s) => [s.ticker, s.price])

@@ -3,14 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { TrendingUp, TrendingDown, Verified } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useMemo } from "react";
+import { getStockName, getPrice, getDayChange } from "@/lib/stockPrices";
 
-const TRENDING_STOCKS = [
-  { symbol: "SCOM", name: "Safaricom", price: 12.85, change: 2.4 },
-  { symbol: "EQTY", name: "Equity Group", price: 62.50, change: -1.2 },
-  { symbol: "KCB", name: "KCB Group", price: 45.30, change: 0.8 },
-  { symbol: "EABL", name: "EABL", price: 155.00, change: -2.1 },
-  { symbol: "ABSA", name: "Absa Kenya", price: 14.10, change: 1.5 },
-];
+// Only the selection of which symbols to feature is curated here — their
+// price/name/change all come from the canonical data at render time.
+const TRENDING_SYMBOLS = ["SCOM", "EQTY", "KCB", "EABL", "ABSA"];
 
 const TRENDING_TOPICS = [
   { tag: "#NSE20", posts: "1.2K" },
@@ -29,13 +27,24 @@ const SUGGESTED_USERS = [
 export function TrendingSidebar() {
   const navigate = useNavigate();
 
+  const trendingStocks = useMemo(
+    () =>
+      TRENDING_SYMBOLS.map((symbol) => ({
+        symbol,
+        name: getStockName(symbol),
+        price: getPrice(symbol),
+        change: +getDayChange(symbol).pct.toFixed(1),
+      })),
+    []
+  );
+
   return (
     <div className="space-y-4">
       {/* Trending Stocks */}
       <div className="rounded-2xl bg-muted/30 border border-border p-4">
         <h3 className="font-bold text-lg mb-3">NSE Movers</h3>
         <div className="space-y-3">
-          {TRENDING_STOCKS.map(stock => (
+          {trendingStocks.map(stock => (
             <div
               key={stock.symbol}
               className="flex items-center justify-between cursor-pointer hover:bg-muted/50 -mx-2 px-2 py-1.5 rounded-lg transition-colors"
