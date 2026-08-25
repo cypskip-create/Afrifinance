@@ -35,21 +35,26 @@ export class MansaAdapter implements IExchangeAdapter {
   readonly exchange: ExchangeCode;
   private client: IMansaClient;
   // Set the first time getCandles() sees a 403 from Mansa's /history
-  // endpoint — i.e. the key's tier doesn't include candle data at all.
-  // That's a fixed fact about the key, not a transient failure, so once
-  // we know it, every subsequent symbol (this run) and every subsequent
-  // scheduled candles run (this process's lifetime) short-circuits before
-  // touching the network, instead of re-spending a request per symbol on
-  // a call that can only ever fail the same way. (retry.ts also no longer
-  // retries a 403 at all, so even the first symbol only costs 1 request,
-  // not 3.) This resets on process restart, at which point the first
-  // symbol pays for re-discovering it once — see getCandles() below.
+  // endpoint — i.e. the key's tier doesn't include candle data AT ALL.
+  // That's a fixed fact about the key that only an actual plan upgrade
+  // changes, so it's safe to cache for the rest of this process's life —
+  // every subsequent symbol (this run) and every subsequent scheduled
+  // candles run short-circuits before touching the network. Resets on
+  // restart, at which point the first symbol pays for re-discovering it.
+  //
+  // NOTE: 429 (daily quota exhausted) does NOT get an equivalent flag here
+  // — that's handled once, centrally, in mansaClient.ts's mansaFetch(),
+  // because the quota is shared across every exchange and endpoint on this
+  // key, not just this adapter's candles calls. Duplicating that tracking
+  // per-adapter would just be a second, redundant source of truth for the
+  // same fact.
   private candlesUnsupported = false;
 
   constructor(exchange: ExchangeCode, client: IMansaClient = new MansaClient()) {
     this.exchange = exchange;
     this.client = client;
   }
+
 
   async listSecurities(): Promise<Security[]> {
     const securities: Security[] = [];
@@ -162,6 +167,10 @@ export class MansaAdapter implements IExchangeAdapter {
           "Mansa returned 403 on /history — this key's tier doesn't include candle data. Skipping candles for the rest of this run and every scheduled run until the process restarts, instead of retrying a call that can only fail the same way every time."
         );
       }
+      // 429s are NOT handled here — mansaClient.ts's mansaFetch() already
+      // caught it, set the shared quota-exhausted flag, and every OTHER
+      // Mansa call (this exchange and every other one) will now fail fast
+      // too. Nothing adapter-specific to do beyond letting it propagate.
       throw err; // still let the pipeline's own retry/dead-letter/log handling run for THIS symbol
     }
   }

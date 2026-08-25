@@ -13,6 +13,7 @@
  * or something to degrade gracefully around (see mansaAdapter.ts).
  */
 import { env } from "../../config/index.js";
+import { logger } from "../../monitoring/logger.js";
 import type {
   MansaStockListResponse, MansaStockDetailResponse, MansaHistoryResponse,
   MansaFundamentalsResponse, MansaDividendsResponse, MansaExchangeMetadataResponse,
@@ -36,9 +37,39 @@ async function parseErrorMessage(res: Response): Promise<string> {
   }
 }
 
+// Mansa's free-tier daily quota (100 requests/day, confirmed resetting at
+// UTC midnight) is tied to the API KEY, not to any one exchange or
+// endpoint — a 429 from an NSE quote call means an NGX candle call would
+// fail identically right now too, since they draw from the same budget.
+// This guard therefore lives here, in the ONE function every Mansa request
+// of every kind funnels through, rather than being duplicated per-adapter
+// or per-method. Once tripped, every call (any exchange, any endpoint)
+// fails fast with a synthetic 429 — no network request sent at all — until
+// the next UTC midnight. Without this, callers like getQuotes() that use
+// Promise.allSettled internally never throw even when every symbol comes
+// back 429, so withRetry's "don't retry a 429" rule never even gets a
+// chance to apply — every polling tick would keep firing a full batch of
+// real requests at an already-exhausted key, forever, which is exactly
+// what was happening before this existed.
+const QUOTA_RESET_BUFFER_MS = 2 * 60 * 1000; // small buffer for clock skew around the reset instant
+let quotaExhaustedUntil: number | null = null;
+
+function msUntilNextUtcMidnight(): number {
+  const now = new Date();
+  const nextMidnightUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0);
+  return nextMidnightUtc - now.getTime() + QUOTA_RESET_BUFFER_MS;
+}
+
 async function mansaFetch<T>(path: string, params?: Record<string, string | number | boolean | undefined>): Promise<T> {
   if (!env.MANSA_API_KEY) {
     throw new Error("MANSA_API_KEY is not set. Required whenever ADAPTER_MODE=live.");
+  }
+
+  if (quotaExhaustedUntil !== null) {
+    if (Date.now() < quotaExhaustedUntil) {
+      throw new MansaApiError(429, "Daily quota exhausted — cached, no request sent", path);
+    }
+    quotaExhaustedUntil = null; // cooldown lapsed — let this one through to check for real
   }
 
   const url = new URL(path, env.MANSA_API_BASE_URL);
@@ -53,6 +84,13 @@ async function mansaFetch<T>(path: string, params?: Record<string, string | numb
   });
 
   if (!res.ok) {
+    if (res.status === 429) {
+      quotaExhaustedUntil = Date.now() + msUntilNextUtcMidnight();
+      logger.warn(
+        { path, blockedUntil: new Date(quotaExhaustedUntil).toISOString() },
+        "Mansa returned 429 — daily quota exhausted. Pausing ALL Mansa requests, every exchange and endpoint, until the next UTC midnight reset."
+      );
+    }
     throw new MansaApiError(res.status, await parseErrorMessage(res), path);
   }
 
