@@ -68,6 +68,13 @@ export const generateMockData = (timeframe: string, symbol: string = "STK") => {
     const high = Math.max(open, close) + wick * rand();
     const low = Math.min(open, close) - wick * rand();
 
+    // Mock volume, same seeded-rand convention as the rest of this generator —
+    // used only when there's no real Data Layer candle (see useHistoricalCandles,
+    // which carries the real Mansa-sourced `volume` field for 1W/1M/3M/1Y/ALL).
+    // Bigger price moves get a somewhat higher volume figure, like a real tape.
+    const moveRatio = Math.abs(close - open) / (volatility || 1);
+    const volume = Math.round(150_000 + rand() * 650_000 + moveRatio * 400_000);
+
     let formattedDate = "";
     if (timeframe === "1D") formattedDate = date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
     else if (["1W", "5D"].includes(timeframe)) formattedDate = date.toLocaleDateString("en-US", { weekday: "short" });
@@ -86,6 +93,7 @@ export const generateMockData = (timeframe: string, symbol: string = "STK") => {
       wickRange: [+low.toFixed(2), +high.toFixed(2)],
       up: close >= open,
       timestamp: date.getTime(),
+      volume,
     });
   }
   return dataPoints;
@@ -124,6 +132,7 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
       kdjK: kdjK[i], kdjD: kdjD[i], kdjJ: kdjJ[i],
       wr: wr[i],
       cci: cciVals[i],
+      volume: d.volume ?? 0,
     }));
   }, [data]);
 
@@ -325,12 +334,40 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
   };
 
   const hasSubPanel = indicators.subPanel !== "none";
+  const hasVolume = indicators.volume;
+  // Bar width shared by the candle body/wick bars and the volume bars so the
+  // two stay visually aligned bar-for-bar (same syncId keeps their x-position
+  // locked together too).
+  const barSize = data.length > 120 ? 2 : data.length > 60 ? 4 : 7;
+
+  const renderVolumePanel = () => (
+    <ResponsiveContainer width="100%" height="100%">
+      <ComposedChart data={chartData} margin={{ top: 2, right: 0, left: 0, bottom: 0 }} syncId={`chart-${symbol}-${timeframe}`}>
+        <XAxis dataKey="date" hide />
+        <YAxis hide domain={[0, (max: number) => max * 1.15]} />
+        <Tooltip content={() => null} cursor={false} />
+        <Bar dataKey="volume" barSize={barSize} isAnimationActive={false} minPointSize={1}>
+          {chartData.map((d, i) => (
+            <Cell key={i} fill={d.up ? "hsl(var(--bull))" : "hsl(var(--bear))"} fillOpacity={0.55} />
+          ))}
+        </Bar>
+      </ComposedChart>
+    </ResponsiveContainer>
+  );
+
+  const VolumePanel = () => (
+    <div className={hasSubPanel ? "flex-[2] min-h-0 border-t border-border/30 pt-1 relative" : "flex-[3] min-h-0 border-t border-border/30 pt-1 relative"}>
+      <span className="absolute top-0.5 left-1 text-[9px] font-bold text-muted-foreground tracking-wide z-10">VOL</span>
+      {renderVolumePanel()}
+    </div>
+  );
+
+  const mainFlexClass = hasVolume && hasSubPanel ? "flex-[5]" : hasVolume || hasSubPanel ? "flex-[7]" : "flex-1";
 
   if (chartType === "candle") {
-    const barSize = data.length > 120 ? 2 : data.length > 60 ? 4 : 7;
     return (
       <div className="relative h-full w-full flex flex-col touch-none" onTouchEnd={handleLeave}>
-        <div ref={plotRef} className={hasSubPanel ? "flex-[7] min-h-0 relative" : "flex-1 min-h-0 relative"}>
+        <div ref={plotRef} className={`${mainFlexClass} min-h-0 relative`}>
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart
               data={chartData}
@@ -358,6 +395,7 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
           </ResponsiveContainer>
           {renderCrosshair()}
         </div>
+        {hasVolume && <VolumePanel />}
         {hasSubPanel && <div className="flex-[3] min-h-0 border-t border-border/30 pt-1">{renderSubPanel()}</div>}
       </div>
     );
@@ -365,7 +403,7 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
 
   return (
     <div className="relative h-full w-full flex flex-col touch-none" onTouchEnd={handleLeave}>
-      <div ref={plotRef} className={hasSubPanel ? "flex-[7] min-h-0 relative" : "flex-1 min-h-0 relative"}>
+      <div ref={plotRef} className={`${mainFlexClass} min-h-0 relative`}>
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
             data={chartData}
@@ -407,6 +445,7 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
         </ResponsiveContainer>
         {renderCrosshair()}
       </div>
+      {hasVolume && <VolumePanel />}
       {hasSubPanel && <div className="flex-[3] min-h-0 border-t border-border/30 pt-1">{renderSubPanel()}</div>}
     </div>
   );

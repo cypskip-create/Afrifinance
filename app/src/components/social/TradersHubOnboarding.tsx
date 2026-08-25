@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -295,22 +294,32 @@ export function TradersHubOnboarding({ userId, profile, updateProfile, onDone }:
 
   const currentProgressIdx = PROGRESS_STEPS.indexOf(step);
 
-  return (
-    <Dialog open={show} onOpenChange={() => {}}>
-      <DialogContent className="max-w-sm rounded-3xl p-0 gap-0 [&>button]:hidden">
-        {currentProgressIdx >= 0 && (
-          <div className="flex items-center gap-1.5 px-8 pt-6">
-            {PROGRESS_STEPS.map((s, i) => (
-              <div
-                key={s}
-                className={`h-1 flex-1 rounded-full transition-colors ${i <= currentProgressIdx ? "bg-primary" : "bg-muted"}`}
-              />
-            ))}
-          </div>
-        )}
+  // Full-screen, not a modal card -- avoids the old dialog's fixed max-width
+  // clipping content on narrower phones, and matches how X/Instagram-style
+  // account setup actually looks. Renders nothing at all until `show` flips
+  // true, same as before.
+  if (!show) return null;
 
+  return (
+    <div
+      className="fixed inset-0 z-[70] bg-background flex flex-col"
+      style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
+      {currentProgressIdx >= 0 && (
+        <div className="flex items-center gap-1.5 px-6 pt-4 shrink-0">
+          {PROGRESS_STEPS.map((s, i) => (
+            <div
+              key={s}
+              className={`h-1 flex-1 rounded-full transition-colors ${i <= currentProgressIdx ? "bg-primary" : "bg-muted"}`}
+            />
+          ))}
+        </div>
+      )}
+
+      <div className="flex-1 min-h-0 overflow-y-auto">
+       <div className="max-w-md mx-auto w-full min-h-full">
         {step === "welcome" && (
-          <div className="p-8 text-center space-y-5">
+          <div className="p-8 text-center space-y-5 min-h-full flex flex-col justify-center">
             <div className="w-16 h-16 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto">
               <ShieldAlert className="h-8 w-8 text-accent" />
             </div>
@@ -592,7 +601,7 @@ export function TradersHubOnboarding({ userId, profile, updateProfile, onDone }:
         )}
 
         {step === "creating" && (
-          <div className="p-10 text-center space-y-6 min-h-[320px] flex flex-col items-center justify-center">
+          <div className="p-10 text-center space-y-6 min-h-full flex flex-col items-center justify-center">
             {!creatingDone && !creatingError && (
               <>
                 <Loader2 className="h-10 w-10 text-primary animate-spin" />
@@ -626,8 +635,9 @@ export function TradersHubOnboarding({ userId, profile, updateProfile, onDone }:
             )}
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+       </div>
+      </div>
+    </div>
   );
 }
 

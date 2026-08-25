@@ -2,6 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
+export interface NotificationActor {
+  user_id: string;
+  full_name: string | null;
+  handle: string | null;
+  avatar_url: string | null;
+}
+
 export interface AppNotification {
   id: string;
   user_id: string;
@@ -15,6 +22,22 @@ export interface AppNotification {
   entity_type: string | null;
   read: boolean;
   created_at: string;
+  actor?: NotificationActor | null;
+}
+
+// Notifications carry an actor_id (who liked/followed/replied) but not the
+// actor's name/avatar -- that has to be joined in separately, from
+// profiles_public so it's automatically limited to people with a real
+// TradersHub presence (see migration 20260824090000).
+async function attachActors(rows: AppNotification[]): Promise<AppNotification[]> {
+  const actorIds = [...new Set(rows.map(r => r.actor_id).filter((id): id is string => !!id))];
+  if (actorIds.length === 0) return rows;
+  const { data } = await supabase
+    .from('profiles_public')
+    .select('user_id, full_name, handle, avatar_url')
+    .in('user_id', actorIds);
+  const byId = new Map((data || []).map((p: any) => [p.user_id, p as NotificationActor]));
+  return rows.map(r => ({ ...r, actor: r.actor_id ? byId.get(r.actor_id) || null : null }));
 }
 
 export function useNotifications() {
@@ -31,7 +54,7 @@ export function useNotifications() {
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(100);
-    setNotifications((data as any) || []);
+    setNotifications(await attachActors((data as any) || []));
     setLoading(false);
   }, [user]);
 
@@ -44,7 +67,10 @@ export function useNotifications() {
       .channel(`notifications-${user.id}`)
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
-        (payload) => setNotifications(prev => [payload.new as AppNotification, ...prev])
+        async (payload) => {
+          const [withActor] = await attachActors([payload.new as AppNotification]);
+          setNotifications(prev => [withActor, ...prev]);
+        }
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };

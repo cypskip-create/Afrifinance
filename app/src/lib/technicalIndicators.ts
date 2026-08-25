@@ -10,27 +10,33 @@ export interface IndicatorPoint {
   high?: number;
   low?: number;
   date?: string;
+  volume?: number;
 }
 
 /** Which indicators are currently switched on for a chart — overlays draw on the
- *  price chart itself, subPanel is a single secondary panel below it (Moomoo lets
- *  several oscillators be open in tabs; we keep one at a time to keep the chart
- *  readable on a phone screen). Volume isn't offered yet — candle data doesn't
- *  carry a volume field until RealNseClient supplies historical bars with it. */
+ *  price chart itself, subPanel is a single secondary oscillator panel below it
+ *  (Moomoo lets several oscillators be open in tabs; we keep one at a time to
+ *  keep the chart readable on a phone screen). Volume is independent of both —
+ *  like Moomoo, it's its own compact panel that can be shown alongside an
+ *  oscillator, not exclusive with it. */
 export interface IndicatorSettings {
   overlays: { ma: boolean; ema: boolean; boll: boolean; sar: boolean };
+  volume: boolean;
   subPanel: "none" | "macd" | "rsi" | "kdj" | "wr" | "cci";
 }
 
 export const DEFAULT_INDICATOR_SETTINGS: IndicatorSettings = {
   overlays: { ma: false, ema: false, boll: false, sar: false },
+  // On by default, Moomoo-style — every other overlay/oscillator is opt-in,
+  // but the volume strip is something people expect to just be there.
+  volume: true,
   subPanel: "none",
 };
 
 export const ALL_INDICATORS_OFF: IndicatorSettings = DEFAULT_INDICATOR_SETTINGS;
 
 export function anyIndicatorsOn(settings: IndicatorSettings): boolean {
-  return settings.overlays.ma || settings.overlays.ema || settings.overlays.boll || settings.overlays.sar || settings.subPanel !== "none";
+  return settings.overlays.ma || settings.overlays.ema || settings.overlays.boll || settings.overlays.sar || settings.volume || settings.subPanel !== "none";
 }
 
 /** Indicator choices are a chart preference, not a per-stock one — Moomoo and every
@@ -58,9 +64,10 @@ export function loadIndicatorSettings(): IndicatorSettings {
     const parsed = JSON.parse(raw);
     if (!isValidIndicatorSettings(parsed)) return DEFAULT_INDICATOR_SETTINGS;
     // Merge over the default so older saved settings missing newer keys (e.g. `sar`,
-    // added later) still come back with well-defined booleans instead of undefined.
+    // `volume`, added later) still come back with well-defined values instead of undefined.
     return {
       overlays: { ...DEFAULT_INDICATOR_SETTINGS.overlays, ...parsed.overlays },
+      volume: typeof (parsed as any).volume === "boolean" ? (parsed as any).volume : false,
       subPanel: parsed.subPanel ?? "none",
     };
   } catch {

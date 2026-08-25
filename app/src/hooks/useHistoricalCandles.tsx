@@ -14,6 +14,7 @@ export interface ChartPoint {
   wickRange: [number, number];
   up: boolean;
   timestamp: number;
+  volume: number;
 }
 
 /** How far back to ask the Data Layer for, per UI timeframe pill.
@@ -56,6 +57,7 @@ function candlesToChartPoints(candles: Candle[], timeframe: string): ChartPoint[
       wickRange: [c.low, c.high],
       up: c.close >= c.open,
       timestamp: date.getTime(),
+      volume: c.volume ?? 0,
     };
   });
 }

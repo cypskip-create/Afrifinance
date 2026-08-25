@@ -7,6 +7,7 @@ import { ChartIndicatorsSheet } from "@/components/stock/ChartIndicatorsSheet";
 import { anyIndicatorsOn, loadIndicatorSettings, saveIndicatorSettings, type IndicatorSettings } from "@/lib/technicalIndicators";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useWatchlist } from "@/hooks/useWatchlist";
+import { AddToWatchlistDialog } from "@/components/markets/AddToWatchlistDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { PriceAlertsManager } from "@/components/alerts/PriceAlertsManager";
@@ -141,15 +142,14 @@ export default function StockDetail() {
         headquarters: "Nairobi, Kenya", ceo: "N/A", employees: "N/A", founded: "N/A"
       };
 
+  const [watchlistDialogOpen, setWatchlistDialogOpen] = useState(false);
+
   const handleWatchlistToggle = async () => {
     if (!symbol) return;
-    if (isInWatchlist(symbol)) {
-      await removeFromWatchlist(symbol);
-      toast({ title: "Removed from watchlist" });
-    } else {
-      await addToWatchlist(symbol, stock.name);
-      toast({ title: "Added to watchlist" });
-    }
+    // Always route through the picker so the person chooses (or confirms)
+    // which watchlist the stock goes into -- consistent whether they're
+    // adding for the first time or already have it saved somewhere.
+    setWatchlistDialogOpen(true);
   };
 
   // Hover state for period change calculations
@@ -776,6 +776,7 @@ export default function StockDetail() {
 
       {showAlertsDialog && <PriceAlertsManager />}
       <StockAlertDialog open={stockAlertOpen} onOpenChange={setStockAlertOpen} symbol={symbol || ""} currentPrice={stock.price} />
+      <AddToWatchlistDialog open={watchlistDialogOpen} onOpenChange={setWatchlistDialogOpen} symbol={symbol || ""} name={stock.name} />
     </div>
   );
 }

@@ -9,6 +9,7 @@ import {
   Loader2, Check, X, AtSign, Eye, Bell, MessageCircle, UserPlus, Shield, Lock,
   Mail, KeyRound, Trash2, Download, Type, Smartphone, ChevronRight, ArrowLeft,
   CreditCard, Fingerprint, HelpCircle, FileText, Plus, Star, MessageSquare, Users,
+  AlertTriangle, ShieldAlert,
 } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
@@ -30,7 +31,7 @@ const HANDLE_REGEX = /^[a-z0-9_]{3,20}$/;
 type Section =
   | "menu" | "tradershub"
   | "account" | "payment" | "display" | "data" | "help" | "legal"
-  | "th-privacy" | "th-notifications" | "blocked" | "muted";
+  | "th-privacy" | "th-notifications" | "blocked" | "muted" | "delete-account";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -53,6 +54,8 @@ export default function Settings() {
   const [changingPassword, setChangingPassword] = useState(false);
   const [portfolioOn, setPortfolioOn] = useState(!!profile?.portfolio_public);
   const [fontScale, setFontScale] = useState(getFontScale());
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   const [prefs, setPrefs] = useState<any>({ notif_comments: true, notif_follows: true });
   const [blockedKeyword, setBlockedKeyword] = useState("");
@@ -215,6 +218,26 @@ export default function Settings() {
     toast({ title: "Data exported" });
   };
 
+  // Permanent, no undo — this is the real deletion path (see
+  // supabase/functions/delete-account), not a "deactivate" placeholder. The
+  // typed confirmation is the only thing standing between this button and
+  // wiping every table the account touches, plus the auth user itself.
+  const handleDeleteAccount = async () => {
+    if (!user || deleteConfirmText.trim().toUpperCase() !== "DELETE") return;
+    setDeletingAccount(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("delete-account");
+      if (error || (data as any)?.error) throw new Error((data as any)?.error || error?.message || "Deletion failed");
+      toast({ title: "Account deleted", description: "Sorry to see you go." });
+      await signOut?.();
+      navigate("/auth");
+    } catch (e: any) {
+      toast({ title: "Couldn't delete account", description: e.message || "Please try again or contact support@continua.app", variant: "destructive" });
+    } finally {
+      setDeletingAccount(false);
+    }
+  };
+
   const topSections: { id: Section; label: string; icon: any; desc: string }[] = [
     { id: "tradershub", label: "TradersHub", icon: Users, desc: "Privacy, notifications, blocked & muted accounts" },
     { id: "account", label: "Your account", icon: AtSign, desc: "Username, email, password, app lock" },
@@ -223,6 +246,14 @@ export default function Settings() {
     { id: "data", label: "Your data", icon: Download, desc: "Download or delete your data" },
     { id: "help", label: "Help & support", icon: HelpCircle, desc: "FAQs & contact us" },
     { id: "legal", label: "Terms & privacy", icon: FileText, desc: "Terms of service, privacy policy" },
+  ];
+
+  // Grouped like Moomoo's Settings — a handful of tight cards instead of one
+  // long flat list, so related settings read as a unit at a glance.
+  const menuGroups: { title?: string; ids: Section[] }[] = [
+    { ids: ["account", "tradershub", "payment"] },
+    { title: "Preferences", ids: ["display"] },
+    { title: "Support", ids: ["data", "help", "legal"] },
   ];
 
   const tradersHubSections: { id: Section; label: string; icon: any; desc: string }[] = [
@@ -250,22 +281,50 @@ export default function Settings() {
 
       <div className="px-4 pt-4 max-w-lg mx-auto">
         {section === "menu" && (
-          <div className="space-y-1 pb-4">
-            {topSections.map(s => (
-              <button key={s.id} onClick={() => setSection(s.id)} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted/50 transition text-left">
-                <div className="h-9 w-9 rounded-lg bg-muted/50 flex items-center justify-center text-muted-foreground"><s.icon className="h-4 w-4" /></div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold">{s.label}</div>
-                  <div className="text-[11px] text-muted-foreground truncate">{s.desc}</div>
+          <div className="space-y-5 pb-4">
+            {menuGroups.map((group, gi) => (
+              <div key={gi}>
+                {group.title && <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-1 mb-1.5">{group.title}</p>}
+                <div className="rounded-2xl border border-border/60 bg-card overflow-hidden divide-y divide-border/50">
+                  {group.ids.map(id => {
+                    const s = topSections.find(t => t.id === id)!;
+                    return (
+                      <button key={s.id} onClick={() => setSection(s.id)} className="w-full flex items-center gap-3 px-3.5 py-3 hover:bg-muted/40 active:bg-muted/60 transition text-left">
+                        <div className="h-9 w-9 rounded-lg bg-muted/50 flex items-center justify-center text-muted-foreground shrink-0"><s.icon className="h-4 w-4" /></div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-semibold">{s.label}</div>
+                          <div className="text-[11px] text-muted-foreground truncate">{s.desc}</div>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                      </button>
+                    );
+                  })}
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </button>
+              </div>
             ))}
-            <Separator className="my-2" />
-            <button onClick={async () => { await signOut?.(); navigate('/auth'); }} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-destructive/10 transition text-left text-destructive">
-              <div className="h-9 w-9 rounded-lg bg-destructive/10 flex items-center justify-center"><KeyRound className="h-4 w-4" /></div>
-              <div className="flex-1 text-sm font-semibold">Log out</div>
-            </button>
+
+            <div>
+              <div className="rounded-2xl border border-border/60 bg-card overflow-hidden">
+                <button onClick={async () => { await signOut?.(); navigate('/auth'); }} className="w-full flex items-center gap-3 px-3.5 py-3 hover:bg-muted/40 active:bg-muted/60 transition text-left">
+                  <div className="h-9 w-9 rounded-lg bg-muted/50 flex items-center justify-center shrink-0"><KeyRound className="h-4 w-4 text-muted-foreground" /></div>
+                  <div className="flex-1 text-sm font-semibold">Log out</div>
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <div className="rounded-2xl border border-destructive/30 bg-destructive/[0.03] overflow-hidden">
+                <button onClick={() => { setDeleteConfirmText(""); setSection("delete-account"); }} className="w-full flex items-center gap-3 px-3.5 py-3 hover:bg-destructive/10 active:bg-destructive/15 transition text-left text-destructive">
+                  <div className="h-9 w-9 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0"><Trash2 className="h-4 w-4" /></div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold">Delete account</div>
+                    <div className="text-[11px] text-destructive/70">Permanently erase your Continua account</div>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-muted-foreground text-center pt-1">Continua v1.0 · Nairobi, Kenya</p>
           </div>
         )}
 
@@ -451,7 +510,61 @@ export default function Settings() {
           <div className="space-y-3 pb-4">
             <Header title="Your data" />
             <Button variant="outline" className="w-full rounded-full justify-start" onClick={exportData}><Download className="h-4 w-4 mr-2" />Download your data</Button>
-            <Button variant="outline" className="w-full rounded-full justify-start text-destructive" onClick={() => toast({ title: "Contact support", description: "Email support@continua.app to delete your account" })}><Trash2 className="h-4 w-4 mr-2" />Deactivate account</Button>
+            <Button variant="outline" className="w-full rounded-full justify-start text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => { setDeleteConfirmText(""); setSection("delete-account"); }}>
+              <Trash2 className="h-4 w-4 mr-2" />Delete account
+            </Button>
+          </div>
+        )}
+
+        {section === "delete-account" && (
+          <div className="space-y-4 pb-4">
+            <Header title="Delete account" back="data" />
+            <div className="flex items-start gap-3 p-3.5 rounded-xl bg-destructive/[0.06] border border-destructive/20">
+              <ShieldAlert className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+              <p className="text-[12.5px] text-destructive leading-relaxed">This permanently deletes your Continua account. There's no undo, and no grace period to recover it afterward.</p>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground mb-2">This will remove:</p>
+              <ul className="space-y-1.5 text-[13px] text-muted-foreground">
+                {[
+                  "Your profile, handle, and TradersHub identity",
+                  "Every post, comment, like, and repost you've made",
+                  "Your followers, following, and blocked/muted lists",
+                  "Your portfolio, watchlists, and price alerts",
+                  "Your saved payment methods",
+                ].map(item => (
+                  <li key={item} className="flex items-start gap-2">
+                    <AlertTriangle className="h-3.5 w-3.5 text-destructive/70 mt-0.5 shrink-0" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold">Type DELETE to confirm</Label>
+              <Input
+                value={deleteConfirmText}
+                onChange={e => setDeleteConfirmText(e.target.value)}
+                placeholder="DELETE"
+                className="h-11 rounded-xl font-semibold tracking-wide"
+                autoCapitalize="characters"
+              />
+            </div>
+
+            <Button
+              variant="destructive"
+              className="w-full h-12 rounded-full font-bold"
+              disabled={deletingAccount || deleteConfirmText.trim().toUpperCase() !== "DELETE"}
+              onClick={handleDeleteAccount}
+            >
+              {deletingAccount ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+              Permanently delete my account
+            </Button>
+            <p className="text-[11px] text-muted-foreground text-center">Changed your mind? Just go back — nothing happens until you tap the button above.</p>
           </div>
         )}
 
