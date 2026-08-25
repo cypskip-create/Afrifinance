@@ -34,6 +34,17 @@ const POLL_FLOOR_MS = 60_000; // never poll Mansa more often than this, regardle
 export class MansaAdapter implements IExchangeAdapter {
   readonly exchange: ExchangeCode;
   private client: IMansaClient;
+  // Set the first time getCandles() sees a 403 from Mansa's /history
+  // endpoint — i.e. the key's tier doesn't include candle data at all.
+  // That's a fixed fact about the key, not a transient failure, so once
+  // we know it, every subsequent symbol (this run) and every subsequent
+  // scheduled candles run (this process's lifetime) short-circuits before
+  // touching the network, instead of re-spending a request per symbol on
+  // a call that can only ever fail the same way. (retry.ts also no longer
+  // retries a 403 at all, so even the first symbol only costs 1 request,
+  // not 3.) This resets on process restart, at which point the first
+  // symbol pays for re-discovering it once — see getCandles() below.
+  private candlesUnsupported = false;
 
   constructor(exchange: ExchangeCode, client: IMansaClient = new MansaClient()) {
     this.exchange = exchange;
@@ -83,14 +94,40 @@ export class MansaAdapter implements IExchangeAdapter {
     // every symbol here, to stay within the free-tier request budget.
     const results = await Promise.allSettled(symbols.map((symbol) => this.client.fetchStock(this.exchange, symbol)));
     const quotes: Quote[] = [];
-    for (const result of results) {
-      if (result.status === "fulfilled") {
-        quotes.push(mapQuote(this.exchange, result.value.data));
+    for (const [i, result] of results.entries()) {
+      if (result.status !== "fulfilled") {
+        // A rejected lookup (unknown ticker, rate limit, etc) is dropped
+        // rather than thrown — one bad symbol in a batch shouldn't fail the
+        // whole quote refresh. Callers can diff `symbols` against the
+        // returned quotes to see what didn't resolve.
+        continue;
       }
-      // A rejected lookup (unknown ticker, rate limit, etc) is dropped
-      // rather than thrown — one bad symbol in a batch shouldn't fail the
-      // whole quote refresh. Callers can diff `symbols` against the
-      // returned quotes to see what didn't resolve.
+      // A 200 response with no (or malformed) `data` payload is a real
+      // response shape from Mansa — not just a hypothetical — so this is
+      // checked explicitly rather than trusting the declared type. Letting
+      // mapQuote() throw on `raw.ticker` here used to take down the ENTIRE
+      // batch (see the try/catch below too): one bad symbol meant every
+      // other symbol's perfectly good quote in this tick got discarded,
+      // and withRetry then re-ran the whole batch — including every good
+      // symbol — two more times against a deterministically-failing
+      // response, tripling the wasted request spend for nothing. Skipping
+      // just the bad symbol keeps everything else in the batch intact.
+      const raw = result.value?.data;
+      if (!raw) {
+        logger.warn(
+          { exchange: this.exchange, symbol: symbols[i], response: result.value },
+          "Mansa fetchStock returned no `data` payload for this symbol — skipping it rather than failing the whole quote batch."
+        );
+        continue;
+      }
+      try {
+        quotes.push(mapQuote(this.exchange, raw));
+      } catch (err) {
+        logger.warn(
+          { exchange: this.exchange, symbol: symbols[i], err },
+          "Failed to map a Mansa quote — skipping this symbol rather than failing the whole batch."
+        );
+      }
     }
     return quotes;
   }
@@ -113,8 +150,20 @@ export class MansaAdapter implements IExchangeAdapter {
       // which would misrepresent the data to any chart reading this.
       return [];
     }
-    const history = await this.client.fetchHistory(this.exchange, symbol, { from, to });
-    return history.data.points.map((point) => mapCandle(this.exchange, symbol, point, history.data.price_unit));
+    if (this.candlesUnsupported) return [];
+    try {
+      const history = await this.client.fetchHistory(this.exchange, symbol, { from, to });
+      return history.data.points.map((point) => mapCandle(this.exchange, symbol, point, history.data.price_unit));
+    } catch (err) {
+      if (err instanceof MansaApiError && err.status === 403) {
+        this.candlesUnsupported = true;
+        logger.warn(
+          { exchange: this.exchange },
+          "Mansa returned 403 on /history — this key's tier doesn't include candle data. Skipping candles for the rest of this run and every scheduled run until the process restarts, instead of retrying a call that can only fail the same way every time."
+        );
+      }
+      throw err; // still let the pipeline's own retry/dead-letter/log handling run for THIS symbol
+    }
   }
 
   async getFundamentals(symbol: string): Promise<FundamentalsBundle | null> {

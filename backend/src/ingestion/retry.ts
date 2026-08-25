@@ -15,6 +15,20 @@ export interface RetryOptions {
   label?: string;        // for log context
 }
 
+// 401/403/404 mean "this key/tier/resource will never work", not "the
+// network hiccuped" — retrying changes nothing about the outcome, it just
+// spends 2-3x the request quota to arrive at the identical failure. Duck
+// -typed on `.status` (rather than importing e.g. MansaApiError) so this
+// stays generic across every adapter's own error type, present or future.
+// 429 (rate limited) is deliberately NOT in this list — that one can
+// genuinely resolve itself after backing off.
+const NON_RETRYABLE_STATUSES = new Set([401, 403, 404]);
+
+function isNonRetryable(err: unknown): boolean {
+  const status = (err as { status?: unknown })?.status;
+  return typeof status === "number" && NON_RETRYABLE_STATUSES.has(status);
+}
+
 export async function withRetry<T>(fn: () => Promise<T>, opts: RetryOptions = {}): Promise<T> {
   const { retries = 2, baseDelayMs = 300, factor = 2, label = "operation" } = opts;
   let lastErr: unknown;
@@ -24,7 +38,12 @@ export async function withRetry<T>(fn: () => Promise<T>, opts: RetryOptions = {}
       return await fn();
     } catch (err) {
       lastErr = err;
-      if (attempt === retries) break;
+      if (attempt === retries || isNonRetryable(err)) {
+        if (attempt < retries) {
+          logger.warn({ label, err: String(err) }, "Not retrying — error indicates a permanent auth/entitlement/not-found condition, not a transient one");
+        }
+        break;
+      }
       const delay = baseDelayMs * Math.pow(factor, attempt);
       logger.warn({ label, attempt: attempt + 1, retries, delayMs: delay, err: String(err) }, "Retrying after failure");
       await new Promise((resolve) => setTimeout(resolve, delay));
