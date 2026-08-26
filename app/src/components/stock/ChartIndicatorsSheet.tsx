@@ -35,7 +35,7 @@ export function ChartIndicatorsSheet({ open, onOpenChange, settings, onChange }:
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="rounded-t-3xl max-h-[75vh] overflow-y-auto">
+      <SheetContent side="bottom" className="rounded-t-3xl max-h-[75vh] overflow-y-auto z-[120]">
         <SheetHeader className="text-left">
           <SheetTitle className="text-sm">Indicators</SheetTitle>
         </SheetHeader>

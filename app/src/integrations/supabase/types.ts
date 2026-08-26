@@ -907,6 +907,8 @@ export type Database = {
           portfolio_public: boolean | null
           portfolio_top_holdings_only: boolean | null
           subscription_plan: string | null
+          tradershub_onboarded: boolean | null
+          trading_experience: string | null
           updated_at: string | null
           user_id: string | null
         }
@@ -926,6 +928,8 @@ export type Database = {
           portfolio_public?: boolean | null
           portfolio_top_holdings_only?: boolean | null
           subscription_plan?: string | null
+          tradershub_onboarded?: boolean | null
+          trading_experience?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
@@ -945,6 +949,8 @@ export type Database = {
           portfolio_public?: boolean | null
           portfolio_top_holdings_only?: boolean | null
           subscription_plan?: string | null
+          tradershub_onboarded?: boolean | null
+          trading_experience?: string | null
           updated_at?: string | null
           user_id?: string | null
         }

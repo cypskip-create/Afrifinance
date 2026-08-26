@@ -394,8 +394,8 @@ export default function StockDetail() {
 
       {/* CHART — embedded, no card wrapper */}
       <div className="relative">
-        <div className="h-[280px] px-1">
-          <StockPriceChart symbol={symbol} timeframe={selectedTimeframe} chartType={chartType} onHoverPrice={handleChartHover} data={periodData} indicators={indicatorSettings} />
+        <div className="px-1">
+          <StockPriceChart symbol={symbol} timeframe={selectedTimeframe} chartType={chartType} onHoverPrice={handleChartHover} data={periodData} indicators={indicatorSettings} mainHeight={280} />
         </div>
         {/* Chart tool row */}
         <div className="absolute top-2 right-3 z-10 flex items-center gap-1">

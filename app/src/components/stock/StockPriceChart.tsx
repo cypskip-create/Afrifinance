@@ -30,7 +30,21 @@ interface StockPriceChartProps {
   /** Which overlay/sub-panel indicators are switched on (Moomoo-style). Defaults to
    *  everything off — a clean chart until the person turns something on. */
   indicators?: IndicatorSettings;
+  /** Fixed height (px) for the main price/candle pane. When set, turning on
+   *  Volume/MACD/RSI/etc. never shrinks the main chart -- those panels get
+   *  their own fixed height and are appended below, growing the component's
+   *  total height instead (Moomoo-style). When omitted, the main pane fills
+   *  whatever space its flex parent gives it (used by the fullscreen chart,
+   *  which is already viewport-bounded). */
+  mainHeight?: number;
 }
+
+// Fixed panel heights (px) for Volume and the oscillator sub-panel. These are
+// constants, not proportions of the total -- that's the whole point: adding
+// a panel adds exactly this many pixels below, and never eats into the main
+// chart's own height.
+const VOLUME_PANEL_HEIGHT = 56;
+const SUB_PANEL_HEIGHT = 84;
 
 export const generateMockData = (timeframe: string, symbol: string = "STK") => {
   let seed = 0;
@@ -99,7 +113,7 @@ export const generateMockData = (timeframe: string, symbol: string = "STK") => {
   return dataPoints;
 };
 
-export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area", onHoverPrice, data: liveData, indicators = DEFAULT_INDICATOR_SETTINGS }: StockPriceChartProps) => {
+export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area", onHoverPrice, data: liveData, indicators = DEFAULT_INDICATOR_SETTINGS, mainHeight }: StockPriceChartProps) => {
   const mockData = useMemo(() => generateMockData(timeframe, symbol), [timeframe, symbol]);
   const data = liveData && liveData.length > 1 ? liveData : mockData;
   const firstPrice = data[0]?.price || 0;
@@ -356,18 +370,25 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
   );
 
   const VolumePanel = () => (
-    <div className={hasSubPanel ? "flex-[2] min-h-0 border-t border-border/30 pt-1 relative" : "flex-[3] min-h-0 border-t border-border/30 pt-1 relative"}>
+    <div className="shrink-0 border-t border-border/30 pt-1 relative" style={{ height: VOLUME_PANEL_HEIGHT }}>
       <span className="absolute top-0.5 left-1 text-[9px] font-bold text-muted-foreground tracking-wide z-10">VOL</span>
       {renderVolumePanel()}
     </div>
   );
 
-  const mainFlexClass = hasVolume && hasSubPanel ? "flex-[5]" : hasVolume || hasSubPanel ? "flex-[7]" : "flex-1";
+  // The main pane either gets a hard-coded pixel height (embedded chart,
+  // `mainHeight` passed in -- never shrinks when Volume/a sub-panel is
+  // switched on, they just add their own fixed height below) or fills
+  // whatever's left in a flex parent (fullscreen chart, already
+  // viewport-bounded so there's nowhere for extra height to go).
+  const mainPaneStyle = mainHeight ? { height: mainHeight, flex: "0 0 auto" as const } : undefined;
+  const mainPaneClass = mainHeight ? "shrink-0 relative" : "flex-1 min-h-0 relative";
+  const outerClass = `relative w-full flex flex-col touch-none ${mainHeight ? "" : "h-full"}`;
 
   if (chartType === "candle") {
     return (
-      <div className="relative h-full w-full flex flex-col touch-none" onTouchEnd={handleLeave}>
-        <div ref={plotRef} className={`${mainFlexClass} min-h-0 relative`}>
+      <div className={outerClass} onTouchEnd={handleLeave}>
+        <div ref={plotRef} className={mainPaneClass} style={mainPaneStyle}>
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart
               data={chartData}
@@ -380,12 +401,12 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
               <XAxis dataKey="date" hide />
               <YAxis hide domain={domain} />
               <Tooltip content={() => null} cursor={false} />
-              <Bar dataKey="wickRange" barSize={1} isAnimationActive={false}>
+              <Bar dataKey="wickRange" barSize={1} isAnimationActive={false} activeBar={false}>
                 {data.map((d, i) => (
                   <Cell key={i} fill={d.up ? "hsl(var(--bull))" : "hsl(var(--bear))"} />
                 ))}
               </Bar>
-              <Bar dataKey="body" barSize={barSize} isAnimationActive={false} minPointSize={1}>
+              <Bar dataKey="body" barSize={barSize} isAnimationActive={false} minPointSize={1} activeBar={false}>
                 {data.map((d, i) => (
                   <Cell key={i} fill={d.up ? "hsl(var(--bull))" : "hsl(var(--bear))"} />
                 ))}
@@ -396,14 +417,14 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
           {renderCrosshair()}
         </div>
         {hasVolume && <VolumePanel />}
-        {hasSubPanel && <div className="flex-[3] min-h-0 border-t border-border/30 pt-1">{renderSubPanel()}</div>}
+        {hasSubPanel && <div className="shrink-0 border-t border-border/30 pt-1" style={{ height: SUB_PANEL_HEIGHT }}>{renderSubPanel()}</div>}
       </div>
     );
   }
 
   return (
-    <div className="relative h-full w-full flex flex-col touch-none" onTouchEnd={handleLeave}>
-      <div ref={plotRef} className={`${mainFlexClass} min-h-0 relative`}>
+    <div className={outerClass} onTouchEnd={handleLeave}>
+      <div ref={plotRef} className={mainPaneClass} style={mainPaneStyle}>
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
             data={chartData}
@@ -446,7 +467,7 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
         {renderCrosshair()}
       </div>
       {hasVolume && <VolumePanel />}
-      {hasSubPanel && <div className="flex-[3] min-h-0 border-t border-border/30 pt-1">{renderSubPanel()}</div>}
+      {hasSubPanel && <div className="shrink-0 border-t border-border/30 pt-1" style={{ height: SUB_PANEL_HEIGHT }}>{renderSubPanel()}</div>}
     </div>
   );
 };
