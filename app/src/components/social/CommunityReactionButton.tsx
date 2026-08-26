@@ -15,14 +15,16 @@ export type CommunityReaction =
 export interface ReactionMeta { id: CommunityReaction; emoji: string; label: string }
 
 export const COMMUNITY_REACTIONS: ReactionMeta[] = [
-  { id: "bullish", emoji: "🐂", label: "Bullish" },
-  { id: "bearish", emoji: "🐻", label: "Bearish" },
-  { id: "strong_hold", emoji: "🤲", label: "Strong Hold" },
+  { id: "bullish", emoji: "📈", label: "Bullish" },
+  { id: "bearish", emoji: "📉", label: "Bearish" },
+  { id: "strong_hold", emoji: "🤝", label: "Strong Hold" },
   { id: "insightful", emoji: "💡", label: "Insightful" },
   { id: "watch", emoji: "👀", label: "Watch" },
   { id: "fire", emoji: "🔥", label: "Fire" },
   { id: "laugh", emoji: "😂", label: "Laugh" },
   { id: "love", emoji: "❤️", label: "Love" },
+  { id: "thumbs_up", emoji: "👍", label: "thumbs up"},
+  { id: "thumbs_down", emoji: "👎", label: "thumbs down"},
 ];
 
 const LEGACY: ReactionMeta[] = [
