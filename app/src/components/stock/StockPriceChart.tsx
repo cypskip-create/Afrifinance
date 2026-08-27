@@ -1,7 +1,7 @@
 import {
-  AreaChart, Area, ComposedChart, Bar, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceLine, Cell
+  AreaChart, Area, ComposedChart, Bar, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceLine, Cell, CartesianGrid
 } from "recharts";
-import { useMemo, useCallback, useState, useRef } from "react";
+import { useMemo, useCallback, useState, useRef, useEffect } from "react";
 import { sma, ema, bollingerBands, rsi, macd, parabolicSAR, kdj, williamsR, cci, DEFAULT_INDICATOR_SETTINGS, type IndicatorSettings } from "@/lib/technicalIndicators";
 
 let lastHaptic = 0;
@@ -37,6 +37,30 @@ interface StockPriceChartProps {
    *  whatever space its flex parent gives it (used by the fullscreen chart,
    *  which is already viewport-bounded). */
   mainHeight?: number;
+  /** Show a real price scale on the right (ticked labels + a highlighted
+   *  current-price tag), and let the person drag that scale up/down to
+   *  zoom the price axis in/out — TradingView/Moomoo style. Off by default
+   *  since the embedded card chart keeps a clean, label-free look. */
+  showPriceAxis?: boolean;
+  /** Draw faint horizontal gridlines behind the price chart. */
+  showGrid?: boolean;
+  /** When true, the crosshair stays put after a tap/click instead of
+   *  clearing on mouse-leave / touch-end (used by the fullscreen chart's
+   *  crosshair tool toggle). */
+  pinCrosshair?: boolean;
+  /** Enables the trendline draw tool: drag anywhere on the main price pane
+   *  to sketch a line. Lines are anchored to real price values and relative
+   *  time position (not raw pixels), so they stay put correctly if the
+   *  price axis is zoomed or the pane is resized. Lines persist across
+   *  drawMode being switched off, and reset when the timeframe/symbol
+   *  changes (an annotation from a different window/price range no longer
+   *  means anything). */
+  drawMode?: boolean;
+  /** Bump this (e.g. a counter) to clear every drawn line. */
+  clearDrawSignal?: number;
+  /** Fires whenever the drawn-line count goes from zero to non-zero or back,
+   *  so a caller can show/hide a "clear drawings" affordance. */
+  onDrawingsChange?: (hasDrawings: boolean) => void;
 }
 
 // Fixed panel heights (px) for Volume and the oscillator sub-panel. These are
@@ -113,7 +137,7 @@ export const generateMockData = (timeframe: string, symbol: string = "STK") => {
   return dataPoints;
 };
 
-export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area", onHoverPrice, data: liveData, indicators = DEFAULT_INDICATOR_SETTINGS, mainHeight }: StockPriceChartProps) => {
+export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area", onHoverPrice, data: liveData, indicators = DEFAULT_INDICATOR_SETTINGS, mainHeight, showPriceAxis = false, showGrid = false, pinCrosshair = false, drawMode = false, clearDrawSignal, onDrawingsChange }: StockPriceChartProps) => {
   const mockData = useMemo(() => generateMockData(timeframe, symbol), [timeframe, symbol]);
   const data = liveData && liveData.length > 1 ? liveData : mockData;
   const firstPrice = data[0]?.price || 0;
@@ -160,6 +184,32 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
   );
   const padding = (maxPrice - minPrice) * 0.15;
 
+  // Price-axis zoom (TradingView/Moomoo style): dragging the right-hand price
+  // scale stretches or compresses the visible price range around its own
+  // center without touching the data, x-axis, or panel heights. 1 = the
+  // normal auto-fit range; >1 zooms out (shorter-looking candles), <1 zooms
+  // in. Resets whenever the timeframe/symbol changes so a new period always
+  // starts auto-fit.
+  const [axisZoom, setAxisZoom] = useState(1);
+  useEffect(() => { setAxisZoom(1); }, [timeframe, symbol]);
+  const axisDragRef = useRef<{ startY: number; startZoom: number } | null>(null);
+  const handleAxisDragStart = useCallback((e: React.PointerEvent) => {
+    if (!showPriceAxis) return;
+    e.preventDefault();
+    axisDragRef.current = { startY: e.clientY, startZoom: axisZoom };
+    (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
+  }, [showPriceAxis, axisZoom]);
+  const handleAxisDragMove = useCallback((e: React.PointerEvent) => {
+    const start = axisDragRef.current;
+    if (!start) return;
+    const dy = e.clientY - start.startY;
+    // Drag down = zoom out (taller range, chart looks flatter); drag up = zoom in.
+    const next = Math.min(4, Math.max(0.25, start.startZoom * (1 + dy / 150)));
+    setAxisZoom(next);
+  }, []);
+  const handleAxisDragEnd = useCallback(() => { axisDragRef.current = null; }, []);
+  const handleAxisDoubleClick = useCallback(() => setAxisZoom(1), []);
+
   // Crosshair overlay position. Recharts v3 no longer hands mouse/touch handlers an
   // `activePayload` — it hands them a small { activeIndex, activeCoordinate, ... } state
   // object as the FIRST argument (the raw DOM event is the second argument). activeCoordinate.y
@@ -174,8 +224,12 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
   const plotRef = useRef<HTMLDivElement | null>(null);
   const PLOT_MARGIN_TOP = 8;
 
-  const domainMin = minPrice - padding;
-  const domainMax = maxPrice + padding;
+  const autoDomainMin = minPrice - padding;
+  const autoDomainMax = maxPrice + padding;
+  const domainCenter = (autoDomainMin + autoDomainMax) / 2;
+  const domainHalf = ((autoDomainMax - autoDomainMin) / 2) * axisZoom;
+  const domainMin = domainCenter - domainHalf;
+  const domainMax = domainCenter + domainHalf;
 
   const updateFromChartState = useCallback((state: any) => {
     const idx = state?.activeIndex != null ? Number(state.activeIndex) : NaN;
@@ -199,9 +253,133 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
   }, [data, onHoverPrice, firstPrice, domainMin, domainMax]);
 
   const handleLeave = useCallback(() => {
+    if (pinCrosshair) return;
     setCrosshair(null);
     onHoverPrice?.(null, null, null, null);
-  }, [onHoverPrice]);
+  }, [onHoverPrice, pinCrosshair]);
+
+  // ---- Trendline draw tool -------------------------------------------------
+  // Every line is stored as (relative-x-fraction, real price) pairs rather
+  // than raw pixels, so it's genuinely anchored to the data: zooming the
+  // price axis (axisZoom above) or resizing the pane recomputes the pixel
+  // position correctly instead of the line drifting off what it was drawn on.
+  type DrawLine = { xFrac1: number; price1: number; xFrac2: number; price2: number };
+  const [lines, setLines] = useState<(DrawLine & { id: number })[]>([]);
+  const [draftLine, setDraftLine] = useState<DrawLine | null>(null);
+  const drawingRef = useRef(false);
+  const lineIdRef = useRef(0);
+
+  // Plot pixel size, tracked reactively (not just read on-demand) so stored
+  // lines re-render at the right spot whenever the pane resizes.
+  const [plotSize, setPlotSize] = useState({ width: 0, height: 0 });
+  useEffect(() => {
+    const el = plotRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) setPlotSize({ width: entry.contentRect.width, height: entry.contentRect.height });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const pixelToDrawValue = useCallback((clientX: number, clientY: number): { xFrac: number; price: number } | null => {
+    const rect = plotRef.current?.getBoundingClientRect();
+    if (!rect || !rect.width) return null;
+    const xFrac = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+    const plotHeight = Math.max(1, rect.height - PLOT_MARGIN_TOP);
+    const price = domainMax - ((clientY - rect.top - PLOT_MARGIN_TOP) / plotHeight) * (domainMax - domainMin);
+    return { xFrac, price };
+  }, [domainMin, domainMax]);
+
+  const drawValueToPixel = useCallback((xFrac: number, price: number): { x: number; y: number } | null => {
+    if (!plotSize.width || !plotSize.height) return null;
+    const plotHeight = Math.max(1, plotSize.height - PLOT_MARGIN_TOP);
+    const x = xFrac * plotSize.width;
+    const y = domainMax === domainMin
+      ? PLOT_MARGIN_TOP + plotHeight / 2
+      : PLOT_MARGIN_TOP + (1 - (price - domainMin) / (domainMax - domainMin)) * plotHeight;
+    return { x, y };
+  }, [plotSize, domainMin, domainMax]);
+
+  // New timeframe/symbol = a different price range and time window, so any
+  // existing sketch no longer refers to anything meaningful on screen.
+  useEffect(() => { setLines([]); setDraftLine(null); }, [timeframe, symbol]);
+  // Caller-driven "clear all" (e.g. a toolbar trash icon) via a bump counter.
+  useEffect(() => {
+    if (clearDrawSignal === undefined) return;
+    setLines([]);
+    setDraftLine(null);
+  }, [clearDrawSignal]);
+  useEffect(() => { onDrawingsChange?.(lines.length > 0); }, [lines.length, onDrawingsChange]);
+
+  const handleDrawPointerDown = useCallback((e: React.PointerEvent) => {
+    if (!drawMode) return;
+    const v = pixelToDrawValue(e.clientX, e.clientY);
+    if (!v) return;
+    e.preventDefault();
+    drawingRef.current = true;
+    setDraftLine({ xFrac1: v.xFrac, price1: v.price, xFrac2: v.xFrac, price2: v.price });
+    (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
+  }, [drawMode, pixelToDrawValue]);
+  const handleDrawPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!drawMode || !drawingRef.current) return;
+    const v = pixelToDrawValue(e.clientX, e.clientY);
+    if (!v) return;
+    setDraftLine((prev) => (prev ? { ...prev, xFrac2: v.xFrac, price2: v.price } : prev));
+  }, [drawMode, pixelToDrawValue]);
+  const handleDrawPointerUp = useCallback(() => {
+    if (!drawingRef.current) return;
+    drawingRef.current = false;
+    setDraftLine((prev) => {
+      if (prev) {
+        // Discard a plain tap (no real drag) instead of leaving a stray dot.
+        const movedEnough = Math.abs(prev.xFrac2 - prev.xFrac1) > 0.01
+          || Math.abs(prev.price2 - prev.price1) > (domainMax - domainMin) * 0.01;
+        if (movedEnough) setLines((ls) => [...ls, { id: ++lineIdRef.current, ...prev }]);
+      }
+      return null;
+    });
+  }, [domainMin, domainMax]);
+
+  const renderDrawLayer = () => {
+    const axisGutter = showPriceAxis ? PRICE_AXIS_WIDTH : 0;
+    return (
+      <>
+        <div
+          className="absolute top-0 left-0 bottom-0 z-10"
+          style={{ right: axisGutter, touchAction: drawMode ? "none" : undefined, pointerEvents: drawMode ? "auto" : "none", cursor: drawMode ? "crosshair" : undefined }}
+          onPointerDown={handleDrawPointerDown}
+          onPointerMove={handleDrawPointerMove}
+          onPointerUp={handleDrawPointerUp}
+          onPointerCancel={handleDrawPointerUp}
+        />
+        {(lines.length > 0 || draftLine) && (
+          <svg className="absolute inset-0 pointer-events-none" width="100%" height="100%">
+            {lines.map((l) => {
+              const p1 = drawValueToPixel(l.xFrac1, l.price1);
+              const p2 = drawValueToPixel(l.xFrac2, l.price2);
+              if (!p1 || !p2) return null;
+              return <line key={l.id} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#f59e0b" strokeWidth={1.5} strokeLinecap="round" />;
+            })}
+            {draftLine && (() => {
+              const p1 = drawValueToPixel(draftLine.xFrac1, draftLine.price1);
+              const p2 = drawValueToPixel(draftLine.xFrac2, draftLine.price2);
+              if (!p1 || !p2) return null;
+              return (
+                <>
+                  <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="4 3" strokeLinecap="round" />
+                  <circle cx={p1.x} cy={p1.y} r={2.5} fill="#f59e0b" />
+                  <circle cx={p2.x} cy={p2.y} r={2.5} fill="#f59e0b" />
+                </>
+              );
+            })()}
+          </svg>
+        )}
+      </>
+    );
+  };
+  // ---------------------------------------------------------------------
 
   const domain: [number, number] = [domainMin, domainMax];
 
@@ -223,6 +401,46 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
       </div>
     );
   };
+
+  const PRICE_AXIS_WIDTH = 52;
+
+  // Highlighted "current price" tag on the right-hand scale, drawn as part of
+  // the ReferenceLine so it always tracks the real plot coordinates (no manual
+  // pixel math needed). Recharts hands a horizontal ReferenceLine's label
+  // renderer a viewBox already sized to the plot area, so x + width lands
+  // exactly at the start of the axis gutter we reserved via YAxis width.
+  const renderCurrentPriceTag = (props: { viewBox?: { x: number; y: number; width: number; height: number } }) => {
+    const { viewBox } = props;
+    if (!viewBox) return null;
+    const tagWidth = PRICE_AXIS_WIDTH - 2;
+    const tagHeight = 16;
+    const x = viewBox.x + viewBox.width + 1;
+    const y = viewBox.y;
+    return (
+      <g>
+        <rect x={x} y={y - tagHeight / 2} width={tagWidth} height={tagHeight} rx={2} fill={lineColor} />
+        <text x={x + tagWidth / 2} y={y + 4} textAnchor="middle" fontSize={10} fontWeight={700} fill="hsl(var(--background))">
+          {lastPrice.toFixed(2)}
+        </text>
+      </g>
+    );
+  };
+
+  // Invisible strip laid over the price-scale gutter so a vertical drag there
+  // zooms the axis (TradingView/Moomoo style) without interfering with the
+  // crosshair drag, which listens on the plot area itself. Double-tap resets
+  // to auto-fit.
+  const renderPriceAxisDragHandle = () => (
+    <div
+      className="absolute top-0 right-0 bottom-0 z-10 touch-none cursor-ns-resize"
+      style={{ width: PRICE_AXIS_WIDTH }}
+      onPointerDown={handleAxisDragStart}
+      onPointerMove={handleAxisDragMove}
+      onPointerUp={handleAxisDragEnd}
+      onPointerCancel={handleAxisDragEnd}
+      onDoubleClick={handleAxisDoubleClick}
+    />
+  );
 
   // Overlay lines share one distinct palette so MA/EMA/BOLL stay visually
   // separable from each other and from the price series itself.
@@ -271,7 +489,7 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }} syncId={`chart-${symbol}-${timeframe}`}>
             <XAxis dataKey="date" hide />
-            <YAxis hide domain={[0, 100]} />
+            <YAxis hide domain={[0, 100]} width={showPriceAxis ? PRICE_AXIS_WIDTH : 0} />
             <Tooltip content={() => null} cursor={false} />
             <ReferenceLine y={70} stroke="hsl(var(--bear))" strokeOpacity={0.35} strokeDasharray="2 3" />
             <ReferenceLine y={30} stroke="hsl(var(--bull))" strokeOpacity={0.35} strokeDasharray="2 3" />
@@ -285,7 +503,7 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }} syncId={`chart-${symbol}-${timeframe}`}>
             <XAxis dataKey="date" hide />
-            <YAxis hide />
+            <YAxis hide width={showPriceAxis ? PRICE_AXIS_WIDTH : 0} />
             <Tooltip content={() => null} cursor={false} />
             <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeOpacity={0.35} />
             <Bar dataKey="macdHist" isAnimationActive={false} barSize={2}>
@@ -304,7 +522,7 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }} syncId={`chart-${symbol}-${timeframe}`}>
             <XAxis dataKey="date" hide />
-            <YAxis hide domain={[-20, 120]} />
+            <YAxis hide domain={[-20, 120]} width={showPriceAxis ? PRICE_AXIS_WIDTH : 0} />
             <Tooltip content={() => null} cursor={false} />
             <ReferenceLine y={80} stroke="hsl(var(--bear))" strokeOpacity={0.35} strokeDasharray="2 3" />
             <ReferenceLine y={20} stroke="hsl(var(--bull))" strokeOpacity={0.35} strokeDasharray="2 3" />
@@ -320,7 +538,7 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }} syncId={`chart-${symbol}-${timeframe}`}>
             <XAxis dataKey="date" hide />
-            <YAxis hide domain={[-100, 0]} />
+            <YAxis hide domain={[-100, 0]} width={showPriceAxis ? PRICE_AXIS_WIDTH : 0} />
             <Tooltip content={() => null} cursor={false} />
             <ReferenceLine y={-20} stroke="hsl(var(--bear))" strokeOpacity={0.35} strokeDasharray="2 3" />
             <ReferenceLine y={-80} stroke="hsl(var(--bull))" strokeOpacity={0.35} strokeDasharray="2 3" />
@@ -334,7 +552,7 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }} syncId={`chart-${symbol}-${timeframe}`}>
             <XAxis dataKey="date" hide />
-            <YAxis hide />
+            <YAxis hide width={showPriceAxis ? PRICE_AXIS_WIDTH : 0} />
             <Tooltip content={() => null} cursor={false} />
             <ReferenceLine y={100} stroke="hsl(var(--bear))" strokeOpacity={0.35} strokeDasharray="2 3" />
             <ReferenceLine y={-100} stroke="hsl(var(--bull))" strokeOpacity={0.35} strokeDasharray="2 3" />
@@ -358,7 +576,7 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
     <ResponsiveContainer width="100%" height="100%">
       <ComposedChart data={chartData} margin={{ top: 2, right: 0, left: 0, bottom: 0 }} syncId={`chart-${symbol}-${timeframe}`}>
         <XAxis dataKey="date" hide />
-        <YAxis hide domain={[0, (max: number) => max * 1.15]} />
+        <YAxis hide domain={[0, (max: number) => max * 1.15]} width={showPriceAxis ? PRICE_AXIS_WIDTH : 0} />
         <Tooltip content={() => null} cursor={false} />
         <Bar dataKey="volume" barSize={barSize} isAnimationActive={false} minPointSize={1}>
           {chartData.map((d, i) => (
@@ -398,9 +616,23 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
               onTouchMove={updateFromChartState}
               syncId={`chart-${symbol}-${timeframe}`}
             >
+              {showGrid && <CartesianGrid horizontal vertical={false} stroke="hsl(var(--border))" strokeOpacity={0.4} strokeDasharray="3 3" />}
               <XAxis dataKey="date" hide />
-              <YAxis hide domain={domain} />
+              <YAxis
+                hide={!showPriceAxis}
+                orientation="right"
+                domain={domain}
+                width={showPriceAxis ? PRICE_AXIS_WIDTH : 0}
+                axisLine={false}
+                tickLine={false}
+                tickCount={6}
+                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                tickFormatter={(v: number) => v.toFixed(2)}
+              />
               <Tooltip content={() => null} cursor={false} />
+              {showPriceAxis && (
+                <ReferenceLine y={lastPrice} stroke={lineColor} strokeDasharray="3 3" strokeOpacity={0.6} label={renderCurrentPriceTag} />
+              )}
               <Bar dataKey="wickRange" barSize={1} isAnimationActive={false} activeBar={false}>
                 {data.map((d, i) => (
                   <Cell key={i} fill={d.up ? "hsl(var(--bull))" : "hsl(var(--bear))"} />
@@ -415,6 +647,8 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
             </ComposedChart>
           </ResponsiveContainer>
           {renderCrosshair()}
+          {showPriceAxis && renderPriceAxisDragHandle()}
+          {renderDrawLayer()}
         </div>
         {hasVolume && <VolumePanel />}
         {hasSubPanel && <div className="shrink-0 border-t border-border/30 pt-1" style={{ height: SUB_PANEL_HEIGHT }}>{renderSubPanel()}</div>}
@@ -447,10 +681,24 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
                 <stop offset={1} stopColor={greyLineColor} />
               </linearGradient>
             </defs>
+            {showGrid && <CartesianGrid horizontal vertical={false} stroke="hsl(var(--border))" strokeOpacity={0.4} strokeDasharray="3 3" />}
             <XAxis dataKey="date" hide />
-            <YAxis hide domain={domain} />
+            <YAxis
+              hide={!showPriceAxis}
+              orientation="right"
+              domain={domain}
+              width={showPriceAxis ? PRICE_AXIS_WIDTH : 0}
+              axisLine={false}
+              tickLine={false}
+              tickCount={6}
+              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+              tickFormatter={(v: number) => v.toFixed(2)}
+            />
             <Tooltip content={() => null} cursor={false} />
             <ReferenceLine y={firstPrice} stroke="hsl(var(--muted-foreground))" strokeWidth={1} strokeDasharray="2 4" strokeOpacity={0.35} />
+            {showPriceAxis && (
+              <ReferenceLine y={lastPrice} stroke={lineColor} strokeDasharray="3 3" strokeOpacity={0.6} label={renderCurrentPriceTag} />
+            )}
             <Area
               type="monotone"
               dataKey="price"
@@ -465,6 +713,8 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
           </ComposedChart>
         </ResponsiveContainer>
         {renderCrosshair()}
+        {showPriceAxis && renderPriceAxisDragHandle()}
+        {renderDrawLayer()}
       </div>
       {hasVolume && <VolumePanel />}
       {hasSubPanel && <div className="shrink-0 border-t border-border/30 pt-1" style={{ height: SUB_PANEL_HEIGHT }}>{renderSubPanel()}</div>}

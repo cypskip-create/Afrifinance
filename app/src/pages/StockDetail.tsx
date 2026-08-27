@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Heart, TrendingUp, TrendingDown, AlarmClock, GitCompare, MessageSquare, Plus, Pencil, Maximize2, Minimize2, CandlestickChart, LineChart as LineChartIcon, AreaChart as AreaChartIcon, ChevronRight, FileText, Users2, Briefcase, Download, Building2, Eye, Bell, SlidersHorizontal } from "lucide-react";
+import { ArrowLeft, Heart, TrendingUp, TrendingDown, AlarmClock, GitCompare, MessageSquare, Plus, Pencil, Maximize2, Minimize2, CandlestickChart, LineChart as LineChartIcon, AreaChart as AreaChartIcon, ChevronRight, ChevronDown, FileText, Users2, Briefcase, Download, Building2, Eye, Bell, SlidersHorizontal, Crosshair, LayoutGrid, Expand, Shrink, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { StockPriceChart, generateMockData, type ChartType } from "@/components/stock/StockPriceChart";
 import { ChartIndicatorsSheet } from "@/components/stock/ChartIndicatorsSheet";
@@ -72,6 +72,20 @@ export default function StockDetail() {
   const [selectedTimeframe, setSelectedTimeframe] = useState("1D");
   const [chartType, setChartType] = useState<ChartType>("area");
   const [fullscreen, setFullscreen] = useState(false);
+  // Fullscreen chart toolbar (Moomoo/TradingView-style) — period picker plus
+  // crosshair-pin, draw, gridline, and immersive toggles. Kept separate from
+  // the embedded card chart's state, which doesn't expose any of this. The
+  // actual trendline drawing (anchored to real price/time so it survives
+  // axis zoom) lives inside StockPriceChart itself; this page just flips the
+  // `drawMode` switch, tracks whether anything's been drawn (to show/hide the
+  // clear button), and bumps `fsClearDrawSignal` to ask the chart to clear.
+  const [fsPeriodMenuOpen, setFsPeriodMenuOpen] = useState(false);
+  const [fsCrosshairPinned, setFsCrosshairPinned] = useState(false);
+  const [fsDrawMode, setFsDrawMode] = useState(false);
+  const [fsHasDrawings, setFsHasDrawings] = useState(false);
+  const [fsClearDrawSignal, setFsClearDrawSignal] = useState(0);
+  const [fsShowGrid, setFsShowGrid] = useState(false);
+  const [fsImmersive, setFsImmersive] = useState(false);
   const [showAlertsDialog, setShowAlertsDialog] = useState(false);
   const [stockAlertOpen, setStockAlertOpen] = useState(false);
   const [hoverPrice, setHoverPrice] = useState<number | null>(null);
@@ -163,6 +177,27 @@ export default function StockDetail() {
     setHoverChangePercent(changePercent ?? null);
     setHoverIsUp(isUp ?? null);
   }, []);
+
+  // Pencil tool: just flips the switch StockPriceChart reads via `drawMode`.
+  // The actual line drawing/anchoring lives in that component; this page only
+  // needs to know whether to show the "clear drawings" trash icon.
+  const fsToggleDrawMode = useCallback(() => setFsDrawMode((v) => !v), []);
+  const fsClearDrawings = useCallback(() => setFsClearDrawSignal((n) => n + 1), []);
+
+  // Leaving fullscreen resets its toolbar toggles, so reopening it always
+  // starts from the same clean state rather than remembering, say, an
+  // immersive/hidden header from last time. (StockPriceChart unmounts along
+  // with this view, so its drawn lines are already gone — this just keeps
+  // the toolbar's own state in sync.)
+  useEffect(() => {
+    if (!fullscreen) {
+      setFsDrawMode(false);
+      setFsHasDrawings(false);
+      setFsShowGrid(false);
+      setFsCrosshairPinned(false);
+      setFsImmersive(false);
+    }
+  }, [fullscreen]);
 
   const timeframes = ["1D", "1W", "1M", "3M", "YTD", "1Y", "ALL"];
   const timeframeLabels: Record<string, string> = {
@@ -449,65 +484,135 @@ export default function StockDetail() {
       {/* FULLSCREEN CHART — Moomoo-style landscape overlay */}
       {fullscreen && (
         <div className="fixed inset-0 z-[100] bg-background flex flex-col animate-fade-in">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border/60">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-sm">{symbol}</span>
-                <span className="text-[10px] text-muted-foreground">{stock.exchange}</span>
+          {!fsImmersive && (
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border/60 shrink-0">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-sm">{symbol}</span>
+                  <span className="text-[10px] text-muted-foreground">{stock.exchange}</span>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xl font-bold tabular">KES {displayPrice.toFixed(2)}</span>
+                  <span className={`text-xs font-semibold tabular ${displayIsUp ? 'text-bull' : 'text-bear'}`}>
+                    {priceChange >= 0 ? '+' : ''}{priceChangePercent}%
+                  </span>
+                </div>
               </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-xl font-bold tabular">KES {displayPrice.toFixed(2)}</span>
-                <span className={`text-xs font-semibold tabular ${displayIsUp ? 'text-bull' : 'text-bear'}`}>
-                  {priceChange >= 0 ? '+' : ''}{priceChangePercent}%
-                </span>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost" size="icon" aria-label="Chart indicators"
+                  className={`h-9 w-9 rounded-full ${anyIndicatorsOn(indicatorSettings) ? "text-primary" : "text-muted-foreground"}`}
+                  onClick={() => setIndicatorsSheetOpen(true)}
+                >
+                  <SlidersHorizontal className="h-4 w-4" />
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" aria-label="Change chart type" className="h-9 w-9 rounded-full text-muted-foreground">
+                      {chartType === "candle" ? <CandlestickChart className="h-4 w-4" /> : chartType === "line" ? <LineChartIcon className="h-4 w-4" /> : <AreaChartIcon className="h-4 w-4" />}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-40 z-[110]">
+                    {([
+                      { id: "line", label: "Line", icon: LineChartIcon },
+                      { id: "area", label: "Area", icon: AreaChartIcon },
+                      { id: "candle", label: "Candlestick", icon: CandlestickChart },
+                    ] as const).map(o => (
+                      <DropdownMenuItem key={o.id} onClick={() => setChartType(o.id)} className="text-xs gap-2">
+                        <o.icon className="h-3.5 w-3.5" />{o.label}
+                        {chartType === o.id && <span className="ml-auto text-primary">✓</span>}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button variant="ghost" size="icon" aria-label="Exit fullscreen" className="h-9 w-9 rounded-full text-muted-foreground" onClick={() => setFullscreen(false)}>
+                  <Minimize2 className="h-4 w-4" />
+                </Button>
               </div>
             </div>
+          )}
+
+          {/* Chart pane — real price scale on the right, draggable to zoom
+              (drag the numbers up/down). The pencil tool's trendline drawing
+              is handled inside StockPriceChart itself, anchored to real
+              price/time so it survives axis zoom and resizing. */}
+          <div className="relative flex-1 min-h-0 px-1 py-2">
+            <StockPriceChart
+              symbol={symbol}
+              timeframe={selectedTimeframe}
+              chartType={chartType}
+              onHoverPrice={handleChartHover}
+              data={periodData}
+              indicators={indicatorSettings}
+              showPriceAxis
+              showGrid={fsShowGrid}
+              pinCrosshair={fsCrosshairPinned}
+              drawMode={fsDrawMode}
+              clearDrawSignal={fsClearDrawSignal}
+              onDrawingsChange={setFsHasDrawings}
+            />
+          </div>
+
+          {/* Bottom toolbar — period picker on the left (opens the same
+              timeframes as the pills above), tools on the right. No share
+              button here by design. */}
+          <div className="flex items-center justify-between gap-2 px-3 py-2 border-t border-border/60 shrink-0" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}>
+            <DropdownMenu open={fsPeriodMenuOpen} onOpenChange={setFsPeriodMenuOpen}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="secondary" size="sm" className="h-8 rounded-md px-2.5 text-[12px] font-semibold gap-1">
+                  {selectedTimeframe}
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" side="top" className="w-32 z-[110]">
+                {timeframes.map(tf => (
+                  <DropdownMenuItem key={tf} onClick={() => setSelectedTimeframe(tf)} className="text-xs justify-between">
+                    {tf}
+                    {tf === selectedTimeframe && <span className="text-primary">✓</span>}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <div className="flex items-center gap-1">
               <Button
-                variant="ghost" size="icon" aria-label="Chart indicators"
-                className={`h-9 w-9 rounded-full ${anyIndicatorsOn(indicatorSettings) ? "text-primary" : "text-muted-foreground"}`}
-                onClick={() => setIndicatorsSheetOpen(true)}
+                variant="ghost" size="icon" aria-label="Crosshair tool"
+                className={`h-8 w-8 rounded-full ${fsCrosshairPinned ? "text-primary" : "text-muted-foreground"}`}
+                onClick={() => setFsCrosshairPinned(v => !v)}
               >
-                <SlidersHorizontal className="h-4 w-4" />
+                <Crosshair className="h-4 w-4" />
               </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" aria-label="Change chart type" className="h-9 w-9 rounded-full text-muted-foreground">
-                    {chartType === "candle" ? <CandlestickChart className="h-4 w-4" /> : chartType === "line" ? <LineChartIcon className="h-4 w-4" /> : <AreaChartIcon className="h-4 w-4" />}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-40 z-[110]">
-                  {([
-                    { id: "line", label: "Line", icon: LineChartIcon },
-                    { id: "area", label: "Area", icon: AreaChartIcon },
-                    { id: "candle", label: "Candlestick", icon: CandlestickChart },
-                  ] as const).map(o => (
-                    <DropdownMenuItem key={o.id} onClick={() => setChartType(o.id)} className="text-xs gap-2">
-                      <o.icon className="h-3.5 w-3.5" />{o.label}
-                      {chartType === o.id && <span className="ml-auto text-primary">✓</span>}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <Button variant="ghost" size="icon" aria-label="Exit fullscreen" className="h-9 w-9 rounded-full text-muted-foreground" onClick={() => setFullscreen(false)}>
-                <Minimize2 className="h-4 w-4" />
+              <Button
+                variant="ghost" size="icon" aria-label="Draw tool"
+                className={`h-8 w-8 rounded-full ${fsDrawMode ? "text-primary" : "text-muted-foreground"}`}
+                onClick={fsToggleDrawMode}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+              {fsHasDrawings && (
+                <Button
+                  variant="ghost" size="icon" aria-label="Clear drawings"
+                  className="h-8 w-8 rounded-full text-muted-foreground"
+                  onClick={fsClearDrawings}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+              <Button
+                variant="ghost" size="icon" aria-label="Toggle gridlines"
+                className={`h-8 w-8 rounded-full ${fsShowGrid ? "text-primary" : "text-muted-foreground"}`}
+                onClick={() => setFsShowGrid(v => !v)}
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost" size="icon" aria-label={fsImmersive ? "Show header" : "Hide header"}
+                className="h-8 w-8 rounded-full text-muted-foreground"
+                onClick={() => setFsImmersive(v => !v)}
+              >
+                {fsImmersive ? <Shrink className="h-4 w-4" /> : <Expand className="h-4 w-4" />}
               </Button>
             </div>
-          </div>
-          <div className="flex-1 min-h-0 px-1 py-2">
-            <StockPriceChart symbol={symbol} timeframe={selectedTimeframe} chartType={chartType} onHoverPrice={handleChartHover} data={periodData} indicators={indicatorSettings} />
-          </div>
-          <div className="flex items-center justify-between px-4 py-3 border-t border-border/60" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}>
-            {timeframes.map(tf => (
-              <button
-                key={tf}
-                data-small-target
-                onClick={() => setSelectedTimeframe(tf)}
-                className={`px-2.5 py-1.5 text-[12px] font-semibold rounded-md tabular transition-colors ${tf === selectedTimeframe ? 'brand-active' : 'text-muted-foreground'}`}
-              >
-                {tf}
-              </button>
-            ))}
           </div>
         </div>
       )}
