@@ -20,7 +20,10 @@ describe("extractPdfText", () => {
       results.push(result);
 
       expect(result.method).toBe("native_pdf_text");
-      expect(result.tables).toEqual([]);
+      // Phase 2 assumption (tables always empty) no longer holds as of
+      // Phase 3's table heuristic — some of these real documents contain
+      // genuine financial tables. Assert shape, not absence.
+      expect(Array.isArray(result.tables)).toBe(true);
     }
 
     expect(results.some((result) => result.text && result.text.length >= 200)).toBe(true);

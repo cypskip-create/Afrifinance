@@ -5,17 +5,25 @@
  * text; this module's job is to detect that honestly (low confidence,
  * needsReview: true) rather than pretend the extraction succeeded.
  *
- * Table extraction (§6) is NOT implemented here — pdf-parse gives flat
- * text, not table structure. That's Phase 3. For now, financial tables
- * inside a PDF just come through as part of the plain text blob.
+ * Table extraction (§6, Phase 3): pdf-parse v2's built-in `getTable()`
+ * was tried first and returned empty results against multiple synthetic
+ * test tables (bordered and borderless), so financial tables here come
+ * from a text-based heuristic instead — see tableExtract.ts for details
+ * and its documented limitations.
  */
 import { PDFParse } from "pdf-parse";
 import type { ParsedExtraction } from "../adapters/types.js";
 import { logger } from "../monitoring/logger.js";
+import { extractTablesFromText } from "./tableExtract.js";
 
-export const PDF_PARSER_VERSION = "native-pdf-text-0.1.0";
+export const PDF_PARSER_VERSION = "native-pdf-text-0.2.0";
 
-const MIN_USABLE_TEXT_LENGTH = 200;
+// Below this many characters of extracted text, treat the PDF as
+// effectively unextracted (scanned/image-based PDFs typically yield
+// near-zero characters, not merely "few" — a short but genuine document,
+// like a one-paragraph dividend notice, can legitimately land under 200
+// chars, so the bar is set low enough to only catch the near-empty case).
+const MIN_USABLE_TEXT_LENGTH = 50;
 
 export async function extractPdfText(buffer: Buffer): Promise<Omit<ParsedExtraction, "entity">> {
   const data = new Uint8Array(buffer);
@@ -49,11 +57,13 @@ export async function extractPdfText(buffer: Buffer): Promise<Omit<ParsedExtract
   const avgCharsPerPage = pageCount > 0 ? text.length / pageCount : text.length;
   const confidence = !looksUsable ? 0.1 : Math.min(0.95, 0.5 + avgCharsPerPage / 4000);
 
+  const tables = looksUsable ? extractTablesFromText(text) : [];
+
   return {
     method: "native_pdf_text",
     confidence,
     text: looksUsable ? text : text || null,
-    tables: [],
+    tables,
     needsReview: !looksUsable,
   };
 }
