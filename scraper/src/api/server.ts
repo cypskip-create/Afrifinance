@@ -1,14 +1,17 @@
-import express, { Request, Response } from "express";
+import express from "express";
 import { env } from "../config/index.js";
 import { logger } from "../monitoring/logger.js";
 import { checkHealth } from "../monitoring/healthCheck.js";
-import { listEnabledSources } from "../storage/sourcesRepository.js";
+import { listEnabledSources, getSource } from "../storage/sourcesRepository.js";
+import { crawlSource } from "../crawler/crawlSource.js";
+import { runAdapter } from "../adapters/runAdapter.js";
+import { nseAnnouncementsAdapter } from "../adapters/nse/announcementsAdapter.js";
 
 export function createServer() {
   const app = express();
   app.use(express.json());
 
-  app.get("/health", async (_req: Request, res: Response) => {
+  app.get("/health", async (_req, res) => {
     const health = await checkHealth();
     res.status(health.status === "ok" ? 200 : 503).json(health);
   });
@@ -16,12 +19,61 @@ export function createServer() {
   // Phase 0: read-only visibility into configured sources. Crawl-trigger
   // and job-status endpoints (§40) land in a later phase once there's an
   // actual crawler to trigger.
-  app.get("/sources", async (_req: Request, res: Response) => {
+  app.get("/sources", async (_req, res) => {
     const sources = await listEnabledSources();
     res.json(sources);
   });
 
-  app.use((req: Request, res: Response) => {
+  // Phase 1: manual crawl trigger for testing. This is a synchronous,
+  // single-pass call — fine for a handful of URLs during development.
+  // Once real scheduling exists (§19, Phase 6) this becomes
+  // fire-and-forget against a job queue instead of blocking the request.
+  app.post("/sources/:id/crawl", async (req, res) => {
+    const source = await getSource(req.params.id);
+    if (!source) {
+      res.status(404).json({ error: "source_not_found", id: req.params.id });
+      return;
+    }
+    try {
+      const batchSize = req.body?.batchSize ?? 20;
+      const summary = await crawlSource(source.id, batchSize);
+      res.json(summary);
+    } catch (err) {
+      logger.error({ err, sourceId: source.id }, "Crawl trigger failed");
+      res.status(500).json({ error: "crawl_failed", message: (err as Error).message });
+    }
+  });
+
+  // Dry run — see what discover() would find WITHOUT downloading any
+  // PDFs. Use this first: the title-pairing heuristic (nearest preceding
+  // heading) hasn't been verified against NSE's actual HTML from this
+  // environment, only inferred from a markdown-converted fetch. Check
+  // that titles look sane before running the real /announcements below.
+  app.get("/adapters/nse/announcements/preview", async (_req, res) => {
+    try {
+      const docs = await nseAnnouncementsAdapter.discover();
+      res.json({ count: docs.length, documents: docs });
+    } catch (err) {
+      logger.error({ err }, "NSE announcements discover() failed");
+      res.status(500).json({ error: "discover_failed", message: (err as Error).message });
+    }
+  });
+
+  // Phase 2: NSE announcements adapter. Separate from the generic
+  // /sources/:id/crawl trigger above — adapters run their own
+  // discover -> fetch -> parse pipeline rather than the crawl_state
+  // queue loop.
+  app.post("/adapters/nse/announcements", async (_req, res) => {
+    try {
+      const summary = await runAdapter(nseAnnouncementsAdapter);
+      res.json(summary);
+    } catch (err) {
+      logger.error({ err }, "NSE announcements adapter run failed");
+      res.status(500).json({ error: "adapter_run_failed", message: (err as Error).message });
+    }
+  });
+
+  app.use((req, res) => {
     res.status(404).json({ error: "not_found", path: req.path });
   });
 

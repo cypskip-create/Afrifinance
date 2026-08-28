@@ -4,6 +4,8 @@ import { ArrowLeft, Heart, TrendingUp, TrendingDown, AlarmClock, GitCompare, Mes
 import { Badge } from "@/components/ui/badge";
 import { StockPriceChart, generateMockData, type ChartType } from "@/components/stock/StockPriceChart";
 import { ChartIndicatorsSheet } from "@/components/stock/ChartIndicatorsSheet";
+import { DrawingToolsSheet } from "@/components/stock/DrawingToolsSheet";
+import { type DrawToolId } from "@/lib/drawingTools";
 import { anyIndicatorsOn, loadIndicatorSettings, saveIndicatorSettings, type IndicatorSettings } from "@/lib/technicalIndicators";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useWatchlist } from "@/hooks/useWatchlist";
@@ -75,14 +77,17 @@ export default function StockDetail() {
   // Fullscreen chart toolbar (Moomoo/TradingView-style) — period picker plus
   // crosshair-pin, draw, gridline, and immersive toggles. Kept separate from
   // the embedded card chart's state, which doesn't expose any of this. The
-  // actual trendline drawing (anchored to real price/time so it survives
-  // axis zoom) lives inside StockPriceChart itself; this page just flips the
-  // `drawMode` switch, tracks whether anything's been drawn (to show/hide the
-  // clear button), and bumps `fsClearDrawSignal` to ask the chart to clear.
+  // actual drawing engine (all the Lines/Channels & Pitchforks/Shapes/
+  // Measures/Items tools, anchored to real price/time so they survive axis
+  // zoom) lives inside StockPriceChart itself; this page just tracks which
+  // tool is selected, whether anything's been drawn (to show/hide the clear
+  // button), and bumps `fsClearDrawSignal` to ask the chart to clear.
   const [fsPeriodMenuOpen, setFsPeriodMenuOpen] = useState(false);
   const [fsCrosshairPinned, setFsCrosshairPinned] = useState(false);
-  const [fsDrawMode, setFsDrawMode] = useState(false);
+  const [drawToolsSheetOpen, setDrawToolsSheetOpen] = useState(false);
+  const [fsActiveDrawTool, setFsActiveDrawTool] = useState<DrawToolId | null>(null);
   const [fsHasDrawings, setFsHasDrawings] = useState(false);
+  const [fsDrawingsHidden, setFsDrawingsHidden] = useState(false);
   const [fsClearDrawSignal, setFsClearDrawSignal] = useState(0);
   const [fsShowGrid, setFsShowGrid] = useState(false);
   const [fsImmersive, setFsImmersive] = useState(false);
@@ -178,24 +183,29 @@ export default function StockDetail() {
     setHoverIsUp(isUp ?? null);
   }, []);
 
-  // Pencil tool: just flips the switch StockPriceChart reads via `drawMode`.
-  // The actual line drawing/anchoring lives in that component; this page only
-  // needs to know whether to show the "clear drawings" trash icon.
-  const fsToggleDrawMode = useCallback(() => setFsDrawMode((v) => !v), []);
+  // Pencil tool: opens the Drawing Tools sheet; picking a tool there sets
+  // `fsActiveDrawTool`, which StockPriceChart reads to start collecting taps
+  // for that tool. The actual drawing/anchoring lives in that component; this
+  // page only needs to know which tool is active, whether to show the "clear
+  // drawings" trash icon, and how to ask the chart to clear everything.
+  const fsSelectDrawTool = useCallback((tool: DrawToolId) => setFsActiveDrawTool(tool), []);
   const fsClearDrawings = useCallback(() => setFsClearDrawSignal((n) => n + 1), []);
+  const fsToggleHideDrawings = useCallback(() => setFsDrawingsHidden((v) => !v), []);
 
   // Leaving fullscreen resets its toolbar toggles, so reopening it always
   // starts from the same clean state rather than remembering, say, an
   // immersive/hidden header from last time. (StockPriceChart unmounts along
-  // with this view, so its drawn lines are already gone — this just keeps
-  // the toolbar's own state in sync.)
+  // with this view, so its drawings are already gone — this just keeps the
+  // toolbar's own state in sync.)
   useEffect(() => {
     if (!fullscreen) {
-      setFsDrawMode(false);
+      setFsActiveDrawTool(null);
       setFsHasDrawings(false);
+      setFsDrawingsHidden(false);
       setFsShowGrid(false);
       setFsCrosshairPinned(false);
       setFsImmersive(false);
+      setDrawToolsSheetOpen(false);
     }
   }, [fullscreen]);
 
@@ -547,7 +557,9 @@ export default function StockDetail() {
               showPriceAxis
               showGrid={fsShowGrid}
               pinCrosshair={fsCrosshairPinned}
-              drawMode={fsDrawMode}
+              activeDrawTool={fsActiveDrawTool}
+              onDrawToolComplete={() => setFsActiveDrawTool(null)}
+              hideDrawings={fsDrawingsHidden}
               clearDrawSignal={fsClearDrawSignal}
               onDrawingsChange={setFsHasDrawings}
             />
@@ -583,9 +595,9 @@ export default function StockDetail() {
                 <Crosshair className="h-4 w-4" />
               </Button>
               <Button
-                variant="ghost" size="icon" aria-label="Draw tool"
-                className={`h-8 w-8 rounded-full ${fsDrawMode ? "text-primary" : "text-muted-foreground"}`}
-                onClick={fsToggleDrawMode}
+                variant="ghost" size="icon" aria-label="Drawing tools"
+                className={`h-8 w-8 rounded-full ${fsActiveDrawTool ? "text-primary" : "text-muted-foreground"}`}
+                onClick={() => setDrawToolsSheetOpen(true)}
               >
                 <Pencil className="h-4 w-4" />
               </Button>
@@ -616,6 +628,15 @@ export default function StockDetail() {
           </div>
         </div>
       )}
+
+      <DrawingToolsSheet
+        open={drawToolsSheetOpen}
+        onOpenChange={setDrawToolsSheetOpen}
+        onSelectTool={fsSelectDrawTool}
+        hasDrawings={fsHasDrawings}
+        onHideAll={fsToggleHideDrawings}
+        onClearAll={fsClearDrawings}
+      />
 
       {/* STICKY SUB-NAV */}
       <div className="sticky top-[53px] z-30 bg-background/92 backdrop-blur-xl border-b border-border/60">
