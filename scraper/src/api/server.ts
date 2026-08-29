@@ -3,6 +3,7 @@ import { env } from "../config/index.js";
 import { logger } from "../monitoring/logger.js";
 import { checkHealth } from "../monitoring/healthCheck.js";
 import { listEnabledSources, getSource } from "../storage/sourcesRepository.js";
+import { listDeadLetters } from "../storage/deadLettersRepository.js";
 import { crawlSource } from "../crawler/crawlSource.js";
 import { runAdapter } from "../adapters/runAdapter.js";
 import { nseAnnouncementsAdapter } from "../adapters/nse/announcementsAdapter.js";
@@ -71,6 +72,15 @@ export function createServer() {
       logger.error({ err }, "NSE announcements adapter run failed");
       res.status(500).json({ error: "adapter_run_failed", message: (err as Error).message });
     }
+  });
+
+  // Phase 6: visibility into permanently-failed URLs (§21, §39) —
+  // anything here exhausted its retries and needs a human look, or at
+  // minimum confirms the crawler isn't silently losing failures.
+  app.get("/dead-letters", async (req, res) => {
+    const sourceId = typeof req.query.source === "string" ? req.query.source : undefined;
+    const deadLetters = await listDeadLetters(sourceId);
+    res.json(deadLetters);
   });
 
   app.use((req, res) => {

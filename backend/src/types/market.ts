@@ -261,12 +261,31 @@ export interface AfriScoreResult {
   inputs: Record<string, number | null>;
 }
 
+/** ── Company announcements (scraper bridge) ──────────────────────────── */
+
+export interface CompanyAnnouncement {
+  id: string;
+  companyId: string | null;
+  securityId: string | null;
+  rawCompanyName: string | null;
+  title: string;
+  documentUrl: string;
+  source: string;
+  exchange: ExchangeCode;
+  scrapedArtifactId: number | null;
+  scrapedExtractionId: number | null;
+  extractionConfidence: number | null;
+  needsReview: boolean;
+  excerpt: string | null;
+  publishedAt: string | null;
+}
+
 /** ── Ingestion metadata (audit trail) ────────────────────────────────── */
 
 export interface IngestionRecord {
   id: string;
   exchange: ExchangeCode;
-  dataset: "price" | "candle" | "company" | "financials" | "corporate_action" | "earnings" | "ownership" | "index";
+  dataset: "price" | "candle" | "company" | "financials" | "corporate_action" | "earnings" | "ownership" | "index" | "announcement";
   status: "success" | "partial" | "failed";
   recordCount: number;
   errorCount: number;

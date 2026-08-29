@@ -19,7 +19,10 @@ describe("extractPdfText", () => {
       const result = await extractPdfText(readFileSync(join(fixtureDir, pdf)));
       results.push(result);
 
-      expect(result.method).toBe("native_pdf_text");
+      // Phase 5 added an OCR fallback for scanned documents — one of
+      // these 13 real files genuinely needs it, so "always native" no
+      // longer holds. Assert it's one of the two valid methods.
+      expect(["native_pdf_text", "ocr"]).toContain(result.method);
       // Phase 2 assumption (tables always empty) no longer holds as of
       // Phase 3's table heuristic — some of these real documents contain
       // genuine financial tables. Assert shape, not absence.
@@ -27,5 +30,8 @@ describe("extractPdfText", () => {
     }
 
     expect(results.some((result) => result.text && result.text.length >= 200)).toBe(true);
-  });
+    // Confirm the OCR fallback actually engaged for the one scanned
+    // document in this fixture set, rather than silently not firing.
+    expect(results.some((result) => result.method === "ocr")).toBe(true);
+  }, 60_000); // includes one real OCR pass (~7s) — default 5s timeout is too short
 });

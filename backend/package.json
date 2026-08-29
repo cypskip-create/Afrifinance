@@ -15,6 +15,7 @@
     "worker:price": "tsx src/workers/priceWorker.ts",
     "worker:financials": "tsx src/workers/financialsWorker.ts",
     "worker:corporate-actions": "tsx src/workers/corporateActionsWorker.ts",
+    "worker:announcements": "tsx scripts/runAnnouncementsBridgeOnce.ts",
     "worker:candles": "tsx src/workers/candlesWorker.ts",
     "apikey:create": "tsx scripts/generateApiKey.ts",
     "apikey:revoke": "tsx scripts/revokeApiKey.ts"

@@ -51,6 +51,7 @@ const EnvSchema = z.object({
   INDEX_POLL_INTERVAL_MS: z.coerce.number().default(300_000), // 5 min — see workers/indexWorker.ts
   FINANCIALS_SYNC_CRON: z.string().default("0 2 * * *"),
   CORPORATE_ACTIONS_SYNC_CRON: z.string().default("0 3 * * *"),
+  ANNOUNCEMENTS_BRIDGE_CRON: z.string().default("*/15 * * * *"), // every 15 min — scraper runs independently; this just catches up whatever it produced
 
   // ── CORS ────────────────────────────────────────────────────────────
   // Comma-separated list of origins allowed to call this API from a browser

@@ -9,6 +9,8 @@ export interface SourceConfig {
   maxDepth?: number;
   concurrency?: number;
   requestsPerSecond?: number;
+  /** Cron expression for how often this source should run — Phase 6. Falls back to env.DEFAULT_CRAWL_CRON if unset. */
+  schedule?: string;
   documents?: {
     pdf?: boolean;
     ocr?: boolean;

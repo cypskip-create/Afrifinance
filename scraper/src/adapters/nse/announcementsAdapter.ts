@@ -20,19 +20,27 @@
  * backfill yet — don't rely on it for that until Phase 4 lands.
  */
 import * as cheerio from "cheerio";
-import { safeFetch } from "../../crawler/httpClient.js";
+import { fetchWithRetry } from "../../crawler/httpClient.js";
 import { isAllowedByRobots } from "../../crawler/robotsCheck.js";
 import { sha256 } from "../../crawler/hash.js";
 import { resolveUrl } from "../../crawler/urlNormalize.js";
 import { storeRawArtifact } from "../../storage/rawStorage.js";
 import { upsertArtifact } from "../../storage/rawArtifactsRepository.js";
+import { getSource } from "../../storage/sourcesRepository.js";
 import { logger } from "../../monitoring/logger.js";
 import type { FetchedDocument, ParsedExtraction, SourceAdapter, SourceDocument } from "../types.js";
 import { extractPdfText } from "../../extraction/pdfText.js";
+import { env } from "../../config/index.js";
 
 const ADAPTER_ID = "nse";
-const CRAWLER_VERSION = "scraper-phase2-0.1.0";
+const CRAWLER_VERSION = "scraper-phase6-0.1.0";
 const ANNOUNCEMENTS_URL = "https://www.nse.co.ke/listed-company-announcements/";
+
+/** NSE's configured requestsPerSecond, if set in scraping.sources.config; falls back to the service default. */
+async function getRequestsPerSecond(): Promise<number> {
+  const source = await getSource(ADAPTER_ID);
+  return source?.config.requestsPerSecond ?? env.DEFAULT_REQUESTS_PER_SECOND;
+}
 
 function isPdfUrl(url: string): boolean {
   return /\.pdf(\?|#|$)/i.test(url);
@@ -89,7 +97,7 @@ export const nseAnnouncementsAdapter: SourceAdapter = {
       return [];
     }
 
-    const res = await safeFetch(ANNOUNCEMENTS_URL);
+    const res = await fetchWithRetry(ANNOUNCEMENTS_URL, { requestsPerSecond: await getRequestsPerSecond() });
     if (res.status >= 400) {
       throw new Error(`Failed to fetch NSE announcements page: HTTP ${res.status}`);
     }
@@ -100,7 +108,7 @@ export const nseAnnouncementsAdapter: SourceAdapter = {
   },
 
   async fetch(document: SourceDocument): Promise<FetchedDocument> {
-    const res = await safeFetch(document.url);
+    const res = await fetchWithRetry(document.url, { requestsPerSecond: await getRequestsPerSecond() });
     if (res.status >= 400) {
       throw new Error(`Failed to fetch ${document.url}: HTTP ${res.status}`);
     }

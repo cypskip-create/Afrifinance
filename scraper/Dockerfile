@@ -8,6 +8,10 @@
 # build order.
 FROM node:20-slim AS build
 WORKDIR /app
+# poppler-utils provides pdftotext (native PDF text extraction) AND
+# pdftoppm (PDF-to-image rasterization for the OCR fallback, Phase 5).
+# Same package, both tools.
+RUN apt-get update && apt-get install -y --no-install-recommends poppler-utils && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json* ./
 RUN npm install
 COPY tsconfig.json tsconfig.build.json ./
@@ -17,6 +21,7 @@ RUN npm run build
 FROM node:20-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
+RUN apt-get update && apt-get install -y --no-install-recommends poppler-utils && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json* ./
 RUN npm install --omit=dev
 COPY --from=build /app/dist ./dist

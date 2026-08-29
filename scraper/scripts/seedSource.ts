@@ -1,9 +1,8 @@
 /**
  * Seeds (or updates) a source definition so there's something for
- * crawlSource() to work with. Sources are meant to eventually be
- * declared as code (one config module per adapter — §41) and synced at
- * boot; this script is the Phase-1 stand-in for that until an actual
- * adapter registry exists (Phase 2).
+ * crawlSource()/the scheduler to work with. Sources are meant to
+ * eventually be declared as code (one config module per adapter — §41);
+ * this script remains the manual stand-in for that.
  *
  * Usage:
  *   npx tsx scripts/seedSource.ts \
@@ -11,7 +10,9 @@
  *     --name "NSE (generic crawl test)" \
  *     --adapter generic \
  *     --seed https://www.nse.co.ke/ \
- *     --domain nse.co.ke
+ *     --domain nse.co.ke \
+ *     [--schedule "0 6 * * *"] \
+ *     [--rps 1]
  */
 import { upsertSource } from "../src/storage/sourcesRepository.js";
 import { pool } from "../src/storage/db.js";
@@ -27,10 +28,12 @@ async function main() {
   const adapter = arg("adapter") ?? "generic";
   const seed = arg("seed");
   const domain = arg("domain");
+  const schedule = arg("schedule"); // cron expression; falls back to env.DEFAULT_CRAWL_CRON if omitted
+  const requestsPerSecond = arg("rps") ? Number(arg("rps")) : undefined;
 
   if (!id || !name || !seed || !domain) {
     console.error(
-      "Usage: npx tsx scripts/seedSource.ts --id <id> --name <name> --seed <url> --domain <allowed-domain> [--adapter generic]",
+      "Usage: npx tsx scripts/seedSource.ts --id <id> --name <name> --seed <url> --domain <allowed-domain> [--adapter generic] [--schedule <cron>] [--rps <number>]",
     );
     process.exit(1);
   }
@@ -44,6 +47,8 @@ async function main() {
       seeds: [seed],
       allowedDomains: [domain],
       maxDepth: 2,
+      ...(schedule ? { schedule } : {}),
+      ...(requestsPerSecond !== undefined ? { requestsPerSecond } : {}),
       documents: { pdf: false, ocr: false, tables: false },
     },
     termsUrl: null,

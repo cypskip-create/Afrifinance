@@ -25,7 +25,8 @@ import http from "node:http";
 import https from "node:https";
 import zlib from "node:zlib";
 import type { Readable } from "node:stream";
-import { assertPublicUrl } from "./urlSafety.js";
+import { assertPublicUrl, UnsafeUrlError } from "./urlSafety.js";
+import { throttleHost } from "./rateLimiter.js";
 import { env } from "../config/index.js";
 
 export class FetchTooLargeError extends Error {}
@@ -126,16 +127,21 @@ function requestOnce(
 
 export async function safeFetch(
   url: string,
-  opts: { maxBytes?: number; timeoutMs?: number } = {},
+  opts: { maxBytes?: number; timeoutMs?: number; requestsPerSecond?: number } = {},
 ): Promise<FetchResult> {
   const maxBytes = opts.maxBytes ?? env.MAX_RESPONSE_SIZE_BYTES;
   const timeoutMs = opts.timeoutMs ?? env.DEFAULT_REQUEST_TIMEOUT_MS;
+  const requestsPerSecond = opts.requestsPerSecond ?? env.DEFAULT_REQUESTS_PER_SECOND;
 
   let currentUrl = url;
   for (let redirects = 0; redirects <= MAX_REDIRECTS; redirects++) {
     // Re-validate on every hop — a redirect chain is a classic SSRF
     // bypass (public URL that 302s to an internal one).
     const validated = await assertPublicUrl(currentUrl);
+
+    // Per-hostname throttling (§20) — applied on every hop, since a
+    // redirect can land on a different host than the one just throttled.
+    await throttleHost(validated.hostname, requestsPerSecond);
 
     const { status, headers, body } = await requestOnce(validated, { maxBytes, timeoutMs });
 
@@ -150,4 +156,51 @@ export async function safeFetch(
   }
 
   throw new Error(`${url}: exceeded ${MAX_REDIRECTS} redirects`);
+}
+
+const RETRYABLE_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504]);
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * safeFetch wrapped with exponential backoff (§20-21). Distinguishes
+ * transient failures worth retrying (timeouts, 429/5xx — the server or
+ * network is temporarily unhappy) from permanent ones that will fail
+ * identically every time (404, SSRF-blocked, oversized response) —
+ * retrying the latter just wastes time and hammers a server that's
+ * already telling us no.
+ */
+export async function fetchWithRetry(
+  url: string,
+  opts: { maxBytes?: number; timeoutMs?: number; requestsPerSecond?: number; maxRetries?: number; baseDelayMs?: number } = {},
+): Promise<FetchResult> {
+  const maxRetries = opts.maxRetries ?? env.DEFAULT_MAX_RETRIES;
+  const baseDelayMs = opts.baseDelayMs ?? 1000;
+
+  let lastResult: FetchResult | undefined;
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const result = await safeFetch(url, opts);
+      if (!RETRYABLE_STATUSES.has(result.status) || attempt === maxRetries) {
+        return result;
+      }
+      lastResult = result;
+    } catch (err) {
+      // Never retry these — they're permanent by nature, not transient.
+      if (err instanceof FetchTooLargeError || err instanceof UnsafeUrlError) throw err;
+      lastError = err;
+      if (attempt === maxRetries) throw err;
+    }
+
+    const exponentialDelay = baseDelayMs * 2 ** attempt;
+    const jitter = exponentialDelay * 0.2 * (Math.random() * 2 - 1);
+    await sleep(Math.max(0, exponentialDelay + jitter));
+  }
+
+  if (lastResult) return lastResult;
+  throw lastError;
 }

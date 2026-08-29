@@ -7,6 +7,7 @@
  * crawler.
  */
 import { insertExtraction } from "../storage/extractionsRepository.js";
+import { recordDeadLetter } from "../storage/deadLettersRepository.js";
 import { logger } from "../monitoring/logger.js";
 import type { SourceAdapter } from "./types.js";
 
@@ -59,7 +60,12 @@ export async function runAdapter(adapter: SourceAdapter): Promise<AdapterRunSumm
       summary.extracted++;
       if (parsed.needsReview) summary.needsReview++;
     } catch (err) {
-      logger.warn({ url: doc.url, err }, "Adapter run: document failed");
+      const reason = String((err as Error).message ?? err);
+      logger.warn({ url: doc.url, reason }, "Adapter run: document failed");
+      // adapter.fetch()/parse() already retried internally via
+      // fetchWithRetry where applicable — reaching this catch means those
+      // retries were exhausted, so this is the final record (§21).
+      await recordDeadLetter({ sourceId: adapter.id, url: doc.url, stage: "fetch", reason });
       summary.failed++;
     }
   }

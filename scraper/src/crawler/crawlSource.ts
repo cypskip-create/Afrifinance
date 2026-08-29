@@ -4,13 +4,14 @@
  * new discoveries within depth/domain limits, store the raw artifact, and
  * mark crawl_state accordingly.
  *
- * Deliberately sequential for Phase 1 — one source, one URL at a time.
- * Concurrency and a real job queue are a Phase 6 concern once there's
- * actual load to justify the complexity.
+ * Deliberately sequential — one source, one URL at a time. A real job
+ * queue (Redis/BullMQ) is still deferred until actual load justifies the
+ * complexity; retry/backoff and per-host rate limiting (Phase 6) don't
+ * require one.
  *
  * NO source-specific rules live here. This only knows about HTML/generic
  * pages; PDFs are discovered (their links get recorded) but not yet
- * downloaded/parsed — that's Phase 2.
+ * downloaded/parsed — that's the NSE adapter's job (announcementsAdapter.ts).
  */
 import { logger } from "../monitoring/logger.js";
 import { getSource } from "../storage/sourcesRepository.js";
@@ -23,14 +24,16 @@ import {
 } from "../storage/crawlStateRepository.js";
 import { upsertArtifact } from "../storage/rawArtifactsRepository.js";
 import { storeRawArtifact } from "../storage/rawStorage.js";
-import { safeFetch, FetchTooLargeError, FetchTimeoutError } from "./httpClient.js";
+import { recordDeadLetter } from "../storage/deadLettersRepository.js";
+import { fetchWithRetry, FetchTooLargeError, FetchTimeoutError } from "./httpClient.js";
 import { UnsafeUrlError } from "./urlSafety.js";
 import { isAllowedByRobots } from "./robotsCheck.js";
 import { extractFromHtml } from "./htmlExtract.js";
 import { canonicalizeUrl, isSameOrSubdomain } from "./urlNormalize.js";
 import { sha256 } from "./hash.js";
+import { env } from "../config/index.js";
 
-const CRAWLER_VERSION = "scraper-phase1-0.1.0";
+const CRAWLER_VERSION = "scraper-phase6-0.1.0";
 
 export interface CrawlSummary {
   sourceId: string;
@@ -55,6 +58,7 @@ export async function crawlSource(sourceId: string, batchSize = 20): Promise<Cra
   const seeds = source.config.seeds ?? [];
   const allowedDomains = source.config.allowedDomains ?? [];
   const maxDepth = source.config.maxDepth ?? 3;
+  const requestsPerSecond = source.config.requestsPerSecond ?? env.DEFAULT_REQUESTS_PER_SECOND;
 
   await seedIfNeeded(sourceId, seeds);
 
@@ -73,7 +77,7 @@ export async function crawlSource(sourceId: string, batchSize = 20): Promise<Cra
         continue;
       }
 
-      const res = await safeFetch(item.url);
+      const res = await fetchWithRetry(item.url, { requestsPerSecond });
       const contentType = res.headers.get("content-type");
       const bodyHash = sha256(res.body);
       const changed = item.contentHash !== bodyHash;
@@ -147,6 +151,10 @@ export async function crawlSource(sourceId: string, batchSize = 20): Promise<Cra
               : `error: ${(err as Error).message}`;
       logger.warn({ url: item.url, reason }, "Crawl failed for URL");
       await markFailed(item.id, reason);
+      // fetchWithRetry already exhausted retries internally before this
+      // catch is ever reached — this dead-letter record is the final,
+      // permanent record of that (§21: "record the exact reason").
+      await recordDeadLetter({ sourceId, url: item.url, stage: "fetch", reason });
       summary.failed++;
     }
   }

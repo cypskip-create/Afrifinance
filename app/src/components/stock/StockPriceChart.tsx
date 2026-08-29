@@ -1,7 +1,7 @@
 import {
   AreaChart, Area, ComposedChart, Bar, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceLine, Cell, CartesianGrid
 } from "recharts";
-import { useMemo, useCallback, useState, useRef, useEffect } from "react";
+import { useMemo, useCallback, useState, useRef, useEffect, useId } from "react";
 import { sma, ema, bollingerBands, rsi, macd, parabolicSAR, kdj, williamsR, cci, DEFAULT_INDICATOR_SETTINGS, type IndicatorSettings } from "@/lib/technicalIndicators";
 import { DRAW_TOOL_LOOKUP, type DrawToolId, type DrawPoint, type Drawing } from "@/lib/drawingTools";
 
@@ -147,6 +147,17 @@ export const generateMockData = (timeframe: string, symbol: string = "STK") => {
 };
 
 export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area", onHoverPrice, data: liveData, indicators = DEFAULT_INDICATOR_SETTINGS, mainHeight, showPriceAxis = false, showGrid = false, pinCrosshair = false, activeDrawTool = null, onDrawToolComplete, hideDrawings = false, clearDrawSignal, onDrawingsChange }: StockPriceChartProps) => {
+  // Recharts synchronizes charts sharing a syncId via a registry keyed by
+  // that exact string, shared across the whole app -- not scoped per
+  // component instance. A syncId built only from symbol+timeframe (as this
+  // used to be) collides between the embedded card chart and the fullscreen
+  // chart whenever they show the same stock/period, silently merging their
+  // sub-panel sync groups. When one instance then unmounts (e.g. closing
+  // fullscreen), the other can be left reading corrupted sync state and
+  // render blank until something unrelated forces a fresh remount. useId()
+  // gives every mounted instance its own id, so instances never collide.
+  const instanceId = useId();
+  const syncId = `chart-${instanceId}-${symbol}-${timeframe}`;
   const mockData = useMemo(() => generateMockData(timeframe, symbol), [timeframe, symbol]);
   const data = liveData && liveData.length > 1 ? liveData : mockData;
   const firstPrice = data[0]?.price || 0;
@@ -788,7 +799,7 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
     if (indicators.subPanel === "rsi") {
       return (
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }} syncId={`chart-${symbol}-${timeframe}`}>
+          <ComposedChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }} syncId={syncId}>
             <XAxis dataKey="date" hide />
             <YAxis hide domain={[0, 100]} width={showPriceAxis ? PRICE_AXIS_WIDTH : 0} />
             <Tooltip content={() => null} cursor={false} />
@@ -802,7 +813,7 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
     if (indicators.subPanel === "macd") {
       return (
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }} syncId={`chart-${symbol}-${timeframe}`}>
+          <ComposedChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }} syncId={syncId}>
             <XAxis dataKey="date" hide />
             <YAxis hide width={showPriceAxis ? PRICE_AXIS_WIDTH : 0} />
             <Tooltip content={() => null} cursor={false} />
@@ -821,7 +832,7 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
     if (indicators.subPanel === "kdj") {
       return (
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }} syncId={`chart-${symbol}-${timeframe}`}>
+          <ComposedChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }} syncId={syncId}>
             <XAxis dataKey="date" hide />
             <YAxis hide domain={[-20, 120]} width={showPriceAxis ? PRICE_AXIS_WIDTH : 0} />
             <Tooltip content={() => null} cursor={false} />
@@ -837,7 +848,7 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
     if (indicators.subPanel === "wr") {
       return (
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }} syncId={`chart-${symbol}-${timeframe}`}>
+          <ComposedChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }} syncId={syncId}>
             <XAxis dataKey="date" hide />
             <YAxis hide domain={[-100, 0]} width={showPriceAxis ? PRICE_AXIS_WIDTH : 0} />
             <Tooltip content={() => null} cursor={false} />
@@ -851,7 +862,7 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
     if (indicators.subPanel === "cci") {
       return (
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }} syncId={`chart-${symbol}-${timeframe}`}>
+          <ComposedChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }} syncId={syncId}>
             <XAxis dataKey="date" hide />
             <YAxis hide width={showPriceAxis ? PRICE_AXIS_WIDTH : 0} />
             <Tooltip content={() => null} cursor={false} />
@@ -875,7 +886,7 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
 
   const renderVolumePanel = () => (
     <ResponsiveContainer width="100%" height="100%">
-      <ComposedChart data={chartData} margin={{ top: 2, right: 0, left: 0, bottom: 0 }} syncId={`chart-${symbol}-${timeframe}`}>
+      <ComposedChart data={chartData} margin={{ top: 2, right: 0, left: 0, bottom: 0 }} syncId={syncId}>
         <XAxis dataKey="date" hide />
         <YAxis hide domain={[0, (max: number) => max * 1.15]} width={showPriceAxis ? PRICE_AXIS_WIDTH : 0} />
         <Tooltip content={() => null} cursor={false} />
@@ -915,7 +926,7 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
               onMouseMove={updateFromChartState}
               onMouseLeave={handleLeave}
               onTouchMove={updateFromChartState}
-              syncId={`chart-${symbol}-${timeframe}`}
+              syncId={syncId}
             >
               {showGrid && <CartesianGrid horizontal vertical={false} stroke="hsl(var(--border))" strokeOpacity={0.4} strokeDasharray="3 3" />}
               <XAxis dataKey="date" hide />
@@ -967,7 +978,7 @@ export const StockPriceChart = ({ symbol = "STK", timeframe, chartType = "area",
             onMouseMove={updateFromChartState}
             onMouseLeave={handleLeave}
             onTouchMove={updateFromChartState}
-            syncId={`chart-${symbol}-${timeframe}`}
+            syncId={syncId}
           >
             <defs>
               <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">

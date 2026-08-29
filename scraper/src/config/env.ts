@@ -52,6 +52,14 @@ const EnvSchema = z.object({
   // Phase 1 — crawler identity and politeness.
   CRAWLER_USER_AGENT: z.string().default("ContinuaBot/0.1 (+https://continua.example/bot)"),
   RESPECT_ROBOTS_TXT: booleanEnv(true),
+
+  // Phase 6 — scheduling. Per-source overrides live in
+  // scraping.sources.config.schedule (a cron string); this is only the
+  // fallback for sources that don't specify their own (§19: "do not
+  // hardcode one global interval" — this default exists for convenience,
+  // not because every source should share it).
+  DEFAULT_CRAWL_CRON: z.string().default("0 */6 * * *"), // every 6 hours
+  SCHEDULER_ENABLED: booleanEnv(true),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
