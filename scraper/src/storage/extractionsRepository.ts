@@ -74,3 +74,36 @@ export async function findLatestExtraction(artifactId: number): Promise<Extracti
   );
   return res.rows[0] ? mapRow(res.rows[0]) : null;
 }
+
+export interface NeedsReviewItem extends Extraction {
+  title: string | null;
+  documentUrl: string;
+  sourceId: string;
+}
+
+/**
+ * Review queue (§39): the latest extraction per artifact where THAT
+ * latest extraction still needs review — an artifact that was
+ * successfully reprocessed after an earlier low-confidence attempt
+ * should drop off this list, not linger because of its stale history.
+ */
+export async function listNeedsReview(limit = 100): Promise<NeedsReviewItem[]> {
+  const res = await query<ExtractionSqlRow & { title: string | null; document_url: string; source_id: string }>(
+    `SELECT * FROM (
+       SELECT DISTINCT ON (e.artifact_id) e.*, a.title, a.document_url, a.source_id
+       FROM scraping.extractions e
+       JOIN scraping.raw_artifacts a ON a.id = e.artifact_id
+       ORDER BY e.artifact_id, e.extracted_at DESC
+     ) latest
+     WHERE needs_review = true
+     ORDER BY extracted_at DESC
+     LIMIT $1`,
+    [limit],
+  );
+  return res.rows.map((row) => ({
+    ...mapRow(row),
+    title: row.title,
+    documentUrl: row.document_url,
+    sourceId: row.source_id,
+  }));
+}

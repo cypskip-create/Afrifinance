@@ -15,20 +15,21 @@ import { crawlSource } from "../crawler/crawlSource.js";
 import { hasRegisteredAdapter, runRegisteredAdapter } from "../adapters/registry.js";
 import { env } from "../config/index.js";
 import { logger } from "../monitoring/logger.js";
+import type { Source } from "../types.js";
 
 const scheduledTasks: ScheduledTask[] = [];
 
-async function runSourceOnce(sourceId: string, adapterId: string): Promise<void> {
+async function runSourceOnce(source: Source): Promise<void> {
   try {
-    if (hasRegisteredAdapter(adapterId)) {
-      const summary = await runRegisteredAdapter(adapterId);
-      logger.info({ sourceId, ...summary }, "Scheduled adapter run complete");
+    if (hasRegisteredAdapter(source.adapter)) {
+      const summary = await runRegisteredAdapter(source);
+      logger.info({ sourceId: source.id, ...summary }, "Scheduled adapter run complete");
     } else {
-      const summary = await crawlSource(sourceId);
+      const summary = await crawlSource(source.id);
       logger.info(summary, "Scheduled crawl complete");
     }
   } catch (err) {
-    logger.error({ sourceId, err }, "Scheduled run failed");
+    logger.error({ sourceId: source.id, err }, "Scheduled run failed");
   }
 }
 
@@ -54,7 +55,7 @@ export async function startScheduler(): Promise<ScheduledTask[]> {
     }
 
     const task = cron.schedule(cronExpression, () => {
-      void runSourceOnce(source.id, source.adapter);
+      void runSourceOnce(source);
     });
     scheduledTasks.push(task);
     logger.info({ sourceId: source.id, adapter: source.adapter, cronExpression }, "Scheduled source");

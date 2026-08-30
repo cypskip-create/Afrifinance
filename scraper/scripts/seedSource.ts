@@ -13,6 +13,10 @@
  *     --domain nse.co.ke \
  *     [--schedule "0 6 * * *"] \
  *     [--rps 1]
+ *
+ * For an RSS source:
+ *   npx tsx scripts/seedSource.ts --id my-feed --name "My Feed" \
+ *     --adapter rss --feed-url https://example.com/feed.xml [--schedule <cron>] [--rps <number>]
  */
 import { upsertSource } from "../src/storage/sourcesRepository.js";
 import { pool } from "../src/storage/db.js";
@@ -30,6 +34,36 @@ async function main() {
   const domain = arg("domain");
   const schedule = arg("schedule"); // cron expression; falls back to env.DEFAULT_CRAWL_CRON if omitted
   const requestsPerSecond = arg("rps") ? Number(arg("rps")) : undefined;
+  const feedUrl = arg("feed-url");
+
+  if (adapter === "rss") {
+    if (!id || !name || !feedUrl) {
+      console.error(
+        "Usage for --adapter rss: npx tsx scripts/seedSource.ts --id <id> --name <name> --adapter rss --feed-url <url> [--schedule <cron>] [--rps <number>]",
+      );
+      process.exit(1);
+    }
+    await upsertSource({
+      id,
+      name,
+      adapter,
+      enabled: true,
+      config: {
+        feedUrl,
+        ...(schedule ? { schedule } : {}),
+        ...(requestsPerSecond !== undefined ? { requestsPerSecond } : {}),
+      },
+      termsUrl: null,
+      robotsUrl: null,
+      license: null,
+      allowedUsage: null,
+      redistributionAllowed: null,
+      attributionRequired: null,
+    });
+    console.log(`Seeded RSS source '${id}' (feed: ${feedUrl}).`);
+    await pool.end();
+    return;
+  }
 
   if (!id || !name || !seed || !domain) {
     console.error(

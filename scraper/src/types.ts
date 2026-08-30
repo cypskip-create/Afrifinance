@@ -11,6 +11,8 @@ export interface SourceConfig {
   requestsPerSecond?: number;
   /** Cron expression for how often this source should run — Phase 6. Falls back to env.DEFAULT_CRAWL_CRON if unset. */
   schedule?: string;
+  /** RSS/Atom feed URL — required for sources using the 'rss' adapter (Phase 7). */
+  feedUrl?: string;
   documents?: {
     pdf?: boolean;
     ocr?: boolean;

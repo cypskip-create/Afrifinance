@@ -7,6 +7,10 @@ import { listDeadLetters } from "../storage/deadLettersRepository.js";
 import { crawlSource } from "../crawler/crawlSource.js";
 import { runAdapter } from "../adapters/runAdapter.js";
 import { nseAnnouncementsAdapter } from "../adapters/nse/announcementsAdapter.js";
+import { createRssFeedAdapter } from "../adapters/rss/createRssFeedAdapter.js";
+import { listNeedsReview } from "../storage/extractionsRepository.js";
+import { reprocessArtifact } from "../extraction/reprocessArtifact.js";
+import { getCrawlStatus } from "../monitoring/crawlStatus.js";
 
 export function createServer() {
   const app = express();
@@ -81,6 +85,78 @@ export function createServer() {
     const sourceId = typeof req.query.source === "string" ? req.query.source : undefined;
     const deadLetters = await listDeadLetters(sourceId);
     res.json(deadLetters);
+  });
+
+  // Phase 7: generic RSS/Atom adapter — one adapter implementation
+  // shared across every source configured with adapter='rss'. :sourceId
+  // is looked up rather than hardcoded, since this endpoint has to work
+  // for whichever RSS sources are actually configured, not one fixed
+  // feed like the NSE endpoints above.
+  app.get("/adapters/rss/:sourceId/preview", async (req, res) => {
+    const source = await getSource(req.params.sourceId);
+    if (!source) {
+      res.status(404).json({ error: "source_not_found", id: req.params.sourceId });
+      return;
+    }
+    try {
+      const adapter = createRssFeedAdapter(source);
+      const docs = await adapter.discover();
+      res.json({ count: docs.length, documents: docs });
+    } catch (err) {
+      logger.error({ err, sourceId: source.id }, "RSS discover() failed");
+      res.status(500).json({ error: "discover_failed", message: (err as Error).message });
+    }
+  });
+
+  app.post("/adapters/rss/:sourceId", async (req, res) => {
+    const source = await getSource(req.params.sourceId);
+    if (!source) {
+      res.status(404).json({ error: "source_not_found", id: req.params.sourceId });
+      return;
+    }
+    try {
+      const adapter = createRssFeedAdapter(source);
+      const summary = await runAdapter(adapter);
+      res.json(summary);
+    } catch (err) {
+      logger.error({ err, sourceId: source.id }, "RSS adapter run failed");
+      res.status(500).json({ error: "adapter_run_failed", message: (err as Error).message });
+    }
+  });
+
+  // Phase 8: human review queue (§39) — the latest extraction per
+  // artifact where that latest extraction still needs a human look.
+  app.get("/extractions/needs-review", async (req, res) => {
+    const limit = req.query.limit ? Number(req.query.limit) : 100;
+    const items = await listNeedsReview(limit);
+    res.json(items);
+  });
+
+  // Phase 8: reprocessing (§45) — re-run extraction against an
+  // already-stored artifact with the current parser code, without
+  // re-downloading. Always creates a new extraction row; the old one
+  // stays visible for comparison.
+  app.post("/artifacts/:id/reprocess", async (req, res) => {
+    const artifactId = Number(req.params.id);
+    if (!Number.isInteger(artifactId)) {
+      res.status(400).json({ error: "invalid_artifact_id" });
+      return;
+    }
+    try {
+      const extraction = await reprocessArtifact(artifactId);
+      res.json(extraction);
+    } catch (err) {
+      logger.error({ err, artifactId }, "Reprocessing failed");
+      res.status(500).json({ error: "reprocess_failed", message: (err as Error).message });
+    }
+  });
+
+  // Phase 8: operational overview (§29-30, §40) — crawl state per
+  // source, extraction method breakdown, review/dead-letter counts, all
+  // in one call rather than ad-hoc SQL every time.
+  app.get("/crawl-status", async (_req, res) => {
+    const report = await getCrawlStatus();
+    res.json(report);
   });
 
   app.use((req, res) => {

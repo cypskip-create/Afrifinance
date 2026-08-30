@@ -49,6 +49,11 @@ export async function findBySha256(sourceId: string, sha256: string): Promise<Ra
   return res.rows[0] ? mapRow(res.rows[0]) : null;
 }
 
+export async function findById(id: number): Promise<RawArtifact | null> {
+  const res = await query<RawArtifactSqlRow>(`SELECT * FROM scraping.raw_artifacts WHERE id = $1`, [id]);
+  return res.rows[0] ? mapRow(res.rows[0]) : null;
+}
+
 /**
  * Insert a new raw artifact, or return the existing one if this content
  * hash was already stored for this source (§17 — same PDF, no duplicate

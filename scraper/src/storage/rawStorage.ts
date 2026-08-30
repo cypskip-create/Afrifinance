@@ -6,7 +6,7 @@
  * is validated by env.ts but not wired up yet — swap this module out
  * when artifact volume outgrows a single Railway instance's disk.
  */
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, writeFile, readFile } from "node:fs/promises";
 import path from "node:path";
 import { env } from "../config/index.js";
 
@@ -51,4 +51,17 @@ export async function storeRawArtifact(params: {
   // storage_path stored in the DB is relative — portable if the base path
   // or driver changes later.
   return relativePath;
+}
+
+/**
+ * Reads a previously-stored artifact back off disk (§45 — reprocessing
+ * must never require re-downloading a document that's already stored).
+ * storagePath is the relative path as stored in raw_artifacts.storage_path.
+ */
+export async function readRawArtifact(storagePath: string): Promise<Buffer> {
+  if (env.RAW_STORAGE_DRIVER !== "local") {
+    throw new Error(`RAW_STORAGE_DRIVER=${env.RAW_STORAGE_DRIVER} is not implemented yet — only 'local' is wired up`);
+  }
+  const fullPath = path.join(env.RAW_STORAGE_LOCAL_PATH, storagePath);
+  return readFile(fullPath);
 }
