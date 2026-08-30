@@ -45,6 +45,10 @@ export const MoversQuerySchema = ExchangeQuery.extend({
   limit: z.coerce.number().int().min(1).max(50).default(10),
 });
 
+export const AnnouncementsQuerySchema = ExchangeQuery.extend({
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+});
+
 export const ScreenerQuerySchema = ExchangeQuery.extend({
   sector: z.string().min(1).optional(),
   minMarketCap: z.coerce.number().nonnegative().optional(),
