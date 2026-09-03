@@ -24,7 +24,7 @@ interface PortfolioValuationsProps {
 // (see backend/src/services/technical/valuationService.ts). No "DCF" or
 // "Analyst" label here — Continua doesn't run a discounted-cash-flow model
 // or aggregate street analyst targets yet, so we name what we actually have
-// rather than borrow labels from apps that do.
+// rather than borrow labels from apps that do
 const MODEL_OPTIONS = [
   { key: "sector-pe", label: "Sector P/E", modelName: "Relative Valuation (Sector P/E)" },
   { key: "graham", label: "Graham Number", modelName: "Graham Number" },
