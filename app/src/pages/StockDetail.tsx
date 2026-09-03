@@ -31,7 +31,9 @@ import { NewsEventsTab } from "@/components/stock/tabs/NewsEventsTab";
 import { CommunityTab } from "@/components/stock/tabs/CommunityTab";
 import { PerformanceTab } from "@/components/stock/tabs/PerformanceTab";
 import { ScoresTab } from "@/components/stock/tabs/ScoresTab";
-import { getMediaItemsForSymbol, MediaItem } from "../data/mediaItems";
+import { getMediaItemsForSymbol } from "../data/mediaItems";
+import { NewsHeadline, announcementToHeadline, mediaItemToHeadline } from "@/lib/newsHeadline";
+import { useCompanyAnnouncements } from "@/hooks/useCompanyAnnouncements";
 import { formatTimestamp } from "@/lib/formatTimestamp";
 import { useLiveQuote } from "@/hooks/useLiveQuotes";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
@@ -302,13 +304,27 @@ export default function StockDetail() {
     ownership: liveOwnership.length > 0 ? liveOwnership : fundamentals.ownership,
     topShareholders: liveTopShareholders.length > 0 ? liveTopShareholders : fundamentals.topShareholders,
   };
-  const stockNews = getMediaItemsForSymbol(symbol || "");
-  // Opens the full story on the TradersHub Media tab. Passes where we came from
-  // explicitly (rather than relying on browser history for the way back) so the
-  // article's close button returns here reliably regardless of what else has
-  // touched the history stack in between (e.g. the URL cleanup once the deep
-  // link is read).
-  const openNewsItem = (item: MediaItem) => navigate(`/traders-hub?tab=media&article=${item.id}`, { state: { returnTo: `/stock/${symbol}` } });
+  // Real NSE filings scraped by continua-scraper, bridged into
+  // market.company_announcements. Falls back to the mock Media items only
+  // when the scraper genuinely has nothing for this symbol yet — same
+  // "prefer live, fall back to placeholder" convention as liveFundamentals
+  // above — so this page never shows a fabricated announcement, only a
+  // clearly-different placeholder feed until real coverage lands.
+  const { announcements: liveAnnouncements } = useCompanyAnnouncements(upperSymbol || undefined);
+  const stockNews: NewsHeadline[] = liveAnnouncements.length > 0
+    ? liveAnnouncements.map(announcementToHeadline)
+    : getMediaItemsForSymbol(symbol || "").map(mediaItemToHeadline);
+  // Real announcements open the original filing URL in a new tab; mock/media
+  // items still open the full story on the TradersHub Media tab (passing
+  // where we came from explicitly, rather than relying on browser history,
+  // so the article's close button returns here reliably).
+  const openNewsItem = (item: NewsHeadline) => {
+    if (item.kind === "announcement") {
+      if (item.documentUrl) window.open(item.documentUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
+    navigate(`/traders-hub?tab=media&article=${item.id}`, { state: { returnTo: `/stock/${symbol}` } });
+  };
 
   // Section refs — sticky sub-nav scrolls to them
   const refs = {

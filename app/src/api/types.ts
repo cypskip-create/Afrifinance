@@ -150,6 +150,29 @@ export interface CorporateAction {
   status: "announced" | "confirmed" | "completed" | "cancelled";
 }
 
+/** Regulatory/company announcement, sourced by continua-scraper from NSE
+ *  filings (PDFs) and other configured feeds — not editorial content.
+ *  `publishedAt` is frequently null: the scraper doesn't yet reliably
+ *  read a publish date off every source, and the Data Layer leaves it
+ *  honest rather than guessing. `needsReview` means entity resolution
+ *  matched this to a company with low confidence. */
+export interface CompanyAnnouncement {
+  id: string;
+  companyId: string | null;
+  securityId: string | null;
+  rawCompanyName: string | null;
+  title: string;
+  documentUrl: string;
+  source: string;
+  exchange: ExchangeCode;
+  scrapedArtifactId: number | null;
+  scrapedExtractionId: number | null;
+  extractionConfidence: number | null;
+  needsReview: boolean;
+  excerpt: string | null;
+  publishedAt: string | null;
+}
+
 export interface OwnershipRecord {
   securityId: string;
   holderName: string;

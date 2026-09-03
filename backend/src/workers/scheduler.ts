@@ -15,6 +15,8 @@ import { runCorporateActionsSyncOnce, startCorporateActionsWorker } from "./corp
 import { runCandlesBackfillOnce, startCandlesWorker } from "./candlesWorker.js";
 import { runPriceIngestionOnce, startPriceWorker } from "./priceWorker.js";
 import { runIndexIngestionOnce, startIndexWorker } from "./indexWorker.js";
+import { runAnnouncementsBridgeOnce, startAnnouncementsWorker } from "./announcementsWorker.js";
+import { runFinancialCandidatesBridgeOnce, startFinancialCandidatesWorker } from "./financialStatementCandidatesWorker.js";
 import { researchService } from "../services/research/researchService.js";
 import { ACTIVE_EXCHANGES } from "../config/index.js";
 import { logger } from "../monitoring/logger.js";
@@ -24,6 +26,15 @@ export async function startAllWorkers(): Promise<() => void> {
   await runFinancialsSyncOnce();
   await runCorporateActionsSyncOnce();
   await runCandlesBackfillOnce();
+
+  // Scraper bridges — catch up on whatever continua-scraper has already
+  // produced in `scraping.*` as of boot, same "one synchronous pass, then
+  // recurring cron" shape as the rest of bootstrap. Placed after
+  // runFinancialsSyncOnce/runCorporateActionsSyncOnce since entity
+  // resolution needs market.companies/securities to already exist.
+  logger.info("Running first scraper-bridge pass (announcements + financial statement candidates)…");
+  await runAnnouncementsBridgeOnce();
+  await runFinancialCandidatesBridgeOnce();
 
   logger.info("Running first price pass so every symbol has a live quote…");
   // respectTradingCalendar: false — bootstrap needs at least one quote to
@@ -46,6 +57,8 @@ export async function startAllWorkers(): Promise<() => void> {
   const financialsTask = startFinancialsWorker();
   const corporateActionsTask = startCorporateActionsWorker();
   const candlesTask = startCandlesWorker();
+  const announcementsTask = startAnnouncementsWorker();
+  const financialCandidatesTask = startFinancialCandidatesWorker();
 
   logger.info("All workers started");
   return () => {
@@ -54,5 +67,7 @@ export async function startAllWorkers(): Promise<() => void> {
     financialsTask.stop();
     corporateActionsTask.stop();
     candlesTask.stop();
+    announcementsTask.stop();
+    financialCandidatesTask.stop();
   };
 }

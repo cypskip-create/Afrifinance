@@ -2,7 +2,7 @@ import { query } from "../db.js";
 
 export interface DeadLetterRecord {
   exchange: string;
-  dataset: "price" | "candle" | "financials" | "corporate_action" | "earnings" | "ownership" | "index" | "announcement";
+  dataset: "price" | "candle" | "financials" | "corporate_action" | "earnings" | "ownership" | "index" | "announcement" | "financial_statement_candidate";
   symbol: string | null;
   payload: unknown;
   error: string;

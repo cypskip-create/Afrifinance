@@ -3,8 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar, Newspaper, TrendingUp, TrendingDown } from "lucide-react";
 import { AIThesisCard } from "@/components/stock/AIThesisCard";
 import { Fundamentals } from "@/data/stockFundamentals";
-import { MediaItem } from "@/data/mediaItems";
-import { formatTimestamp } from "@/lib/formatTimestamp";
+import { NewsHeadline, headlineTime } from "@/lib/newsHeadline";
 
 interface Props {
   symbol: string;
@@ -13,10 +12,11 @@ interface Props {
   price: number;
   changePercent: string;
   pe: string; eps: string; dividend: string;
-  news: MediaItem[];
+  news: NewsHeadline[];
   fundamentals: Fundamentals;
-  /** Opens the full story on the Media tab. */
-  onSelectNews?: (item: MediaItem) => void;
+  /** Opens the source (an NSE filing URL for a real announcement, or the
+   *  full story on the Media tab for a mock/editorial item). */
+  onSelectNews?: (item: NewsHeadline) => void;
 }
 
 const typeColor = (t: string) =>
@@ -72,12 +72,26 @@ export function NewsEventsTab(props: Props) {
           news.map(n => (
             <Card key={n.id} className="soft-card cursor-pointer active:opacity-70 transition-opacity" onClick={() => onSelectNews?.(n)}>
               <CardContent className="p-3 flex items-start gap-3">
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${n.sentiment === "bearish" ? "bg-bear/10 text-bear" : "bg-bull/10 text-bull"}`}>
-                  {n.sentiment === "bearish" ? <TrendingDown className="h-3.5 w-3.5" /> : <TrendingUp className="h-3.5 w-3.5" />}
+                {/* Sentiment icon only for editorial media items — a regulatory
+                    filing has no sentiment, so we show a neutral icon rather
+                    than fabricate a bullish/bearish read on it. */}
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
+                  n.kind === "media" && n.sentiment === "bearish" ? "bg-bear/10 text-bear"
+                  : n.kind === "media" ? "bg-bull/10 text-bull"
+                  : "bg-muted text-muted-foreground"
+                }`}>
+                  {n.kind === "media" ? (
+                    n.sentiment === "bearish" ? <TrendingDown className="h-3.5 w-3.5" /> : <TrendingUp className="h-3.5 w-3.5" />
+                  ) : (
+                    <Newspaper className="h-3.5 w-3.5" />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold line-clamp-2">{n.title}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">{n.source} · {formatTimestamp(n.publishedAt)}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    {n.source} · {headlineTime(n)}
+                    {n.needsReview && " · Unconfirmed match"}
+                  </p>
                 </div>
               </CardContent>
             </Card>

@@ -2,13 +2,16 @@ import { query } from "../db.js";
 import type { FinancialPeriod, IncomeStatement, BalanceSheet, CashFlowStatement } from "../../types/market.js";
 
 export const financialsRepository = {
-  async upsertPeriodBundle(period: FinancialPeriod, income: IncomeStatement, balance: BalanceSheet, cashFlow: CashFlowStatement): Promise<void> {
+  async upsertPeriod(period: FinancialPeriod): Promise<void> {
     await query(
       `INSERT INTO market.financial_periods (id, security_id, period_type, fiscal_year, fiscal_quarter, period_end, reported_at, currency)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
        ON CONFLICT (id) DO UPDATE SET reported_at = EXCLUDED.reported_at`,
       [period.id, period.securityId, period.periodType, period.fiscalYear, period.fiscalQuarter ?? null, period.periodEnd, period.reportedAt, period.currency]
     );
+  },
+
+  async upsertIncomeStatement(income: IncomeStatement): Promise<void> {
     await query(
       `INSERT INTO market.income_statements (period_id, revenue, cost_of_revenue, gross_profit, operating_expenses, operating_income, net_income, eps, diluted_eps, ebitda)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
@@ -19,6 +22,9 @@ export const financialsRepository = {
       [income.periodId, income.revenue, income.costOfRevenue ?? null, income.grossProfit ?? null, income.operatingExpenses ?? null,
        income.operatingIncome ?? null, income.netIncome, income.eps, income.dilutedEps ?? null, income.ebitda ?? null]
     );
+  },
+
+  async upsertBalanceSheet(balance: BalanceSheet): Promise<void> {
     await query(
       `INSERT INTO market.balance_sheets (period_id, total_assets, total_liabilities, total_equity, cash, total_debt, current_assets, current_liabilities, shares_outstanding)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
@@ -29,6 +35,9 @@ export const financialsRepository = {
       [balance.periodId, balance.totalAssets, balance.totalLiabilities, balance.totalEquity, balance.cash ?? null,
        balance.totalDebt ?? null, balance.currentAssets ?? null, balance.currentLiabilities ?? null, balance.sharesOutstanding ?? null]
     );
+  },
+
+  async upsertCashFlowStatement(cashFlow: CashFlowStatement): Promise<void> {
     await query(
       `INSERT INTO market.cash_flow_statements (period_id, operating_cash_flow, investing_cash_flow, financing_cash_flow, free_cash_flow, capex)
        VALUES ($1,$2,$3,$4,$5,$6)
@@ -38,6 +47,20 @@ export const financialsRepository = {
       [cashFlow.periodId, cashFlow.operatingCashFlow ?? null, cashFlow.investingCashFlow ?? null, cashFlow.financingCashFlow ?? null,
        cashFlow.freeCashFlow ?? null, cashFlow.capex ?? null]
     );
+  },
+
+  /** Convenience wrapper for callers (like the Mansa/NSE ingestion
+   *  pipeline) that always have all three statements at once. The review
+   *  confirm script writes period + a single statement individually
+   *  instead — see upsertPeriod/upsertIncomeStatement/etc — since a
+   *  scraped candidate is usually only one statement type, and writing
+   *  fabricated zeros into the other two to satisfy this signature would
+   *  violate the "never fabricate" rule that whole pipeline exists for. */
+  async upsertPeriodBundle(period: FinancialPeriod, income: IncomeStatement, balance: BalanceSheet, cashFlow: CashFlowStatement): Promise<void> {
+    await this.upsertPeriod(period);
+    await this.upsertIncomeStatement(income);
+    await this.upsertBalanceSheet(balance);
+    await this.upsertCashFlowStatement(cashFlow);
   },
 
   async getLatestPeriodBundle(securityId: string, periodType: "annual" | "quarterly" = "annual") {

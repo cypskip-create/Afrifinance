@@ -17,6 +17,10 @@
     "worker:corporate-actions": "tsx src/workers/corporateActionsWorker.ts",
     "worker:announcements": "tsx scripts/runAnnouncementsBridgeOnce.ts",
     "worker:candles": "tsx src/workers/candlesWorker.ts",
+    "worker:financial-candidates": "tsx scripts/runFinancialCandidatesBridgeOnce.ts",
+    "financials:review": "tsx scripts/listFinancialStatementCandidates.ts",
+    "financials:confirm": "tsx scripts/confirmFinancialStatementCandidate.ts",
+    "financials:reject": "tsx scripts/rejectFinancialStatementCandidate.ts",
     "apikey:create": "tsx scripts/generateApiKey.ts",
     "apikey:revoke": "tsx scripts/revokeApiKey.ts"
   },

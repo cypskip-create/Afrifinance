@@ -7,12 +7,36 @@ import { PortfolioSnowflake } from "@/components/portfolio/PortfolioSnowflake";
 import { PortfolioInsights } from "@/components/portfolio/PortfolioInsights";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
-  ArrowUpRight, ArrowDownRight, Eye, EyeOff, RefreshCw, Newspaper, ChevronDown, Share,
+  ArrowUpRight, ArrowDownRight, Eye, EyeOff, RefreshCw, ChevronDown, Share,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 
-import { getPrice as getSharedPrice, getDayChange, computePortfolioStats } from "@/lib/stockPrices";
+import { getPrice as getSharedPrice, getDayChange, getDivYield, computePortfolioStats } from "@/lib/stockPrices";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { ReturnsBreakdown } from "@/components/portfolio/ReturnsBreakdown";
+import { ReturnsContributors } from "@/components/portfolio/ReturnsContributors";
+import { PortfolioValuations } from "@/components/portfolio/PortfolioValuations";
+import { usePortfolioValuations } from "@/hooks/usePortfolioValuations";
+import { DividendQuality } from "@/components/portfolio/DividendQuality";
+import { DividendCalendar } from "@/components/portfolio/DividendCalendar";
+import { DividendForecast } from "@/components/portfolio/DividendForecast";
+import { DividendHistory } from "@/components/portfolio/DividendHistory";
+import { DividendContributors } from "@/components/portfolio/DividendContributors";
+import { usePortfolioDividends } from "@/hooks/usePortfolioDividends";
+import { PortfolioRisksRewards } from "@/components/portfolio/PortfolioRisksRewards";
+import { KeyMetricsBenchmarks } from "@/components/portfolio/KeyMetricsBenchmarks";
+import { PortfolioDiversification } from "@/components/portfolio/PortfolioDiversification";
+import { usePortfolioResearch } from "@/hooks/usePortfolioResearch";
+import { useMarketBenchmark } from "@/hooks/useMarketBenchmark";
+import { PortfolioUpdates } from "@/components/portfolio/PortfolioUpdates";
+import { usePortfolioUpdates } from "@/hooks/usePortfolioUpdates";
+import { PortfolioScorecard } from "@/components/portfolio/PortfolioScorecard";
+import { PortfolioCorrelation } from "@/components/portfolio/PortfolioCorrelation";
+import { PortfolioRiskAnalysis } from "@/components/portfolio/PortfolioRiskAnalysis";
+import { ShareDilution } from "@/components/portfolio/ShareDilution";
+import { usePortfolioGrowth } from "@/hooks/usePortfolioGrowth";
+import { usePortfolioRiskAnalytics } from "@/hooks/usePortfolioRiskAnalytics";
 import { useLivePortfolioQuotes } from "@/hooks/useLiveQuotes";
 import { useProfile } from "@/hooks/useProfile";
 import { HoldingsList } from "@/components/portfolio/HoldingsList";
@@ -20,8 +44,6 @@ import { PortfolioVisibilityToggles } from "@/components/portfolio/PortfolioVisi
 import { SharePortfolioDialog } from "@/components/social/SharePortfolioDialog";
 import { ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { fx } from "@/lib/chartPalette";
-import { getMediaItemsForSymbols } from "@/data/mediaItems";
-import { formatTimestamp } from "@/lib/formatTimestamp";
 
 const ALLOC_COLORS = [fx.revenue, fx.netIncome, fx.assets, fx.foreign, fx.liabilities, fx.operatingIncome, fx.eps, fx.retail];
 
@@ -33,6 +55,7 @@ export default function TrackInvestments() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { profile, updateProfile } = useProfile();
+  const isPremium = profile?.subscription_plan === "premium" || profile?.subscription_plan === "premium_plus";
   const [showBalance, setShowBalance] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [sortBy, setSortBy] = useState<SortKey>("value");
@@ -93,12 +116,34 @@ export default function TrackInvestments() {
 
   const activeAlloc = allocationMode === "asset" ? assetAlloc : sectorAlloc;
 
+  // ── RETURNS ──
+  // Unrealized P&L is the one figure Continua can compute with full
+  // confidence today (live price vs avg cost). Realized P&L and currency
+  // effects need closed-lot / multi-currency tracking we don't have yet,
+  // so those columns honestly show "No Data" rather than a fabricated
+  // number — same convention DividendTracker already uses for yield.
+  const dividendIncome = useMemo(() => {
+    return holdings.reduce((sum, h) => {
+      const yieldPct = getDivYield(h.symbol);
+      if (!yieldPct) return sum;
+      return sum + (h.price * yieldPct) / 100 * h.shares;
+    }, 0);
+  }, [holdings]);
+
+  // ── VALUATIONS ──
+  // Real, per-symbol model-based fair values (see usePortfolioValuations),
+  // fetched in parallel for every distinct holding.
+  const { valuations, isLoading: valuationsLoading } = usePortfolioValuations(holdings.map(h => h.symbol));
+  const { data: dividendData } = usePortfolioDividends(holdings.map(h => h.symbol));
+  const { research, isLoading: researchLoading } = usePortfolioResearch(holdings.map(h => h.symbol));
+  const { averages: marketBenchmark, isLoading: benchmarkLoading } = useMarketBenchmark();
+  const { items: updateItems, recentCounts: updateCounts, isLoading: updatesLoading } = usePortfolioUpdates(holdings.map(h => h.symbol));
+  const { growth } = usePortfolioGrowth(holdings.map(h => h.symbol));
+  const riskAnalytics = usePortfolioRiskAnalytics(holdings.map(h => ({ symbol: h.symbol, weight: h.weight })));
+
   const topMovers = useMemo(() => {
     const sorted = [...holdings].sort((a, b) => Math.abs(b.gainPct) - Math.abs(a.gainPct));
     return sorted.slice(0, 3);
-  }, [holdings]);
-  const portfolioUpdates = useMemo(() => {
-    return getMediaItemsForSymbols(holdings.map(h => h.symbol)).slice(0, 6);
   }, [holdings]);
 
   const diversificationScore = useMemo(() => {
@@ -231,28 +276,163 @@ export default function TrackInvestments() {
           gainPct={stats.gainPct}
         />
 
+        <PortfolioRisksRewards
+          holdings={holdings.map(h => ({ symbol: h.symbol, name: (h as any).name }))}
+          research={research}
+          valuations={valuations}
+          benchmark={marketBenchmark}
+          dividendData={dividendData}
+        />
+
         <PortfolioInsights holdings={portfolio} prices={Object.fromEntries(portfolio.map(h => [h.symbol, getLivePrice(h.symbol)]))} />
 
-        {portfolioUpdates.length > 0 && (
-          <section>
-            <div className="mb-2">
-              <p className="section-eyebrow">Updates for your holdings</p>
-            </div>
-            <div className="border-t border-border/60">
-              {portfolioUpdates.map(item => (
-                <button
-                  key={item.id}
-                  data-small-target
-                  onClick={() => navigate(`/traders-hub?tab=media&article=${item.id}`, { state: { returnTo: "/track-investments" } })}
-                  className="w-full flex items-start gap-3 py-3 border-b border-border/40 text-left active:opacity-70 transition-opacity"
-                >
-                  <Newspaper className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
-                  <div className="min-w-0 flex-1"><p className="text-[12px] font-medium leading-snug">{item.title}</p><p className="mt-1 text-[10px] text-muted-foreground">{item.source} · {formatTimestamp(item.publishedAt)}</p></div>
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
+        {/* ── HOLDINGS / RETURNS ── */}
+        <Tabs defaultValue="holdings">
+          <TabsList className="w-full flex overflow-x-auto gap-1.5 h-11 rounded-full bg-muted/50 p-1 justify-start">
+            <TabsTrigger value="holdings" className="shrink-0 rounded-full px-4 text-[12px] font-semibold">Holdings</TabsTrigger>
+            <TabsTrigger value="returns" className="shrink-0 rounded-full px-4 text-[12px] font-semibold">Returns</TabsTrigger>
+            <TabsTrigger value="valuations" className="shrink-0 rounded-full px-4 text-[12px] font-semibold">Valuations</TabsTrigger>
+            <TabsTrigger value="updates" className="shrink-0 rounded-full px-4 text-[12px] font-semibold">Updates</TabsTrigger>
+            <TabsTrigger value="dividends" className="shrink-0 rounded-full px-4 text-[12px] font-semibold">Dividends</TabsTrigger>
+            <TabsTrigger value="analysis" className="shrink-0 rounded-full px-4 text-[12px] font-semibold">Analysis</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="updates" className="mt-4 space-y-4">
+            {holdings.length === 0 ? (
+              <div className="py-12 text-center">
+                <p className="text-sm font-semibold">No positions yet</p>
+                <p className="text-xs text-muted-foreground mt-1">Add an investment to see earnings, dividends, and filings.</p>
+              </div>
+            ) : (
+              <PortfolioUpdates items={updateItems} recentCounts={updateCounts} isLoading={updatesLoading} />
+            )}
+          </TabsContent>
+
+          <TabsContent value="analysis" className="mt-4 space-y-4">
+            {holdings.length === 0 ? (
+              <div className="py-12 text-center">
+                <p className="text-sm font-semibold">No positions yet</p>
+                <p className="text-xs text-muted-foreground mt-1">Add an investment to see benchmarks and diversification.</p>
+              </div>
+            ) : (
+              <>
+                <PortfolioScorecard
+                  holdings={holdings.map(h => ({ symbol: h.symbol, name: (h as any).name, weight: h.weight }))}
+                  research={research}
+                  valuations={valuations}
+                  benchmark={marketBenchmark}
+                  dividendData={dividendData}
+                />
+                <KeyMetricsBenchmarks
+                  holdings={holdings.map(h => ({ symbol: h.symbol, name: (h as any).name, value: h.value, weight: h.weight, price: h.price, avgCost: h.avg_cost, shares: h.shares }))}
+                  research={research}
+                  valuations={valuations}
+                  growth={growth}
+                  dividendData={dividendData}
+                  benchmark={marketBenchmark}
+                  isLoading={researchLoading || benchmarkLoading}
+                />
+                <PortfolioDiversification
+                  holdings={holdings.map(h => ({ symbol: h.symbol, name: (h as any).name, sector: h.sector, value: h.value }))}
+                  showValues={showBalance}
+                />
+                <PortfolioCorrelation
+                  pairs={riskAnalytics.pairs}
+                  symbols={riskAnalytics.symbolsWithData}
+                  isLoading={riskAnalytics.isLoading}
+                  hasEnoughData={riskAnalytics.hasEnoughData}
+                />
+                <PortfolioRiskAnalysis
+                  holdings={holdings.map(h => ({ symbol: h.symbol, weight: h.weight }))}
+                  risk={riskAnalytics}
+                />
+                <ShareDilution
+                  holdings={holdings.map(h => ({ symbol: h.symbol, weight: h.weight }))}
+                />
+              </>
+            )}
+          </TabsContent>
+
+          <TabsContent value="dividends" className="mt-4 space-y-4">
+            {holdings.length === 0 ? (
+              <div className="py-12 text-center">
+                <p className="text-sm font-semibold">No positions yet</p>
+                <p className="text-xs text-muted-foreground mt-1">Add an investment to track dividend income.</p>
+              </div>
+            ) : (
+              <>
+                <DividendHistory
+                  holdings={holdings.map(h => ({ symbol: h.symbol, name: (h as any).name, shares: h.shares }))}
+                  dividendData={dividendData}
+                  isPremium={isPremium}
+                  showValues={showBalance}
+                />
+                <DividendContributors
+                  holdings={holdings.map(h => ({ symbol: h.symbol, name: (h as any).name, shares: h.shares }))}
+                  dividendData={dividendData}
+                  isPremium={isPremium}
+                  showValues={showBalance}
+                />
+                <DividendQuality
+                  holdings={holdings.map(h => ({ id: h.id, symbol: h.symbol, name: (h as any).name, shares: h.shares, price: h.price, avgCost: h.avg_cost }))}
+                  dividendData={dividendData}
+                  showValues={showBalance}
+                />
+                <DividendForecast
+                  holdings={holdings.map(h => ({ symbol: h.symbol, name: (h as any).name, shares: h.shares }))}
+                  dividendData={dividendData}
+                  isPremium={isPremium}
+                  showValues={showBalance}
+                />
+                <DividendCalendar
+                  holdings={holdings.map(h => ({ symbol: h.symbol, shares: h.shares }))}
+                  dividendData={dividendData}
+                  showValues={showBalance}
+                />
+              </>
+            )}
+          </TabsContent>
+
+          <TabsContent value="valuations" className="mt-4">
+            {holdings.length === 0 ? (
+              <div className="py-12 text-center">
+                <p className="text-sm font-semibold">No positions yet</p>
+                <p className="text-xs text-muted-foreground mt-1">Add an investment to see fair-value estimates.</p>
+              </div>
+            ) : (
+              <PortfolioValuations
+                holdings={holdings.map(h => ({ id: h.id, symbol: h.symbol, name: (h as any).name, shares: h.shares, price: h.price, value: h.value }))}
+                valuations={valuations}
+                isLoading={valuationsLoading}
+                showValues={showBalance}
+              />
+            )}
+          </TabsContent>
+
+          <TabsContent value="returns" className="mt-4 space-y-4">
+            {holdings.length === 0 ? (
+              <div className="py-12 text-center">
+                <p className="text-sm font-semibold">No positions yet</p>
+                <p className="text-xs text-muted-foreground mt-1">Add an investment to see your returns breakdown.</p>
+              </div>
+            ) : (
+              <>
+                <ReturnsBreakdown
+                  unrealized={stats.totalGain}
+                  dividends={dividendIncome}
+                  realized={null}
+                  currency={null}
+                  showValues={showBalance}
+                />
+                <ReturnsContributors
+                  holdings={holdings.map(h => ({ symbol: h.symbol, name: (h as any).name, amount: h.gain, gainPct: h.gainPct }))}
+                  showValues={showBalance}
+                />
+              </>
+            )}
+          </TabsContent>
+
+          <TabsContent value="holdings" className="mt-4 space-y-8">
 
         {/* ── ALLOCATION ── */}
         {activeAlloc.length > 0 && (
@@ -492,6 +672,8 @@ export default function TrackInvestments() {
             </div>
           </div>
         )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

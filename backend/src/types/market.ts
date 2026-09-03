@@ -280,12 +280,52 @@ export interface CompanyAnnouncement {
   publishedAt: string | null;
 }
 
+/** ── Financial statement candidates (scraper bridge, review queue) ──────
+ *  A raw table detected by continua-scraper's tableExtract.ts, staged here
+ *  for human confirmation before it ever becomes a real FinancialPeriod /
+ *  IncomeStatement / BalanceSheet / CashFlowStatement — see the migration's
+ *  header comment for why this can't be safely automated end-to-end. */
+
+export interface DetectedTableRow {
+  label: string;
+  values: string[];
+}
+
+export interface DetectedFinancialTable {
+  title: string | null;
+  headerLine: string | null;
+  rows: DetectedTableRow[];
+  method: string;
+  confidence: number;
+}
+
+export interface FinancialStatementCandidate {
+  id: string;
+  companyId: string | null;
+  securityId: string | null;
+  rawCompanyName: string | null;
+  source: string;
+  exchange: ExchangeCode;
+  documentUrl: string;
+  documentTitle: string | null;
+  tableIndex: number;
+  detectedTable: DetectedFinancialTable;
+  detectionConfidence: number | null;
+  scrapedArtifactId: number | null;
+  scrapedExtractionId: number | null;
+  status: "pending" | "confirmed" | "rejected";
+  reviewedAt: string | null;
+  reviewedNote: string | null;
+  resultingPeriodId: string | null;
+  createdAt: string;
+}
+
 /** ── Ingestion metadata (audit trail) ────────────────────────────────── */
 
 export interface IngestionRecord {
   id: string;
   exchange: ExchangeCode;
-  dataset: "price" | "candle" | "company" | "financials" | "corporate_action" | "earnings" | "ownership" | "index" | "announcement";
+  dataset: "price" | "candle" | "company" | "financials" | "corporate_action" | "earnings" | "ownership" | "index" | "announcement" | "financial_statement_candidate";
   status: "success" | "partial" | "failed";
   recordCount: number;
   errorCount: number;
