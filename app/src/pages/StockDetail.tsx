@@ -20,20 +20,20 @@ import { ContinuaScoreCard, computeScores } from "@/components/stock/ContinuaSco
 import { AIThesisCard } from "@/components/stock/AIThesisCard";
 import { getFundamentals } from "@/data/stockFundamentals";
 import { STOCK_META, getPrice, getDayChange, DIV_YIELD, getStockFundamentals } from "@/lib/stockPrices";
-import { ValuationTab } from "@/components/stock/tabs/ValuationTab";
+import { ValuationSection } from "@/components/stock/report/ValuationSection";
+import { FutureGrowthSection } from "@/components/stock/report/FutureGrowthSection";
+import { PastPerformanceSection } from "@/components/stock/report/PastPerformanceSection";
+import { FinancialHealthSection } from "@/components/stock/report/FinancialHealthSection";
+import { DividendsSection } from "@/components/stock/report/DividendsSection";
+import { ManagementSection } from "@/components/stock/report/ManagementSection";
+import { OwnershipSection } from "@/components/stock/report/OwnershipSection";
+import { CompanyInfoSection } from "@/components/stock/report/CompanyInfoSection";
 import { TechnicalsTab } from "@/components/stock/tabs/TechnicalsTab";
-import { GrowthTab } from "@/components/stock/tabs/GrowthTab";
-import { HealthTab } from "@/components/stock/tabs/HealthTab";
-import { DividendsTab } from "@/components/stock/tabs/DividendsTab";
-import { OwnershipTab } from "@/components/stock/tabs/OwnershipTab";
-import { RiskTab } from "@/components/stock/tabs/RiskTab";
 import { NewsEventsTab } from "@/components/stock/tabs/NewsEventsTab";
 import { CommunityTab } from "@/components/stock/tabs/CommunityTab";
-import { PerformanceTab } from "@/components/stock/tabs/PerformanceTab";
 import { ScoresTab } from "@/components/stock/tabs/ScoresTab";
-import { getMediaItemsForSymbol } from "../data/mediaItems";
-import { NewsHeadline, announcementToHeadline, mediaItemToHeadline } from "@/lib/newsHeadline";
-import { useCompanyAnnouncements } from "@/hooks/useCompanyAnnouncements";
+import { StockSnowflake } from "@/components/stock/tabs/StockSnowflake";
+import { getMediaItemsForSymbol, MediaItem } from "../data/mediaItems";
 import { formatTimestamp } from "@/lib/formatTimestamp";
 import { useLiveQuote } from "@/hooks/useLiveQuotes";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
@@ -98,7 +98,6 @@ export default function StockDetail() {
   const [hoverPrice, setHoverPrice] = useState<number | null>(null);
   const [hoverDate, setHoverDate] = useState<string | null>(null);
   const [section, setSection] = useState<SubSection>("overview");
-  const [researchGroup, setResearchGroup] = useState<"valuation" | "performance" | "growth" | "health" | "dividends" | "scores" | "ownership" | "risk" | "technicals">("valuation");
   const { addToWatchlist, removeFromWatchlist, isInWatchlist } = useWatchlist();
   const { portfolio } = usePortfolio();
   const { toast } = useToast();
@@ -304,27 +303,13 @@ export default function StockDetail() {
     ownership: liveOwnership.length > 0 ? liveOwnership : fundamentals.ownership,
     topShareholders: liveTopShareholders.length > 0 ? liveTopShareholders : fundamentals.topShareholders,
   };
-  // Real NSE filings scraped by continua-scraper, bridged into
-  // market.company_announcements. Falls back to the mock Media items only
-  // when the scraper genuinely has nothing for this symbol yet — same
-  // "prefer live, fall back to placeholder" convention as liveFundamentals
-  // above — so this page never shows a fabricated announcement, only a
-  // clearly-different placeholder feed until real coverage lands.
-  const { announcements: liveAnnouncements } = useCompanyAnnouncements(upperSymbol || undefined);
-  const stockNews: NewsHeadline[] = liveAnnouncements.length > 0
-    ? liveAnnouncements.map(announcementToHeadline)
-    : getMediaItemsForSymbol(symbol || "").map(mediaItemToHeadline);
-  // Real announcements open the original filing URL in a new tab; mock/media
-  // items still open the full story on the TradersHub Media tab (passing
-  // where we came from explicitly, rather than relying on browser history,
-  // so the article's close button returns here reliably).
-  const openNewsItem = (item: NewsHeadline) => {
-    if (item.kind === "announcement") {
-      if (item.documentUrl) window.open(item.documentUrl, "_blank", "noopener,noreferrer");
-      return;
-    }
-    navigate(`/traders-hub?tab=media&article=${item.id}`, { state: { returnTo: `/stock/${symbol}` } });
-  };
+  const stockNews = getMediaItemsForSymbol(symbol || "");
+  // Opens the full story on the TradersHub Media tab. Passes where we came from
+  // explicitly (rather than relying on browser history for the way back) so the
+  // article's close button returns here reliably regardless of what else has
+  // touched the history stack in between (e.g. the URL cleanup once the deep
+  // link is read).
+  const openNewsItem = (item: MediaItem) => navigate(`/traders-hub?tab=media&article=${item.id}`, { state: { returnTo: `/stock/${symbol}` } });
 
   // Section refs — sticky sub-nav scrolls to them
   const refs = {
@@ -759,31 +744,52 @@ export default function StockDetail() {
         {/* RESEARCH */}
         <section ref={refs.research} data-section="research" className="space-y-4 scroll-mt-32">
           <Eyebrow>Research</Eyebrow>
-          {/* Second-level sticky nav — sits directly under the primary sub-nav */}
+          {/* Jump nav — scrolls to a section rather than switching a tab,
+              since the report below is one continuous scroll now. */}
           <div className="sticky top-[97px] z-20 -mx-4 px-4 py-2 bg-background/92 backdrop-blur-xl border-b border-border/60">
             <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
-              {(["valuation", "technicals", "performance", "growth", "health", "dividends", "scores", "ownership", "risk"] as const).map(g => (
+              {[
+                { id: "rpt-snowflake", label: "Snowflake" },
+                { id: "rpt-1", label: "1. Valuation" },
+                { id: "rpt-2", label: "2. Future Growth" },
+                { id: "rpt-3", label: "3. Past Performance" },
+                { id: "rpt-4", label: "4. Financial Health" },
+                { id: "rpt-5", label: "5. Dividend" },
+                { id: "rpt-6", label: "6. Management" },
+                { id: "rpt-7", label: "7. Ownership" },
+                { id: "rpt-8", label: "8. Company Info" },
+                { id: "rpt-technicals", label: "Technicals" },
+              ].map(({ id, label }) => (
                 <button
-                  key={g}
+                  key={id}
                   data-small-target
-                  onClick={() => setResearchGroup(g)}
-                  className={`px-3 py-1 text-[11px] font-semibold rounded-full whitespace-nowrap capitalize transition-colors ${researchGroup === g ? 'brand-active' : 'bg-muted/40 text-muted-foreground'}`}
+                  onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                  className="px-3 py-1 text-[11px] font-semibold rounded-full whitespace-nowrap bg-muted/40 text-muted-foreground hover:bg-muted/70 transition-colors"
                 >
-                  {g}
+                  {label}
                 </button>
               ))}
             </div>
           </div>
-          <div className="research-flow pt-2">
-          {researchGroup === "valuation" && <ValuationTab price={stock.price} pe={stock.pe} fundamentals={liveFundamentals} symbol={symbol || ""} onSeePerformance={() => setResearchGroup("performance")} />}
-          {researchGroup === "technicals" && <TechnicalsTab symbol={symbol || ""} currency={exchangeMeta.currency} />}
-          {researchGroup === "performance" && <PerformanceTab symbol={symbol || ""} price={stock.price} fundamentals={liveFundamentals} />}
-          {researchGroup === "growth" && <GrowthTab fundamentals={liveFundamentals} />}
-          {researchGroup === "health" && <HealthTab fundamentals={liveFundamentals} />}
-          {researchGroup === "dividends" && <DividendsTab divYield={divYield} annualDividend={stock.dividend} fundamentals={liveFundamentals} />}
-          {researchGroup === "scores" && <ScoresTab fundamentals={liveFundamentals} />}
-          {researchGroup === "ownership" && <OwnershipTab fundamentals={liveFundamentals} />}
-          {researchGroup === "risk" && <RiskTab fundamentals={liveFundamentals} />}
+
+          <div className="space-y-10 pt-2">
+            <div id="rpt-snowflake" className="scroll-mt-40"><StockSnowflake symbol={symbol || ""} /></div>
+            <div id="rpt-1" className="scroll-mt-40"><ValuationSection symbol={symbol || ""} name={stock.name} sector={stock.sector} price={stock.price} currency={exchangeMeta.currency} /></div>
+            <div id="rpt-2" className="scroll-mt-40"><FutureGrowthSection symbol={symbol || ""} /></div>
+            <div id="rpt-3" className="scroll-mt-40"><PastPerformanceSection symbol={symbol || ""} currency={exchangeMeta.currency} /></div>
+            <div id="rpt-4" className="scroll-mt-40"><FinancialHealthSection symbol={symbol || ""} currency={exchangeMeta.currency} /></div>
+            <div id="rpt-5" className="scroll-mt-40"><DividendsSection symbol={symbol || ""} currency={exchangeMeta.currency} divYield={divYield} annualDividend={stock.dividend} /></div>
+            <div id="rpt-6" className="scroll-mt-40"><ManagementSection symbol={symbol || ""} /></div>
+            <div id="rpt-7" className="scroll-mt-40"><OwnershipSection fundamentals={liveFundamentals} /></div>
+            <div id="rpt-8" className="scroll-mt-40"><CompanyInfoSection symbol={symbol || ""} exchange={exchangeMeta.code} marketCap={stock.marketCap} /></div>
+            <div id="rpt-technicals" className="scroll-mt-40 space-y-2">
+              <p className="text-[11px] text-muted-foreground">
+                Technicals and the Institutional Scorecard below aren't part of Simply Wall St's report —
+                they're Continua-original tools kept from the existing research suite.
+              </p>
+              <TechnicalsTab symbol={symbol || ""} currency={exchangeMeta.currency} />
+              <ScoresTab fundamentals={liveFundamentals} />
+            </div>
           </div>
         </section>
 
@@ -794,7 +800,7 @@ export default function StockDetail() {
             symbol={symbol || ""} name={stock.name} sector={stock.sector}
             price={stock.price} changePercent={stock.changePercent}
             pe={stock.pe} eps={stock.eps} dividend={stock.dividend}
-            news={stockNews} fundamentals={liveFundamentals}
+            news={stockNews}
             onSelectNews={openNewsItem}
           />
         </section>

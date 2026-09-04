@@ -1,206 +1,139 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { ArrowUpRight, ArrowDownRight } from "lucide-react";
-import { Fundamentals } from "@/data/stockFundamentals";
+import { ArrowUpRight, ArrowDownRight, Loader2 } from "lucide-react";
 import { fx } from "@/lib/chartPalette";
 import { BarChartBlock } from "@/components/charts/BarChartBlock";
+import { historicalApi } from "@/api/historicalApi";
+import { useStockFinancials } from "@/hooks/useStockFinancials";
+import { useResearch } from "@/hooks/useResearch";
+import { InfoTip } from "@/components/portfolio/InfoTip";
 
-interface Props {
-  symbol: string;
-  price: number;
-  fundamentals: Fundamentals;
+interface Props { symbol: string; price: number }
+
+const PERIODS = [
+  { label: "1M", days: 30 },
+  { label: "3M", days: 91 },
+  { label: "6M", days: 182 },
+  { label: "1Y", days: 365 },
+];
+
+function returnOverDays(candles: { timestamp: string; close: number }[], days: number): number | null {
+  if (candles.length < 2) return null;
+  const targetTime = Date.now() - days * 86_400_000;
+  const earliest = new Date(candles[0].timestamp).getTime();
+  if (targetTime < earliest) return null; // not enough history on file for this window
+  let closest = candles[0];
+  for (const c of candles) {
+    if (Math.abs(new Date(c.timestamp).getTime() - targetTime) < Math.abs(new Date(closest.timestamp).getTime() - targetTime)) closest = c;
+  }
+  const last = candles[candles.length - 1];
+  if (closest.close === 0) return null;
+  return ((last.close - closest.close) / closest.close) * 100;
 }
 
+/** Trailing total return computed from real daily candles — replacing
+ *  the synthetic pastReturns/analystTargets/earningsSurprises this tab
+ *  used to run on. There's no sector or NSE-index benchmark series to
+ *  compare against, and no analyst estimates to compute a "surprise"
+ *  from, so both are replaced with real, honestly-scoped alternatives:
+ *  real EPS history instead of EPS-vs-estimate, and no benchmark line
+ *  rather than a fabricated one. */
+export function PerformanceTab({ symbol, price }: Props) {
+  const candlesQuery = useQuery({
+    queryKey: ["continua", "candles", symbol, "1y-perf"],
+    queryFn: () => historicalApi.getCandles(symbol, { interval: "1d", from: new Date(Date.now() - 370 * 86_400_000).toISOString().slice(0, 10) }),
+    staleTime: 15 * 60_000,
+  });
+  const { history, isLoading: historyLoading } = useStockFinancials(symbol);
+  const { research, isLoading: researchLoading } = useResearch(symbol);
 
+  const candles = candlesQuery.data ?? [];
+  const returns = PERIODS.map((p) => ({ label: p.label, value: returnOverDays(candles, p.days) }));
 
-
-export function PerformanceTab({ symbol, price, fundamentals }: Props) {
-  const [benchmark, setBenchmark] = useState<"sector" | "nse">("sector");
-  const [surpriseView, setSurpriseView] = useState<"abs" | "pct">("abs");
-
-  const returns = fundamentals.pastReturns.map(r => ({
-    period: r.period,
-    Company: r.company,
-    Benchmark: benchmark === "sector" ? r.sector : r.nse,
-  }));
-
-  const surprises = useMemo(() => fundamentals.earningsSurprises.map(s => ({
-    quarter: s.quarter,
-    Estimate: s.estimate,
-    Actual: s.actual,
-    surprise: +(((s.actual - s.estimate) / s.estimate) * 100).toFixed(1),
-  })), [fundamentals.earningsSurprises]);
-
-  const beatRate = Math.round(
-    (surprises.filter(s => s.surprise > 0).length / surprises.length) * 100
+  const epsHistory = useMemo(
+    () => [...history].sort((a, b) => a.fiscalYear - b.fiscalYear).map((r) => ({ year: String(r.fiscalYear), EPS: r.eps })),
+    [history]
   );
 
-  const tgt = fundamentals.analystTargets;
-  const totalRatings = tgt.buy + tgt.hold + tgt.sell || 1;
-  // position of current price on Low → High axis
-  const tgtPct = Math.max(0, Math.min(100, ((price - tgt.low) / (tgt.high - tgt.low)) * 100));
-  const avgPct = Math.max(0, Math.min(100, ((tgt.avg - tgt.low) / (tgt.high - tgt.low)) * 100));
+  const ratios = research?.ratios;
 
   return (
     <div className="space-y-3">
-      {/* PAST RETURNS */}
       <Card className="soft-card">
         <CardContent className="p-4">
-          <BarChartBlock
-            title="Total Return vs Benchmark"
-            annual={returns}
-            annualCount={6}
-            xKey="period"
-            series={[
-              { key: "Company", label: symbol, color: fx.positive },
-              { key: "Benchmark", label: benchmark === "sector" ? "Sector average" : "NSE 20", color: fx.foreign },
-            ]}
-            colorFor={(row, s) => (s.key === "Benchmark" ? fx.foreign : row.Company >= 0 ? fx.positive : fx.negative)}
-            yFmt={(v) => `${v}%`}
-            valueFmt={(v) => `${Number(v) >= 0 ? "+" : ""}${Number(v).toFixed(1)}%`}
-            right={
-              <ToggleGroup type="single" size="sm" value={benchmark} onValueChange={(v) => v && setBenchmark(v as any)}>
-                <ToggleGroupItem value="sector" className="h-6 text-[10px] px-2">Sector</ToggleGroupItem>
-                <ToggleGroupItem value="nse" className="h-6 text-[10px] px-2">NSE 20</ToggleGroupItem>
-              </ToggleGroup>
-            }
-          />
-
-          <div className="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-border/40">
-            {(["1Y", "3Y", "5Y"] as const).map(p => {
-              const row = fundamentals.pastReturns.find(r => r.period === p)!;
-              const bm = benchmark === "sector" ? row.sector : row.nse;
-              const diff = row.company - bm;
-              return (
-                <div key={p} className="text-center">
-                  <p className="text-[9px] text-muted-foreground uppercase">{p}</p>
-                  <p className={`text-sm font-bold ${row.company >= 0 ? "text-bull" : "text-bear"}`}>{row.company >= 0 ? "+" : ""}{row.company.toFixed(1)}%</p>
-                  <p className={`text-[10px] ${diff >= 0 ? "text-bull" : "text-bear"}`}>
-                    {diff >= 0 ? <ArrowUpRight className="h-2.5 w-2.5 inline" /> : <ArrowDownRight className="h-2.5 w-2.5 inline" />}
-                    {Math.abs(diff).toFixed(1)}% vs {benchmark === "sector" ? "sector" : "NSE"}
-                  </p>
-                </div>
-              );
-            })}
+          <div className="flex items-center gap-1.5 mb-2">
+            <p className="text-xs font-bold">Trailing Total Return</p>
+            <InfoTip>Computed from real daily closing prices on file — Continua has no sector or NSE-index historical series to benchmark against yet, so this shows the company only.</InfoTip>
           </div>
-        </CardContent>
-      </Card>
-
-
-      {/* ANALYST PRICE TARGETS */}
-      <Card className="soft-card">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="text-xs font-bold">Analyst Price Targets</h4>
-            <Badge variant="outline" className="text-[10px]">{tgt.count} analysts</Badge>
-          </div>
-
-          <div className="relative h-12 mb-3">
-            {/* Track */}
-            <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 h-1.5 rounded-full bg-gradient-to-r from-bear/40 via-accent/50 to-bull/60" />
-            {/* Avg marker */}
-            <div className="absolute top-1/2 -translate-y-1/2" style={{ left: `${avgPct}%` }}>
-              <div className="-translate-x-1/2 w-3 h-3 rounded-full bg-foreground ring-2 ring-background" />
-              <p className="absolute top-4 -translate-x-1/2 text-[9px] font-semibold whitespace-nowrap">Avg KES {tgt.avg}</p>
+          {candlesQuery.isLoading ? (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground py-4">
+              <Loader2 className="h-3 w-3 animate-spin" /> Loading price history…
             </div>
-            {/* Current price marker */}
-            <div className="absolute top-1/2 -translate-y-1/2" style={{ left: `${tgtPct}%` }}>
-              <div className="-translate-x-1/2 w-3 h-3 rounded-full bg-primary ring-2 ring-background" />
-              <p className="absolute -top-5 -translate-x-1/2 text-[9px] font-semibold text-primary whitespace-nowrap">Now KES {price.toFixed(2)}</p>
-            </div>
-          </div>
-          <div className="flex justify-between text-[10px] text-muted-foreground">
-            <span>Low KES {tgt.low}</span>
-            <span>High KES {tgt.high}</span>
-          </div>
-
-          {/* Rating distribution */}
-          <div className="mt-4 space-y-1.5">
-            {[
-              { label: "Buy", value: tgt.buy, color: "bg-bull" },
-              { label: "Hold", value: tgt.hold, color: "bg-chart-3" },
-              { label: "Sell", value: tgt.sell, color: "bg-bear" },
-            ].map(row => (
-              <div key={row.label} className="flex items-center gap-2 text-[11px]">
-                <span className="w-9 font-medium">{row.label}</span>
-                <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                  <div className={`h-full ${row.color}`} style={{ width: `${(row.value / totalRatings) * 100}%` }} />
-                </div>
-                <span className="w-6 text-right font-bold">{row.value}</span>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* EARNINGS SURPRISES */}
-      <Card className="soft-card">
-        <CardContent className="p-4">
-          <p className="text-[10px] text-muted-foreground mb-1">Beat estimate {beatRate}% of last 8 quarters</p>
-          {surpriseView === "abs" ? (
-            <BarChartBlock
-              title="Earnings Surprises"
-              annual={surprises}
-              annualCount={5}
-              xKey="quarter"
-              series={[
-                { key: "Estimate", label: "Analyst estimate", color: fx.forecast },
-                { key: "Actual", label: "Actual EPS", color: fx.positive },
-              ]}
-              colorFor={(row, s) => (s.key === "Estimate" ? fx.forecast : row.Actual >= row.Estimate ? fx.positive : fx.negative)}
-              valueFmt={(v) => `KES ${v}`}
-              right={
-                <ToggleGroup type="single" size="sm" value={surpriseView} onValueChange={(v) => v && setSurpriseView(v as any)}>
-                  <ToggleGroupItem value="abs" className="h-6 text-[10px] px-2">EPS</ToggleGroupItem>
-                  <ToggleGroupItem value="pct" className="h-6 text-[10px] px-2">Surprise %</ToggleGroupItem>
-                </ToggleGroup>
-              }
-            />
           ) : (
-            <BarChartBlock
-              title="Earnings Surprises"
-              annual={surprises}
-              annualCount={5}
-              xKey="quarter"
-              series={[{ key: "surprise", label: "Surprise vs estimate", color: fx.positive }]}
-              colorFor={(row) => (row.surprise >= 0 ? fx.positive : fx.negative)}
-              yFmt={(v) => `${v}%`}
-              valueFmt={(v) => `${v}%`}
-              right={
-                <ToggleGroup type="single" size="sm" value={surpriseView} onValueChange={(v) => v && setSurpriseView(v as any)}>
-                  <ToggleGroupItem value="abs" className="h-6 text-[10px] px-2">EPS</ToggleGroupItem>
-                  <ToggleGroupItem value="pct" className="h-6 text-[10px] px-2">Surprise %</ToggleGroupItem>
-                </ToggleGroup>
-              }
-            />
+            <div className="grid grid-cols-4 gap-2 pt-2">
+              {returns.map((r) => (
+                <div key={r.label} className="text-center">
+                  <p className="text-[9px] text-muted-foreground uppercase">{r.label}</p>
+                  {r.value == null ? (
+                    <p className="text-xs text-muted-foreground mt-1">No data</p>
+                  ) : (
+                    <p className={`text-sm font-bold tabular ${r.value >= 0 ? "text-bull" : "text-bear"}`}>
+                      {r.value >= 0 ? <ArrowUpRight className="h-2.5 w-2.5 inline" /> : <ArrowDownRight className="h-2.5 w-2.5 inline" />}
+                      {r.value >= 0 ? "+" : ""}{r.value.toFixed(1)}%
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>
 
-
-      {/* MARGIN TRENDS */}
       <Card className="soft-card">
         <CardContent className="p-4">
-          <BarChartBlock
-            title="Profitability Margins"
-            annual={fundamentals.marginsHistory}
-            allowQuarterly
-            xKey="year"
-            series={[
-              { key: "gross", label: "Gross margin", color: fx.grossMargin },
-              { key: "operating", label: "Operating margin", color: fx.operatingMargin },
-              { key: "net", label: "Net margin", color: fx.netMargin },
-            ]}
-            yFmt={(v) => `${v}%`}
-            valueFmt={(v) => `${Number(v).toFixed(1)}%`}
-          />
+          <div className="flex items-center gap-1.5 mb-1">
+            <p className="text-xs font-bold">Analyst Price Targets</p>
+            <InfoTip>Continua doesn't ingest a street analyst price-target feed yet.</InfoTip>
+          </div>
+          <p className="text-xs text-muted-foreground pt-2">No analyst coverage on file for {symbol} yet.</p>
         </CardContent>
       </Card>
 
+      <Card className="soft-card">
+        <CardContent className="p-4">
+          {historyLoading ? (
+            <p className="text-xs text-muted-foreground py-4">Loading financial history…</p>
+          ) : epsHistory.length === 0 ? (
+            <p className="text-xs text-muted-foreground py-4">No reported EPS history on file for {symbol} yet.</p>
+          ) : (
+            <BarChartBlock
+              title="Reported EPS History"
+              annual={epsHistory}
+              xKey="year"
+              series={[{ key: "EPS", label: "Reported EPS", color: fx.eps }]}
+              colorFor={(row) => (row.EPS >= 0 ? fx.positive : fx.negative)}
+              valueFmt={(v) => `KES ${v}`}
+            />
+          )}
+          <p className="text-[10px] text-muted-foreground mt-1">Real, already-reported EPS — no analyst estimate to compare against, so no "surprise" is shown.</p>
+        </CardContent>
+      </Card>
 
-
+      <Card className="soft-card">
+        <CardContent className="p-4">
+          <p className="text-xs font-bold mb-2">Current Profitability</p>
+          {researchLoading ? (
+            <p className="text-xs text-muted-foreground py-2">Loading…</p>
+          ) : (
+            <div className="grid grid-cols-3 gap-3">
+              <div><p className="text-[9.5px] text-muted-foreground">Gross margin</p><p className="text-sm font-bold tabular">{ratios?.grossMargin != null ? `${(ratios.grossMargin * 100).toFixed(1)}%` : "—"}</p></div>
+              <div><p className="text-[9.5px] text-muted-foreground">Operating margin</p><p className="text-sm font-bold tabular">{ratios?.operatingMargin != null ? `${(ratios.operatingMargin * 100).toFixed(1)}%` : "—"}</p></div>
+              <div><p className="text-[9.5px] text-muted-foreground">Net margin</p><p className="text-sm font-bold tabular">{ratios?.netMargin != null ? `${(ratios.netMargin * 100).toFixed(1)}%` : "—"}</p></div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

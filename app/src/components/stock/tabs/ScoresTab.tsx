@@ -1,4 +1,4 @@
-import { CheckCircle2, XCircle, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { CheckCircle2, XCircle, ArrowUpRight, ArrowDownRight, Info } from "lucide-react";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Cell, PieChart, Pie } from "recharts";
 import { Fundamentals } from "@/data/stockFundamentals";
 import { fx, axisStyle, gridStyle } from "@/lib/chartPalette";
@@ -63,6 +63,17 @@ export function ScoresTab({ fundamentals }: { fundamentals: Fundamentals }) {
 
   return (
     <div className="space-y-8">
+      <div className="flex items-start gap-2 rounded-xl bg-muted/40 p-3">
+        <Info className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
+        <p className="text-[10.5px] text-muted-foreground leading-snug">
+          <span className="font-semibold text-foreground">Demonstration data.</span> Piotroski F-Score,
+          Altman Z-Score, and the composite dials below need multiple years of full balance-sheet
+          history — Continua's data layer currently gives one real current-period snapshot per
+          company, not the multi-year time series this scoring needs. Shown with real numbers
+          elsewhere in this app (Snowflake, Health, Growth tabs) instead.
+        </p>
+      </div>
+
       {/* Composite dials */}
       <div>
         <Eyebrow>Institutional Scorecard</Eyebrow>
