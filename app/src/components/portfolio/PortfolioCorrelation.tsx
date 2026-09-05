@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { InfoTip } from "./InfoTip";
 
 interface Pair { a: string; b: string; corr: number }
@@ -92,8 +93,8 @@ export function PortfolioCorrelation({ pairs, symbols, isLoading, hasEnoughData 
                 <div key={s} className="text-[10px] font-bold text-center pb-1.5">{s}</div>
               ))}
               {symbols.map((row) => (
-                <>
-                  <div key={`${row}-label`} className="text-[10px] font-bold flex items-center pr-2">{row}</div>
+                <Fragment key={row}>
+                  <div className="text-[10px] font-bold flex items-center pr-2">{row}</div>
                   {symbols.map((col) => {
                     const c = row === col ? 1 : corrMap[`${row}|${col}`];
                     return (
@@ -106,7 +107,7 @@ export function PortfolioCorrelation({ pairs, symbols, isLoading, hasEnoughData 
                       </div>
                     );
                   })}
-                </>
+                </Fragment>
               ))}
             </div>
           </div>

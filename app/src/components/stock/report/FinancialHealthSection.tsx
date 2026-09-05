@@ -1,8 +1,10 @@
+import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from "recharts";
 import { ReportSection, SubWidget } from "./ReportSection";
 import { CriteriaChecklist } from "./CriteriaChecklist";
 import { KeyInfoUpdates } from "./KeyInfoUpdates";
 import { useStockFinancials } from "@/hooks/useStockFinancials";
 import { useResearch } from "@/hooks/useResearch";
+import { fx } from "@/lib/chartPalette";
 
 interface Props { symbol: string; currency: string }
 
@@ -51,43 +53,45 @@ export function FinancialHealthSection({ symbol, currency }: Props) {
       />
 
       <SubWidget number="4.1" title="Financial Position Analysis" description="Short-term vs long-term assets and liabilities, most recent period on file.">
-        {isLoading ? <p className="text-xs text-muted-foreground py-6">Loading…</p> : !latest ? (
+        {isLoading ? (
+          <p className="text-xs text-muted-foreground py-6">Loading…</p>
+        ) : !latest ? (
           <p className="text-xs text-muted-foreground py-6">No balance sheet on file yet.</p>
         ) : (
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <p className="text-[10px] text-muted-foreground mb-1">Short Term</p>
-              <Bar label="Assets" value={latest.currentAssets} max={Math.max(latest.currentAssets ?? 0, latest.currentLiabilities ?? 0)} color="hsl(217 91% 60%)" currency={currency} />
-              <Bar label="Liabilities" value={latest.currentLiabilities} max={Math.max(latest.currentAssets ?? 0, latest.currentLiabilities ?? 0)} color="hsl(160 84% 58%)" currency={currency} />
-            </div>
-            <div>
-              <p className="text-[10px] text-muted-foreground mb-1">Long Term</p>
-              <Bar label="Assets" value={longTermAssets} max={Math.max(longTermAssets ?? 0, longTermLiabilities ?? 0)} color="hsl(217 91% 60%)" currency={currency} />
-              <Bar label="Liabilities" value={longTermLiabilities} max={Math.max(longTermAssets ?? 0, longTermLiabilities ?? 0)} color="hsl(160 84% 58%)" currency={currency} />
-            </div>
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={[
+                { name: "Short Term", Assets: (latest.currentAssets ?? 0) / 1e9, Liabilities: (latest.currentLiabilities ?? 0) / 1e9 },
+                { name: "Long Term", Assets: (longTermAssets ?? 0) / 1e9, Liabilities: (longTermLiabilities ?? 0) / 1e9 },
+              ]}>
+                <XAxis dataKey="name" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={32} />
+                <Tooltip formatter={(v: number) => [`${currency}${v.toFixed(2)}B`, ""]} contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }} />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+                <Bar dataKey="Assets" fill="hsl(217 91% 60%)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Liabilities" fill="hsl(160 84% 58%)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         )}
       </SubWidget>
 
-      <SubWidget number="4.2" title="Debt to Equity History and Analysis" description="Continua doesn't have a multi-year debt/equity time series yet — shown as a current snapshot instead.">
-        {!latest ? <p className="text-xs text-muted-foreground py-4">No data on file yet.</p> : (
-          <div className="flex gap-6">
-            <div><p className="text-[10px] text-muted-foreground">Debt</p><p className="text-sm font-bold tabular">{currency}{fmtB(latest.totalDebt)}</p></div>
-            <div><p className="text-[10px] text-muted-foreground">Equity</p><p className="text-sm font-bold tabular">{currency}{fmtB(latest.totalEquity)}</p></div>
-            <div><p className="text-[10px] text-muted-foreground">Cash</p><p className="text-sm font-bold tabular">{currency}{fmtB(latest.cash)}</p></div>
-          </div>
-        )}
+      <SubWidget number="4.2" title="Debt to Equity History and Analysis" description="Continua doesn't have a multi-year debt/equity time series yet, so this chart currently plots one real point — it will fill in as more periods are reported.">
+        <div className="h-72">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={latest ? [{ period: `FY${latest.fiscalYear}`, Debt: (latest.totalDebt ?? 0) / 1e9, Equity: latest.totalEquity / 1e9, Cash: (latest.cash ?? 0) / 1e9 }] : []}>
+              <XAxis dataKey="period" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={32} />
+              <Tooltip formatter={(v: number) => [`${currency}${v.toFixed(2)}B`, ""]} contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }} />
+              <Legend wrapperStyle={{ fontSize: 10 }} />
+              <Area type="monotone" dataKey="Equity" stroke={fx.revenue} fill={fx.revenue} fillOpacity={0.25} />
+              <Area type="monotone" dataKey="Debt" stroke={fx.negative} fill={fx.negative} fillOpacity={0.25} />
+              <Area type="monotone" dataKey="Cash" stroke={fx.positive} fill={fx.positive} fillOpacity={0.15} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+        {!latest && <p className="text-xs text-muted-foreground mt-1">No balance sheet on file yet — chart will populate once one is.</p>}
       </SubWidget>
     </ReportSection>
-  );
-}
-
-function Bar({ label, value, max, color, currency }: { label: string; value: number | null | undefined; max: number; color: string; currency: string }) {
-  const pct = value != null && max > 0 ? (value / max) * 100 : 0;
-  return (
-    <div className="mb-2">
-      <div className="flex justify-between text-[10px] mb-0.5"><span>{label}</span><span className="font-semibold tabular">{value != null ? `${currency}${(value / 1e9).toFixed(2)}B` : "—"}</span></div>
-      <div className="h-3 rounded bg-muted overflow-hidden"><div className="h-full rounded" style={{ width: `${pct}%`, background: color }} /></div>
-    </div>
   );
 }

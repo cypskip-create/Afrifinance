@@ -1,3 +1,4 @@
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from "recharts";
 import { ReportSection, SubWidget } from "./ReportSection";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import { useStockFinancials } from "@/hooks/useStockFinancials";
@@ -14,8 +15,8 @@ export function CompanyInfoSection({ symbol, exchange, marketCap }: Props) {
   const sharesOutstanding = latest?.sharesOutstanding != null ? `${(latest.sharesOutstanding / 1e6).toFixed(2)}m` : "n/a";
 
   return (
-    <ReportSection number={8} title={`${company?.name ?? symbol} Company Information`} intro="Employee count, exchange listing, and where Continua's data comes from.">
-      <SubWidget number="8.1" title="Key Information">
+    <ReportSection number={9} title={`${company?.name ?? symbol} Company Information`} intro="Employee count, exchange listing, and where Continua's data comes from.">
+      <SubWidget number="9.1" title="Key Information">
         {isLoading ? <p className="text-xs text-muted-foreground py-4">Loading…</p> : (
           <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-[12px]">
             <Row label="Name" value={company?.name ?? symbol} />
@@ -37,15 +38,21 @@ export function CompanyInfoSection({ symbol, exchange, marketCap }: Props) {
         {company?.description && <p className="text-[11.5px] text-muted-foreground mt-4 leading-relaxed">{company.description}</p>}
       </SubWidget>
 
-      <SubWidget number="8.2" title="Number of Employees" description="Continua's data layer gives a current employee count, not a multi-year history yet.">
-        {company?.employees ? (
-          <p className="text-2xl font-bold tabular">{company.employees}</p>
-        ) : (
-          <p className="text-xs text-muted-foreground py-4">No employee count on file for {symbol} yet.</p>
-        )}
+      <SubWidget number="9.2" title="Number of Employees" description="Continua's data layer gives a current employee count, not a multi-year history yet — chart currently plots one real point.">
+        <div className="h-40">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={company?.employees ? [{ period: "Current", employees: parseFloat(company.employees.replace(/[^0-9.]/g, "")) || 0 }] : []}>
+              <XAxis dataKey="period" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={32} />
+              <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }} />
+              <Area type="monotone" dataKey="employees" stroke="hsl(160 84% 58%)" fill="hsl(160 84% 58%)" fillOpacity={0.3} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+        {!company?.employees && <p className="text-xs text-muted-foreground mt-1">No employee count on file for {symbol} yet.</p>}
       </SubWidget>
 
-      <SubWidget number="8.3" title="Data Sources" description="Where Continua's numbers in this report actually come from.">
+      <SubWidget number="9.3" title="Data Sources" description="Where Continua's numbers in this report actually come from.">
         <div className="space-y-2 text-[12px]">
           <SourceRow pkg="Market Prices" data="NSE end-of-day feed" note="Live and historical daily candles" />
           <SourceRow pkg="Company Financials" data="Continua's NSE announcement scraper" note="Income statement, balance sheet, cash flow — from scraped and parsed PDF filings" />

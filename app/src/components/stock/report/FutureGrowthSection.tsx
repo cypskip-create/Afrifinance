@@ -1,9 +1,14 @@
-import { ReportSection } from "./ReportSection";
+import { useState, useMemo } from "react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { fx } from "@/lib/chartPalette";
+import { BarChartBlock } from "@/components/charts/BarChartBlock";
+import { ReportSection, SubWidget } from "./ReportSection";
 import { CriteriaChecklist } from "./CriteriaChecklist";
 import { KeyInfoUpdates } from "./KeyInfoUpdates";
 import { useStockFinancials } from "@/hooks/useStockFinancials";
 
 interface Props { symbol: string }
+type Metric = "revenue" | "earnings" | "eps";
 
 function pctChange(latest: number, prior: number): number | null {
   if (prior === 0) return null;
@@ -13,13 +18,30 @@ function pctChange(latest: number, prior: number): number | null {
 /** Continua has no analyst forward-estimates feed, so — same as Simply
  *  Wall St shows for thinly-covered NSE stocks — this section is
  *  honestly mostly "n/a" rather than guessed. The one real thing shown
- *  is trailing (already-reported) growth, clearly labeled as such. */
+ *  is trailing (already-reported) growth: both as headline figures and
+ *  as a real multi-year chart (financialsApi.getHistory), clearly
+ *  labeled as trailing rather than a forecast. The chart renders its
+ *  frame immediately and just shows "no history on file yet" until
+ *  there are at least two fiscal years of real data to plot. */
 export function FutureGrowthSection({ symbol }: Props) {
+  const [metric, setMetric] = useState<Metric>("revenue");
   const { history, isLoading } = useStockFinancials(symbol);
   const [latest, prior] = [...history].sort((a, b) => b.fiscalYear - a.fiscalYear);
   const earningsGrowth = latest && prior ? pctChange(latest.netIncome, prior.netIncome) : null;
   const epsGrowth = latest && prior ? pctChange(latest.eps, prior.eps) : null;
   const revenueGrowth = latest && prior ? pctChange(latest.revenue, prior.revenue) : null;
+
+  const chronological = useMemo(() => [...history].sort((a, b) => a.fiscalYear - b.fiscalYear), [history]);
+  const chartData = chronological.map((r) => ({
+    year: String(r.fiscalYear),
+    Revenue: +(r.revenue / 1e9).toFixed(2),
+    Earnings: +(r.netIncome / 1e9).toFixed(2),
+    EPS: r.eps,
+  }));
+  const key = metric === "revenue" ? "Revenue" : metric === "earnings" ? "Earnings" : "EPS";
+  const color = metric === "revenue" ? fx.revenue : metric === "earnings" ? fx.earnings : fx.eps;
+  const yFmt = (v: number) => (metric === "eps" ? v.toFixed(1) : `${v}B`);
+  const tipFmt = (v: number) => (metric === "eps" ? `KES ${v}` : `KES ${v}B`);
 
   return (
     <ReportSection number={2} title="Future Growth">
@@ -44,6 +66,30 @@ export function FutureGrowthSection({ symbol }: Props) {
           updatesTitle="Recent future growth updates"
         />
       )}
+
+      <SubWidget number="2.1" title="Trailing Growth History" description="Real, already-reported revenue, earnings, and EPS by fiscal year — not a projection.">
+        {isLoading ? (
+          <div className="h-64 flex items-center justify-center"><p className="text-xs text-muted-foreground">Loading financial history…</p></div>
+        ) : chartData.length === 0 ? (
+          <div className="h-64 flex items-center justify-center"><p className="text-xs text-muted-foreground">No financial history on file for {symbol} yet.</p></div>
+        ) : (
+          <BarChartBlock
+            title=""
+            annual={chartData}
+            xKey="year"
+            series={[{ key, label: metric === "eps" ? "EPS" : key, color }]}
+            yFmt={yFmt}
+            valueFmt={(v) => tipFmt(v)}
+            right={
+              <ToggleGroup type="single" size="sm" value={metric} onValueChange={(v) => v && setMetric(v as Metric)}>
+                <ToggleGroupItem value="revenue" className="h-6 text-[10px] px-2">Revenue</ToggleGroupItem>
+                <ToggleGroupItem value="earnings" className="h-6 text-[10px] px-2">Earnings</ToggleGroupItem>
+                <ToggleGroupItem value="eps" className="h-6 text-[10px] px-2">EPS</ToggleGroupItem>
+              </ToggleGroup>
+            }
+          />
+        )}
+      </SubWidget>
 
       <p className="text-[11px] text-muted-foreground">
         In this section Simply Wall St presents revenue and earnings growth projections based on consensus

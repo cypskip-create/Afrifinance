@@ -24,6 +24,7 @@ import { ValuationSection } from "@/components/stock/report/ValuationSection";
 import { FutureGrowthSection } from "@/components/stock/report/FutureGrowthSection";
 import { PastPerformanceSection } from "@/components/stock/report/PastPerformanceSection";
 import { FinancialHealthSection } from "@/components/stock/report/FinancialHealthSection";
+import { RiskSection } from "@/components/stock/report/RiskSection";
 import { DividendsSection } from "@/components/stock/report/DividendsSection";
 import { ManagementSection } from "@/components/stock/report/ManagementSection";
 import { OwnershipSection } from "@/components/stock/report/OwnershipSection";
@@ -292,7 +293,7 @@ export default function StockDetail() {
   // rather than fabricated, so the research tabs stay useful without
   // silently mixing invented numbers into what looks like real disclosure.
   const { history: liveDividendHistory } = useDividendHistory(upperSymbol || undefined);
-  const { ownership: liveOwnership, topShareholders: liveTopShareholders } = useOwnership(upperSymbol || undefined);
+  const { ownership: liveOwnership, topShareholders: liveTopShareholders, isLoading: ownershipLoading } = useOwnership(upperSymbol || undefined);
   const liveFundamentals = {
     ...fundamentals,
     dividendHistory: liveDividendHistory.length > 0 ? liveDividendHistory : fundamentals.dividendHistory,
@@ -300,8 +301,6 @@ export default function StockDetail() {
     // but Fundamentals.payoutRatio is a whole-number percent — same unit
     // mismatch as dividendYield above.
     payoutRatio: liveResearch?.ratios.payoutRatio != null ? liveResearch.ratios.payoutRatio * 100 : fundamentals.payoutRatio,
-    ownership: liveOwnership.length > 0 ? liveOwnership : fundamentals.ownership,
-    topShareholders: liveTopShareholders.length > 0 ? liveTopShareholders : fundamentals.topShareholders,
   };
   const stockNews = getMediaItemsForSymbol(symbol || "");
   // Opens the full story on the TradersHub Media tab. Passes where we came from
@@ -754,10 +753,11 @@ export default function StockDetail() {
                 { id: "rpt-2", label: "2. Future Growth" },
                 { id: "rpt-3", label: "3. Past Performance" },
                 { id: "rpt-4", label: "4. Financial Health" },
-                { id: "rpt-5", label: "5. Dividend" },
-                { id: "rpt-6", label: "6. Management" },
-                { id: "rpt-7", label: "7. Ownership" },
-                { id: "rpt-8", label: "8. Company Info" },
+                { id: "rpt-5", label: "5. Risk" },
+                { id: "rpt-6", label: "6. Dividend" },
+                { id: "rpt-7", label: "7. Management" },
+                { id: "rpt-8", label: "8. Ownership" },
+                { id: "rpt-9", label: "9. Company Info" },
                 { id: "rpt-technicals", label: "Technicals" },
               ].map(({ id, label }) => (
                 <button
@@ -778,10 +778,11 @@ export default function StockDetail() {
             <div id="rpt-2" className="scroll-mt-40"><FutureGrowthSection symbol={symbol || ""} /></div>
             <div id="rpt-3" className="scroll-mt-40"><PastPerformanceSection symbol={symbol || ""} currency={exchangeMeta.currency} /></div>
             <div id="rpt-4" className="scroll-mt-40"><FinancialHealthSection symbol={symbol || ""} currency={exchangeMeta.currency} /></div>
-            <div id="rpt-5" className="scroll-mt-40"><DividendsSection symbol={symbol || ""} currency={exchangeMeta.currency} divYield={divYield} annualDividend={stock.dividend} /></div>
-            <div id="rpt-6" className="scroll-mt-40"><ManagementSection symbol={symbol || ""} /></div>
-            <div id="rpt-7" className="scroll-mt-40"><OwnershipSection fundamentals={liveFundamentals} /></div>
-            <div id="rpt-8" className="scroll-mt-40"><CompanyInfoSection symbol={symbol || ""} exchange={exchangeMeta.code} marketCap={stock.marketCap} /></div>
+            <div id="rpt-5" className="scroll-mt-40"><RiskSection symbol={symbol || ""} /></div>
+            <div id="rpt-6" className="scroll-mt-40"><DividendsSection symbol={symbol || ""} currency={exchangeMeta.currency} divYield={divYield} annualDividend={stock.dividend} /></div>
+            <div id="rpt-7" className="scroll-mt-40"><ManagementSection symbol={symbol || ""} /></div>
+            <div id="rpt-8" className="scroll-mt-40"><OwnershipSection ownership={liveOwnership} topShareholders={liveTopShareholders} isLoading={ownershipLoading} /></div>
+            <div id="rpt-9" className="scroll-mt-40"><CompanyInfoSection symbol={symbol || ""} exchange={exchangeMeta.code} marketCap={stock.marketCap} /></div>
             <div id="rpt-technicals" className="scroll-mt-40 space-y-2">
               <p className="text-[11px] text-muted-foreground">
                 Technicals and the Institutional Scorecard below aren't part of Simply Wall St's report —

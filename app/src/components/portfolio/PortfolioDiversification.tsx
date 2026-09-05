@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Sankey, ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Layer, Rectangle } from "recharts";
+import { tooltipStyle } from "@/lib/chartPalette";
 import { InfoTip } from "./InfoTip";
 
 interface HoldingLike {
@@ -82,7 +83,7 @@ export function PortfolioDiversification({ holdings, showValues = true, currency
             >
               <Tooltip
                 formatter={(v: number) => [showValues ? `${currencyLabel}${v.toLocaleString("en-US", { maximumFractionDigits: 0 })}` : "••••", ""]}
-                contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
+                contentStyle={tooltipStyle}
               />
             </Sankey>
           </ResponsiveContainer>
@@ -105,7 +106,7 @@ export function PortfolioDiversification({ holdings, showValues = true, currency
                   `${(entry?.payload as { pct: number })?.pct.toFixed(1)}% · ${showValues ? `${currencyLabel}${v.toLocaleString("en-US", { maximumFractionDigits: 0 })}` : "••••"}`,
                   (entry?.payload as { fullName: string })?.fullName,
                 ]}
-                contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
+                contentStyle={tooltipStyle}
               />
             </PieChart>
           </ResponsiveContainer>

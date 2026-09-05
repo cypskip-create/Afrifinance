@@ -45,13 +45,19 @@ export function PortfolioScorecard({ holdings, research, valuations, benchmark, 
     scores: scoreHolding(h.symbol, research[h.symbol.toUpperCase()], valuations[h.symbol.toUpperCase()], benchmark, dividendData[h.symbol.toUpperCase()]),
   }));
 
-  const axisAverage = (axis: Axis) => {
+  // Returns null (not 0) when no holding has real data for this axis — a
+  // portfolio-wide "no data" case is never shown as a real score of zero.
+  const axisAverage = (axis: Axis): number | null => {
     const vals = perHolding.map((h) => h.scores[axis]).filter((v): v is number => v != null);
-    if (vals.length === 0) return 0;
+    if (vals.length === 0) return null;
     return vals.reduce((a, b) => a + b, 0) / vals.length;
   };
 
-  const radarData = AXES.map((axis) => ({ metric: axis.toUpperCase(), v: axisAverage(axis) }));
+  // The radar still needs a numeric point per axis to keep the five-point
+  // snowflake shape recognizable, so a missing axis plots at the chart's
+  // origin (0) — but the headline readout below never states that as a
+  // real "0.00 / 6" score; see the ?? null check there.
+  const radarData = AXES.map((axis) => ({ metric: axis.toUpperCase(), v: axisAverage(axis) ?? 0 }));
 
   const ranked = [...perHolding]
     .filter((h) => h.scores[selected] != null)
@@ -108,7 +114,7 @@ export function PortfolioScorecard({ holdings, research, valuations, benchmark, 
         ))}
       </div>
 
-      <p className="text-[15px] font-bold font-serif">{selected} <span className="text-muted-foreground font-sans text-[13px] font-normal">{axisAverage(selected).toFixed(2)} / 6</span></p>
+      <p className="text-[15px] font-bold font-serif">{selected} <span className="text-muted-foreground font-sans text-[13px] font-normal">{axisAverage(selected) != null ? `${axisAverage(selected)!.toFixed(2)} / 6` : "No data"}</span></p>
       <p className="text-[11px] text-muted-foreground mb-3">{AXIS_DESCRIPTIONS[selected]}</p>
 
       {ranked.length === 0 ? (

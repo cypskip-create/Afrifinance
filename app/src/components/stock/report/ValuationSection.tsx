@@ -1,30 +1,43 @@
-import { PieChart, Pie, Cell } from "recharts";
+import { useQuery } from "@tanstack/react-query";
+import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ReferenceLine } from "recharts";
 import { ReportSection, SubWidget } from "./ReportSection";
 import { CriteriaChecklist } from "./CriteriaChecklist";
 import { useValuation } from "@/hooks/useValuation";
 import { useResearch } from "@/hooks/useResearch";
 import { useSectorPeers } from "@/hooks/useSectorPeers";
 import { useMarketBenchmark } from "@/hooks/useMarketBenchmark";
+import { historicalApi } from "@/api/historicalApi";
+import { fx } from "@/lib/chartPalette";
 
 interface Props { symbol: string; name: string; sector: string; price: number; currency: string }
 
-function FairValueBar({ price, fair, currency }: { price: number; fair: number; currency: string }) {
-  const pct = ((fair - price) / price) * 100;
-  const max = Math.max(price, fair) * 1.3;
+// Fixed chart heights so every widget reserves the same real estate
+// whether or not data has arrived yet — matching Simply Wall St's layout,
+// where the chart frame never collapses just because a value is missing.
+const CHART_H_LARGE = 300;   // price/earnings history, analyst targets
+const CHART_H_MEDIUM = 260;  // peer/industry comparisons
+const CHART_H_SMALL = 200;   // donuts, gauges
+
+function FairValueBar({ price, fair, currency }: { price: number; fair: number | null; currency: string }) {
+  const hasFair = fair != null;
+  const pct = hasFair ? ((fair! - price) / price) * 100 : 0;
+  const max = Math.max(price, fair ?? price) * 1.3;
   const priceX = (price / max) * 100;
-  const fairX = (fair / max) * 100;
+  const fairX = hasFair ? ((fair as number) / max) * 100 : null;
   return (
     <div>
-      <p className={`text-2xl font-bold ${pct >= 0 ? "text-bull" : "text-bear"}`}>
-        {Math.abs(pct).toFixed(1)}% <span className="text-sm font-semibold">{pct >= 0 ? "Undervalued" : "Overvalued"}</span>
+      <p className={`text-2xl font-bold ${!hasFair ? "text-muted-foreground" : pct >= 0 ? "text-bull" : "text-bear"}`}>
+        {hasFair ? <>{Math.abs(pct).toFixed(1)}% <span className="text-sm font-semibold">{pct >= 0 ? "Undervalued" : "Overvalued"}</span></> : "N/A"}
       </p>
-      <div className="relative h-16 mt-3 rounded-lg overflow-hidden" style={{ background: "linear-gradient(90deg, #10b981 0%, #10b981 55%, #eab308 75%, #7f1d1d 100%)" }}>
+      <div className="relative h-16 mt-3 rounded-lg overflow-hidden" style={{ background: hasFair ? "linear-gradient(90deg, #10b981 0%, #10b981 55%, #eab308 75%, #7f1d1d 100%)" : "hsl(var(--muted))" }}>
         <div className="absolute top-0 bottom-0 border-l-2 border-white/80" style={{ left: `${Math.min(98, priceX)}%` }}>
           <span className="absolute -top-1 left-1 text-[10px] font-bold text-white bg-black/40 px-1 rounded">Current {currency}{price.toFixed(2)}</span>
         </div>
-        <div className="absolute top-0 bottom-0 border-l-2 border-white" style={{ left: `${Math.min(98, fairX)}%` }}>
-          <span className="absolute bottom-1 left-1 text-[10px] font-bold text-white bg-black/40 px-1 rounded">Fair Value {currency}{fair.toFixed(2)}</span>
-        </div>
+        {hasFair && (
+          <div className="absolute top-0 bottom-0 border-l-2 border-white" style={{ left: `${Math.min(98, fairX!)}%` }}>
+            <span className="absolute bottom-1 left-1 text-[10px] font-bold text-white bg-black/40 px-1 rounded">Fair Value {currency}{fair!.toFixed(2)}</span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -36,11 +49,18 @@ export function ValuationSection({ symbol, name, sector, price, currency }: Prop
   const { data: peers, isLoading: peersLoading } = useSectorPeers(sector);
   const { averages: benchmark } = useMarketBenchmark();
 
+  const priceHistoryQuery = useQuery({
+    queryKey: ["continua", "candles", symbol, "valuation-2y"],
+    queryFn: () => historicalApi.getCandles(symbol, { interval: "1d", from: new Date(Date.now() - 730 * 86_400_000).toISOString().slice(0, 10) }),
+    staleTime: 15 * 60_000,
+  });
+  const priceSeries = (priceHistoryQuery.data ?? []).map((c) => ({ date: c.timestamp.slice(0, 10), price: c.close }));
+
   const bestModel = valuation?.models.find((m) => m.fairValue != null);
   const ratios = research?.ratios;
   const peerRows = (peers ?? []).filter((p) => p.pe != null).sort((a, b) => (b.pe ?? 0) - (a.pe ?? 0));
   const peerAvg = peerRows.length > 0 ? peerRows.reduce((s, p) => s + (p.pe ?? 0), 0) / peerRows.length : null;
-  const maxPeerPe = Math.max(1, ...peerRows.map((p) => p.pe ?? 0));
+  const peerChartData = peerRows.slice(0, 8).map((p) => ({ symbol: p.symbol, pe: p.pe ?? 0, isSelf: p.symbol === symbol }));
 
   const checks = [
     { label: "Trading below fair value", status: bestModel ? (bestModel.upsidePercent! > 0 ? "pass" as const : "fail" as const) : "unknown" as const },
@@ -56,76 +76,111 @@ export function ValuationSection({ symbol, name, sector, price, currency }: Prop
       />
 
       <SubWidget number="1.1" title="Share Price vs Fair Value" description={`What is the fair price of ${symbol} based on Continua's real valuation models?`}>
-        {valLoading ? <p className="text-xs text-muted-foreground py-6">Loading…</p> : !bestModel ? (
-          <p className="text-xs text-muted-foreground py-6">None of Continua's models could compute a fair value for {symbol} yet.</p>
-        ) : (
-          <FairValueBar price={price} fair={bestModel.fairValue!} currency={currency} />
-        )}
-        <p className="text-[10px] text-muted-foreground mt-2">Model: {bestModel?.model ?? "—"} — Continua doesn't run a discounted cash flow model yet.</p>
+        <FairValueBar price={price} fair={bestModel?.fairValue ?? null} currency={currency} />
+        <p className="text-[10px] text-muted-foreground mt-2">Model: {bestModel?.model ?? "None available yet"} — Continua doesn't run a discounted cash flow model.</p>
       </SubWidget>
 
       <SubWidget number="1.2" title="Key Valuation Metric" description={`Which real metric is available for ${symbol}?`}>
         <div className="flex items-center gap-6">
-          <div className="w-32 h-32 shrink-0">
-            <PieChart width={128} height={128}>
-              <Pie data={[{ v: ratios?.pe ? Math.min(100, (1 / ratios.pe) * 100) : 0 }, { v: 100 }]} dataKey="v" innerRadius={44} outerRadius={60} startAngle={90} endAngle={-270}>
-                <Cell fill="hsl(217 91% 60%)" />
-                <Cell fill="hsl(var(--muted))" />
-              </Pie>
-            </PieChart>
+          <div style={{ width: CHART_H_SMALL, height: CHART_H_SMALL }} className="shrink-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={[{ v: ratios?.pe ? Math.min(100, (1 / ratios.pe) * 100) : 0 }, { v: ratios?.pe ? 100 - Math.min(100, (1 / ratios.pe) * 100) : 100 }]} dataKey="v" innerRadius="68%" outerRadius="92%" startAngle={90} endAngle={-270} stroke="none">
+                  <Cell fill="hsl(217 91% 60%)" />
+                  <Cell fill="hsl(var(--muted))" />
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
           </div>
           <div>
             <p className="text-3xl font-bold tabular">{ratios?.pe != null ? `${ratios.pe.toFixed(1)}x` : "—"}</p>
             <p className="text-[11px] text-muted-foreground">P/E Ratio — used since {symbol} is profitable</p>
-            {ratios?.pb != null && <p className="text-[11px] text-muted-foreground mt-1">P/B Ratio: {ratios.pb.toFixed(2)}x</p>}
+            <p className="text-[11px] text-muted-foreground mt-1">P/B Ratio: {ratios?.pb != null ? `${ratios.pb.toFixed(2)}x` : "—"}</p>
           </div>
         </div>
       </SubWidget>
 
       <SubWidget number="1.3" title="Price to Earnings Ratio vs Peers" description={`How does ${symbol}'s P/E compare to its real NSE sector peers?`}>
-        {peersLoading ? <p className="text-xs text-muted-foreground py-4">Loading peers…</p> : peerRows.length === 0 ? (
-          <p className="text-xs text-muted-foreground py-4">No sector peers with a P/E on file yet.</p>
-        ) : (
-          <div className="space-y-2">
-            {peerAvg != null && <p className="text-[10.5px] text-muted-foreground mb-2">Peer average: {peerAvg.toFixed(1)}x</p>}
-            {peerRows.slice(0, 6).map((p) => (
-              <div key={p.symbol} className="flex items-center gap-2">
-                <span className={`text-[11px] w-14 shrink-0 font-bold ${p.symbol === symbol ? "text-primary" : ""}`}>{p.symbol}</span>
-                <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
-                  <div className={`h-full rounded ${p.symbol === symbol ? "bg-primary" : "bg-bull"}`} style={{ width: `${((p.pe ?? 0) / maxPeerPe) * 100}%` }} />
-                </div>
-                <span className="text-[11px] font-semibold tabular w-12 text-right">{p.pe!.toFixed(1)}x</span>
-              </div>
-            ))}
-          </div>
-        )}
+        {peerAvg != null && <p className="text-[10.5px] text-muted-foreground mb-1">Peer average: {peerAvg.toFixed(1)}x</p>}
+        <div style={{ height: CHART_H_MEDIUM }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={peerChartData} layout="vertical" margin={{ left: 8, right: 16 }}>
+              <XAxis type="number" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="symbol" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={48} />
+              <Tooltip formatter={(v: number) => [`${v.toFixed(1)}x`, "P/E"]} contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }} />
+              {peerAvg != null && <ReferenceLine x={peerAvg} stroke="hsl(38 92% 50%)" strokeDasharray="4 3" />}
+              <Bar dataKey="pe" radius={[0, 4, 4, 0]} maxBarSize={18}>
+                {peerChartData.map((p) => <Cell key={p.symbol} fill={p.isSelf ? "hsl(217 91% 60%)" : "hsl(var(--bull))"} />)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        {!peersLoading && peerChartData.length === 0 && <p className="text-[10px] text-muted-foreground mt-1">No sector peers with a P/E on file yet.</p>}
       </SubWidget>
 
       <SubWidget number="1.4" title="Historical Price to Earnings Ratio" description="Compares a stock's price to its earnings over time.">
-        <p className="text-xs text-muted-foreground py-4">Continua doesn't have a historical P/E time series yet — only the current ratio, shown above.</p>
+        <div style={{ height: CHART_H_LARGE }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={ratios?.pe != null ? [{ x: "Current", pe: ratios.pe }] : []}>
+              <XAxis dataKey="x" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={28} />
+              <Tooltip formatter={(v: number) => [`${v.toFixed(1)}x`, "P/E"]} contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }} />
+              <Line type="monotone" dataKey="pe" stroke={fx.revenue} strokeWidth={2} dot={{ r: 4 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+        <p className="text-[10px] text-muted-foreground mt-1">Only the current ratio is plotted — Continua doesn't have a historical P/E time series yet.</p>
       </SubWidget>
 
       <SubWidget number="1.5" title="Price to Earnings Ratio vs Industry" description={`How does ${symbol}'s P/E compare across its NSE sector?`}>
-        {peerRows.length === 0 ? (
-          <p className="text-xs text-muted-foreground py-4">No sector peers on file yet.</p>
-        ) : (
-          <div className="flex items-end gap-1.5 h-32">
-            {peerRows.map((p) => (
-              <div key={p.symbol} className="flex-1 flex flex-col items-center justify-end h-full">
-                <div className={`w-full rounded-t ${p.symbol === symbol ? "bg-primary" : "bg-bull/60"}`} style={{ height: `${((p.pe ?? 0) / maxPeerPe) * 100}%` }} />
-                <span className="text-[8px] text-muted-foreground mt-1 truncate w-full text-center">{p.symbol}</span>
-              </div>
-            ))}
-          </div>
-        )}
+        <div style={{ height: CHART_H_MEDIUM }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={peerChartData}>
+              <XAxis dataKey="symbol" tick={{ fontSize: 9 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={28} />
+              <Tooltip formatter={(v: number) => [`${v.toFixed(1)}x`, "P/E"]} contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }} />
+              <Bar dataKey="pe" radius={[4, 4, 0, 0]}>
+                {peerChartData.map((p) => <Cell key={p.symbol} fill={p.isSelf ? "hsl(217 91% 60%)" : "hsl(var(--bull) / 0.6)"} />)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        {!peersLoading && peerChartData.length === 0 && <p className="text-[10px] text-muted-foreground mt-1">No sector peers on file yet.</p>}
       </SubWidget>
 
       <SubWidget number="1.6" title="Price to Earnings Ratio vs Fair Ratio" description="The expected P/E given forecast growth, margins and risk — needs analyst estimates Continua doesn't have.">
-        <p className="text-xs text-muted-foreground py-4">Insufficient data — {symbol} has no analyst coverage on file to compute a Fair P/E Ratio.</p>
+        <div style={{ height: CHART_H_SMALL }} className="flex items-center justify-center">
+          <svg viewBox="0 0 200 110" className="w-full max-w-[240px]">
+            <path d="M 20 95 A 80 80 0 0 1 180 95" stroke="hsl(var(--muted))" strokeWidth="10" fill="none" strokeLinecap="round" />
+          </svg>
+        </div>
+        <p className="text-center text-sm font-bold -mt-4">Fair PE: N/A</p>
+        <p className="text-xs text-muted-foreground py-2 text-center">Insufficient data — {symbol} has no analyst coverage on file to compute a Fair P/E Ratio.</p>
       </SubWidget>
 
       <SubWidget number="1.7" title="Analyst Price Targets" description="The analyst 12-month forecast and statistical confidence in the consensus target.">
-        <p className="text-xs text-muted-foreground py-4">No analyst price-target coverage on file for {symbol}.</p>
+        {priceHistoryQuery.isLoading ? (
+          <p className="text-xs text-muted-foreground py-4">Loading price history…</p>
+        ) : priceSeries.length === 0 ? (
+          <p className="text-xs text-muted-foreground py-4">No price history on file for {symbol} yet.</p>
+        ) : (
+          <div style={{ height: CHART_H_LARGE }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={priceSeries}>
+                <XAxis dataKey="date" tick={{ fontSize: 9 }} axisLine={false} tickLine={false} interval={Math.max(0, Math.floor(priceSeries.length / 5) - 1)} />
+                <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={36} domain={["auto", "auto"]} />
+                <Tooltip formatter={(v: number) => [`${currency}${v.toFixed(2)}`, "Price"]} contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }} />
+                <Area type="monotone" dataKey="price" stroke={fx.revenue} fill={fx.revenue} fillOpacity={0.15} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+        <div className="grid grid-cols-3 gap-2 mt-2 text-center">
+          <div><p className="text-[9.5px] text-muted-foreground">Analysts</p><p className="text-sm font-bold tabular">0</p></div>
+          <div><p className="text-[9.5px] text-muted-foreground">Avg 1Y Target</p><p className="text-sm font-bold tabular">N/A</p></div>
+          <div><p className="text-[9.5px] text-muted-foreground">Agreement</p><p className="text-sm font-bold tabular">N/A</p></div>
+        </div>
+        <p className="text-[10px] text-muted-foreground mt-2">The line above is real historical price — Continua has no analyst 12-month forecast feed, so no forecast cone is drawn.</p>
       </SubWidget>
     </ReportSection>
   );

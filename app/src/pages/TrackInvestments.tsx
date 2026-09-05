@@ -12,7 +12,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 
-import { getPrice as getSharedPrice, getDayChange, getDivYield, computePortfolioStats } from "@/lib/stockPrices";
+import { getPrice as getSharedPrice, getDayChange, computePortfolioStats } from "@/lib/stockPrices";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ReturnsBreakdown } from "@/components/portfolio/ReturnsBreakdown";
 import { ReturnsContributors } from "@/components/portfolio/ReturnsContributors";
@@ -116,25 +116,28 @@ export default function TrackInvestments() {
 
   const activeAlloc = allocationMode === "asset" ? assetAlloc : sectorAlloc;
 
-  // ── RETURNS ──
-  // Unrealized P&L is the one figure Continua can compute with full
-  // confidence today (live price vs avg cost). Realized P&L and currency
-  // effects need closed-lot / multi-currency tracking we don't have yet,
-  // so those columns honestly show "No Data" rather than a fabricated
-  // number — same convention DividendTracker already uses for yield.
-  const dividendIncome = useMemo(() => {
-    return holdings.reduce((sum, h) => {
-      const yieldPct = getDivYield(h.symbol);
-      if (!yieldPct) return sum;
-      return sum + (h.price * yieldPct) / 100 * h.shares;
-    }, 0);
-  }, [holdings]);
-
   // ── VALUATIONS ──
   // Real, per-symbol model-based fair values (see usePortfolioValuations),
   // fetched in parallel for every distinct holding.
   const { valuations, isLoading: valuationsLoading } = usePortfolioValuations(holdings.map(h => h.symbol));
   const { data: dividendData } = usePortfolioDividends(holdings.map(h => h.symbol));
+
+  // ── RETURNS ──
+  // Unrealized P&L is the one figure Continua can compute with full
+  // confidence today (live price vs avg cost). Realized P&L and currency
+  // effects need closed-lot / multi-currency tracking we don't have yet,
+  // so those columns honestly show "No Data" rather than a fabricated
+  // number. Dividends use the same real, confirmed trailing-12m payout
+  // data (usePortfolioDividends) that Dividend Quality/Forecast/History
+  // already render below — not the legacy hardcoded DIV_YIELD table,
+  // which never reflects an actual reported payout.
+  const dividendIncome = useMemo(() => {
+    return holdings.reduce((sum, h) => {
+      const d = dividendData[h.symbol.toUpperCase()];
+      if (!d) return sum;
+      return sum + d.ttmPerShare * h.shares;
+    }, 0);
+  }, [holdings, dividendData]);
   const { research, isLoading: researchLoading } = usePortfolioResearch(holdings.map(h => h.symbol));
   const { averages: marketBenchmark, isLoading: benchmarkLoading } = useMarketBenchmark();
   const { items: updateItems, recentCounts: updateCounts, isLoading: updatesLoading } = usePortfolioUpdates(holdings.map(h => h.symbol));

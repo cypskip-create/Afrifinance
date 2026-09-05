@@ -7,7 +7,7 @@ import {
   Cell,
   Tooltip,
 } from "recharts";
-import { fx } from "@/lib/chartPalette";
+import { fx, tooltipStyle } from "@/lib/chartPalette";
 
 export interface ReturnsBreakdownFigure {
   label: string;
@@ -102,12 +102,7 @@ export function ReturnsBreakdown({
             <XAxis dataKey="name" hide />
             <Tooltip
               cursor={{ fill: "hsl(var(--muted) / 0.3)" }}
-              contentStyle={{
-                background: "hsl(var(--popover))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: 8,
-                fontSize: 11,
-              }}
+              contentStyle={tooltipStyle}
               formatter={(_: number, __: string, entry) => {
                 const raw = (entry.payload as { raw: number | null }).raw;
                 return [raw === null ? "No Data" : (showValues ? fmt(raw, currencyLabel) : "••••"), ""];

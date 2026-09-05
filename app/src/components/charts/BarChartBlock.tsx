@@ -19,7 +19,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  ChartPeriod, lastAnnual, toQuarterly, ANNUAL_PERIODS, QUARTERLY_PERIODS,
+  ChartPeriod, lastAnnual, lastQuarterly, ANNUAL_PERIODS, QUARTERLY_PERIODS,
 } from "@/lib/chartPeriods";
 
 export interface BarSeries {
@@ -33,9 +33,11 @@ interface Props {
   title: string;
   /** Annual rows (full history — trimmed internally to the last 3). */
   annual: any[];
-  /** Enables the Annual / Quarterly dropdown when true. */
+  /** Shows the Annual / Quarterly dropdown, but only once real `quarterly`
+   *  rows are supplied — there is no fabricated fallback, so passing this
+   *  true with no `quarterly` data has no visible effect. */
   allowQuarterly?: boolean;
-  /** Explicit quarterly rows; otherwise derived from `annual`. */
+  /** Real quarterly rows (from a quarterly-period financials fetch). */
   quarterly?: any[];
   xKey: string;
   series: BarSeries[];
@@ -61,15 +63,14 @@ export function BarChartBlock({
   const [period, setPeriod] = useState<ChartPeriod>("annual");
   const [active, setActive] = useState<number | null>(null);
 
-  const numericKeys = useMemo(() => series.map(s => s.key), [series]);
+  const hasQuarterly = !!quarterly && quarterly.length > 0;
 
   const data = useMemo(() => {
-    if (period === "quarterly") {
-      const q = quarterly ?? toQuarterly(annual, numericKeys, xKey, QUARTERLY_PERIODS);
-      return q.slice(-QUARTERLY_PERIODS);
+    if (period === "quarterly" && hasQuarterly) {
+      return lastQuarterly(quarterly!, QUARTERLY_PERIODS);
     }
     return lastAnnual(annual, annualCount ?? ANNUAL_PERIODS);
-  }, [period, annual, quarterly, numericKeys, xKey, annualCount]);
+  }, [period, annual, quarterly, hasQuarterly, annualCount]);
 
   const idx = active !== null && active < data.length ? active : data.length - 1;
   const row = data[idx];
@@ -83,7 +84,7 @@ export function BarChartBlock({
         <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{title}</p>
         <div className="flex items-center gap-1.5">
           {right}
-          {allowQuarterly && (
+          {allowQuarterly && hasQuarterly && (
             <Select value={period} onValueChange={(v) => { setPeriod(v as ChartPeriod); setActive(null); }}>
               <SelectTrigger className="h-6 w-[92px] text-[10px] px-2 rounded-md border-border/70" aria-label="Reporting period">
                 <SelectValue />

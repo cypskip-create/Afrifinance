@@ -72,7 +72,7 @@ export default function Watchlist() {
   const searchResults = useMemo(() => {
     if (!query.trim()) return instruments;
     const q = query.trim().toLowerCase();
-    return instruments.filter(s => s.symbol.toLowerCase().includes(q) || s.name.toLowerCase().includes(q));
+    return instruments.filter(s => s.symbol.toLowerCase().includes(q) || s.companyName.toLowerCase().includes(q));
   }, [query, instruments]);
 
   const handleAdd = async (symbol: string, name: string) => {
@@ -285,14 +285,14 @@ export default function Watchlist() {
                 <div key={s.symbol} className="flex items-center justify-between gap-3 py-2.5 border-b border-border/40 last:border-0">
                   <div className="min-w-0">
                     <p className="text-[13px] font-bold">{s.symbol}</p>
-                    <p className="text-[11px] text-muted-foreground truncate">{s.name}</p>
+                    <p className="text-[11px] text-muted-foreground truncate">{s.companyName}</p>
                   </div>
                   <Button
                     size="sm"
                     variant={already ? "outline" : "default"}
                     className="h-8 rounded-full text-[12px] shrink-0"
                     disabled={already}
-                    onClick={() => handleAdd(s.symbol, s.name)}
+                    onClick={() => handleAdd(s.symbol, s.companyName)}
                   >
                     {already ? "Added" : "Add"}
                   </Button>

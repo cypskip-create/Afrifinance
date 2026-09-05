@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
  */
 export type CommunityReaction =
   | "bullish" | "bearish" | "strong_hold" | "insightful" | "watch" | "fire" | "laugh" | "love"
+  | "thumbs_up" | "thumbs_down"
   // legacy
   | "cautious" | "support" | "disagree";
 

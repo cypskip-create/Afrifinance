@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Info, ExternalLink, TrendingUp, DollarSign, FileText, AlertCircle, Newspaper } from "lucide-react";
+import { Info, ExternalLink, TrendingUp, DollarSign, FileText, AlertCircle } from "lucide-react";
 import { InfoTip } from "./InfoTip";
 import type { PortfolioUpdateItem, UpdateCategory } from "@/hooks/usePortfolioUpdates";
 
@@ -14,7 +14,6 @@ const CATEGORIES: { key: UpdateCategory | "all"; label: string; icon: typeof Tre
   { key: "earnings", label: "Earnings", icon: TrendingUp },
   { key: "dividends", label: "Dividends", icon: DollarSign },
   { key: "filings", label: "Company Filings", icon: FileText },
-  { key: "news", label: "Market News", icon: Newspaper },
 ];
 
 function timeAgo(iso: string) {
