@@ -13,6 +13,7 @@ import cron, { type ScheduledTask } from "node-cron";
 import { listEnabledSources } from "../storage/sourcesRepository.js";
 import { crawlSource } from "../crawler/crawlSource.js";
 import { hasRegisteredAdapter, runRegisteredAdapter } from "../adapters/registry.js";
+import { sweepUnextractedArtifacts } from "../extraction/extractionSweep.js";
 import { env } from "../config/index.js";
 import { logger } from "../monitoring/logger.js";
 import type { Source } from "../types.js";
@@ -59,6 +60,22 @@ export async function startScheduler(): Promise<ScheduledTask[]> {
     });
     scheduledTasks.push(task);
     logger.info({ sourceId: source.id, adapter: source.adapter, cronExpression }, "Scheduled source");
+  }
+
+  // Independent of any one source: catches up generic-crawled artifacts
+  // (every source without a registered adapter — see registry.ts) that
+  // crawlSource.ts stored but never extracted. Runs regardless of which
+  // sources are configured, so it doesn't need its own per-source setup.
+  if (cron.validate(env.EXTRACTION_SWEEP_CRON)) {
+    const sweepTask = cron.schedule(env.EXTRACTION_SWEEP_CRON, () => {
+      void sweepUnextractedArtifacts(env.EXTRACTION_SWEEP_BATCH_SIZE).catch((err) =>
+        logger.error({ err }, "Scheduled extraction sweep failed"),
+      );
+    });
+    scheduledTasks.push(sweepTask);
+    logger.info({ cronExpression: env.EXTRACTION_SWEEP_CRON }, "Scheduled extraction sweep");
+  } else {
+    logger.warn({ cronExpression: env.EXTRACTION_SWEEP_CRON }, "Invalid EXTRACTION_SWEEP_CRON — extraction sweep not scheduled");
   }
 
   return scheduledTasks;

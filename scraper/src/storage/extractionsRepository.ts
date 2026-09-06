@@ -67,6 +67,53 @@ export async function insertExtraction(input: NewExtraction): Promise<Extraction
   return mapRow(row);
 }
 
+export interface UnextractedArtifact {
+  artifactId: number;
+  sourceId: string;
+  adapter: string;
+  contentType: string | null;
+  storagePath: string;
+  documentUrl: string;
+}
+
+/**
+ * Artifacts with zero extraction rows at all — distinct from
+ * listNeedsReview() below, which is about extractions that ran but came
+ * back low-confidence. This is for artifacts that never got a chance to
+ * run: today that's every raw_artifact stored via the generic crawler
+ * (crawler/crawlSource.ts stores bytes for provenance but doesn't invoke
+ * extraction itself — only the adapter-based runAdapter.ts path does).
+ * extractionSweep.ts uses this to catch generic-crawled PDFs/HTML up
+ * with the same extraction adapter-based sources already get for free.
+ */
+export async function findUnextracted(limit = 50): Promise<UnextractedArtifact[]> {
+  const res = await query<{
+    artifact_id: number;
+    source_id: string;
+    adapter: string;
+    content_type: string | null;
+    storage_path: string;
+    document_url: string;
+  }>(
+    `SELECT a.id as artifact_id, a.source_id, a.adapter, a.content_type, a.storage_path, a.document_url
+     FROM scraping.raw_artifacts a
+     LEFT JOIN scraping.extractions e ON e.artifact_id = a.id
+     WHERE e.id IS NULL
+       AND (a.content_type ILIKE '%pdf%' OR a.content_type ILIKE '%html%')
+     ORDER BY a.discovered_at ASC
+     LIMIT $1`,
+    [limit],
+  );
+  return res.rows.map((row) => ({
+    artifactId: row.artifact_id,
+    sourceId: row.source_id,
+    adapter: row.adapter,
+    contentType: row.content_type,
+    storagePath: row.storage_path,
+    documentUrl: row.document_url,
+  }));
+}
+
 export async function findLatestExtraction(artifactId: number): Promise<Extraction | null> {
   const res = await query<ExtractionSqlRow>(
     `SELECT * FROM scraping.extractions WHERE artifact_id = $1 ORDER BY extracted_at DESC LIMIT 1`,

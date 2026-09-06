@@ -10,6 +10,7 @@ import { nseAnnouncementsAdapter } from "../adapters/nse/announcementsAdapter.js
 import { createRssFeedAdapter } from "../adapters/rss/createRssFeedAdapter.js";
 import { listNeedsReview } from "../storage/extractionsRepository.js";
 import { reprocessArtifact } from "../extraction/reprocessArtifact.js";
+import { sweepUnextractedArtifacts } from "../extraction/extractionSweep.js";
 import { getCrawlStatus } from "../monitoring/crawlStatus.js";
 
 export function createServer() {
@@ -148,6 +149,22 @@ export function createServer() {
     } catch (err) {
       logger.error({ err, artifactId }, "Reprocessing failed");
       res.status(500).json({ error: "reprocess_failed", message: (err as Error).message });
+    }
+  });
+
+  // Manual trigger for the extraction sweep (also runs on its own cron —
+  // see scheduler.ts) — catches up any generic-crawled artifact
+  // (CMA Kenya, Central Bank of Kenya, company IR pages, ...) that was
+  // stored but never extracted, since the generic crawler only stores
+  // bytes and doesn't parse them itself.
+  app.post("/extractions/sweep", async (req, res) => {
+    try {
+      const limit = req.body?.limit ?? 50;
+      const summary = await sweepUnextractedArtifacts(limit);
+      res.json(summary);
+    } catch (err) {
+      logger.error({ err }, "Extraction sweep failed");
+      res.status(500).json({ error: "sweep_failed", message: (err as Error).message });
     }
   });
 

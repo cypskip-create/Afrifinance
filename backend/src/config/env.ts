@@ -30,9 +30,27 @@ const EnvSchema = z.object({
   CACHE_DRIVER: z.enum(["memory", "redis"]).default("memory"),
   REDIS_URL: z.string().optional(),
 
-  NSE_CLIENT_MODE: z.enum(["mock", "live"]).default("mock"),
+  NSE_CLIENT_MODE: z.enum(["mock", "live", "afx"]).default("mock"),
   NSE_API_BASE_URL: z.string().optional(),
   NSE_API_KEY: z.string().optional(),
+
+  // ── AFX client (afx.kwayisi.org) ───────────────────────────────────
+  // A free public source, not a licensed feed — fetched by scraping
+  // individual stock pages directly (adapters/afx/afxClient.ts), NOT
+  // through the scraper service's compliance pipeline (robots.txt /
+  // rate limiting / licensing metadata all live inline in the client
+  // itself instead, since it's a live per-request client rather than a
+  // discover/fetch/parse crawl job). Deliberately polled far slower than
+  // PRICE_POLL_INTERVAL_MS — that interval is sized for a real licensed
+  // push/poll feed, not a public HTML page meant for human readers.
+  AFX_MIN_REQUEST_INTERVAL_MS: z.coerce.number().default(1000), // 1 req/sec ceiling across all symbols
+  AFX_POLL_INTERVAL_MS: z.coerce.number().default(300_000), // 5 min — see note above
+  // Comma-separated tickers this client will serve, since afx.kwayisi.org
+  // has no verified listing/index page to enumerate the market from (only
+  // individual pages like /nse/cgen.html were ever actually inspected).
+  // Left unset = falls back to the tickers already known to this codebase
+  // (adapters/nse/nseClient.ts's SEED list) rather than guessing others.
+  AFX_TICKERS: z.string().optional(),
 
   // ── Mansa API ───────────────────────────────────────────────────────
   // Pan-African market data (mansaapi.com) — the live data source behind

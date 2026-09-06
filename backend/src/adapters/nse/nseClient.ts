@@ -20,6 +20,7 @@ import type {
   NseRawSecurity, NseRawQuote, NseRawCandle, NseRawCompanyProfile,
   NseRawFinancialPeriod, NseRawCorporateAction, NseRawEarningsEvent, NseRawOwnership,
 } from "./nseRawTypes.js";
+import { AfxClient } from "../afx/afxClient.js";
 
 export interface INseClient {
   fetchSecurities(): Promise<NseRawSecurity[]>;
@@ -439,5 +440,6 @@ export class RealNseClient implements INseClient {
 }
 
 export function createNseClient(): INseClient {
+  if (env.NSE_CLIENT_MODE === "afx") return new AfxClient();
   return env.NSE_CLIENT_MODE === "live" ? new RealNseClient() : new MockNseClient();
 }

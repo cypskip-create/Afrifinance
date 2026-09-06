@@ -14,6 +14,7 @@
 import { runAdapter, type AdapterRunSummary } from "./runAdapter.js";
 import { nseAnnouncementsAdapter } from "./nse/announcementsAdapter.js";
 import { createRssFeedAdapter } from "./rss/createRssFeedAdapter.js";
+import { kenyanstocksAdapter } from "./kenyanstocks/kenyanstocksAdapter.js";
 import type { SourceAdapter } from "./types.js";
 import type { Source } from "../types.js";
 import type { CrawlSummary } from "../crawler/crawlSource.js";
@@ -23,6 +24,10 @@ type AdapterFactory = (source: Source) => SourceAdapter;
 const adapterFactories: Record<string, AdapterFactory> = {
   nse: () => nseAnnouncementsAdapter,
   rss: (source) => createRssFeedAdapter(source),
+  // Renders with a real headless browser, unlike every other adapter
+  // here — see kenyanstocksAdapter.ts's doc comment for why, and for
+  // what it deliberately does NOT attempt to parse yet.
+  kenyanstocks: () => kenyanstocksAdapter,
 };
 
 export function hasRegisteredAdapter(adapterId: string): boolean {
