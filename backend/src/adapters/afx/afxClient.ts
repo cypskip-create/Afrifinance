@@ -50,6 +50,20 @@ const USER_AGENT = "ContinuaBot/1.0 (+https://github.com/cypskip-create/Continua
 let robotsDisallowedPaths: string[] | null = null;
 let lastRequestAt = 0;
 
+/**
+ * Per-path HTML cache, TTL = AFX_POLL_INTERVAL_MS. This is the actual fix
+ * for a real problem: priceWorker.ts polls every PRICE_POLL_INTERVAL_MS
+ * (default 5s) — sized for a real feed — regardless of which adapter is
+ * behind NSE. Without this cache, fetchQuotes() would hit the network
+ * fresh on every 5-second tick, and the per-request throttle below only
+ * spaces out requests WITHIN one fetchQuotes() call, not BETWEEN separate
+ * calls from priceWorker — so afx.kwayisi.org would get hammered every 5
+ * seconds regardless of AFX_POLL_INTERVAL_MS's intent. Caching here means
+ * the actual network fetch only happens once per AFX_POLL_INTERVAL_MS per
+ * page, no matter how often callers ask.
+ */
+const pageCache = new Map<string, { html: string; fetchedAt: number }>();
+
 async function loadRobotsRules(): Promise<string[]> {
   if (robotsDisallowedPaths) return robotsDisallowedPaths;
   try {
@@ -91,6 +105,11 @@ async function throttle(): Promise<void> {
 }
 
 async function fetchPage(path: string): Promise<string | null> {
+  const cached = pageCache.get(path);
+  if (cached && Date.now() - cached.fetchedAt < env.AFX_POLL_INTERVAL_MS) {
+    return cached.html;
+  }
+
   const allowed = await isAllowed(path);
   if (!allowed) {
     logger.warn({ path }, "AfxClient: path disallowed by robots.txt — skipping");
@@ -101,9 +120,13 @@ async function fetchPage(path: string): Promise<string | null> {
   const res = await fetch(url, { headers: { "User-Agent": USER_AGENT } });
   if (!res.ok) {
     logger.warn({ url, status: res.status }, "AfxClient: fetch failed");
-    return null;
+    // Serve stale cache rather than nothing, if we have it — a transient
+    // failure shouldn't blank out a quote that was fine 4 minutes ago.
+    return cached?.html ?? null;
   }
-  return res.text();
+  const html = await res.text();
+  pageCache.set(path, { html, fetchedAt: Date.now() });
+  return html;
 }
 
 function tickerList(): string[] {
@@ -173,7 +196,7 @@ export class AfxClient implements INseClient {
     return results;
   }
 
-  async fetchCandles(symbol: string, interval: NseRawCandle["Interval"]): Promise<NseRawCandle[]> {
+  async fetchCandles(symbol: string, interval: NseRawCandle["Interval"], from: string, to: string): Promise<NseRawCandle[]> {
     if (interval !== "1D") {
       // Only the 10-day daily history table exists on this source — no
       // intraday granularity to derive 1MIN/5MIN/etc. bars from.
@@ -181,9 +204,12 @@ export class AfxClient implements INseClient {
     }
     const html = await fetchPage(`/nse/${symbol.toLowerCase()}.html`);
     if (!html) return [];
-    const bars = parseAfxDailyHistory(html);
+    const bars = parseAfxDailyHistory(html).filter((bar) => bar.date >= from && bar.date <= to);
     // O=H=L=C is deliberate — see the module doc comment on why this is
-    // an honest "close-only" bar, not a fabricated intraday range.
+    // an honest "close-only" bar, not a fabricated intraday range. Note
+    // this source only ever has ~10 days of history at all — a wider
+    // [from, to] range just yields fewer bars than requested, not an
+    // error, same as any other adapter running out of history.
     return bars.map((bar) => ({
       Symbol: symbol.toUpperCase(),
       Interval: "1D" as const,
