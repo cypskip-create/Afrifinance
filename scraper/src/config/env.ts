@@ -2,10 +2,8 @@ import "dotenv/config";
 import { z } from "zod";
 
 /**
- * `z.coerce.boolean()` is a footgun for env vars: it does `Boolean(value)`,
- * and `Boolean("false")` is `true` in JavaScript — any non-empty string is
- * truthy. That means `SOME_FLAG=false` in a real .env file would silently
- * be read as `true`. This helper actually parses the string instead.
+ * `z.coerce.boolean()` is a footgun for env vars — see continua-data's
+ * env.ts for the full explanation. Same fix here.
  */
 export function booleanEnv(defaultValue: boolean) {
   return z
@@ -15,115 +13,71 @@ export function booleanEnv(defaultValue: boolean) {
 }
 
 /**
- * Every environment variable the system needs, validated once at boot.
- * If something required is missing/malformed, we fail loudly at startup
- * instead of failing weirdly three layers deep at 2am during a price tick.
+ * Every environment variable this service needs, validated once at boot.
+ * This is a SEPARATE service from continua-data (backend/) — it has its
+ * own Railway deployment and its own env vars, even though it talks to
+ * the same Postgres instance.
  */
 const EnvSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-  PORT: z.coerce.number().default(4000),
-  WS_PORT: z.coerce.number().default(4001),
+  PORT: z.coerce.number().default(4100),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
 
+  // Same Postgres instance as continua-data and the app — this service
+  // only ever touches the `scraping` schema within it (see
+  // supabase/migrations/<...> scraping engine foundation schema.sql).
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
 
-  CACHE_DRIVER: z.enum(["memory", "redis"]).default("memory"),
-  REDIS_URL: z.string().optional(),
+  // Where raw artifacts (PDFs, HTML, images, ...) are written. Local disk
+  // is fine for single-instance running; point this at a Supabase Storage
+  // bucket or S3-compatible target once artifact volume outgrows local
+  // disk on the Railway instance.
+  RAW_STORAGE_DRIVER: z.enum(["local", "supabase"]).default("local"),
+  RAW_STORAGE_LOCAL_PATH: z.string().default("./data/raw"),
+  SUPABASE_URL: z.string().optional(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
+  SUPABASE_STORAGE_BUCKET: z.string().default("scraper-raw"),
 
-  NSE_CLIENT_MODE: z.enum(["mock", "live", "afx"]).default("mock"),
-  NSE_API_BASE_URL: z.string().optional(),
-  NSE_API_KEY: z.string().optional(),
+  // Global default politeness settings — per-source overrides live in
+  // scraping.sources.config, this is just the fallback when a source
+  // doesn't specify its own.
+  DEFAULT_REQUESTS_PER_SECOND: z.coerce.number().default(1),
+  DEFAULT_REQUEST_TIMEOUT_MS: z.coerce.number().default(30_000),
+  DEFAULT_MAX_RETRIES: z.coerce.number().default(3),
 
-  // ── AFX client (afx.kwayisi.org) ───────────────────────────────────
-  // A free public source, not a licensed feed — fetched by scraping
-  // individual stock pages directly (adapters/afx/afxClient.ts), NOT
-  // through the scraper service's compliance pipeline (robots.txt /
-  // rate limiting / licensing metadata all live inline in the client
-  // itself instead, since it's a live per-request client rather than a
-  // discover/fetch/parse crawl job). Deliberately polled far slower than
-  // PRICE_POLL_INTERVAL_MS — that interval is sized for a real licensed
-  // push/poll feed, not a public HTML page meant for human readers.
-  AFX_MIN_REQUEST_INTERVAL_MS: z.coerce.number().default(1000), // 1 req/sec ceiling across all symbols
-  AFX_POLL_INTERVAL_MS: z.coerce.number().default(300_000), // 5 min — see note above
-  // Comma-separated tickers this client will serve, since afx.kwayisi.org
-  // has no verified listing/index page to enumerate the market from (only
-  // individual pages like /nse/cgen.html were ever actually inspected).
-  // Left unset = falls back to the tickers already known to this codebase
-  // (adapters/nse/nseClient.ts's SEED list) rather than guessing others.
-  AFX_TICKERS: z.string().optional(),
+  // Safety ceilings (§28) — apply regardless of source config.
+  MAX_RESPONSE_SIZE_BYTES: z.coerce.number().default(50 * 1024 * 1024), // 50MB
+  MAX_CRAWL_DEPTH: z.coerce.number().default(6),
 
-  // ── Mansa API ───────────────────────────────────────────────────────
-  // Pan-African market data (mansaapi.com) — the live data source behind
-  // every exchange adapter in adapters/mansa/. One key covers all
-  // exchanges; ADAPTER_MODE below lets a deployment run entirely on the
-  // NSE mock (no key needed) until a Mansa key is actually issued.
-  MANSA_API_BASE_URL: z.string().default("https://mansaapi.com"),
-  MANSA_API_KEY: z.string().optional(),
-  MANSA_API_IP: z.string().optional(),
-  // "mock" keeps every exchange on the existing seeded NSE mock client
-  // (default — works with zero setup). "live" routes every ACTIVE_EXCHANGES
-  // entry through the Mansa adapter and requires MANSA_API_KEY to be set.
-  ADAPTER_MODE: z.enum(["mock", "live"]).default("mock"),
+  // Phase 1 — crawler identity and politeness.
+  CRAWLER_USER_AGENT: z.string().default("ContinuaBot/0.1 (+https://continua.example/bot)"),
+  RESPECT_ROBOTS_TXT: booleanEnv(true),
 
-  // Which adapter NSE specifically resolves to when ADAPTER_MODE=live.
-  // Default "mansa" preserves existing behavior (NSE alongside every
-  // other ACTIVE_EXCHANGES entry, via MansaAdapter). "nse_client" routes
-  // NSE through NseAdapter instead — i.e. through createNseClient(),
-  // meaning NSE_CLIENT_MODE actually takes effect in live mode. See the
-  // long comment in adapters/registry.ts for why this exists.
-  NSE_ADAPTER_SOURCE: z.enum(["mansa", "nse_client"]).default("mansa"),
+  // Phase 6 — scheduling. Per-source overrides live in
+  // scraping.sources.config.schedule (a cron string); this is only the
+  // fallback for sources that don't specify their own (§19: "do not
+  // hardcode one global interval" — this default exists for convenience,
+  // not because every source should share it).
+  DEFAULT_CRAWL_CRON: z.string().default("0 */6 * * *"), // every 6 hours
+  SCHEDULER_ENABLED: booleanEnv(true),
 
-  PRICE_POLL_INTERVAL_MS: z.coerce.number().default(5000),
-  INDEX_POLL_INTERVAL_MS: z.coerce.number().default(300_000), // 5 min — see workers/indexWorker.ts
-  FINANCIALS_SYNC_CRON: z.string().default("0 2 * * *"),
-  CORPORATE_ACTIONS_SYNC_CRON: z.string().default("0 3 * * *"),
-  ANNOUNCEMENTS_BRIDGE_CRON: z.string().default("*/15 * * * *"), // every 15 min — scraper runs independently; this just catches up whatever it produced
-  FINANCIAL_CANDIDATES_BRIDGE_CRON: z.string().default("*/15 * * * *"), // same cadence as the announcements bridge, same reasoning
-
-  // ── CORS ────────────────────────────────────────────────────────────
-  // Comma-separated list of origins allowed to call this API from a browser
-  // (e.g. "https://afrifinance.lovable.app,https://app.afrifinance.co.ke").
-  // Falls back to the local Vite dev server origin so `npm run dev` keeps
-  // working out of the box. Requests with no Origin header (curl, mobile
-  // apps, server-to-server) are always allowed — CORS only governs browsers,
-  // and this API is separately protected by API keys either way.
-  ALLOWED_ORIGINS: z
-    .string()
-    .optional()
-    .transform((v) =>
-      (v ?? "http://localhost:8080,http://127.0.0.1:8080,https://afrifinance.lovable.app")
-        .split(",")
-        .map((o) => o.trim())
-        .filter(Boolean)
-    ),
-
-  // ── API auth + rate limiting ──────────────────────────────────────────
-  API_KEY_AUTH_ENABLED: booleanEnv(true),
-  // A fixed dev key that bypasses the DB lookup entirely — lets local dev
-  // and CI run against the API before any real key has been issued via
-  // `npm run apikey:create`. Never set this in a production environment;
-  // real callers should get a DB-issued key (revocable, rate-limited,
-  // attributable) instead.
-  DEV_API_KEY: z.string().optional(),
-  RATE_LIMIT_WINDOW_MS: z.coerce.number().default(60_000),
-  RATE_LIMIT_MAX_DEFAULT: z.coerce.number().default(120),
-
-  // ── Trading calendar ───────────────────────────────────────────────────
-  // When true, workers ignore exchange trading hours/days and poll
-  // continuously — useful for demos/tests run outside NSE market hours.
-  IGNORE_TRADING_CALENDAR: booleanEnv(false),
+  // How often to catch up generic-crawled artifacts that were stored but
+  // never extracted (extraction/extractionSweep.ts). Independent of any
+  // one source's own crawl cron — this sweeps across all sources.
+  EXTRACTION_SWEEP_CRON: z.string().default("*/15 * * * *"), // every 15 minutes
+  EXTRACTION_SWEEP_BATCH_SIZE: z.coerce.number().default(50),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
 
 function loadEnv(): Env {
-  const parsed = EnvSchema.safeParse(process.env);
-  if (!parsed.success) {
-    // eslint-disable-next-line no-console
-    console.error("Invalid environment configuration:", parsed.error.flatten().fieldErrors);
+  const result = EnvSchema.safeParse(process.env);
+  if (!result.success) {
+    console.error("Invalid environment configuration:");
+    console.error(result.error.format());
     process.exit(1);
   }
-  return parsed.data;
+  return result.data;
 }
 
 export const env = loadEnv();

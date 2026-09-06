@@ -65,6 +65,14 @@ const EnvSchema = z.object({
   // entry through the Mansa adapter and requires MANSA_API_KEY to be set.
   ADAPTER_MODE: z.enum(["mock", "live"]).default("mock"),
 
+  // Which adapter NSE specifically resolves to when ADAPTER_MODE=live.
+  // Default "mansa" preserves existing behavior (NSE alongside every
+  // other ACTIVE_EXCHANGES entry, via MansaAdapter). "nse_client" routes
+  // NSE through NseAdapter instead — i.e. through createNseClient(),
+  // meaning NSE_CLIENT_MODE actually takes effect in live mode. See the
+  // long comment in adapters/registry.ts for why this exists.
+  NSE_ADAPTER_SOURCE: z.enum(["mansa", "nse_client"]).default("mansa"),
+
   PRICE_POLL_INTERVAL_MS: z.coerce.number().default(5000),
   INDEX_POLL_INTERVAL_MS: z.coerce.number().default(300_000), // 5 min — see workers/indexWorker.ts
   FINANCIALS_SYNC_CRON: z.string().default("0 2 * * *"),

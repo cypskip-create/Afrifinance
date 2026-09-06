@@ -37,7 +37,8 @@
     "pino": "^9.3.2",
     "pino-pretty": "^11.2.2",
     "ws": "^8.18.0",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "cheerio":"^1.2.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
