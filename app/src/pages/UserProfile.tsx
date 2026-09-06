@@ -492,7 +492,7 @@ export default function UserProfile() {
 
       {/* Tabs */}
       <Tabs defaultValue="posts" className="mt-4">
-        <TabsList className="w-full flex bg-transparent border-b border-border rounded-none h-11 p-0 overflow-x-auto">
+        <TabsList className="w-full flex bg-transparent border-b border-border rounded-none h-11 p-0 gap-1 overflow-x-auto">
           {[
             { value: "posts", label: "Posts" },
             ...(isOwnProfile ? [{ value: "bookmarks", label: "Bookmarks" }] : []),
@@ -501,7 +501,7 @@ export default function UserProfile() {
             <TabsTrigger
               key={tab.value}
               value={tab.value}
-              className="flex-1 min-w-[80px] rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none h-full text-xs sm:text-sm font-semibold"
+              className="flex-1 min-w-[80px] my-1.5 rounded-full data-[state=active]:bg-foreground data-[state=active]:text-background data-[state=active]:shadow-none text-xs sm:text-sm font-semibold text-muted-foreground"
             >
               {tab.label}
             </TabsTrigger>

@@ -140,10 +140,10 @@ export function FollowersDialog({
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "followers" | "following")} className="flex-1 flex flex-col min-h-0">
           <TabsList className="w-full grid grid-cols-2 rounded-none border-b border-border bg-transparent h-11 shrink-0">
-            <TabsTrigger value="followers" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary">
+            <TabsTrigger value="followers" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-foreground">
               Followers ({followers.length})
             </TabsTrigger>
-            <TabsTrigger value="following" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary">
+            <TabsTrigger value="following" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-foreground">
               Following ({following.length})
             </TabsTrigger>
           </TabsList>

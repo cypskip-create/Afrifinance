@@ -53,26 +53,26 @@ export function FinancialHealthSection({ symbol, currency }: Props) {
       />
 
       <SubWidget number="4.1" title="Financial Position Analysis" description="Short-term vs long-term assets and liabilities, most recent period on file.">
-        {isLoading ? (
-          <p className="text-xs text-muted-foreground py-6">Loading…</p>
-        ) : !latest ? (
-          <p className="text-xs text-muted-foreground py-6">No balance sheet on file yet.</p>
-        ) : (
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={[
-                { name: "Short Term", Assets: (latest.currentAssets ?? 0) / 1e9, Liabilities: (latest.currentLiabilities ?? 0) / 1e9 },
-                { name: "Long Term", Assets: (longTermAssets ?? 0) / 1e9, Liabilities: (longTermLiabilities ?? 0) / 1e9 },
-              ]}>
-                <XAxis dataKey="name" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={32} />
-                <Tooltip formatter={(v: number) => [`${currency}${v.toFixed(2)}B`, ""]} contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }} />
-                <Legend wrapperStyle={{ fontSize: 10 }} />
-                <Bar dataKey="Assets" fill="hsl(217 91% 60%)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Liabilities" fill="hsl(160 84% 58%)" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+        {/* Frame always renders — zero-filled placeholder rows keep the same
+            two-category shape until a real balance sheet is on file, rather
+            than replacing the chart with a text box. */}
+        <div className="h-72">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={[
+              { name: "Short Term", Assets: (latest?.currentAssets ?? 0) / 1e9, Liabilities: (latest?.currentLiabilities ?? 0) / 1e9 },
+              { name: "Long Term", Assets: (longTermAssets ?? 0) / 1e9, Liabilities: (longTermLiabilities ?? 0) / 1e9 },
+            ]}>
+              <XAxis dataKey="name" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={32} />
+              <Tooltip formatter={(v: number) => [`${currency}${v.toFixed(2)}B`, ""]} contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }} />
+              <Legend wrapperStyle={{ fontSize: 10 }} />
+              <Bar dataKey="Assets" fill="hsl(217 91% 60%)" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Liabilities" fill="hsl(160 84% 58%)" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        {(isLoading || !latest) && (
+          <p className="text-xs text-muted-foreground mt-1">{isLoading ? "Loading…" : "No balance sheet on file yet — chart will populate once one is."}</p>
         )}
       </SubWidget>
 

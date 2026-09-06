@@ -291,8 +291,8 @@ export function RobinhoodPerformanceChart({
               variant="ghost"
               size="sm"
               onClick={() => { setActiveTimeframe(tf.label); haptic(5); }}
-              className={`text-[11px] px-2.5 py-1 h-auto font-semibold transition-all ${
-                activeTimeframe === tf.label ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'
+              className={`text-[11px] px-2.5 py-1 h-auto font-semibold rounded-full border transition-all ${
+                activeTimeframe === tf.label ? 'text-foreground border-foreground' : 'text-muted-foreground border-transparent hover:text-foreground'
               }`}
             >
               {tf.label}

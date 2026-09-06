@@ -239,7 +239,7 @@ export default function Markets() {
               key={tab}
               data-small-target
               onClick={() => setActiveTab(tab)}
-              className={`pill-tab whitespace-nowrap ${activeTab === tab ? 'active' : ''}`}
+              className={`pill-tab whitespace-nowrap ${activeTab === tab ? 'rounded-full bg-foreground text-background' : ''}`}
             >
               {tab}
             </button>
@@ -682,7 +682,7 @@ export default function Markets() {
               </h2>
               <div className="flex gap-1.5">
                 {["yield", "amount"].map(s => (
-                  <Button key={s} variant={divSortBy === s ? "default" : "outline"} size="sm" className={`text-xs rounded-full h-7 ${divSortBy === s ? 'bg-primary text-primary-foreground' : ''}`} onClick={() => setDivSortBy(s)}>
+                  <Button key={s} variant="outline" size="sm" className={`text-xs rounded-full h-7 ${divSortBy === s ? 'border-foreground text-foreground' : ''}`} onClick={() => setDivSortBy(s)}>
                     {s === "yield" ? "By Yield" : "By Amount"}
                   </Button>
                 ))}

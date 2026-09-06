@@ -291,13 +291,13 @@ export default function TrackInvestments() {
 
         {/* ── HOLDINGS / RETURNS ── */}
         <Tabs defaultValue="holdings">
-          <TabsList className="w-full flex overflow-x-auto gap-1.5 h-11 rounded-full bg-muted/50 p-1 justify-start">
-            <TabsTrigger value="holdings" className="shrink-0 rounded-full px-4 text-[12px] font-semibold">Holdings</TabsTrigger>
-            <TabsTrigger value="returns" className="shrink-0 rounded-full px-4 text-[12px] font-semibold">Returns</TabsTrigger>
-            <TabsTrigger value="valuations" className="shrink-0 rounded-full px-4 text-[12px] font-semibold">Valuations</TabsTrigger>
-            <TabsTrigger value="updates" className="shrink-0 rounded-full px-4 text-[12px] font-semibold">Updates</TabsTrigger>
-            <TabsTrigger value="dividends" className="shrink-0 rounded-full px-4 text-[12px] font-semibold">Dividends</TabsTrigger>
-            <TabsTrigger value="analysis" className="shrink-0 rounded-full px-4 text-[12px] font-semibold">Analysis</TabsTrigger>
+          <TabsList className="w-full flex overflow-x-auto scrollbar-hide gap-5 h-10 bg-transparent p-0 justify-start border-b border-border rounded-none">
+            <TabsTrigger value="holdings" className="shrink-0 rounded-none border-b-2 border-transparent px-0.5 pb-2.5 text-[12.5px] font-semibold text-muted-foreground data-[state=active]:border-foreground data-[state=active]:text-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none transition-colors">Holdings</TabsTrigger>
+            <TabsTrigger value="returns" className="shrink-0 rounded-none border-b-2 border-transparent px-0.5 pb-2.5 text-[12.5px] font-semibold text-muted-foreground data-[state=active]:border-foreground data-[state=active]:text-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none transition-colors">Returns</TabsTrigger>
+            <TabsTrigger value="valuations" className="shrink-0 rounded-none border-b-2 border-transparent px-0.5 pb-2.5 text-[12.5px] font-semibold text-muted-foreground data-[state=active]:border-foreground data-[state=active]:text-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none transition-colors">Valuations</TabsTrigger>
+            <TabsTrigger value="updates" className="shrink-0 rounded-none border-b-2 border-transparent px-0.5 pb-2.5 text-[12.5px] font-semibold text-muted-foreground data-[state=active]:border-foreground data-[state=active]:text-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none transition-colors">Updates</TabsTrigger>
+            <TabsTrigger value="dividends" className="shrink-0 rounded-none border-b-2 border-transparent px-0.5 pb-2.5 text-[12.5px] font-semibold text-muted-foreground data-[state=active]:border-foreground data-[state=active]:text-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none transition-colors">Dividends</TabsTrigger>
+            <TabsTrigger value="analysis" className="shrink-0 rounded-none border-b-2 border-transparent px-0.5 pb-2.5 text-[12.5px] font-semibold text-muted-foreground data-[state=active]:border-foreground data-[state=active]:text-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none transition-colors">Analysis</TabsTrigger>
           </TabsList>
 
           <TabsContent value="updates" className="mt-4 space-y-4">

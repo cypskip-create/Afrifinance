@@ -8,6 +8,7 @@ import { motion, useInView } from "framer-motion";
 import {
   PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line,
   Tooltip, XAxis, YAxis, BarChart, Bar,
+  Sankey, Layer, Rectangle, RadarChart, PolarGrid, PolarAngleAxis, Radar,
 } from "recharts";
 import { ContinuaMark } from "@/components/shared/ContinuaMark";
 import { AfricaMap } from "@/components/shared/AfricaMap";
@@ -196,6 +197,291 @@ const DrawnLine = ({ points, stroke, viewBox }: { points: string; stroke: string
   />
 );
 
+// A little live-market pulse — a dot that breathes, for anywhere the page
+// wants to say "this updates" without literally streaming a socket.
+const LivePulse = ({ color = "var(--bull)" }: { color?: string }) => (
+  <span className="live-pulse-wrap">
+    <motion.span
+      className="live-pulse-ring"
+      style={{ borderColor: color }}
+      animate={{ scale: [1, 2.1], opacity: [0.55, 0] }}
+      transition={{ duration: 1.8, repeat: Infinity, ease: "easeOut" }}
+    />
+    <span className="live-pulse-dot" style={{ background: color }} />
+  </span>
+);
+
+// A live-updating price series — a small random-walk generator that keeps
+// nudging the last point and scrolling the window forward, so a chart fed
+// by this actually ticks for as long as it's on screen, not just once.
+function useLiveSeries(seed: number[], stepMs = 900) {
+  const [data, setData] = useState(() => seed.map((v, i) => ({ i, v })));
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setData(prev => {
+        const last = prev[prev.length - 1].v;
+        const next = Math.max(2, last + (Math.random() - 0.47) * Math.max(0.6, last * 0.02));
+        return [...prev.slice(1).map((p, idx) => ({ i: idx, v: p.v })), { i: prev.length - 1, v: next }];
+      });
+    }, stepMs);
+    return () => window.clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stepMs]);
+  return data;
+}
+
+// A genuinely live chart, not a one-time draw-in — ticks for as long as it's
+// mounted, same "this updates" promise the LivePulse dot makes elsewhere.
+const LiveTickingChart = ({ seed, height = 78 }: { seed: number[]; height?: number }) => {
+  const data = useLiveSeries(seed);
+  const up = data[data.length - 1].v >= data[0].v;
+  const color = up ? "var(--bull)" : "var(--bear)";
+  return (
+    <div style={{ height }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={data} margin={{ top: 4, right: 2, bottom: 0, left: 2 }}>
+          <Line type="monotone" dataKey="v" stroke={color} strokeWidth={2.25} dot={false} isAnimationActive={false} />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
+
+// Leader-line label for the demo donut — same "elbow line + ticker + %"
+// treatment used on the real Diversification Across Holdings chart.
+const RADIAN = Math.PI / 180;
+function renderDemoDonutLabel(props: any) {
+  const { cx, cy, midAngle, outerRadius, index, payload } = props;
+  const sin = Math.sin(-RADIAN * midAngle);
+  const cos = Math.cos(-RADIAN * midAngle);
+  const sx = cx + outerRadius * cos;
+  const sy = cy + outerRadius * sin;
+  const mx = cx + (outerRadius + 14) * cos;
+  const my = cy + (outerRadius + 14) * sin;
+  const ex = mx + (cos >= 0 ? 1 : -1) * 10;
+  const ey = my;
+  const anchor = cos >= 0 ? "start" : "end";
+  return (
+    <g key={`demo-donut-label-${index}`}>
+      <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={payload.color} strokeOpacity={0.5} fill="none" />
+      <text x={ex + (cos >= 0 ? 3 : -3)} y={ey - 2} textAnchor={anchor} fontSize={10} fontWeight={700} fill={payload.color} fontFamily="'IBM Plex Mono',monospace">
+        {payload.symbol}
+      </text>
+      <text x={ex + (cos >= 0 ? 3 : -3)} y={ey + 9} textAnchor={anchor} fontSize={9.5} fill="var(--muted)" fontFamily="'IBM Plex Mono',monospace">
+        {payload.pct.toFixed(1)}%
+      </text>
+    </g>
+  );
+}
+
+// Same "flow" node shape used in the real Sankey — a solid bar for the
+// portfolio root, thin markers everywhere downstream, one flow color.
+function DemoSankeyNode({ x, y, width, height, index, payload }: any) {
+  const isRoot = index === 0;
+  const isSector = index > 0 && index <= SANKEY_SECTORS.length;
+  const barWidth = isRoot ? width : 2;
+  const barX = isRoot ? x : x + (width - barWidth) / 2;
+  const fill = isRoot ? "var(--fg)" : "#E0A639";
+  const labelSide = x < 40 ? "start" : "end";
+  return (
+    <Layer>
+      <Rectangle x={barX} y={y} width={barWidth} height={Math.max(height, 2)} fill={fill} radius={1} />
+      <text
+        x={labelSide === "start" ? x - 7 : x + width + 7}
+        y={y + height / 2}
+        textAnchor={labelSide === "start" ? "end" : "start"}
+        dominantBaseline="middle"
+        fontSize={9.5}
+        fontWeight={isRoot ? 700 : 600}
+        fill="var(--fg)"
+        fontFamily="'IBM Plex Mono',monospace"
+      >
+        {payload.name}
+        {isSector && <tspan fill="var(--muted)" fontWeight={400}> {payload.value.toFixed(0)}%</tspan>}
+      </text>
+    </Layer>
+  );
+}
+
+// The Holdings donut demo — tap a slice and the center readout updates,
+// exactly like the real Diversification Across Holdings tool, including
+// the real tool's honest "n/a" for history that isn't on file yet.
+const DiversificationDonutDemo = () => {
+  const [selected, setSelected] = useState(DIVERSIFY_HOLDINGS[0]);
+  return (
+    <div className="tool-card">
+      <div className="tool-card-head">
+        <h5>Diversification across Holdings</h5>
+        <p>Tap any slice — every holding gets its own label, none get bucketed away.</p>
+      </div>
+      <div className="donut-demo-wrap">
+        <AnimateChartOnView height={220}>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={DIVERSIFY_HOLDINGS}
+                dataKey="pct"
+                nameKey="symbol"
+                innerRadius="52%"
+                outerRadius="74%"
+                paddingAngle={1.5}
+                stroke="none"
+                isAnimationActive
+                animationDuration={1100}
+                label={renderDemoDonutLabel}
+                labelLine={false}
+              >
+                {DIVERSIFY_HOLDINGS.map(h => (
+                  <Cell
+                    key={h.symbol}
+                    fill={h.color}
+                    stroke={selected.symbol === h.symbol ? "var(--card)" : "none"}
+                    strokeWidth={selected.symbol === h.symbol ? 2 : 0}
+                    onClick={() => setSelected(h)}
+                    style={{ cursor: "pointer" }}
+                  />
+                ))}
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+        </AnimateChartOnView>
+        <div className="donut-demo-center">
+          <span className="mono" style={{ color: selected.color, fontWeight: 700, fontSize: "12.5px" }}>{selected.symbol}</span>
+          <span style={{ fontWeight: 700, fontSize: "15px" }}>{selected.pct.toFixed(1)}%</span>
+          <div className="donut-demo-rows">
+            <div><span>Value</span><b className="mono">KSh{selected.value.toLocaleString()}</b></div>
+            <div><span>1Y</span><b className="mono">{selected.oneYear ?? "n/a"}</b></div>
+            <div><span>7D</span><b className="mono" style={{ color: selected.sevenDay?.startsWith("-") ? "var(--bear)" : selected.sevenDay ? "var(--bull)" : undefined }}>{selected.sevenDay ?? "n/a"}</b></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// The Sector Sankey demo — Portfolio flowing into Sector flowing into
+// each Holding, one flow color, same as the real "Diversification across
+// Industries" tool.
+const DiversificationSankeyDemo = () => (
+  <div className="tool-card">
+    <div className="tool-card-head">
+      <h5>Diversification across Industries</h5>
+      <p>How your value actually flows — from portfolio, into sector, into each ticker.</p>
+    </div>
+    <div style={{ height: 220 }}>
+      <AnimateChartOnView height={220}>
+        <ResponsiveContainer width="100%" height="100%">
+          <Sankey
+            data={sankeyDemoData}
+            nodeWidth={2}
+            nodePadding={14}
+            margin={{ top: 8, right: 74, bottom: 8, left: 8 }}
+            link={{ stroke: "#E0A639", strokeOpacity: 0.35 }}
+            node={DemoSankeyNode}
+          />
+        </ResponsiveContainer>
+      </AnimateChartOnView>
+    </div>
+  </div>
+);
+
+// The Portfolio Snowflake demo — one radar shape scoring value, growth,
+// diversity, stability, winners and size at a glance.
+const SnowflakeDemo = () => (
+  <div className="tool-card">
+    <div className="tool-card-head">
+      <h5>Portfolio Snowflake</h5>
+      <p>Six angles on portfolio health, in one shape — the same idea Simply Wall St popularised, tuned for the NSE.</p>
+    </div>
+    <div style={{ height: 220 }}>
+      <AnimateChartOnView height={220}>
+        <ResponsiveContainer width="100%" height="100%">
+          <RadarChart data={SNOWFLAKE_AXES} outerRadius="72%">
+            <PolarGrid stroke="var(--border)" />
+            <PolarAngleAxis dataKey="metric" tick={{ fontSize: 9.5, fill: "var(--muted)", fontFamily: "'IBM Plex Mono',monospace" }} />
+            <Radar dataKey="v" stroke="var(--primary)" fill="var(--primary)" fillOpacity={0.35} isAnimationActive animationDuration={1100} />
+          </RadarChart>
+        </ResponsiveContainer>
+      </AnimateChartOnView>
+    </div>
+  </div>
+);
+
+// The stock report's Risk pentagon — the same shape draws whether every
+// factor is known or not; an unscored axis reads as unknown, never as a
+// disguised "medium".
+const RiskPentagonDemo = () => (
+  <div className="tool-card">
+    <div className="tool-card-head">
+      <h5>Risk, scored honestly</h5>
+      <p>One factor here has no data on file — the shape still draws, it just says so instead of guessing.</p>
+    </div>
+    <div style={{ height: 220 }}>
+      <AnimateChartOnView height={220}>
+        <ResponsiveContainer width="100%" height="100%">
+          <RadarChart data={RISK_AXES} outerRadius="70%">
+            <PolarGrid stroke="var(--border)" />
+            <PolarAngleAxis
+              dataKey="metric"
+              tick={(props: any) => {
+                const axis = RISK_AXES[props.index];
+                return (
+                  <text x={props.x} y={props.y} textAnchor={props.textAnchor} fontSize={9.5} fill={axis.known ? "var(--muted)" : "var(--accent)"} fontFamily="'IBM Plex Mono',monospace">
+                    {props.payload.value}{!axis.known ? " ·  ?" : ""}
+                  </text>
+                );
+              }}
+            />
+            <Radar dataKey="v" stroke="var(--bear)" fill="var(--bear)" fillOpacity={0.28} isAnimationActive animationDuration={1100} />
+          </RadarChart>
+        </ResponsiveContainer>
+      </AnimateChartOnView>
+    </div>
+  </div>
+);
+
+// The TradersHub reaction tray — six quick reactions in one row, a "+" that
+// expands to the full set, no labels cluttering the emoji itself, same as
+// the real in-app picker. Fully interactive: tap it.
+const ReactionTrayDemo = () => {
+  const [counts, setCounts] = useState([18, 2, 9, 6, 4, 0]);
+  const [selected, setSelected] = useState<number | null>(0);
+  const [expanded, setExpanded] = useState(false);
+  const [pop, setPop] = useState<number | null>(null);
+
+  const pick = (i: number) => {
+    setCounts(prev => prev.map((c, idx) => {
+      if (idx === i) return selected === i ? c - 1 : c + 1;
+      if (idx === selected) return c - 1;
+      return c;
+    }));
+    setSelected(selected === i ? null : i);
+    setPop(i);
+    window.setTimeout(() => setPop(null), 260);
+  };
+
+  return (
+    <div className="reaction-demo">
+      <div className="reaction-row">
+        {LANDING_REACTIONS.map((r, i) => (
+          <button key={r.label} type="button" title={r.label} className={`reaction-chip${selected === i ? " on" : ""}`} onClick={() => pick(i)}>
+            <motion.span animate={pop === i ? { scale: [1, 1.5, 1] } : {}} transition={{ duration: 0.26 }} style={{ display: "inline-block" }}>
+              {r.emoji}
+            </motion.span>
+            {counts[i] > 0 && <b>{counts[i]}</b>}
+          </button>
+        ))}
+        <button type="button" aria-label="More reactions" className={`reaction-chip reaction-more${expanded ? " on" : ""}`} onClick={() => setExpanded(v => !v)}>+</button>
+      </div>
+      {expanded && (
+        <motion.div className="reaction-expand" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} transition={{ duration: 0.22 }}>
+          {LANDING_REACTIONS_MORE.map(e => <span key={e} className="reaction-expand-item">{e}</span>)}
+        </motion.div>
+      )}
+    </div>
+  );
+};
+
 // ============================================================
 // 2. TICKER DATA — symbol selection is curated, price/change come from
 //    the canonical data (lib/stockPrices.ts -> data/nseSecurities.ts)
@@ -248,12 +534,63 @@ const assetAllocation = [
   { label: "Cash", value: 18, color: "var(--border)" },
 ];
 
+// ---- Diversification showcase (Holdings donut / Sector Sankey / Snowflake) ----
+// Mirrors the actual in-app portfolio tools, with illustrative sample numbers.
+const DIVERSIFY_HOLDINGS = [
+  { symbol: "KCB", sector: "Banking", pct: 22.7, value: 63650, color: "#E0498A", oneYear: "+18.4%", sevenDay: "+1.2%" },
+  { symbol: "CGEN", sector: "Manufacturing", pct: 22.7, value: 63650, color: "#22C3A6", oneYear: "n/a", sevenDay: "-0.7%" },
+  { symbol: "EQTY", sector: "Banking", pct: 19.3, value: 54110, color: "#8B6FE8", oneYear: "+9.6%", sevenDay: "+0.4%" },
+  { symbol: "KAPC", sector: "Agriculture", pct: 13.2, value: 37060, color: "#5C7CFA", oneYear: "+31.2%", sevenDay: "+2.1%" },
+  { symbol: "EABL", sector: "Manufacturing", pct: 10.0, value: 28050, color: "#F1584B", oneYear: "-4.8%", sevenDay: "-1.5%" },
+  { symbol: "BRIT", sector: "Insurance", pct: 3.8, value: 10660, color: "#2FBFA0", oneYear: "n/a", sevenDay: "n/a" },
+];
+
+const SANKEY_SECTORS = [...new Set(DIVERSIFY_HOLDINGS.map(h => h.sector))];
+const sankeyDemoData = {
+  nodes: [{ name: "Portfolio" }, ...SANKEY_SECTORS.map(s => ({ name: s })), ...DIVERSIFY_HOLDINGS.map(h => ({ name: h.symbol }))],
+  links: [
+    ...SANKEY_SECTORS.map(s => ({
+      source: 0,
+      target: 1 + SANKEY_SECTORS.indexOf(s),
+      value: DIVERSIFY_HOLDINGS.filter(h => h.sector === s).reduce((sum, h) => sum + h.pct, 0),
+    })),
+    ...DIVERSIFY_HOLDINGS.map((h, i) => ({ source: 1 + SANKEY_SECTORS.indexOf(h.sector), target: 1 + SANKEY_SECTORS.length + i, value: h.pct })),
+  ],
+};
+
+const SNOWFLAKE_AXES = [
+  { metric: "Value", v: 72 }, { metric: "Growth", v: 58 }, { metric: "Diversity", v: 64 },
+  { metric: "Stability", v: 80 }, { metric: "Winners", v: 66 }, { metric: "Size", v: 45 },
+];
+
+// Risk pentagon — one axis is deliberately shown as "Unknown", the same way
+// the real stock report treats a factor with no data on file: the shape
+// still draws, it just doesn't pretend to know what it doesn't.
+const RISK_AXES = [
+  { metric: "Volatility", v: 62, known: true },
+  { metric: "Debt", v: 38, known: true },
+  { metric: "Liquidity", v: 74, known: true },
+  { metric: "Governance", v: 0, known: false },
+  { metric: "Concentration", v: 55, known: true },
+];
+
+const LANDING_REACTIONS: { emoji: string; label: string }[] = [
+  { emoji: "📈", label: "Bullish" },
+  { emoji: "📉", label: "Bearish" },
+  { emoji: "🔥", label: "Fire" },
+  { emoji: "❤️", label: "Love" },
+  { emoji: "👍", label: "Thumbs up" },
+  { emoji: "👎", label: "Thumbs down" },
+];
+const LANDING_REACTIONS_MORE = ["🤝", "💡", "👀", "😂", "🎉", "🏆", "💔", "😱", "🤔", "🙈", "🙏", "🤯", "😎", "🦈"];
+
 const navSections = [
   { id: "highlights", label: "Highlights" },
   { id: "tradershub", label: "TradersHub" },
   { id: "research", label: "Research" },
   { id: "stock-page", label: "Stock page" },
   { id: "portfolio", label: "Portfolio" },
+  { id: "tools", label: "Tools" },
   { id: "brand-story", label: "Our story" },
   { id: "more-features", label: "More" },
   { id: "pricing", label: "Pricing" },
@@ -306,6 +643,15 @@ const Check = () => (
 
 const ContinuaLandingPage = () => {
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // Cycles a soft highlight through the hero exchange board, one row every
+  // couple of seconds — a lightweight stand-in for "a tick just landed"
+  // without needing an actual live feed on the marketing page.
+  const [flashRow, setFlashRow] = useState(0);
+  useEffect(() => {
+    const id = window.setInterval(() => setFlashRow(i => (i + 1) % boardRows.length), 2200);
+    return () => window.clearInterval(id);
+  }, []);
 
   // ----- Recharts data -----
   const portfolioLineData = [
@@ -578,6 +924,68 @@ const ContinuaLandingPage = () => {
         .donut-legend li{ display:flex; align-items:center; gap:7px; font-size:12px; color:var(--muted); }
         .donut-legend .dot{ width:8px; height:8px; border-radius:50%; flex:none; }
         .donut-legend b{ margin-left:10px; font-family:'IBM Plex Mono',monospace; color:var(--fg); font-size:11.5px; font-weight:600; }
+
+        /* ---- Live pulse dot (used wherever the page wants to say "this updates") ---- */
+        .live-pulse-wrap{ position:relative; display:inline-flex; width:8px; height:8px; flex:none; }
+        .live-pulse-dot{ position:absolute; inset:0; border-radius:50%; }
+        .live-pulse-ring{ position:absolute; inset:0; border-radius:50%; border:1.5px solid; }
+
+        /* ---- Tools showcase grid (Donut / Sankey / Snowflake / Risk) ---- */
+        .tools-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:18px; }
+        .tool-card{
+          background:var(--card); border:1px solid var(--border); border-radius:16px; padding:18px;
+          box-shadow:var(--shadow); transition:transform .25s ease, box-shadow .25s ease;
+          transform-style:preserve-3d; will-change:transform;
+        }
+        .tool-card:hover{ transform:translateY(-5px); box-shadow:0 1px 2px rgba(20,20,20,.04), 0 22px 40px -18px rgba(20,20,20,.2); }
+        .tool-card-head h5{ margin:0 0 4px; font-size:13.5px; font-weight:600; font-family:'Space Grotesk',sans-serif; }
+        .tool-card-head p{ margin:0 0 6px; font-size:11.5px; color:var(--muted); line-height:1.5; }
+        .donut-demo-wrap{ position:relative; }
+        .donut-demo-center{
+          position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+          gap:1px; pointer-events:none; text-align:center;
+        }
+        .donut-demo-rows{ margin-top:5px; display:flex; flex-direction:column; gap:1px; width:84px; }
+        .donut-demo-rows div{ display:flex; align-items:center; justify-content:space-between; font-size:9px; line-height:1.5; }
+        .donut-demo-rows span{ color:var(--muted); }
+        .donut-demo-rows b{ font-weight:600; }
+
+        /* ---- Reaction tray demo (TradersHub) ---- */
+        .reaction-demo{ margin-top:16px; }
+        .reaction-row{ display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
+        .reaction-chip{
+          display:flex; align-items:center; gap:4px; height:32px; padding:0 9px; border-radius:999px;
+          background:var(--bg-alt); border:1px solid transparent; font-size:15px; cursor:pointer;
+          transition:transform .15s ease, background .15s ease, border-color .15s ease;
+        }
+        .reaction-chip b{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; color:var(--muted); }
+        .reaction-chip:hover{ transform:translateY(-2px); background:var(--border); }
+        .reaction-chip.on{ background:var(--primary-tint); border-color:var(--primary); }
+        .reaction-chip.reaction-more{ font-size:14px; font-weight:700; color:var(--muted); background:transparent; border:1px dashed var(--border); }
+        .reaction-expand{ display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; overflow:hidden; }
+        .reaction-expand-item{
+          display:flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:999px;
+          background:var(--bg-alt); font-size:14px;
+        }
+
+        /* ---- Ambient background blobs (hero) ---- */
+        .hero{ position:relative; overflow:hidden; }
+        .hero-blob{ position:absolute; border-radius:50%; filter:blur(60px); opacity:.35; z-index:0; pointer-events:none; }
+        .hero-blob-1{ width:360px; height:360px; background:var(--primary); top:-120px; right:-60px; animation:blob-float-1 16s ease-in-out infinite; }
+        .hero-blob-2{ width:280px; height:280px; background:var(--accent); bottom:-100px; left:-60px; animation:blob-float-2 18s ease-in-out infinite; }
+        .hero .wrap{ position:relative; z-index:1; }
+        @keyframes blob-float-1{ 0%,100%{ transform:translate(0,0) scale(1); } 50%{ transform:translate(-30px,30px) scale(1.08); } }
+        @keyframes blob-float-2{ 0%,100%{ transform:translate(0,0) scale(1); } 50%{ transform:translate(24px,-24px) scale(1.1); } }
+
+        /* ---- Board row flash — cycles through as if a fresh tick just landed ---- */
+        .board-row{ transition:background-color .5s ease; }
+        .board-row.flash{ background:var(--primary-tint); }
+        @media (max-width:900px){
+          .tools-grid{ grid-template-columns:1fr 1fr; }
+        }
+        @media (max-width:560px){
+          .tools-grid{ grid-template-columns:1fr; }
+        }
         .steps{ display:grid; grid-template-columns:repeat(3,1fr); gap:28px; }
         .step{ position:relative; padding-top:8px; transition:transform .2s ease; }
         .step:hover{ transform:translateY(-3px); }
@@ -716,7 +1124,7 @@ const ContinuaLandingPage = () => {
           .menu-btn{ width:30px; height:30px; }
         }
         @media (prefers-reduced-motion:reduce){
-          .ticker-track, .cta-tape span, .board-live .dot, .highlights-track{ animation:none; }
+          .ticker-track, .cta-tape span, .board-live .dot, .highlights-track, .hero-blob-1, .hero-blob-2, .live-pulse-ring{ animation:none; }
         }
         @media (max-width:560px){
           .highlight-card{ flex-basis:230px; }
@@ -785,6 +1193,8 @@ const ContinuaLandingPage = () => {
           HERO (wrapped with Reveal)
       ============================================================ */}
       <section className="hero">
+        <div className="hero-blob hero-blob-1" aria-hidden="true" />
+        <div className="hero-blob hero-blob-2" aria-hidden="true" />
         <div className="wrap hero-grid">
           <Reveal>
             <div>
@@ -807,13 +1217,13 @@ const ContinuaLandingPage = () => {
               <span className="board-flag">NSE · Nairobi</span>
               <div className="board-head">
                 <span className="label">Exchange board</span>
-                <span className="board-live"><span className="dot"></span>Live</span>
+                <span className="board-live"><LivePulse />Live</span>
               </div>
               <div className="board-cols">
                 <span>Symbol</span><span style={{ textAlign: "right" }}>Last</span><span style={{ textAlign: "right" }}>Chg</span>
               </div>
-              {boardRows.map(([symbol, name, price, change]) => (
-                <div className="board-row" key={symbol}>
+              {boardRows.map(([symbol, name, price, change], i) => (
+                <div className={`board-row${flashRow === i ? " flash" : ""}`} key={symbol}>
                   <div>
                     <div className="board-sym">{symbol}</div>
                     <div className="board-name">{name}</div>
@@ -943,7 +1353,7 @@ const ContinuaLandingPage = () => {
                   <h3>Numbers tell you what happened.<br />People tell you why it matters.</h3>
                   <p>TradersHub is a live feed built entirely around Kenyan markets — post your thesis, tag the ticker, and see how the room reacts. It's the reason Continua isn't just a research app: it's where you find out what other NSE investors are actually thinking, right now.</p>
                   <ul className="check-list">
-                    <li><Check /> React with more than a like — bullish, cautious, insightful, fire and more</li>
+                    <li><Check /> React with more than a like — bullish, bearish, fire and more, plus a full tray behind a tap</li>
                     <li><Check /> Nested, threaded replies, so you always know what's being answered</li>
                     <li><Check /> Follow the investors whose takes you actually want to see</li>
                     <li><Check /> Join topic and stock-specific community Rooms for live discussion</li>
@@ -964,9 +1374,7 @@ const ContinuaLandingPage = () => {
                       <QuoteSpark points="0,50 25,44 50,48 75,30 100,36 125,18 150,26 175,10 200,20 225,6 260,14" viewBox="0 0 260 64" />
                     </div>
                     <div className="react-demo">
-                      <div className="react-pill on">🐂 Bullish · 18</div>
-                      <div className="react-pill">🔥 Fire · 6</div>
-                      <div className="react-pill">🧠 Insightful · 3</div>
+                      <ReactionTrayDemo />
                     </div>
                     <div className="reply-preview">
                       <div className="post-row" style={{ marginBottom: "4px" }}>
@@ -1033,6 +1441,7 @@ const ContinuaLandingPage = () => {
                 <li><Check /> Switch between line, candlestick and area charts, with EMA, RSI, MACD and Bollinger Bands</li>
                 <li><Check /> A bull case and a bear case, generated fresh from the stock's current numbers</li>
                 <li><Check /> Set a price alert right from the chart — above or below any target</li>
+                <li><Check /> The add-to-portfolio button tucks itself away while you scroll and read, and comes right back the moment you scroll up</li>
               </ul>
             </Reveal>
             <Reveal delay={0.1} className="showcase-media">
@@ -1040,7 +1449,9 @@ const ContinuaLandingPage = () => {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "12px" }}>
                   <div className="post-name" style={{ fontSize: "15px" }}>SCOM <span className="post-handle">Safaricom PLC</span></div>
                   <div style={{ textAlign: "right" }}>
-                    <div className="pf-value" style={{ fontSize: "18px" }}>KES 17.85</div>
+                    <div className="pf-value" style={{ fontSize: "18px", display: "flex", alignItems: "center", gap: "6px", justifyContent: "flex-end" }}>
+                      <LivePulse /> KES 17.85
+                    </div>
                     <span className="pf-chip">+1.7% today</span>
                   </div>
                 </div>
@@ -1050,7 +1461,9 @@ const ContinuaLandingPage = () => {
                   <div className="react-pill">MACD</div>
                 </div>
                 <div className="quote-chart" style={{ height: "78px" }}>
-                  <QuoteSpark points="0,58 25,52 50,56 75,38 100,44 125,26 150,34 175,18 200,28 225,14 260,20" viewBox="0 0 260 78" />
+                  {/* Genuinely live, not a one-time draw-in — this line keeps
+                      ticking with a fresh point for as long as it's on screen. */}
+                  <LiveTickingChart seed={[58, 52, 56, 38, 44, 26, 34, 18, 28, 14, 20, 24, 16, 22, 12, 18, 8, 14, 20, 10]} height={78} />
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginTop: "14px" }}>
                   <div style={{ background: "var(--primary-tint)", borderRadius: "8px", padding: "9px 11px" }}>
@@ -1200,6 +1613,31 @@ const ContinuaLandingPage = () => {
               </div>
             </Reveal>
           </div>
+        </div>
+      </section>
+
+      {/* ============================================================
+          DIVERSIFICATION & SNOWFLAKE TOOLS — the real portfolio + report
+          instruments, not mockups: same data shapes, same "always draws,
+          even empty" chart philosophy as the live app.
+      ============================================================ */}
+      <section id="tools" className="alt">
+        <div className="wrap">
+          <Reveal className="section-head" style={{ margin: "0 auto 40px", textAlign: "center" }}>
+            <div className="eyebrow" style={{ justifyContent: "center" }}>How the tools actually work</div>
+            <h2>Not just charts. Instruments.</h2>
+            <p style={{ margin: "0 auto" }}>
+              Four tools pulled straight from Continua's portfolio and stock report screens. Tap the donut, watch the
+              radar shapes draw in, and notice the one thing they all share: every chart here draws its full frame
+              even when the underlying data is thin — nothing gets hidden, nothing gets faked.
+            </p>
+          </Reveal>
+          <StaggerContainer className="tools-grid">
+            <StaggerItem><DiversificationDonutDemo /></StaggerItem>
+            <StaggerItem><DiversificationSankeyDemo /></StaggerItem>
+            <StaggerItem><SnowflakeDemo /></StaggerItem>
+            <StaggerItem><RiskPentagonDemo /></StaggerItem>
+          </StaggerContainer>
         </div>
       </section>
 
@@ -1391,6 +1829,7 @@ const ContinuaLandingPage = () => {
               <a href="#stock-page" onClick={scrollToSection("stock-page")}>Stock page</a>
               <a href="#tradershub" onClick={scrollToSection("tradershub")}>TradersHub</a>
               <a href="#portfolio" onClick={scrollToSection("portfolio")}>Portfolio</a>
+              <a href="#tools" onClick={scrollToSection("tools")}>Tools</a>
             </div>
             <div>
               <h5>Company</h5>

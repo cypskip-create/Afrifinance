@@ -70,6 +70,22 @@ const SUB_NAV: { id: SubSection; label: string }[] = [
   { id: "more", label: "More" },
 ];
 
+// The nested jump-nav inside the Research section (Snowflake, then the
+// numbered report sections) — a level below SUB_NAV above.
+const REPORT_JUMP_NAV: { id: string; label: string }[] = [
+  { id: "rpt-snowflake", label: "Snowflake" },
+  { id: "rpt-1", label: "1. Valuation" },
+  { id: "rpt-2", label: "2. Future Growth" },
+  { id: "rpt-3", label: "3. Past Performance" },
+  { id: "rpt-4", label: "4. Financial Health" },
+  { id: "rpt-5", label: "5. Risk" },
+  { id: "rpt-6", label: "6. Dividend" },
+  { id: "rpt-7", label: "7. Management" },
+  { id: "rpt-8", label: "8. Ownership" },
+  { id: "rpt-9", label: "9. Company Info" },
+  { id: "rpt-technicals", label: "Technicals" },
+];
+
 export default function StockDetail() {
   const { exchangeMeta } = useExchange();
   const navigate = useNavigate();
@@ -340,6 +356,23 @@ export default function StockDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Scroll spy for the nested report jump-nav (Snowflake, 1. Valuation, …) —
+  // same idea as the top-level scroll spy above, one level down.
+  const [reportSection, setReportSection] = useState<string>("rpt-snowflake");
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter(e => e.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        if (visible[0]) setReportSection(visible[0].target.id);
+      },
+      { rootMargin: "-140px 0px -60% 0px", threshold: [0, 0.25, 0.5, 1] }
+    );
+    const els = REPORT_JUMP_NAV.map(({ id }) => document.getElementById(id)).filter((el): el is HTMLElement => !!el);
+    els.forEach(el => observer.observe(el));
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Whether the hero price (above the chart) is still on screen. The sticky
   // header's price/change block only appears once this goes false — i.e.
   // once the person has actually scrolled the hero price out of view —
@@ -357,6 +390,30 @@ export default function StockDetail() {
     );
     observer.observe(el);
     return () => observer.disconnect();
+  }, []);
+
+  // Add/Update-to-portfolio CTA hides on scroll down and reappears on
+  // scroll up, same as X's bottom nav — keeps it out of the way while
+  // reading, back within reach the moment you start scrolling back.
+  const [ctaVisible, setCtaVisible] = useState(true);
+  useEffect(() => {
+    let lastY = window.scrollY;
+    let ticking = false;
+    const handleScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const currentY = window.scrollY;
+        const delta = currentY - lastY;
+        if (Math.abs(delta) > 6) {
+          setCtaVisible(delta < 0 || currentY < 120);
+          lastY = currentY;
+        }
+        ticking = false;
+      });
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const Eyebrow = ({ children }: { children: React.ReactNode }) => (
@@ -484,7 +541,7 @@ export default function StockDetail() {
             key={tf}
             data-small-target
             onClick={() => setSelectedTimeframe(tf)}
-            className={`px-2 py-1 text-[11px] font-semibold rounded-md tabular transition-colors ${tf === selectedTimeframe ? 'brand-active' : 'text-muted-foreground hover:text-foreground'}`}
+            className={`px-2 py-1 text-[11px] font-semibold rounded-md tabular border transition-colors ${tf === selectedTimeframe ? 'border-foreground text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
           >
             {tf}
           </button>
@@ -580,7 +637,7 @@ export default function StockDetail() {
                 {timeframes.map(tf => (
                   <DropdownMenuItem key={tf} onClick={() => setSelectedTimeframe(tf)} className="text-xs justify-between">
                     {tf}
-                    {tf === selectedTimeframe && <span className="text-primary">✓</span>}
+                    {tf === selectedTimeframe && <span className="text-foreground">✓</span>}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
@@ -646,7 +703,7 @@ export default function StockDetail() {
               key={s.id}
               data-small-target
               onClick={() => scrollTo(s.id)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-full whitespace-nowrap transition-colors ${section === s.id ? 'brand-active' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-full whitespace-nowrap transition-colors ${section === s.id ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
             >
               {s.label}
             </button>
@@ -744,27 +801,20 @@ export default function StockDetail() {
         <section ref={refs.research} data-section="research" className="space-y-4 scroll-mt-32">
           <Eyebrow>Research</Eyebrow>
           {/* Jump nav — scrolls to a section rather than switching a tab,
-              since the report below is one continuous scroll now. */}
+              since the report below is one continuous scroll now. Tracks
+              which report section is in view and rings it, same idea as
+              the Overview/Research/News row above but as an outline
+              instead of a fill — this is the nested, sub-level nav. */}
           <div className="sticky top-[97px] z-20 -mx-4 px-4 py-2 bg-background/92 backdrop-blur-xl border-b border-border/60">
             <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
-              {[
-                { id: "rpt-snowflake", label: "Snowflake" },
-                { id: "rpt-1", label: "1. Valuation" },
-                { id: "rpt-2", label: "2. Future Growth" },
-                { id: "rpt-3", label: "3. Past Performance" },
-                { id: "rpt-4", label: "4. Financial Health" },
-                { id: "rpt-5", label: "5. Risk" },
-                { id: "rpt-6", label: "6. Dividend" },
-                { id: "rpt-7", label: "7. Management" },
-                { id: "rpt-8", label: "8. Ownership" },
-                { id: "rpt-9", label: "9. Company Info" },
-                { id: "rpt-technicals", label: "Technicals" },
-              ].map(({ id, label }) => (
+              {REPORT_JUMP_NAV.map(({ id, label }) => (
                 <button
                   key={id}
                   data-small-target
                   onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                  className="px-3 py-1 text-[11px] font-semibold rounded-full whitespace-nowrap bg-muted/40 text-muted-foreground hover:bg-muted/70 transition-colors"
+                  className={`px-3 py-1 text-[11px] font-semibold rounded-full whitespace-nowrap border transition-colors ${
+                    reportSection === id ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+                  }`}
                 >
                   {label}
                 </button>
@@ -907,8 +957,12 @@ export default function StockDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Fixed Add Investment CTA — compact, pinned to the very bottom edge */}
-      <div className="fixed left-6 right-6 z-30" style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 1px)" }}>
+      {/* Fixed Add Investment CTA — compact, pinned to the very bottom edge.
+          Slides out of view on scroll-down and back in on scroll-up. */}
+      <div
+        className={`fixed left-6 right-6 z-30 transition-transform duration-300 ease-out ${ctaVisible ? "translate-y-0" : "translate-y-[calc(100%+24px)]"}`}
+        style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 1px)" }}
+      >
         <AddInvestmentDialog
           lockedSymbol={symbol} lockedName={stock.name} lockedSector={stock.sector}
           trigger={

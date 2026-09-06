@@ -159,21 +159,21 @@ export function ValuationSection({ symbol, name, sector, price, currency }: Prop
       </SubWidget>
 
       <SubWidget number="1.7" title="Analyst Price Targets" description="The analyst 12-month forecast and statistical confidence in the consensus target.">
-        {priceHistoryQuery.isLoading ? (
-          <p className="text-xs text-muted-foreground py-4">Loading price history…</p>
-        ) : priceSeries.length === 0 ? (
-          <p className="text-xs text-muted-foreground py-4">No price history on file for {symbol} yet.</p>
-        ) : (
-          <div style={{ height: CHART_H_LARGE }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={priceSeries}>
-                <XAxis dataKey="date" tick={{ fontSize: 9 }} axisLine={false} tickLine={false} interval={Math.max(0, Math.floor(priceSeries.length / 5) - 1)} />
-                <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={36} domain={["auto", "auto"]} />
-                <Tooltip formatter={(v: number) => [`${currency}${v.toFixed(2)}`, "Price"]} contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }} />
-                <Area type="monotone" dataKey="price" stroke={fx.revenue} fill={fx.revenue} fillOpacity={0.15} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+        {/* Frame always renders — an empty array still draws empty axes, so
+            a symbol with no price history yet shows the tool (an empty
+            chart) rather than a text box in its place. */}
+        <div style={{ height: CHART_H_LARGE }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={priceSeries}>
+              <XAxis dataKey="date" tick={{ fontSize: 9 }} axisLine={false} tickLine={false} interval={Math.max(0, Math.floor(priceSeries.length / 5) - 1)} />
+              <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={36} domain={["auto", "auto"]} />
+              <Tooltip formatter={(v: number) => [`${currency}${v.toFixed(2)}`, "Price"]} contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }} />
+              <Area type="monotone" dataKey="price" stroke={fx.revenue} fill={fx.revenue} fillOpacity={0.15} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+        {(priceHistoryQuery.isLoading || priceSeries.length === 0) && (
+          <p className="text-xs text-muted-foreground mt-1">{priceHistoryQuery.isLoading ? "Loading price history…" : `No price history on file for ${symbol} yet.`}</p>
         )}
         <div className="grid grid-cols-3 gap-2 mt-2 text-center">
           <div><p className="text-[9.5px] text-muted-foreground">Analysts</p><p className="text-sm font-bold tabular">0</p></div>

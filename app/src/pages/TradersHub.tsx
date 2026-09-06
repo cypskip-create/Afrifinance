@@ -366,7 +366,7 @@ export default function TradersHub() {
               >
                 {currentFeedLabel}
                 <ChevronDown className="h-3.5 w-3.5" />
-                {isFeedTab(activeTab) && <span className="absolute -bottom-px left-1/2 -translate-x-1/2 w-10 h-[3px] rounded-full bg-primary" />}
+                {isFeedTab(activeTab) && <span className="absolute -bottom-px left-1/2 -translate-x-1/2 w-10 h-[3px] rounded-full bg-foreground" />}
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-44">
@@ -377,7 +377,7 @@ export default function TradersHub() {
                   className="flex items-center justify-between text-[13px]"
                 >
                   {tab.label}
-                  {activeTab === tab.id && <Check className="h-3.5 w-3.5 text-primary" />}
+                  {activeTab === tab.id && <Check className="h-3.5 w-3.5 text-foreground" />}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -390,7 +390,7 @@ export default function TradersHub() {
           >
             <Newspaper className="h-3.5 w-3.5" />
             Media
-            {activeTab === "media" && <span className="absolute -bottom-px left-1/2 -translate-x-1/2 w-10 h-[3px] rounded-full bg-primary" />}
+            {activeTab === "media" && <span className="absolute -bottom-px left-1/2 -translate-x-1/2 w-10 h-[3px] rounded-full bg-foreground" />}
           </button>
         </div>
       </header>

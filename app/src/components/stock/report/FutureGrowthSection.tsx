@@ -68,27 +68,25 @@ export function FutureGrowthSection({ symbol }: Props) {
       )}
 
       <SubWidget number="2.1" title="Trailing Growth History" description="Real, already-reported revenue, earnings, and EPS by fiscal year — not a projection.">
-        {isLoading ? (
-          <div className="h-64 flex items-center justify-center"><p className="text-xs text-muted-foreground">Loading financial history…</p></div>
-        ) : chartData.length === 0 ? (
-          <div className="h-64 flex items-center justify-center"><p className="text-xs text-muted-foreground">No financial history on file for {symbol} yet.</p></div>
-        ) : (
-          <BarChartBlock
-            title=""
-            annual={chartData}
-            xKey="year"
-            series={[{ key, label: metric === "eps" ? "EPS" : key, color }]}
-            yFmt={yFmt}
-            valueFmt={(v) => tipFmt(v)}
-            right={
-              <ToggleGroup type="single" size="sm" value={metric} onValueChange={(v) => v && setMetric(v as Metric)}>
-                <ToggleGroupItem value="revenue" className="h-6 text-[10px] px-2">Revenue</ToggleGroupItem>
-                <ToggleGroupItem value="earnings" className="h-6 text-[10px] px-2">Earnings</ToggleGroupItem>
-                <ToggleGroupItem value="eps" className="h-6 text-[10px] px-2">EPS</ToggleGroupItem>
-              </ToggleGroup>
-            }
-          />
-        )}
+        {/* Chart frame renders unconditionally — BarChartBlock draws empty axes
+            fine with an empty array, so a symbol with no history on file yet
+            still shows the tool (an empty chart), not a text box in its place. */}
+        <BarChartBlock
+          title=""
+          annual={chartData}
+          xKey="year"
+          series={[{ key, label: metric === "eps" ? "EPS" : key, color }]}
+          yFmt={yFmt}
+          valueFmt={(v) => tipFmt(v)}
+          note={isLoading ? "Loading financial history…" : chartData.length === 0 ? `No financial history on file for ${symbol} yet.` : undefined}
+          right={
+            <ToggleGroup type="single" size="sm" value={metric} onValueChange={(v) => v && setMetric(v as Metric)}>
+              <ToggleGroupItem value="revenue" className="h-6 text-[10px] px-2">Revenue</ToggleGroupItem>
+              <ToggleGroupItem value="earnings" className="h-6 text-[10px] px-2">Earnings</ToggleGroupItem>
+              <ToggleGroupItem value="eps" className="h-6 text-[10px] px-2">EPS</ToggleGroupItem>
+            </ToggleGroup>
+          }
+        />
       </SubWidget>
 
       <p className="text-[11px] text-muted-foreground">
