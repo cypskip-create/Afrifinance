@@ -12,6 +12,6 @@
  * nseClient.ts's SEED and are irrelevant here.
  */
 export const KNOWN_NSE_SYMBOLS: string[] = [
-  "SAFCOM", "EQTY", "KCB", "COOP", "SCBK", "ABSA", "NCBA", "DTB",
+  "SCOM", "EQTY", "KCB", "COOP", "SCBK", "ABSA", "NCBA", "DTB",
   "STANBIC", "BRIT", "JUB", "EABL", "BAT", "KPLC", "KEGN", "TOTL", "BAMB",
 ];
